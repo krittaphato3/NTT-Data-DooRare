@@ -1,0 +1,11 @@
+{
+  "commands": {
+    "claude": "",
+    "gemini": "",
+    "qwen": "",
+    "local": ""
+  },
+  "sessionWordsMax": 250,
+  "summaryWordsMax": 12,
+  "ignoreOldSessionsDays": 30
+}
