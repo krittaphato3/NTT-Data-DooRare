@@ -1,59 +1,87 @@
 [
   {
-    "path": "GUIDELINES.md",
-    "title": "Guidelines",
-    "summary": "Guidelines",
-    "tags": "session",
-    "date": "2026-10-09"
-  },
-  {
     "path": "README.md",
     "title": "ai-material",
     "summary": "ai-material",
     "tags": "session",
-    "date": "2026-10-09"
-  },
-  {
-    "path": "context\\architecture.md",
-    "title": "Architecture",
-    "summary": "Architecture",
-    "tags": "session",
-    "date": "2026-10-09"
+    "date": "2026-10-14"
   },
   {
     "path": "context\\conventions.md",
     "title": "Conventions",
     "summary": "Conventions",
     "tags": "session",
-    "date": "2026-10-09"
-  },
-  {
-    "path": "context\\current-status.md",
-    "title": "Current Status",
-    "summary": "Current Status",
-    "tags": "session",
-    "date": "2026-10-09"
+    "date": "2026-10-14"
   },
   {
     "path": "context\\current-task.md",
     "title": "Current Task",
     "summary": "Current Task",
     "tags": "session",
-    "date": "2026-10-09"
-  },
-  {
-    "path": "context\\quality-checklist.md",
-    "title": "Quality Checklist",
-    "summary": "Quality Checklist",
-    "tags": "session",
-    "date": "2026-10-09"
+    "date": "2026-10-14"
   },
   {
     "path": "context\\runbook.md",
     "title": "Runbook",
     "summary": "Runbook",
     "tags": "session",
-    "date": "2026-10-09"
+    "date": "2026-10-14"
+  },
+  {
+    "path": "decisions\\0002-role-based-frontend-structure.md",
+    "title": "Role-based frontend structure",
+    "summary": "Organize frontend by role with shared layout; responsive via CSS breakpoints.",
+    "tags": "decision, frontend, structure, responsive",
+    "date": "2026-10-14"
+  },
+  {
+    "path": "sessions\\2026-10-14-pharmacist-dashboard-restructure-responsive.md",
+    "title": "Pharmacist dashboard restructure + responsive pass",
+    "summary": "Role-based frontend restructure and full responsive adaptation of dashboard",
+    "tags": "session, frontend, structure, responsive",
+    "date": "2026-10-14"
+  },
+  {
+    "path": "skills\\README.md",
+    "title": "Curated agent skills",
+    "summary": "Which agent skills this repo keeps, why, and how to add more.",
+    "tags": "skill, workflow, context",
+    "date": "2026-10-14"
+  },
+  {
+    "path": "GUIDELINES.md",
+    "title": "Guidelines",
+    "summary": "Guidelines",
+    "tags": "session",
+    "date": "2026-10-13"
+  },
+  {
+    "path": "context\\architecture.md",
+    "title": "Architecture",
+    "summary": "Architecture",
+    "tags": "session",
+    "date": "2026-10-13"
+  },
+  {
+    "path": "context\\current-status.md",
+    "title": "Current Status",
+    "summary": "Current Status",
+    "tags": "session",
+    "date": "2026-10-13"
+  },
+  {
+    "path": "context\\quality-checklist.md",
+    "title": "Quality Checklist",
+    "summary": "Quality Checklist",
+    "tags": "session",
+    "date": "2026-10-13"
+  },
+  {
+    "path": "sessions\\2026-10-13-pharmacist-dashboard-frontend.md",
+    "title": "Pharmacist dashboard frontend (npm + Docker)",
+    "summary": "Built pharmacist dashboard React frontend with npm Docker build",
+    "tags": "session",
+    "date": "2026-10-13"
   },
   {
     "path": "decisions\\0001-shared-ai-context.md",
@@ -67,13 +95,6 @@
     "title": "bootstrap setup",
     "summary": "Reusable setup prompt starter.",
     "tags": "session, setup",
-    "date": "2026-10-09"
-  },
-  {
-    "path": "sessions\\2026-10-09-2030-claude-bootstrap-test.md",
-    "title": "Bootstrap Test",
-    "summary": "Update after session.",
-    "tags": "session",
     "date": "2026-10-09"
   }
 ]

@@ -6,3 +6,14 @@ logs/
 build/
 dist/
 .DS_Store
+
+# Local Freebuff tooling state (.freebuff/project-id)
+.freebuff/
+
+# Scratch screenshot comparison output
+tmp-*/
+
+# Generated UI capture output (regenerate with `npm run capture`);
+# only the pipeline docs stay tracked, not the images/gallery.
+artifacts/*
+!artifacts/README.md

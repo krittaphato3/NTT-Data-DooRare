@@ -574,11 +574,37 @@ button {
 .step:hover {
   background: #eff6ff;
 }
-/* ---- Fluid full-viewport shell (layout only; tokens, copy and colors unchanged) ---- */
+/* ==========================================================================
+   App shell & responsive system
+   Breakpoints
+     >=1200  wide desktop   (scope chip visible, 240px sidebar)
+     >=1024  desktop        (persistent sidebar, collapsible to a 64px rail)
+     <1024   tablet & phone (sidebar becomes an off-canvas drawer)
+     <768    phone          (compact top bar, search on its own row)
+     <640    small phone    (2-col KPI/tiles, 16px card pads)
+     <360    very small     (single-column KPIs)
+   Design tokens, colors and copy follow Mockups/Dashboard - Pharmacist
+   Hospital/Main.dc.html; only layout adapts per device.
+   ========================================================================== */
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
 .shell {
+  display: flex;
   flex-wrap: nowrap;
   align-items: stretch;
   width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--bg);
+  font-family: 'Noto Sans Thai', 'IBM Plex Sans Thai', Inter, system-ui, sans-serif;
+  color: var(--body);
+  font-size: 14px;
+  line-height: 22px;
+}
+body.nav-open {
+  overflow: hidden;
 }
 .content {
   flex: 1 1 0;
@@ -586,13 +612,239 @@ button {
   display: flex;
   flex-direction: column;
 }
+
+/* ---------------- Sidebar ---------------- */
 .side {
-  flex-shrink: 0;
+  flex: 0 0 auto;
+  width: 240px;
+  background: #ffffff;
+  border-right: 1px solid var(--border);
+  padding: 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
   position: sticky;
   top: 0;
   height: 100vh;
+  height: 100dvh;
   overflow-y: auto;
+  transition: width 0.18s ease, transform 0.22s ease;
+  z-index: 80;
 }
+.side-brand {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 6px 4px 8px;
+}
+.side-brand-name {
+  font-size: 16px;
+  line-height: 20px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.side-close {
+  display: none;
+}
+.sidenav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.nav-text {
+  min-width: 0;
+}
+.nav-text .en {
+  display: block;
+}
+.sidefoot {
+  margin-top: auto;
+  padding: 12px;
+  border-radius: 8px;
+  background: var(--bg);
+  font-size: 12px;
+  line-height: 18px;
+}
+.sidefoot-title {
+  color: var(--ink);
+  font-weight: 500;
+}
+.nav-scrim {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 42, 92, 0.45);
+  z-index: 70;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+/* Icon-only rail: the collapsed state applies on desktop only */
+@media (min-width: 1024px) {
+  .shell-collapsed .side {
+    width: 64px;
+  }
+  .shell-collapsed .side-brand {
+    justify-content: center;
+    padding: 4px;
+  }
+  .shell-collapsed .side-brand-text,
+  .shell-collapsed .nav-text,
+  .shell-collapsed .navbadge,
+  .shell-collapsed .sidefoot {
+    display: none;
+  }
+  .shell-collapsed .navlink {
+    justify-content: center;
+    padding: 6px;
+  }
+}
+
+/* ---------------- Top bar ---------------- */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  min-height: 64px;
+  background: #ffffff;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 12px clamp(16px, 3vw, 32px);
+}
+.topbar-search {
+  flex: 1 1 260px;
+  min-width: 0;
+  max-width: 420px;
+  height: 40px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  color: var(--body);
+}
+.topbar-search:focus-within {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.15);
+}
+.topbar-search input:focus-visible {
+  outline: none;
+}
+.topbar-scope {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 6px;
+  background: var(--primary-soft);
+  color: var(--primary-dark);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.topbar-hospital {
+  border-color: var(--border);
+  gap: 8px;
+  color: var(--ink);
+  max-width: 100%;
+}
+.topbar-hospital .label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.nav-toggle {
+  display: none;
+}
+.menu-wrap {
+  position: relative;
+}
+.topbar-spacer {
+  flex: 1 1 0;
+}
+.popover {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  max-width: calc(100vw - 24px);
+  z-index: 60;
+}
+.bell-pop {
+  width: min(320px, calc(100vw - 24px));
+  padding: 12px 16px;
+}
+.acct-pop {
+  width: min(240px, calc(100vw - 24px));
+  padding: 8px;
+}
+.bell-btn {
+  width: 40px;
+  height: 40px;
+  position: relative;
+  border: 0;
+  flex: none;
+}
+.bell-count {
+  position: absolute;
+  top: 3px;
+  right: 1px;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 9999px;
+  background: #b91c1c;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 18px;
+  padding: 0 4px;
+}
+.kbd-hint {
+  font-size: 11px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0 5px;
+  color: var(--body);
+}
+.acct-btn {
+  height: 44px;
+  padding: 0 8px 0 4px;
+  gap: 10px;
+  flex: none;
+}
+.acct-avatar {
+  width: 36px;
+  height: 36px;
+  background: #dbeafe;
+  color: #1e40af;
+}
+.acct-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+.acct-name {
+  font-size: 13px;
+  line-height: 16px;
+  color: var(--ink);
+}
+.acct-role {
+  font-size: 11px;
+  line-height: 14px;
+  padding: 0 6px;
+  border-radius: 4px;
+  border: 1px solid var(--border-strong);
+  color: var(--body);
+  font-weight: 500;
+}
+
+/* ---------------- Main content ---------------- */
 .mainpad {
   width: 100%;
   max-width: none;
@@ -600,30 +852,86 @@ button {
   padding: 28px clamp(16px, 3vw, 32px) 32px;
   display: flex;
   flex-direction: column;
-  gap: 24;
+  gap: 24px;
 }
-.topbar {
-  padding-top: 12px;
-  padding-bottom: 12px;
-  padding-left: clamp(16px, 3vw, 32px);
-  padding-right: clamp(16px, 3vw, 32px);
+.rowcards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  align-items: stretch;
+}
+.cardpad {
+  padding: 20px 24px;
+}
+.cardpad--alerts {
+  padding: 20px 24px 8px;
+}
+.kpi-card {
+  padding: 16px 18px;
+}
+.kpi-num {
+  font-size: 32px;
+  line-height: 40px;
+  font-weight: 600;
+  margin-top: 6px;
+}
+.agent-card {
+  background: var(--primary-soft);
+  border: 1px solid var(--primary-border);
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 8px;
+}
+.pagehead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+}
+.pagehead-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.dialog {
+  width: 460px;
+  max-width: 100%;
+  max-height: 90dvh;
+  overflow-y: auto;
+  padding: 20px 24px;
+  outline: none;
 }
 .footerbar {
-  padding-top: 12px;
-  padding-bottom: 12px;
-  padding-left: clamp(16px, 3vw, 32px);
-  padding-right: clamp(16px, 3vw, 32px);
+  margin-top: auto;
+  border-top: 1px solid var(--border);
+  background: #ffffff;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 24px;
+  font-size: 12px;
+  line-height: 16px;
+  padding: 12px clamp(16px, 3vw, 32px);
 }
+.footer-meta {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+
 /* KPI cards: fluid grid — 5 across when wide, wrapping down without overflow */
 .kpi-row {
   display: grid;
   gap: 16px;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
 }
 .kpi-row > .card {
   min-width: 0;
 }
-/* Status filter tiles: 4 across on desktop, reflow on narrow screens */
+/* Status filter tiles: 4 across on desktop, 2x2 on small screens */
 .tiles4 {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
@@ -633,77 +941,28 @@ button {
   overflow-x: auto;
   max-width: 100%;
 }
-@media (max-width: 1100px) {
-  .mainpad {
-    padding: 24px clamp(16px, 3vw, 24px) 28px;
-  }
+
+/* Alert rows reflow on phones (icon · content · time/action) */
+.alert-item {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 14px 0;
+  border-top: 1px solid var(--border);
 }
-@media (max-width: 900px) {
-  .shell {
-    flex-direction: column;
-  }
-  .shell > .side {
-    flex: none !important;
-    width: 100%;
-    max-width: none;
-    height: auto;
-    position: static;
-    overflow: visible;
-  }
-  /* Collapsed on small screens = nav hidden behind the toggle button */
-  .shell-collapsed .sidenav {
-    display: none;
-  }
-  .sidenav {
-    flex-direction: row !important;
-    overflow-x: auto;
-    padding-bottom: 4px;
-  }
-  .sidenav .navlink {
-    white-space: nowrap;
-    flex: none;
-  }
-  .sidenav .en {
-    display: none;
-  }
-  .sidefoot {
-    display: none !important;
-  }
-  .mainpad {
-    padding: 20px 16px 24px;
-  }
-  /* 2 KPI cards per row on tablet widths */
-  .kpi-row {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+.alert-main {
+  flex: 1 1 220px;
+  min-width: 0;
 }
-@media (max-width: 640px) {
-  .topbar {
-    gap: 8px;
-  }
-  /* Search takes its own full row; actions wrap below */
-  .topbar-search {
-    flex: 1 1 100% !important;
-    max-width: none !important;
-  }
-  .tiles4 {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  /* Tile labels may wrap instead of overflowing their tile */
-  .tl {
-    white-space: normal;
-  }
+.alert-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  flex: none;
 }
-@media (max-width: 430px) {
-  /* 1 KPI card per row on phones */
-  .kpi-row {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .mainpad {
-    padding: 16px 16px 20px;
-    gap: 16px;
-  }
-}
+
 .equal-card {
   display: flex;
   flex-direction: column;
@@ -720,9 +979,195 @@ button {
   margin-top: auto;
   flex: none;
 }
-@media (max-width: 900px) {
+
+/* ---------------- Tablet & phone: off-canvas drawer ---------------- */
+@media (max-width: 1023px) {
+  .side {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: min(300px, 86vw);
+    height: 100dvh;
+    transform: translateX(-105%);
+    box-shadow: 0 24px 48px rgba(15, 42, 92, 0.22);
+  }
+  .shell-nav-open .side {
+    transform: translateX(0);
+  }
+  .side-close {
+    display: inline-grid;
+  }
+  .nav-toggle {
+    display: inline-grid;
+    width: 40px;
+    height: 40px;
+  }
+  .mainpad {
+    padding: 24px clamp(16px, 3vw, 24px) 28px;
+  }
   .equal-scroll {
     max-height: none;
     overflow-y: visible;
+  }
+  /* Hospital region suffix is dropped on tablet/phone to keep the bar compact */
+  .topbar-hospital .region {
+    display: none;
+  }
+  /* Account menu collapses to avatar + chevron (name/role shown on hover-free desktop only) */
+  .acct-text {
+    display: none;
+  }
+}
+
+/* ---------------- Tablet/laptop: trim top-bar extras ---------------- */
+@media (max-width: 1199px) {
+  .topbar-scope {
+    display: none;
+  }
+}
+
+/* ---------------- Phone ---------------- */
+@media (max-width: 767px) {
+  /* Explicit 2-row grid: [menu · hospital · bell · account] then [search].
+     The hospital chip shrinks/ellipsizes, so nothing ever spills. */
+  .topbar {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) minmax(0, auto) auto auto;
+    align-items: center;
+    column-gap: 8px;
+    row-gap: 8px;
+    min-height: 56px;
+    padding: 10px 16px;
+  }
+  .nav-toggle {
+    grid-area: 1 / 1;
+  }
+  .topbar-spacer {
+    grid-area: 1 / 2;
+  }
+  .topbar-hospital {
+    grid-area: 1 / 3;
+    min-width: 0;
+    padding: 0 10px;
+  }
+  .bell-wrap {
+    grid-area: 1 / 4;
+  }
+  .acct-wrap {
+    grid-area: 1 / 5;
+  }
+  .topbar-search {
+    grid-area: 2 / 1 / 2 / -1;
+    flex: 1 1 100%;
+    max-width: none;
+  }
+  .topbar-hospital .label {
+    max-width: none;
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+  .acct-btn {
+    padding: 0 4px;
+    gap: 4px;
+  }
+  .kbd-hint {
+    display: none;
+  }
+  /* Popovers anchor to the top bar (not their narrow wrapper) so they
+     never spill off-screen on phones */
+  .menu-wrap {
+    position: static;
+  }
+  .popover {
+    top: calc(100% + 4px);
+    right: 12px;
+  }
+}
+
+/* ---------------- Small phone ---------------- */
+@media (max-width: 639px) {
+  .mainpad {
+    padding: 20px 16px 24px;
+    gap: 20px;
+  }
+  .rowcards {
+    gap: 16px;
+  }
+  .kpi-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+  .tiles4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .tl {
+    white-space: normal;
+  }
+  .cardpad,
+  .cardpad--alerts {
+    padding: 16px;
+  }
+  .kpi-card {
+    padding: 14px;
+  }
+  .kpi-num {
+    font-size: 28px;
+    line-height: 34px;
+  }
+  .agent-card {
+    padding: 14px 16px;
+  }
+  .alert-side {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+  }
+  .label-en {
+    display: none;
+  }
+  .pagehead-actions {
+    width: 100%;
+  }
+  .pagehead-actions .btn {
+    flex: 1 1 auto;
+  }
+  .footerbar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .dialog {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 359px) {
+  .kpi-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Comfortable touch targets on touch devices */
+@media (hover: none) and (pointer: coarse) {
+  .btn-sm {
+    height: 36px;
+  }
+  .tab {
+    min-height: 36px;
+  }
+  .step {
+    width: 36px;
+    height: 36px;
+  }
+  .tile {
+    padding: 12px 14px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .side {
+    transition: none;
   }
 }

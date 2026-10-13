@@ -1,13 +1,9 @@
-import { useState } from 'react';
-import { AlertsPanel } from './components/AlertsPanel';
-import { BottomRow } from './components/BottomRow';
-import { Footer } from './components/Footer';
-import { KpiRow } from './components/KpiRow';
-import { MiddleRow } from './components/MiddleRow';
-import { PageHeader } from './components/PageHeader';
-import { RequestStatusPanel } from './components/RequestStatusPanel';
-import { Sidebar } from './components/Sidebar';
-import { TopBar } from './components/TopBar';
+import { useEffect, useState } from 'react';
+import { Footer } from './components/layout/Footer';
+import { Sidebar } from './components/layout/Sidebar';
+import { TopBar } from './components/layout/TopBar';
+import { ALERTS } from './roles/pharmacist/data/dashboard';
+import { DashboardPage } from './roles/pharmacist/pages/DashboardPage';
 
 function initialRole(): boolean {
   try {
@@ -17,29 +13,54 @@ function initialRole(): boolean {
   }
 }
 
+/**
+ * App shell: sidebar + top bar + the active role page + footer.
+ * Role pages live in `src/roles/<role>/pages/` (see src/README.md).
+ */
 export default function App() {
   const [query, setQuery] = useState('');
   const [collapsed, setCollapsed] = useState(false);
+  const [navOpen, setNavOpen] = useState(false);
   const [hospital, setHospital] = useState('ทุกโรงพยาบาล (12)');
   const [isAdmin] = useState(initialRole);
 
+  // Mobile drawer: lock page scroll, close on Escape and when resizing to desktop.
+  useEffect(() => {
+    if (!navOpen) return;
+    const desktop = window.matchMedia('(min-width: 1024px)');
+    const close = () => setNavOpen(false);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') close();
+    };
+    desktop.addEventListener('change', close);
+    window.addEventListener('keydown', onKey);
+    document.body.classList.add('nav-open');
+    return () => {
+      desktop.removeEventListener('change', close);
+      window.removeEventListener('keydown', onKey);
+      document.body.classList.remove('nav-open');
+    };
+  }, [navOpen]);
+
+  const shellClass = ['shell', collapsed ? 'shell-collapsed' : '', navOpen ? 'shell-nav-open' : '']
+    .filter(Boolean)
+    .join(' ');
+
   return (
-    <div
-      className={collapsed ? 'shell shell-collapsed' : 'shell'}
-      style={{ display: 'flex', flexWrap: 'nowrap', alignItems: 'stretch', width: '100%', minHeight: '100vh', background: '#F5F8FC', fontFamily: "'Noto Sans Thai', 'IBM Plex Sans Thai', Inter, system-ui, sans-serif", color: '#475569', fontSize: 14, lineHeight: '22px' }}
-    >
-      <Sidebar collapsed={collapsed} onToggle={() => setCollapsed((v) => !v)} />
-      <div className="content" style={{ flex: '1 1 0', minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-        <TopBar query={query} onQuery={setQuery} isAdmin={isAdmin} />
+    <div className={shellClass}>
+      <Sidebar collapsed={collapsed} onToggle={() => setCollapsed((v) => !v)} onNavigate={() => setNavOpen(false)} />
+      {navOpen && <button className="nav-scrim" aria-label="ปิดเมนู" onClick={() => setNavOpen(false)} />}
+      <div className="content">
+        <TopBar
+          query={query}
+          onQuery={setQuery}
+          isAdmin={isAdmin}
+          navOpen={navOpen}
+          onMenu={() => setNavOpen((v) => !v)}
+          notifications={ALERTS.map((a) => ({ drug: a.drug, time: a.time }))}
+        />
         <main className="mainpad">
-          <PageHeader isAdmin={isAdmin} hospital={hospital} onHospital={setHospital} />
-          <KpiRow />
-          <section style={{ display: 'flex', flexWrap: 'wrap', gap: 24, alignItems: 'stretch' }}>
-            <AlertsPanel query={query} hospital={hospital} />
-            <RequestStatusPanel query={query} hospital={hospital} />
-          </section>
-          <MiddleRow />
-          <BottomRow />
+          <DashboardPage isAdmin={isAdmin} query={query} hospital={hospital} onHospital={setHospital} />
         </main>
         <Footer isAdmin={isAdmin} />
       </div>
