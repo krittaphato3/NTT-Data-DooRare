@@ -1,0 +1,866 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>MedSupply Link – Dashboard</title>
+<script src="./vendor/react.js"></script>
+<script src="./vendor/react-dom.js"></script>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Noto+Sans+Thai:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F5F8FC}
+*{box-sizing:border-box}
+a{color:#1D4ED8}a:hover{color:#1E40AF}
+button{font-family:inherit}
+.num{font-family:Inter,"Noto Sans Thai",system-ui,sans-serif;font-variant-numeric:tabular-nums}
+.en{font-size:12px;line-height:16px;color:#94A3B8;font-weight:400}
+.card{background:#FFFFFF;border:1px solid #E2E8F0;border-radius:12px;box-shadow:0 1px 2px rgba(15,42,92,.04),0 2px 8px rgba(15,42,92,.05)}
+.ic{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.ic20{width:20px;height:20px}
+.ic14{width:14px;height:14px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:40px;padding:0 16px;border-radius:8px;border:1px solid transparent;font-size:14px;font-weight:500;line-height:1;cursor:pointer;white-space:nowrap;text-decoration:none}
+.btn:focus-visible,.tab:focus-visible,.tile:focus-visible,.navlink:focus-visible,.icbtn:focus-visible,.link:focus-visible,.sw:focus-visible{outline:2px solid #1D4ED8;outline-offset:2px}
+.btn-p{background:#1D4ED8;color:#FFFFFF}.btn-p:hover{background:#1E40AF;color:#FFFFFF}
+.btn-s{background:#FFFFFF;color:#1D4ED8;border-color:#94A3B8}.btn-s:hover{background:#EFF6FF;color:#1D4ED8}
+.btn-g{background:transparent;color:#475569}.btn-g:hover{background:#F1F5F9;color:#475569}
+.btn-sm{height:32px;padding:0 12px;font-size:13px}
+.btn[disabled]{background:#F1F5F9;color:#94A3B8;border-color:#E2E8F0;cursor:not-allowed}
+.icbtn{width:32px;height:32px;display:inline-grid;place-items:center;border-radius:8px;border:1px solid #E2E8F0;background:#FFFFFF;color:#475569;cursor:pointer}
+.icbtn:hover{background:#F1F5F9}
+.link{color:#1D4ED8;text-decoration:none;font-weight:500;font-size:13px;display:inline-flex;align-items:center;gap:4px;background:none;border:0;padding:0;cursor:pointer}
+.link:hover{text-decoration:underline;color:#1E40AF}
+.badge{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 8px;border-radius:6px;font-size:12px;font-weight:500;line-height:1;white-space:nowrap}
+.st-pending{background:#FEF3C7;color:#92400E}
+.st-approved{background:#DCFCE7;color:#166534}
+.st-transit{background:#DBEAFE;color:#1E40AF}
+.st-delivered{background:#CCFBF1;color:#115E59}
+.st-rejected{background:#FEE2E2;color:#991B1B}
+.st-timeout{background:#F1F5F9;color:#475569}
+.ug-critical{background:#FEE2E2;color:#B91C1C;font-weight:600}
+.ug-urgent{background:#FFEDD5;color:#9A3412}
+.ug-normal{background:#EEF2F7;color:#475569}
+.ved{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:20px;padding:0 5px;border-radius:6px;border:1.5px solid;background:#FFFFFF;font-family:Inter,sans-serif;font-size:11px;font-weight:600;line-height:1}
+.ved-V{border-color:#DC2626;color:#B91C1C}.ved-E{border-color:#D97706;color:#92400E}.ved-D{border-color:#94A3B8;color:#475569}
+.tab{height:32px;padding:0 12px;border-radius:8px;border:1px solid transparent;background:transparent;color:#475569;font-size:13px;font-weight:500;cursor:pointer;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.tab:hover{background:#F1F5F9}
+.tab-on,.tab-on:hover{background:#DBEAFE;color:#1E40AF}
+.cnt{font-family:Inter,sans-serif;font-size:11px;font-weight:600;background:#F1F5F9;color:#475569;border-radius:9999px;padding:0 6px;line-height:18px}
+.tab-on .cnt{background:#FFFFFF;color:#1E40AF}
+.navlink{display:flex;align-items:center;gap:10px;min-height:40px;padding:6px 10px;border-radius:8px;color:#475569;text-decoration:none;font-size:14px;line-height:18px}
+.navlink:hover{background:#F1F5F9;color:#0F2A5C}
+.nav-on,.nav-on:hover{background:#EFF6FF;color:#1D4ED8;font-weight:600}
+.navlink .en{display:block}
+.nav-on .en{color:#1D4ED8}
+.navbadge{margin-left:auto;font-family:Inter,sans-serif;font-size:11px;font-weight:600;line-height:18px;min-width:20px;text-align:center;border-radius:9999px;padding:0 6px;background:#FEE2E2;color:#B91C1C}
+.sev{width:36px;height:36px;border-radius:8px;display:grid;place-items:center;flex:none}
+.sev-crit{background:#FEE2E2;color:#B91C1C}.sev-urg{background:#FFEDD5;color:#9A3412}.sev-norm{background:#EEF2F7;color:#475569}
+.tile{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:10px 12px;border-radius:8px;border:1px solid #E2E8F0;background:#FFFFFF;cursor:pointer;text-align:left;min-width:0}
+.tile:hover{border-color:#94A3B8}
+.tile-on{border-width:2px;padding:9px 11px}
+.tile .n{font-family:Inter,sans-serif;font-variant-numeric:tabular-nums;font-size:22px;line-height:28px;font-weight:600;color:#0F2A5C}
+.tile-pending.tile-on{border-color:#92400E;background:#FFFBEB}
+.tile-approved.tile-on{border-color:#166534;background:#F0FDF4}
+.tile-transit.tile-on{border-color:#1E40AF;background:#EFF6FF}
+.tile-delivered.tile-on{border-color:#115E59;background:#F0FDFA}
+.tile-rejected.tile-on{border-color:#991B1B;background:#FEF2F2}
+.tile-timeout.tile-on{border-color:#475569;background:#F8FAFC}
+.tl{font-size:12px;line-height:16px;font-weight:500;display:flex;align-items:center;gap:4px;white-space:nowrap}
+.c-pending{color:#92400E}.c-approved{color:#166534}.c-transit{color:#1E40AF}.c-delivered{color:#115E59}.c-rejected{color:#991B1B}.c-timeout{color:#475569}
+.seg{height:6px;border-radius:9999px;flex:1}
+.seg-done{background:#1D4ED8}.seg-cur{background:#93C5FD}.seg-todo{background:#E2E8F0}
+.sl{flex:1;font-size:11px;line-height:14px}
+.sl-done{color:#1E40AF;font-weight:500}.sl-cur{color:#1E40AF;font-weight:600}.sl-todo{color:#475569}
+.timer{font-family:Inter,sans-serif;font-variant-numeric:tabular-nums;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:4px}
+.timer-warn{color:#92400E}.timer-crit{color:#B91C1C}
+.av{width:32px;height:32px;border-radius:9999px;display:grid;place-items:center;flex:none;font-size:13px;font-weight:600}
+.av-hosp{background:#EFF6FF;color:#1D4ED8}.av-sys{background:#F1F5F9;color:#475569}.av-agent{background:#DBEAFE;color:#1D4ED8}.av-truck{background:#DBEAFE;color:#1E40AF}.av-ok{background:#CCFBF1;color:#115E59}.av-bad{background:#FEE2E2;color:#991B1B}.av-edit{background:#FEF3C7;color:#92400E}.av-good{background:#DCFCE7;color:#166534}
+.stbl{width:100%;border-collapse:collapse;font-size:12.5px;line-height:18px;min-width:440px}
+.stbl th{text-align:left;font-weight:500;color:#475569;background:#F1F5F9;padding:8px 10px;border-bottom:1px solid #E2E8F0;white-space:nowrap}
+.stbl td{padding:10px;border-bottom:1px solid #E2E8F0;vertical-align:top;color:#475569}
+.stbl tr:last-child td{border-bottom:0}
+.cur-row td{background:#EFF6FF}
+.sw{width:40px;height:22px;border-radius:9999px;border:0;padding:2px;cursor:pointer;display:inline-flex;align-items:center}
+.sw-on{background:#166534;justify-content:flex-end}.sw-off{background:#94A3B8;justify-content:flex-start}
+.sw span{width:18px;height:18px;border-radius:9999px;background:#FFFFFF;display:block}
+.step{width:32px;height:32px;border-radius:8px;border:1px solid #94A3B8;background:#FFFFFF;color:#1D4ED8;cursor:pointer;display:grid;place-items:center}
+.step:hover{background:#EFF6FF}
+@media (max-width:900px){
+  .side{flex-basis:100% !important}
+  .sidenav{flex-direction:row !important;overflow-x:auto}
+  .sidenav .en{display:none}
+  .sidefoot{display:none !important}
+  .mainpad{padding:16px !important}
+}
+</style>
+</helmet>
+
+<div style="display: flex; flex-wrap: wrap; min-height: 100vh; background: #F5F8FC; font-family: 'Noto Sans Thai', 'IBM Plex Sans Thai', Inter, system-ui, sans-serif; color: #475569; font-size: 14px; line-height: 22px;">
+
+<!-- ============ SIDEBAR ============ -->
+<aside class="side" aria-label="เมนูหลัก" style="flex: 1 1 240px; max-width: 100%; background: #FFFFFF; border-right: 1px solid #E2E8F0; padding: 16px 12px; display: flex; flex-direction: column; gap: 16px;">
+  <div style="display: flex; align-items: center; justify-content: space-between; padding: 4px 6px 4px 8px;">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <span style="width: 32px; height: 32px; border-radius: 8px; background: #1D4ED8; color: #FFFFFF; display: grid; place-items: center;"><svg class="ic" viewBox="0 0 24 24" style="stroke-width: 2.5" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></span>
+      <div>
+        <div style="font-size: 16px; line-height: 20px; font-weight: 600; color: #0F2A5C;">MedSupply Link</div>
+        <div class="en">เครือข่ายเขตสุขภาพที่ 6</div>
+      </div>
+    </div>
+    <button class="icbtn" aria-label="ย่อเมนู / Collapse sidebar" style="border: 0;"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h18v16H3zM9 4v16M15 10l-2 2 2 2"></path></svg></button>
+  </div>
+  <nav class="sidenav" style="display: flex; flex-direction: column; gap: 2px;">
+    <sc-for list="{{nav}}" as="n" hint-placeholder-count="10">
+      <a href="#" class="navlink {{n.cls}}" aria-current="{{n.current}}">
+        <svg class="ic ic20" viewBox="0 0 24 24" aria-hidden="true"><path d="{{n.icon}}"></path></svg>
+        <span><span>{{n.th}}</span><span class="en">{{n.en}}</span></span>
+        <sc-if value="{{n.hasBadge}}" hint-placeholder-val="{{false}}"><span class="navbadge" aria-label="{{n.badgeLabel}}">{{n.badge}}</span></sc-if>
+      </a>
+    </sc-for>
+  </nav>
+  <div class="sidefoot" style="margin-top: auto; padding: 12px; border-radius: 8px; background: #F5F8FC; font-size: 12px; line-height: 18px;">
+    <div style="color: #0F2A5C; font-weight: 500;">ต้องการความช่วยเหลือ?</div>
+    <div>ศูนย์ประสานยา เขต 6 · โทร 1669 ต่อ 214</div>
+  </div>
+</aside>
+
+<!-- ============ CONTENT ============ -->
+<div style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column;">
+
+  <!-- TOP BAR -->
+  <header style="min-height: 64px; background: #FFFFFF; border-bottom: 1px solid #E2E8F0; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 32px;">
+    <label style="flex: 1 1 260px; max-width: 420px; height: 40px; border: 1px solid #94A3B8; border-radius: 8px; display: flex; align-items: center; gap: 8px; padding: 0 12px; color: #475569;">
+      <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 19a8 8 0 1 0 0-16a8 8 0 1 0 0 16zM21 21l-4.3-4.3"></path></svg>
+      <input type="search" placeholder="ค้นหายา, เลขคำขอ, โรงพยาบาล…" aria-label="ค้นหา / Search" style="border: 0; outline: none; flex: 1; min-width: 0; font: inherit; color: #0F2A5C; background: transparent;">
+      <span class="num" style="font-size: 11px; border: 1px solid #E2E8F0; border-radius: 4px; padding: 0 5px; color: #475569;">Ctrl K</span>
+    </label>
+    <span style="flex: 1 1 0;"></span>
+    <span style="display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border-radius: 6px; background: #EFF6FF; color: #1E40AF; font-size: 12px; font-weight: 500; white-space: nowrap;">
+      <svg class="ic ic14" viewBox="0 0 24 24" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12zM12 15a3 3 0 1 0 0-6a3 3 0 1 0 0 6z"></path></svg>{{scopeLabel}}
+    </span>
+    <button class="btn btn-g" style="border-color: #E2E8F0; gap: 8px; color: #0F2A5C;" aria-label="เลือกโรงพยาบาลและเขต">
+      <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 21V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v16M2 21h20M10 7h4M12 5v4M9 21v-4h6v4"></path></svg>
+      <span>{{hospitalLabel}}</span><span style="color: #475569; font-weight: 400;">· เขตสุขภาพที่ 6</span>
+      <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg>
+    </button>
+    <button class="icbtn" aria-label="การแจ้งเตือน 6 รายการที่ยังไม่อ่าน" style="width: 40px; height: 40px; position: relative; border: 0;">
+      <svg class="ic ic20" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.9 1.9 0 0 0 3.4 0"></path></svg>
+      <span class="num" style="position: absolute; top: 3px; right: 1px; min-width: 18px; height: 18px; border-radius: 9999px; background: #B91C1C; color: #FFFFFF; font-size: 11px; font-weight: 600; line-height: 18px; padding: 0 4px;">6</span>
+    </button>
+    <button class="btn btn-g" style="height: 44px; padding: 0 8px 0 4px; gap: 10px;" aria-label="เมนูผู้ใช้">
+      <span class="av" style="width: 36px; height: 36px; background: #DBEAFE; color: #1E40AF;">ณ</span>
+      <span style="display: flex; flex-direction: column; align-items: flex-start; gap: 2px;">
+        <span style="font-size: 13px; line-height: 16px; color: #0F2A5C;">{{userName}}</span>
+        <span style="font-size: 11px; line-height: 14px; padding: 0 6px; border-radius: 4px; border: 1px solid #94A3B8; color: #475569; font-weight: 500;">{{role}}</span>
+      </span>
+      <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg>
+    </button>
+  </header>
+
+  <main class="mainpad" style="padding: 28px 32px 32px; display: flex; flex-direction: column; gap: 24px; width: 100%; max-width: 1440px;">
+
+    <!-- 1. PAGE HEADER -->
+    <section style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px;">
+      <div>
+        <h1 style="margin: 0; font-size: 28px; line-height: 40px; font-weight: 600; color: #0F2A5C;">ภาพรวม <span style="font-size: 16px; font-weight: 400; color: #94A3B8;">/ Dashboard</span></h1>
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 2px;">
+          <span>สวัสดี <strong style="color: #0F2A5C; font-weight: 600;">{{userName}}</strong> · {{roleTh}}</span>
+          <span style="color: #CBD5E1;" aria-hidden="true">|</span>
+          <span style="display: inline-flex; align-items: center; gap: 6px;"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18v16H3zM3 10h18M8 3v4M16 3v4"></path></svg>วันอังคารที่ 13 ตุลาคม 2569 · <span class="num">19:11</span> น.</span>
+          <sc-if value="{{isAdmin}}" hint-placeholder-val="{{false}}">
+            <label style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px;">โรงพยาบาล
+              <select aria-label="กรองโรงพยาบาล / Hospital filter" style="height: 32px; border: 1px solid #94A3B8; border-radius: 8px; padding: 0 8px; font: inherit; color: #0F2A5C; background: #FFFFFF;">
+                <option>ทุกโรงพยาบาล (12)</option><option>โรงพยาบาลสมุทรปราการ</option><option>รพ.บางพลี</option><option>รพ.บางบ่อ</option>
+              </select>
+            </label>
+          </sc-if>
+        </div>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+        <button class="btn btn-s"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 18v-6a5 5 0 1 1 10 0v6M5 21h14v-3H5zM12 2v2M4.2 5.2l1.4 1.4M19.8 5.2l-1.4 1.4"></path></svg>รายงานเหตุฉุกเฉิน <span style="font-weight: 400; opacity: .8;">Report Emergency</span></button>
+        <button class="btn btn-p"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>สร้างคำขอยืม <span style="font-weight: 400; opacity: .85;">Create Request</span></button>
+      </div>
+    </section>
+
+    <!-- 2. KPI ROW -->
+    <section aria-label="สรุปตัวชี้วัด" style="display: flex; flex-wrap: wrap; gap: 16px;">
+      <div class="card" style="flex: 1 1 190px; padding: 16px 18px; border-color: #FECACA;">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+          <span style="font-size: 13px; line-height: 18px; color: #0F2A5C; font-weight: 500;">ยารายการเสี่ยงขาด<span class="en" style="display: block;">At-risk items</span></span>
+          <span class="sev sev-crit" style="width: 32px; height: 32px;"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01"></path></svg></span>
+        </div>
+        <div class="num" style="font-size: 32px; line-height: 40px; font-weight: 600; color: #B91C1C; margin-top: 6px;">12</div>
+        <div style="display: flex; align-items: center; gap: 4px; font-size: 12px; line-height: 16px; color: #B91C1C;"><svg class="ic ic14" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8"></path></svg><span class="num">+3</span> จากเมื่อวาน · V <span class="num">4</span> รายการ</div>
+      </div>
+      <div class="card" style="flex: 1 1 190px; padding: 16px 18px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+          <span style="font-size: 13px; line-height: 18px; color: #0F2A5C; font-weight: 500;">คำขอรออนุมัติ<span class="en" style="display: block;">Pending approvals</span></span>
+          <span class="sev" style="width: 32px; height: 32px; background: #FEF3C7; color: #92400E;"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 22h14M5 2h14M17 22v-4.2a2 2 0 0 0-.6-1.4L12 12l-4.4 4.4a2 2 0 0 0-.6 1.4V22M7 2v4.2a2 2 0 0 0 .6 1.4L12 12l4.4-4.4a2 2 0 0 0 .6-1.4V2"></path></svg></span>
+        </div>
+        <div class="num" style="font-size: 32px; line-height: 40px; font-weight: 600; color: #0F2A5C; margin-top: 6px;">5</div>
+        <div style="display: flex; align-items: center; gap: 4px; font-size: 12px; line-height: 16px; color: #92400E;"><svg class="ic ic14" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20a10 10 0 1 0 0-20zM12 6v6l4 2"></path></svg><span class="num">2</span> รายการเหลือ &lt; 1 ชม.</div>
+      </div>
+      <div class="card" style="flex: 1 1 190px; padding: 16px 18px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+          <span style="font-size: 13px; line-height: 18px; color: #0F2A5C; font-weight: 500;">กำลังจัดส่ง<span class="en" style="display: block;">In transit</span></span>
+          <span class="sev" style="width: 32px; height: 32px; background: #DBEAFE; color: #1E40AF;"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 6h12v10H2zM14 9h4l4 4v3h-8M6 20a2 2 0 1 0 0-4a2 2 0 1 0 0 4zM18 20a2 2 0 1 0 0-4a2 2 0 1 0 0 4z"></path></svg></span>
+        </div>
+        <div class="num" style="font-size: 32px; line-height: 40px; font-weight: 600; color: #0F2A5C; margin-top: 6px;">3</div>
+        <div style="font-size: 12px; line-height: 16px; color: #475569;">ถึงภายในวันนี้ <span class="num">2</span> · ขาเข้า <span class="num">1</span> / ขาออก <span class="num">2</span></div>
+      </div>
+      <div class="card" style="flex: 1 1 190px; padding: 16px 18px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+          <span style="font-size: 13px; line-height: 18px; color: #0F2A5C; font-weight: 500;">ยาใกล้หมดอายุ<span class="en" style="display: block;">Near-expiry lots</span></span>
+          <span class="sev sev-norm" style="width: 32px; height: 32px;"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 2v4M16 2v4M3 6h18v15H3zM3 10h18M10 14l4 4M14 14l-4 4"></path></svg></span>
+        </div>
+        <div class="num" style="font-size: 32px; line-height: 40px; font-weight: 600; color: #0F2A5C; margin-top: 6px;">18</div>
+        <div style="font-size: 12px; line-height: 16px; color: #475569;">ภายใน <span class="num">90</span> วัน · มูลค่า ฿<span class="num">46,200</span></div>
+      </div>
+      <div class="card" style="flex: 1 1 190px; padding: 16px 18px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+          <span style="font-size: 13px; line-height: 18px; color: #0F2A5C; font-weight: 500;">อัตราขาดสต็อก<span class="en" style="display: block;">Stockout rate · ต.ค.</span></span>
+          <svg viewBox="0 0 64 24" width="64" height="24" role="img" aria-label="แนวโน้ม 6 เดือน ลดลง" style="flex: none;"><path d="M2 6 L14 8 L26 7 L38 12 L50 15 L62 19" fill="none" stroke="#166534" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"></path><circle cx="62" cy="19" r="2.5" fill="#166534"></circle></svg>
+        </div>
+        <div class="num" style="font-size: 32px; line-height: 40px; font-weight: 600; color: #0F2A5C; margin-top: 6px;">2.1%</div>
+        <div style="display: flex; align-items: center; gap: 4px; font-size: 12px; line-height: 16px; color: #166534;"><svg class="ic ic14" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 9v8H9"></path></svg>↓ <span class="num">14%</span> vs เดือนที่แล้ว · ลด over/understock ฿<span class="num">184k</span></div>
+      </div>
+    </section>
+
+    <!-- 3 + 4. ALERTS + REQUEST STATUS -->
+    <section style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start;">
+
+      <!-- ALERTS -->
+      <div class="card" style="flex: 3 1 560px; min-width: 0; padding: 20px 24px 8px;">
+        <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px;">
+          <h2 style="margin: 0; font-size: 20px; line-height: 30px; font-weight: 600; color: #0F2A5C;">การแจ้งเตือน <span style="font-size: 14px; font-weight: 400; color: #94A3B8;">/ Alerts</span></h2>
+          <span style="font-size: 12px; line-height: 16px;">เรียงตาม: ยา V ก่อน แล้วตามมูลค่าผลกระทบ</span>
+        </div>
+        <div role="tablist" aria-label="กรองการแจ้งเตือน" style="display: flex; flex-wrap: wrap; gap: 4px; margin: 12px 0 16px;">
+          <sc-for list="{{alertTabs}}" as="t" hint-placeholder-count="5">
+            <button role="tab" class="tab {{t.cls}}" aria-selected="{{t.sel}}" onClick="{{t.pick}}">{{t.label}} <span class="cnt">{{t.count}}</span></button>
+          </sc-for>
+        </div>
+
+        <!-- AGENT SUGGESTION (pinned) -->
+        <sc-if value="{{showAgent}}" hint-placeholder-val="{{true}}">
+        <div role="region" aria-label="คำแนะนำจาก Agent" style="background: #EFF6FF; border: 1px solid #DBEAFE; border-radius: 12px; padding: 16px 20px; margin-bottom: 8px;">
+          <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px;">
+            <span style="display: inline-flex; align-items: center; gap: 6px; color: #1D4ED8; font-size: 13px; font-weight: 600;">
+              <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9zM19 16l.7 1.8 1.8.7-1.8.7L19 21l-.7-1.8-1.8-.7 1.8-.7z"></path></svg>คำแนะนำจาก Agent <span class="en" style="color: #475569;">Agent suggestion · ปักหมุด</span>
+            </span>
+            <span style="display: inline-flex; align-items: center; gap: 6px;"><span class="ved ved-V">V</span><span class="badge ug-critical"><svg class="ic ic14" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01"></path></svg>เร่งด่วนมาก</span><span style="font-size: 12px;">18:30 น.</span></span>
+          </div>
+
+          <div style="margin-top: 8px; font-size: 16px; line-height: 26px; font-weight: 600; color: #0F2A5C;">Agent แนะนำ: ขอยืม Insulin Glargine pen <span class="num">{{agentTotal}}</span> หน่วย</div>
+          <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px;">
+            <span style="display: inline-flex; align-items: center; gap: 6px; background: #FFFFFF; border: 1px solid #DBEAFE; border-radius: 8px; padding: 4px 10px; font-size: 13px; color: #0F2A5C;">รพ.บางพลี <strong class="num" style="font-weight: 600;">{{qA}}</strong> <span style="color: #475569;">· 15.4 กม.</span></span>
+            <span style="display: inline-flex; align-items: center; color: #475569;">+</span>
+            <span style="display: inline-flex; align-items: center; gap: 6px; background: #FFFFFF; border: 1px solid #DBEAFE; border-radius: 8px; padding: 4px 10px; font-size: 13px; color: #0F2A5C;">รพ.บางบ่อ <strong class="num" style="font-weight: 600;">{{qB}}</strong> <span style="color: #475569;">· 28.6 กม.</span></span>
+            <sc-if value="{{adjusted}}" hint-placeholder-val="{{false}}"><span class="badge" style="background: #FEF3C7; color: #92400E;">ปรับจำนวนโดยคุณ (Agent เสนอ 80 + 40)</span></sc-if>
+          </div>
+          <p style="margin: 8px 0 12px; font-size: 13px; line-height: 20px; color: #475569;">เหตุผล: คงเหลือ <span class="num">18</span> ด้าม ใช้เฉลี่ย <span class="num">12</span>/วัน → พอใช้ <span class="num">1.5</span> วัน ต่ำกว่า Predict 7 วัน · ทั้งสองแห่งมีสต็อกเกินเกณฑ์ปลอดภัยและส่งถึงได้ภายในวันนี้</p>
+
+          <sc-if value="{{agentOpen}}" hint-placeholder-val="{{true}}">
+            <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+              <button class="btn btn-p btn-sm" onClick="{{agentApprove}}"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5L20 7"></path></svg>อนุมัติ · Approve</button>
+              <button class="btn btn-s btn-sm" onClick="{{agentAdjust}}"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"></path></svg>ปรับจำนวน · Adjust</button>
+              <button class="btn btn-g btn-sm" onClick="{{agentReject}}"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"></path></svg>ปฏิเสธ · Reject</button>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{agentAdjusting}}" hint-placeholder-val="{{false}}">
+            <div style="background: #FFFFFF; border: 1px solid #DBEAFE; border-radius: 8px; padding: 12px 14px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px;">
+              <div style="display: flex; align-items: center; gap: 8px;"><span style="font-size: 13px; color: #0F2A5C; min-width: 64px;">รพ.บางพลี</span>
+                <button class="step" aria-label="ลดจำนวน รพ.บางพลี" onClick="{{decA}}"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"></path></svg></button>
+                <output class="num" style="min-width: 40px; text-align: right; font-weight: 600; color: #0F2A5C;">{{qA}}</output>
+                <button class="step" aria-label="เพิ่มจำนวน รพ.บางพลี" onClick="{{incA}}"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></button>
+                <span style="font-size: 12px;">ให้ยืมได้สูงสุด <span class="num">110</span></span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 8px;"><span style="font-size: 13px; color: #0F2A5C; min-width: 64px;">รพ.บางบ่อ</span>
+                <button class="step" aria-label="ลดจำนวน รพ.บางบ่อ" onClick="{{decB}}"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"></path></svg></button>
+                <output class="num" style="min-width: 40px; text-align: right; font-weight: 600; color: #0F2A5C;">{{qB}}</output>
+                <button class="step" aria-label="เพิ่มจำนวน รพ.บางบ่อ" onClick="{{incB}}"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></button>
+                <span style="font-size: 12px;">ให้ยืมได้สูงสุด <span class="num">60</span></span>
+              </div>
+              <div style="display: flex; gap: 8px; margin-left: auto;">
+                <button class="btn btn-g btn-sm" onClick="{{agentBack}}">ยกเลิก</button>
+                <button class="btn btn-p btn-sm" onClick="{{agentSaveAdjust}}">บันทึกจำนวน</button>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{agentConfirming}}" hint-placeholder-val="{{false}}">
+            <div style="background: #FFFFFF; border: 1px solid #1D4ED8; border-radius: 8px; padding: 12px 14px;">
+              <div style="font-size: 14px; font-weight: 600; color: #0F2A5C;">ยืนยันส่งคำขอยืม 2 รายการ?</div>
+              <ul style="margin: 6px 0 10px; padding-left: 18px; font-size: 13px; line-height: 20px;">
+                <li>Insulin Glargine pen <span class="num">{{qA}}</span> หน่วย จาก รพ.บางพลี → โรงพยาบาลสมุทรปราการ</li>
+                <li>Insulin Glargine pen <span class="num">{{qB}}</span> หน่วย จาก รพ.บางบ่อ → โรงพยาบาลสมุทรปราการ</li>
+              </ul>
+              <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                <button class="btn btn-p btn-sm" onClick="{{agentSend}}">ยืนยันและส่งคำขอ</button>
+                <button class="btn btn-g btn-sm" onClick="{{agentBack}}">ย้อนกลับ</button>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{agentSent}}" hint-placeholder-val="{{false}}">
+            <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; background: #DCFCE7; color: #166534; border-radius: 8px; padding: 10px 12px; font-size: 13px; font-weight: 500;">
+              <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20a10 10 0 1 0 0-20zM8.5 12l2.5 2.5 4.5-5"></path></svg>ส่งคำขอแล้วโดยคุณ: #REQ-1055 (รพ.บางพลี) และ #REQ-1056 (รพ.บางบ่อ) · รอโรงพยาบาลผู้ให้ยืมตอบรับ
+            </div>
+          </sc-if>
+
+          <sc-if value="{{agentRejected}}" hint-placeholder-val="{{false}}">
+            <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; background: #F1F5F9; color: #475569; border-radius: 8px; padding: 10px 12px; font-size: 13px;">
+              <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20a10 10 0 1 0 0-20zM15 9l-6 6M9 9l6 6"></path></svg>ปฏิเสธคำแนะนำแล้ว · ไม่มีการส่งคำขอ
+              <button class="link" onClick="{{agentBack}}" style="margin-left: auto;">เลิกทำ</button>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{agentNotSent}}" hint-placeholder-val="{{true}}">
+            <div style="display: flex; align-items: center; gap: 6px; margin-top: 10px; font-size: 12px; line-height: 16px; color: #1E40AF; font-weight: 500;">
+              <svg class="ic ic14" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 11h12v10H6zM8 11V7a4 4 0 0 1 8 0v4"></path></svg>ยังไม่ส่งคำขอจนกว่าเจ้าหน้าที่อนุมัติ · Nothing is sent until you approve
+            </div>
+          </sc-if>
+        </div>
+        </sc-if>
+
+        <!-- ALERT ROWS -->
+        <ul style="list-style: none; margin: 0; padding: 0;">
+          <sc-for list="{{alerts}}" as="a" hint-placeholder-count="6">
+            <li style="display: flex; gap: 12px; align-items: flex-start; padding: 14px 0; border-top: 1px solid #E2E8F0;">
+              <span class="sev {{a.sevCls}}" title="{{a.sevLabel}}"><svg class="ic" viewBox="0 0 24 24" role="img" aria-label="{{a.sevLabel}}"><path d="{{a.icon}}"></path></svg></span>
+              <div style="flex: 1 1 auto; min-width: 0;">
+                <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px;">
+                  <span style="font-weight: 600; color: #0F2A5C;">{{a.drug}}</span>
+                  <span class="ved ved-{{a.ved}}" title="{{a.vedLabel}}">{{a.ved}}</span>
+                  <span style="font-size: 12px; color: #475569; border: 1px solid #E2E8F0; border-radius: 6px; padding: 0 6px; line-height: 18px;">{{a.typeLabel}}</span>
+                </div>
+                <div style="font-size: 13px; line-height: 20px; margin-top: 2px; color: {{a.msgColor}};">{{a.msg}}</div>
+              </div>
+              <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex: none;">
+                <span style="font-size: 12px; line-height: 16px;">{{a.time}}</span>
+                <button class="btn btn-sm {{a.btnCls}}">{{a.action}}</button>
+              </div>
+            </li>
+          </sc-for>
+        </ul>
+        <sc-if value="{{noAlerts}}" hint-placeholder-val="{{false}}">
+          <div style="padding: 24px 0; text-align: center; border-top: 1px solid #E2E8F0;">ไม่มีการแจ้งเตือนในหมวดนี้</div>
+        </sc-if>
+        <div style="border-top: 1px solid #E2E8F0; padding: 12px 0; display: flex; justify-content: center;"><a href="#" class="link">ดูการแจ้งเตือนทั้งหมด (<span class="num">14</span>)</a></div>
+      </div>
+
+      <!-- REQUEST STATUS -->
+      <div class="card" style="flex: 2 1 420px; min-width: 0; padding: 20px 24px;">
+        <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px;">
+          <h2 style="margin: 0; font-size: 20px; line-height: 30px; font-weight: 600; color: #0F2A5C;">สถานะคำขอ <span style="font-size: 14px; font-weight: 400; color: #94A3B8;">/ Request Status</span></h2>
+          <span style="font-size: 12px;">7 วันล่าสุด</span>
+        </div>
+        <div role="tablist" aria-label="ประเภทคำขอ" style="display: flex; gap: 4px; padding: 4px; background: #F1F5F9; border-radius: 10px; margin: 12px 0 14px;">
+          <sc-for list="{{reqTabs}}" as="t" hint-placeholder-count="2">
+            <button role="tab" aria-selected="{{t.sel}}" onClick="{{t.pick}}" style="flex: 1 1 0; height: 40px; border: 0; border-radius: 8px; cursor: pointer; font-size: 13px; line-height: 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: {{t.bg}}; color: {{t.fg}}; font-weight: {{t.fw}}; box-shadow: {{t.shadow}};">
+              <span>{{t.th}}</span><span style="font-size: 11px; line-height: 14px; font-weight: 400; color: #475569;">{{t.en}}</span>
+            </button>
+          </sc-for>
+        </div>
+
+        <!-- pipeline -->
+        <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; position: relative;">
+          <sc-for list="{{flowTiles}}" as="s" hint-placeholder-count="4">
+            <button class="tile tile-{{s.key}} {{s.onCls}}" aria-pressed="{{s.pressed}}" onClick="{{s.pick}}" title="กรองตาม {{s.en}}">
+              <span class="n">{{s.count}}</span>
+              <span class="tl c-{{s.key}}"><svg class="ic ic14" viewBox="0 0 24 24" aria-hidden="true"><path d="{{s.icon}}"></path></svg>{{s.th}}</span>
+              <span style="font-size: 11px; line-height: 14px; color: #475569;">{{s.en}}</span>
+            </button>
+          </sc-for>
+        </div>
+        <div aria-hidden="true" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin-top: 4px;">
+          <span style="height: 3px; border-radius: 9999px; background: #FCD34D;"></span><span style="height: 3px; border-radius: 9999px; background: #86EFAC;"></span><span style="height: 3px; border-radius: 9999px; background: #93C5FD;"></span><span style="height: 3px; border-radius: 9999px; background: #5EEAD4;"></span>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 10px;">
+          <span style="font-size: 12px; margin-right: 2px;">ไม่สำเร็จ:</span>
+          <sc-for list="{{failTiles}}" as="s" hint-placeholder-count="2">
+            <button class="tab {{s.onCls}}" aria-pressed="{{s.pressed}}" onClick="{{s.pick}}" style="height: 30px; border-color: #E2E8F0;">
+              <span class="tl c-{{s.key}}"><svg class="ic ic14" viewBox="0 0 24 24" aria-hidden="true"><path d="{{s.icon}}"></path></svg>{{s.th}} · {{s.en}}</span><span class="cnt">{{s.count}}</span>
+            </button>
+          </sc-for>
+          <sc-if value="{{hasFilter}}" hint-placeholder-val="{{false}}"><button class="link" onClick="{{clearFilter}}" style="margin-left: auto;">ล้างตัวกรอง ({{filterLabel}})</button></sc-if>
+        </div>
+
+        <!-- recent requests -->
+        <div style="display: flex; align-items: baseline; justify-content: space-between; margin: 18px 0 4px;">
+          <h3 style="margin: 0; font-size: 16px; line-height: 26px; font-weight: 600; color: #0F2A5C;">คำขอล่าสุด <span class="en">Recent requests</span></h3>
+          <a href="#" class="link">ดูทั้งหมด</a>
+        </div>
+        <div role="table" aria-label="คำขอล่าสุด">
+          <div role="row" style="display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; padding: 6px 0; border-bottom: 1px solid #E2E8F0; font-size: 12px; line-height: 16px; font-weight: 500;">
+            <span role="columnheader">คำขอ · ยา · จาก → ถึง</span><span role="columnheader" style="text-align: right;">จำนวน</span>
+          </div>
+          <sc-for list="{{rows}}" as="r" hint-placeholder-count="6">
+            <div role="row" style="padding: 12px 0; border-bottom: 1px solid #E2E8F0; background: {{r.bg}};">
+              <div style="display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 8px; align-items: start;">
+                <div role="cell" style="min-width: 0;">
+                  <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px;"><span class="num" style="font-size: 12px; color: #1D4ED8; font-weight: 500;">#{{r.id}}</span><span style="font-weight: 600; color: #0F2A5C; font-size: 13px;">{{r.drug}}</span></div>
+                  <div style="font-size: 12px; line-height: 18px; display: flex; align-items: center; gap: 4px;">{{r.from}} <svg class="ic ic14" viewBox="0 0 24 24" aria-label="ไปยัง" role="img"><path d="M5 12h14M13 6l6 6-6 6"></path></svg> {{r.to}}</div>
+                </div>
+                <div role="cell" style="text-align: right;"><span class="num" style="font-size: 14px; font-weight: 600; color: #0F2A5C;">{{r.qty}}</span> <span style="font-size: 12px;">{{r.unit}}</span></div>
+              </div>
+              <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin-top: 8px;">
+                <span role="cell" class="badge {{r.ugCls}}"><svg class="ic ic14" viewBox="0 0 24 24" aria-hidden="true"><path d="{{r.ugIcon}}"></path></svg>{{r.ugLabel}}</span>
+                <span role="cell" class="badge {{r.stCls}}" title="{{r.stEn}}"><svg class="ic ic14" viewBox="0 0 24 24" aria-hidden="true"><path d="{{r.stIcon}}"></path></svg>{{r.stLabel}}</span>
+                <span role="cell" style="flex: 1 1 140px; min-width: 0;">
+                  <sc-if value="{{r.isPending}}" hint-placeholder-val="{{false}}"><span class="timer {{r.timerCls}}"><svg class="ic ic14" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20a10 10 0 1 0 0-20zM12 6v6l4 2"></path></svg>เหลือ {{r.timer}}</span></sc-if>
+                  <sc-if value="{{r.isTransit}}" hint-placeholder-val="{{false}}">
+                    <span style="display: block; min-width: 150px;">
+                      <span style="display: flex; gap: 3px;"><sc-for list="{{r.steps}}" as="g" hint-placeholder-count="3"><span class="seg {{g.seg}}"></span></sc-for></span>
+                      <span style="display: flex; gap: 3px; margin-top: 3px;"><sc-for list="{{r.steps}}" as="g" hint-placeholder-count="3"><span class="sl {{g.lbl}}">{{g.label}}</span></sc-for></span>
+                    </span>
+                  </sc-if>
+                  <sc-if value="{{r.isOther}}" hint-placeholder-val="{{true}}"><span style="font-size: 12px; line-height: 16px;">{{r.note}}</span></sc-if>
+                </span>
+                <button class="btn btn-sm {{r.btnCls}}" style="margin-left: auto;">{{r.action}}</button>
+              </div>
+              <sc-if value="{{r.isTransit}}" hint-placeholder-val="{{false}}"><div style="font-size: 12px; line-height: 16px; margin-top: 4px; color: #1E40AF;">{{r.note}}</div></sc-if>
+            </div>
+          </sc-for>
+          <sc-if value="{{noRows}}" hint-placeholder-val="{{false}}">
+            <div style="padding: 24px 0; text-align: center; font-size: 13px;">ไม่มีคำขอสถานะ “{{filterLabel}}” ในรายการล่าสุด</div>
+          </sc-if>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. MIDDLE ROW -->
+    <section style="display: flex; flex-wrap: wrap; gap: 24px; align-items: stretch;">
+
+      <!-- Nearby hospitals -->
+      <div class="card" style="flex: 1 1 320px; min-width: 0; padding: 20px 24px; display: flex; flex-direction: column; gap: 12px;">
+        <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 8px;">
+          <h3 style="margin: 0; font-size: 16px; line-height: 26px; font-weight: 600; color: #0F2A5C;">โรงพยาบาลใกล้เคียง <span class="en">Nearby Hospitals</span></h3>
+          <a href="#" class="link">ดูทั้งหมด</a>
+        </div>
+        <svg viewBox="0 0 320 132" role="img" aria-label="แผนที่: โรงพยาบาลสมุทรปราการ และโรงพยาบาลใกล้เคียง 4 แห่ง" style="width: 100%; height: 132px; border-radius: 8px; border: 1px solid #E2E8F0; display: block;" preserveAspectRatio="xMidYMid slice">
+          <rect x="0" y="0" width="320" height="132" fill="#EFF6FF"></rect>
+          <path d="M0 116 C80 108 160 120 320 112 L320 132 L0 132 Z" fill="#DBEAFE"></path>
+          <path d="M92 -4 C104 30 78 52 98 78 C112 96 96 110 104 120" fill="none" stroke="#BFDBFE" stroke-width="10" stroke-linecap="round"></path>
+          <path d="M0 44 L320 30" stroke="#FFFFFF" stroke-width="5" fill="none"></path>
+          <path d="M120 0 L150 132" stroke="#FFFFFF" stroke-width="4" fill="none"></path>
+          <path d="M120 90 L320 76" stroke="#FFFFFF" stroke-width="4" fill="none"></path>
+          <path d="M210 0 L240 132" stroke="#FFFFFF" stroke-width="3" fill="none"></path>
+          <circle cx="132" cy="96" r="12" fill="#1D4ED8" fill-opacity="0.15"></circle>
+          <circle cx="132" cy="96" r="7" fill="#1D4ED8" stroke="#FFFFFF" stroke-width="2.5"></circle>
+          <g font-family="Inter, sans-serif" font-size="10" font-weight="600" text-anchor="middle">
+            <circle cx="70" cy="88" r="9" fill="#FFFFFF" stroke="#1D4ED8" stroke-width="1.5"></circle><text x="70" y="91.5" fill="#1D4ED8">1</text>
+            <circle cx="196" cy="30" r="9" fill="#FFFFFF" stroke="#1D4ED8" stroke-width="1.5"></circle><text x="196" y="33.5" fill="#1D4ED8">2</text>
+            <circle cx="246" cy="56" r="9" fill="#FFFFFF" stroke="#1D4ED8" stroke-width="1.5"></circle><text x="246" y="59.5" fill="#1D4ED8">3</text>
+            <circle cx="292" cy="96" r="9" fill="#FFFFFF" stroke="#1D4ED8" stroke-width="1.5"></circle><text x="292" y="99.5" fill="#1D4ED8">4</text>
+          </g>
+          <text x="144" y="114" font-size="10" fill="#0F2A5C" font-family="Noto Sans Thai, sans-serif" font-weight="600">รพ.สมุทรปราการ (คุณ)</text>
+        </svg>
+        <ul style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column;">
+          <sc-for list="{{nearby}}" as="h" hint-placeholder-count="4">
+            <li style="display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid #E2E8F0;">
+              <span class="num" style="width: 22px; height: 22px; border-radius: 9999px; border: 1.5px solid #1D4ED8; color: #1D4ED8; font-size: 11px; font-weight: 600; display: grid; place-items: center; flex: none;">{{h.n}}</span>
+              <div style="flex: 1 1 auto; min-width: 0;">
+                <div style="font-size: 13px; line-height: 18px; color: #0F2A5C; font-weight: 500;">{{h.name}}</div>
+                <div style="font-size: 12px; line-height: 16px;"><span class="num">{{h.km}}</span> กม. · <span class="num">{{h.min}}</span> นาที</div>
+              </div>
+              <span class="badge" style="background: #DCFCE7; color: #166534;" title="จำนวนรายการยาที่ให้ยืมได้">ให้ยืมได้ <span class="num">{{h.lend}}</span> รายการ</span>
+            </li>
+          </sc-for>
+        </ul>
+      </div>
+
+      <!-- My work history -->
+      <div class="card" style="flex: 1 1 320px; min-width: 0; padding: 20px 24px;">
+        <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 8px;">
+          <h3 style="margin: 0; font-size: 16px; line-height: 26px; font-weight: 600; color: #0F2A5C;">ประวัติการทำงานของฉัน <span class="en">My Work History · วันนี้</span></h3>
+          <a href="#" class="link">ดูทั้งหมด</a>
+        </div>
+        <ol style="list-style: none; margin: 14px 0 0; padding: 0;">
+          <sc-for list="{{work}}" as="w" hint-placeholder-count="5">
+            <li style="display: flex; gap: 12px; position: relative; padding-bottom: 16px;">
+              <span style="display: flex; flex-direction: column; align-items: center; flex: none;">
+                <span class="av {{w.cls}}" style="width: 28px; height: 28px;"><svg class="ic ic14" viewBox="0 0 24 24" aria-hidden="true"><path d="{{w.icon}}"></path></svg></span>
+                <span style="flex: 1 1 auto; width: 1px; background: #E2E8F0; margin-top: 4px; min-height: 12px;"></span>
+              </span>
+              <div style="min-width: 0;">
+                <div style="font-size: 13px; line-height: 20px; color: #0F2A5C;">{{w.text}}</div>
+                <div style="font-size: 12px; line-height: 16px;"><span class="num">{{w.time}}</span> น. · {{w.sub}}</div>
+              </div>
+            </li>
+          </sc-for>
+        </ol>
+      </div>
+
+      <!-- Near-expiry -->
+      <div class="card" style="flex: 1 1 320px; min-width: 0; padding: 20px 24px;">
+        <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 8px;">
+          <h3 style="margin: 0; font-size: 16px; line-height: 26px; font-weight: 600; color: #0F2A5C;">ยาใกล้หมดอายุ <span class="en">Near-expiry · 3 ล็อตแรก</span></h3>
+          <a href="#" class="link">ดูทั้งหมด (<span class="num">18</span>)</a>
+        </div>
+        <ul style="list-style: none; margin: 10px 0 0; padding: 0;">
+          <sc-for list="{{expiry}}" as="e" hint-placeholder-count="3">
+            <li style="padding: 14px 0; border-top: 1px solid #E2E8F0;">
+              <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 10px;">
+                <div style="min-width: 0;">
+                  <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px;"><span style="font-weight: 600; color: #0F2A5C; font-size: 13px;">{{e.drug}}</span><span class="ved ved-{{e.ved}}">{{e.ved}}</span></div>
+                  <div style="font-size: 12px; line-height: 18px;">Lot <span class="num">{{e.lot}}</span> · <span class="num">{{e.qty}}</span> · {{e.where}}</div>
+                </div>
+                <span class="badge {{e.dayCls}}" style="flex: none;"><svg class="ic ic14" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20a10 10 0 1 0 0-20zM12 6v6l4 2"></path></svg>เหลือ <span class="num">{{e.days}}</span> วัน</span>
+              </div>
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px;">
+                <span style="font-size: 12px;">หมดอายุ {{e.exp}} · มูลค่า ฿<span class="num">{{e.value}}</span></span>
+                <sc-if value="{{e.notReleased}}" hint-placeholder-val="{{true}}"><button class="btn btn-s btn-sm" onClick="{{e.release}}">ปล่อยเข้าคลังกลาง</button></sc-if>
+                <sc-if value="{{e.released}}" hint-placeholder-val="{{false}}"><span class="badge st-pending"><svg class="ic ic14" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 22h14M5 2h14M17 22v-4.2a2 2 0 0 0-.6-1.4L12 12l-4.4 4.4a2 2 0 0 0-.6 1.4V22M7 2v4.2a2 2 0 0 0 .6 1.4L12 12l4.4-4.4a2 2 0 0 0 .6-1.4V2"></path></svg>รอคลังกลางยืนยัน</span></sc-if>
+              </div>
+            </li>
+          </sc-for>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 6. BOTTOM ROW -->
+    <section style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start;">
+
+      <!-- Recent activity -->
+      <div class="card" style="flex: 3 1 520px; min-width: 0; padding: 20px 24px;">
+        <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 8px;">
+          <h3 style="margin: 0; font-size: 16px; line-height: 26px; font-weight: 600; color: #0F2A5C;">กิจกรรมล่าสุด <span class="en">Recent Activity · ทั้งเครือข่ายที่เกี่ยวกับ รพ.ของคุณ</span></h3>
+          <a href="#" class="link">ดูทั้งหมด</a>
+        </div>
+        <ol style="list-style: none; margin: 14px 0 0; padding: 0;">
+          <sc-for list="{{activity}}" as="v" hint-placeholder-count="6">
+            <li style="display: flex; gap: 12px; padding-bottom: 14px;">
+              <span style="display: flex; flex-direction: column; align-items: center; flex: none;">
+                <span class="av {{v.cls}}"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="{{v.icon}}"></path></svg></span>
+                <span style="flex: 1 1 auto; width: 1px; background: #E2E8F0; margin-top: 4px; min-height: 10px;"></span>
+              </span>
+              <div style="flex: 1 1 auto; min-width: 0; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 12px; padding-top: 5px;">
+                <div style="min-width: 0; flex: 1 1 300px;">
+                  <span style="font-size: 13px; line-height: 20px; color: #0F2A5C;"><strong style="font-weight: 600;">{{v.who}}</strong> {{v.text}}</span>
+                  <sc-if value="{{v.hasTag}}" hint-placeholder-val="{{false}}"> <span class="badge {{v.tagCls}}" style="height: 20px; margin-left: 4px;">{{v.tag}}</span></sc-if>
+                </div>
+                <span class="num" style="font-size: 12px; line-height: 20px; flex: none;">{{v.time}}</span>
+              </div>
+            </li>
+          </sc-for>
+        </ol>
+      </div>
+
+      <!-- Sessions -->
+      <div class="card" style="flex: 2 1 400px; min-width: 0; padding: 20px 24px;">
+        <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px;">
+          <h3 style="margin: 0; font-size: 16px; line-height: 26px; font-weight: 600; color: #0F2A5C;">เซสชันและประวัติการเข้าสู่ระบบ <span class="en" style="display: block;">Session &amp; Login History</span></h3>
+          <sc-if value="{{othersActive}}" hint-placeholder-val="{{true}}"><button class="btn btn-s btn-sm" onClick="{{logoutOthers}}"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"></path></svg>ออกจากเซสชันอื่น <span style="font-weight: 400;">· Log out other sessions</span></button></sc-if>
+          <sc-if value="{{othersOut}}" hint-placeholder-val="{{false}}"><span class="badge st-approved"><svg class="ic ic14" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5L20 7"></path></svg>ออกจากระบบอีก 2 เซสชันแล้ว</span></sc-if>
+        </div>
+        <div style="overflow-x: auto; margin-top: 12px; border: 1px solid #E2E8F0; border-radius: 8px;">
+          <table class="stbl">
+            <thead><tr><th scope="col">วัน/เวลา</th><th scope="col">อุปกรณ์ / เบราว์เซอร์</th><th scope="col">IP</th><th scope="col">ตำแหน่ง</th><th scope="col">สถานะ</th></tr></thead>
+            <tbody>
+              <sc-for list="{{sessions}}" as="s" hint-placeholder-count="5">
+                <tr class="{{s.rowCls}}">
+                  <td><span class="num" style="color: #0F2A5C; font-weight: 500;">{{s.date}}</span><br><span class="num">{{s.time}}</span></td>
+                  <td><span style="display: inline-flex; align-items: center; gap: 4px; color: #0F2A5C;"><svg class="ic ic14" viewBox="0 0 24 24" aria-hidden="true"><path d="{{s.icon}}"></path></svg>{{s.browser}}</span><br>{{s.os}}</td>
+                  <td class="num">{{s.ip}}</td>
+                  <td>{{s.loc}}</td>
+                  <td>
+                    <span class="badge {{s.stCls}}"><svg class="ic ic14" viewBox="0 0 24 24" aria-hidden="true"><path d="{{s.stIcon}}"></path></svg>{{s.st}}</span>
+                    <sc-if value="{{s.isCurrent}}" hint-placeholder-val="{{false}}"><div style="font-size: 11px; line-height: 14px; color: #1D4ED8; font-weight: 600; margin-top: 4px;">เซสชันปัจจุบัน · Current</div></sc-if>
+                    <sc-if value="{{s.isActive}}" hint-placeholder-val="{{false}}"><div style="font-size: 11px; line-height: 14px; color: #166534; margin-top: 4px;">● กำลังใช้งาน</div></sc-if>
+                    <sc-if value="{{s.hasNote}}" hint-placeholder-val="{{false}}"><div style="font-size: 11px; line-height: 14px; color: #991B1B; margin-top: 4px;">{{s.note}}</div></sc-if>
+                  </td>
+                </tr>
+              </sc-for>
+            </tbody>
+          </table>
+        </div>
+        <div style="margin-top: 10px; display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
+          <span style="font-size: 12px;">มีการเข้าสู่ระบบล้มเหลว <span class="num">2</span> ครั้งใน 7 วัน</span>
+          <a href="#" class="link">ดูประวัติทั้งหมด</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- 7. FOOTER -->
+  <footer style="margin-top: auto; border-top: 1px solid #E2E8F0; background: #FFFFFF; padding: 12px 32px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 24px; font-size: 12px; line-height: 16px;">
+    <span style="display: inline-flex; align-items: center; gap: 6px;"><svg class="ic ic14" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5"></path></svg>อัปเดตข้อมูลล่าสุด <span class="num">19:10</span> น. · ซิงก์สต็อกจาก HIS ทุก <span class="num">15</span> นาที</span>
+    <span style="display: inline-flex; align-items: center; gap: 12px;">
+      <span style="display: inline-flex; align-items: center; gap: 6px; color: {{agentStatusColor}}; font-weight: 500;"><span style="width: 8px; height: 8px; border-radius: 9999px; background: {{agentStatusColor}}; display: inline-block;"></span>Agent: {{agentStatus}}</span>
+      <sc-if value="{{isAdmin}}" hint-placeholder-val="{{false}}">
+        <span style="display: inline-flex; align-items: center; gap: 8px; padding-left: 12px; border-left: 1px solid #E2E8F0;">
+          <span>เปิด/ปิด Agent <span style="font-size: 11px; border: 1px solid #94A3B8; border-radius: 4px; padding: 0 4px;">Admin</span></span>
+          <button class="sw {{swCls}}" role="switch" aria-checked="{{agentOnStr}}" aria-label="เปิดหรือปิด Agent" onClick="{{toggleAgent}}"><span></span></button>
+        </span>
+      </sc-if>
+      <span>MedSupply Link v2.4 · เขตสุขภาพที่ 6</span>
+    </span>
+  </footer>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"role":{"editor":"enum","options":["Pharmacist","Officer","Admin"],"default":"Pharmacist"},"$preview":{"width":1440,"height":2240}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { alertTab: 'all', status: null, reqTab: 'in', agent: 'open', qA: 80, qB: 40, adjusted: false, tick: 0, othersOut: false, agentOn: true, released: {} };
+  }
+  componentDidMount() {
+    this._t = setInterval(() => this.setState({ tick: this.state.tick + 1 }), 1000);
+  }
+  componentWillUnmount() { clearInterval(this._t); }
+
+  fmt(s) {
+    if (s < 0) s = 0;
+    const p = (n) => (n < 10 ? '0' : '') + n;
+    return p(Math.floor(s / 3600)) + ':' + p(Math.floor((s % 3600) / 60)) + ':' + p(s % 60);
+  }
+
+  renderVals() {
+    const S = this.state;
+    const role = this.props.role ?? 'Pharmacist';
+    const isAdmin = role === 'Admin';
+    const C = 'M12 2a10 10 0 1 0 0 20a10 10 0 1 0 0-20z';
+    const P = {
+      hourglass: 'M5 22h14M5 2h14M17 22v-4.2a2 2 0 0 0-.6-1.4L12 12l-4.4 4.4a2 2 0 0 0-.6 1.4V22M7 2v4.2a2 2 0 0 0 .6 1.4L12 12l4.4-4.4a2 2 0 0 0 .6-1.4V2',
+      checkc: C + 'M8.5 12l2.5 2.5 4.5-5',
+      truck: 'M2 6h12v10H2zM14 9h4l4 4v3h-8M6 20a2 2 0 1 0 0-4a2 2 0 1 0 0 4zM18 20a2 2 0 1 0 0-4a2 2 0 1 0 0 4z',
+      pkg: 'M16 16l2 2 4-4M21 10V8a2 2 0 0 0-1-1.7l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.7l7 4a2 2 0 0 0 2 0l2-1.1M3.3 7L12 12l8.7-5M12 22V12',
+      xc: C + 'M15 9l-6 6M9 9l6 6',
+      clock: C + 'M12 6v6l4 2',
+      tri: 'M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01',
+      alertc: C + 'M12 8v4M12 16h.01',
+      minusc: C + 'M8 12h8',
+      siren: 'M7 18v-6a5 5 0 1 1 10 0v6M5 21h14v-3H5zM12 2v2M4.2 5.2l1.4 1.4M19.8 5.2l-1.4 1.4',
+      calx: 'M8 2v4M16 2v4M3 6h18v15H3zM3 10h18M10 14l4 4M14 14l-4 4',
+      inbox: 'M22 12h-6l-2 3h-4l-2-3H2M5.5 5.1L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.5-6.9A2 2 0 0 0 16.8 4H7.2a2 2 0 0 0-1.7 1.1z',
+      grid: 'M3 3h7v9H3zM14 3h7v5h-7zM14 12h7v9h-7zM3 16h7v5H3z',
+      box: 'M7.5 4.3l9 5.2M21 8a2 2 0 0 0-1-1.7l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.7l7 4a2 2 0 0 0 2 0l7-4a2 2 0 0 0 1-1.7zM3.3 7L12 12l8.7-5M12 22V12',
+      pin: 'M12 22s7-6.2 7-12a7 7 0 0 0-14 0c0 5.8 7 12 7 12zM12 12a2 2 0 1 0 0-4a2 2 0 1 0 0 4z',
+      chart: 'M3 3v18h18M7 16v-4M12 16V8M17 16v-7',
+      gear: 'M12 15a3 3 0 1 0 0-6a3 3 0 1 0 0 6zM19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z',
+      shield: 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10zM9 12l2 2 4-4',
+      hosp: 'M4 21V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v16M2 21h20M10 7h4M12 5v4M9 21v-4h6v4',
+      sparkle: 'M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9zM19 16l.7 1.8 1.8.7-1.8.7L19 21l-.7-1.8-1.8-.7 1.8-.7z',
+      edit: 'M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z',
+      check: 'M5 12l5 5L20 7',
+      x: 'M18 6L6 18M6 6l12 12',
+      login: 'M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3',
+      monitor: 'M3 4h18v12H3zM8 20h8M12 16v4',
+      phone: 'M7 2h10v20H7zM11 18h2',
+      tablet: 'M5 2h14v20H5zM11 18h2',
+    };
+
+    // ---------- sidebar ----------
+    const navDefs = [
+      ['ภาพรวม', 'Dashboard', P.grid, true, ''],
+      ['สต็อกยา', 'Stock', P.box, false, ''],
+      ['คำขอยืม', 'Requests', P.inbox, false, '5'],
+      ['การจัดส่ง', 'Shipments', P.truck, false, ''],
+      ['โรงพยาบาลใกล้เคียง', 'Nearby Hospitals', P.pin, false, ''],
+      ['ยาใกล้หมดอายุ', 'Near-Expiry Pool', P.calx, false, ''],
+      ['เหตุฉุกเฉิน', 'Emergency', P.siren, false, '1'],
+      ['รายงาน', 'Reports', P.chart, false, ''],
+      ['ตั้งค่า', 'Settings', P.gear, false, ''],
+      ['เซสชันและการเข้าสู่ระบบ', 'Session & Login History', P.shield, false, ''],
+    ];
+    const nav = navDefs.map((d) => ({ th: d[0], en: d[1], icon: d[2], cls: d[3] ? 'nav-on' : '', current: d[3] ? 'page' : 'false', hasBadge: d[4] !== '', badge: d[4], badgeLabel: d[4] + ' รายการรอดำเนินการ' }));
+
+    // ---------- alerts ----------
+    const reqLeft = this.fmt(2530 - S.tick);
+    const TYPES = { shortage: 'ขาดแคลน', expiry: 'ใกล้หมดอายุ', request: 'คำขอ', emergency: 'เหตุฉุกเฉิน' };
+    const SEV = { crit: ['sev-crit', 'วิกฤต'], urg: ['sev-urg', 'เร่งด่วน'], norm: ['sev-norm', 'ปกติ'] };
+    const VEDL = { V: 'Vital', E: 'Essential', D: 'Desirable' };
+    const allAlerts = [
+      { type: 'shortage', sev: 'crit', ved: 'V', icon: P.tri, drug: 'Insulin Glargine pen', msg: 'Insulin Glargine: stock เหลือใช้ 1.5 วัน – ต่ำกว่า Predict (ต้องการ 84 ด้าม / 7 วัน)', time: '10 นาทีที่แล้ว', action: 'สร้างคำขอ', primary: true },
+      { type: 'shortage', sev: 'crit', ved: 'V', icon: P.tri, drug: 'Adrenaline 1 mg/mL amp', msg: 'เหลือ 24 amp (ใช้ได้ 2 วัน) – ER ใช้เพิ่มขึ้น 40% สัปดาห์นี้ · คำขอ #REQ-1050 กำลังจัดส่ง', time: '25 นาทีที่แล้ว', action: 'ดูรายละเอียด' },
+      { type: 'emergency', sev: 'crit', ved: 'V', icon: P.siren, drug: 'Tranexamic acid 500 mg inj', msg: 'เหตุฉุกเฉิน: อุบัติเหตุหมู่ ถ.เทพารักษ์ กม.12 – คาดใช้เพิ่ม 60 amp ใน 24 ชม.', time: '42 นาทีที่แล้ว', action: 'ดูรายละเอียด' },
+      { type: 'request', sev: 'urg', ved: 'E', icon: P.inbox, drug: 'Amlodipine 5 mg tab', msg: 'คำขอ #REQ-1047 จาก รพ.บางบ่อ (500 tab) รอคุณอนุมัติ – เหลือ ' + reqLeft, time: '1 ชม.ที่แล้ว', action: 'พิจารณา', primary: true },
+      { type: 'expiry', sev: 'urg', ved: 'E', icon: P.calx, drug: 'Metformin 500 mg tab', msg: 'Lot MF2405 · 3,000 tab หมดอายุใน 45 วัน – มี รพ. 2 แห่งต้องการใช้', time: 'วันนี้ 08:00', action: 'ดูรายละเอียด' },
+      { type: 'expiry', sev: 'norm', ved: 'D', icon: P.calx, drug: 'Silver sulfadiazine 1% cream', msg: 'Lot SS2311 · 40 หลอด หมดอายุใน 60 วัน', time: 'วันนี้ 08:00', action: 'ดูรายละเอียด' },
+    ];
+    const tabDefs = [['all', 'ทั้งหมด'], ['shortage', 'ขาดแคลน'], ['expiry', 'ใกล้หมดอายุ'], ['request', 'คำขอ'], ['emergency', 'เหตุฉุกเฉิน']];
+    const alertTabs = tabDefs.map(([k, l]) => ({
+      label: l,
+      count: k === 'all' ? allAlerts.length : allAlerts.filter((a) => a.type === k).length,
+      cls: S.alertTab === k ? 'tab-on' : '',
+      sel: S.alertTab === k ? 'true' : 'false',
+      pick: () => this.setState({ alertTab: k }),
+    }));
+    const alerts = allAlerts
+      .filter((a) => S.alertTab === 'all' || a.type === S.alertTab)
+      .map((a) => ({
+        ...a,
+        sevCls: SEV[a.sev][0],
+        sevLabel: 'ระดับ' + SEV[a.sev][1],
+        vedLabel: VEDL[a.ved],
+        typeLabel: TYPES[a.type],
+        msgColor: a.sev === 'crit' ? '#B91C1C' : '#475569',
+        btnCls: a.primary ? 'btn-p' : 'btn-s',
+      }));
+    const showAgent = S.alertTab === 'all' || S.alertTab === 'shortage';
+
+    // ---------- requests ----------
+    const ST = {
+      pending: ['รอดำเนินการ', 'Pending', 'st-pending', P.hourglass],
+      approved: ['อนุมัติแล้ว', 'Approved', 'st-approved', P.checkc],
+      transit: ['กำลังจัดส่ง', 'In Transit', 'st-transit', P.truck],
+      delivered: ['ส่งถึงแล้ว', 'Delivered', 'st-delivered', P.pkg],
+      rejected: ['ปฏิเสธ', 'Rejected', 'st-rejected', P.xc],
+      timeout: ['หมดเวลา', 'Timeout', 'st-timeout', P.clock],
+    };
+    const UG = {
+      critical: ['เร่งด่วนมาก', 'ug-critical', P.tri],
+      urgent: ['เร่งด่วน', 'ug-urgent', P.alertc],
+      normal: ['ปกติ', 'ug-normal', P.minusc],
+    };
+    const ME = 'รพ.สมุทรปราการ';
+    const incoming = [
+      { id: 'REQ-1051', drug: 'Insulin Glargine pen', qty: '40', unit: 'pen', from: 'รพ.บางบ่อ', to: ME, ug: 'critical', st: 'pending', secs: 1125, action: 'ติดตาม' },
+      { id: 'REQ-1050', drug: 'Adrenaline 1 mg/mL amp', qty: '20', unit: 'amp', from: 'รพ.บางพลี', to: ME, ug: 'critical', st: 'transit', step: 2, note: 'รถ สป-04 · ถึงประมาณ 19:40 น.', action: 'ติดตาม' },
+      { id: 'REQ-1049', drug: 'Tranexamic acid 500 mg inj', qty: '60', unit: 'amp', from: 'รพ.พระสมุทรเจดีย์ฯ', to: ME, ug: 'urgent', st: 'pending', secs: 4532, action: 'ติดตาม' },
+      { id: 'REQ-1046', drug: 'Adrenaline 1 mg/mL amp', qty: '10', unit: 'amp', from: 'รพ.บางเสาธง', to: ME, ug: 'critical', st: 'approved', note: 'รอรถรับของ 19:30 น.', action: 'ดู' },
+      { id: 'REQ-1042', drug: 'Amlodipine 5 mg tab', qty: '1,000', unit: 'tab', from: 'รพ.บางพลี', to: ME, ug: 'normal', st: 'timeout', note: 'ไม่มีการตอบกลับใน 2 ชม. (18:47)', action: 'ส่งใหม่' },
+      { id: 'REQ-1039', drug: 'Insulin Glargine pen', qty: '30', unit: 'pen', from: 'รพ.พระสมุทรเจดีย์ฯ', to: ME, ug: 'urgent', st: 'rejected', note: 'เหตุผล: สต็อกผู้ให้ยืมต่ำกว่าเกณฑ์', action: 'ดูเหตุผล' },
+      { id: 'REQ-1043', drug: 'Insulin Glargine pen', qty: '20', unit: 'pen', from: 'รพ.บางพลี', to: ME, ug: 'urgent', st: 'delivered', note: 'รับของแล้ว 12 ต.ค. 16:20', action: 'ดู' },
+    ];
+    const lending = [
+      { id: 'REQ-1047', drug: 'Amlodipine 5 mg tab', qty: '500', unit: 'tab', from: ME, to: 'รพ.บางบ่อ', ug: 'normal', st: 'pending', secs: 2530, action: 'พิจารณา', primary: true },
+      { id: 'REQ-1052', drug: 'Silver sulfadiazine 1% cream', qty: '15', unit: 'หลอด', from: ME, to: 'รพ.บางเสาธง', ug: 'normal', st: 'pending', secs: 6485, action: 'พิจารณา', primary: true },
+      { id: 'REQ-1054', drug: 'Metformin 500 mg tab', qty: '1,000', unit: 'tab', from: ME, to: 'รพ.พระสมุทรเจดีย์ฯ', ug: 'urgent', st: 'pending', secs: 9010, action: 'พิจารณา', primary: true },
+      { id: 'REQ-1045', drug: 'Amlodipine 5 mg tab', qty: '300', unit: 'tab', from: ME, to: 'รพ.บางบ่อ', ug: 'normal', st: 'transit', step: 2, note: 'ถึงประมาณ 20:05 น.', action: 'ติดตาม' },
+      { id: 'REQ-1044', drug: 'Metformin 500 mg tab', qty: '2,000', unit: 'tab', from: ME, to: 'รพ.บางพลี', ug: 'normal', st: 'transit', step: 1, note: 'ขึ้นรถแล้ว 19:05 น.', action: 'ติดตาม' },
+      { id: 'REQ-1048', drug: 'Metformin 500 mg tab', qty: '500', unit: 'tab', from: ME, to: 'รพ.บางเสาธง', ug: 'normal', st: 'approved', note: 'อนุมัติโดยคุณ 18:52 · รอขึ้นรถ', action: 'ดู' },
+      { id: 'REQ-1040', drug: 'Silver sulfadiazine 1% cream', qty: '10', unit: 'หลอด', from: ME, to: 'รพ.บางพลี', ug: 'normal', st: 'delivered', note: 'ปลายทางยืนยันรับ 16:40', action: 'ดู' },
+    ];
+    const list = S.reqTab === 'in' ? incoming : lending;
+    const stepLabels = ['ขึ้นรถแล้ว', 'กำลังจัดส่ง', 'ส่งถึงแล้ว'];
+    const mkTile = (k) => ({
+      key: k, th: ST[k][0], en: ST[k][1], icon: ST[k][3],
+      count: list.filter((r) => r.st === k).length,
+      onCls: S.status === k ? 'tile-on tab-on' : '',
+      pressed: S.status === k ? 'true' : 'false',
+      pick: () => this.setState({ status: S.status === k ? null : k }),
+    });
+    const flowTiles = ['pending', 'approved', 'transit', 'delivered'].map(mkTile);
+    const failTiles = ['rejected', 'timeout'].map((k) => {
+      const t = mkTile(k);
+      t.onCls = S.status === k ? 'tab-on' : '';
+      return t;
+    });
+    const rows = list
+      .filter((r) => !S.status || r.st === S.status)
+      .map((r) => {
+        const left = (r.secs || 0) - S.tick;
+        return {
+          ...r,
+          ugLabel: UG[r.ug][0], ugCls: UG[r.ug][1], ugIcon: UG[r.ug][2],
+          stLabel: ST[r.st][0], stEn: ST[r.st][1], stCls: ST[r.st][2], stIcon: ST[r.st][3],
+          isPending: r.st === 'pending', isTransit: r.st === 'transit', isOther: r.st !== 'pending' && r.st !== 'transit',
+          timer: this.fmt(left),
+          timerCls: left < 1800 ? 'timer-crit' : 'timer-warn',
+          steps: stepLabels.map((l, i) => ({ label: l, seg: i < (r.step || 0) - 1 ? 'seg-done' : i === (r.step || 0) - 1 ? 'seg-cur' : 'seg-todo', lbl: i < (r.step || 0) - 1 ? 'sl-done' : i === (r.step || 0) - 1 ? 'sl-cur' : 'sl-todo' })),
+          btnCls: r.primary ? 'btn-p' : 'btn-g',
+          bg: r.st === 'pending' && left < 1800 ? '#FFFBFB' : 'transparent',
+        };
+      });
+    const reqTabs = [['in', 'คำขอที่ฉันขอ', 'Incoming needs'], ['out', 'คำขอที่ขอจากเรา', 'Lending requests']].map(([k, th, en]) => ({
+      th, en,
+      sel: S.reqTab === k ? 'true' : 'false',
+      bg: S.reqTab === k ? '#FFFFFF' : 'transparent',
+      fg: S.reqTab === k ? '#0F2A5C' : '#475569',
+      fw: S.reqTab === k ? '600' : '500',
+      shadow: S.reqTab === k ? '0 1px 2px rgba(15,42,92,.08)' : 'none',
+      pick: () => this.setState({ reqTab: k, status: null }),
+    }));
+
+    // ---------- widgets ----------
+    const nearby = [
+      { n: '1', name: 'รพ.พระสมุทรเจดีย์สวาทยานนท์', km: '7.2', min: '20', lend: '5' },
+      { n: '2', name: 'รพ.บางพลี', km: '15.4', min: '25', lend: '12' },
+      { n: '3', name: 'รพ.บางเสาธง', km: '21.0', min: '30', lend: '3' },
+      { n: '4', name: 'รพ.บางบ่อ', km: '28.6', min: '38', lend: '8' },
+    ];
+    const work = [
+      { cls: 'av-good', icon: P.check, text: 'อนุมัติให้ยืม #REQ-1048 · Metformin 500 mg tab 500 tab → รพ.บางเสาธง', time: '18:52', sub: 'คำขอยืม' },
+      { cls: 'av-edit', icon: P.edit, text: 'ปรับจำนวน #REQ-1050 Adrenaline จาก 30 → 20 amp (Agent เสนอ 30)', time: '17:30', sub: 'ปรับคำแนะนำ Agent' },
+      { cls: 'av-ok', icon: P.pkg, text: 'ยืนยันปล่อย Lot SS2309 · Silver sulfadiazine 15 หลอด เข้าคลังกลาง', time: '15:05', sub: 'Near-Expiry Pool' },
+      { cls: 'av-bad', icon: P.x, text: 'ปฏิเสธคำขอ #REQ-1041 จาก รพ.บางบ่อ (Adrenaline) – สต็อก V ต่ำกว่าเกณฑ์', time: '11:20', sub: 'คำขอยืม' },
+      { cls: 'av-sys', icon: P.login, text: 'เข้าสู่ระบบ · Chrome / Windows 11', time: '08:31', sub: 'เซสชัน' },
+    ];
+    const expDefs = [
+      { k: 'MF2405', drug: 'Metformin 500 mg tab', ved: 'E', lot: 'MF2405', qty: '3,000 tab', where: 'คลังยาหลัก', days: '45', exp: '27 พ.ย. 2569', value: '2,400' },
+      { k: 'SS2311', drug: 'Silver sulfadiazine 1% cream', ved: 'D', lot: 'SS2311', qty: '40 หลอด', where: 'คลังยา OPD', days: '60', exp: '12 ธ.ค. 2569', value: '3,200' },
+      { k: 'AM2402', drug: 'Amlodipine 5 mg tab', ved: 'E', lot: 'AM2402', qty: '1,200 tab', where: 'คลังยาหลัก', days: '74', exp: '26 ธ.ค. 2569', value: '600' },
+    ];
+    const expiry = expDefs.map((e) => ({
+      ...e,
+      dayCls: Number(e.days) <= 45 ? 'st-pending' : 'st-timeout',
+      released: !!S.released[e.k],
+      notReleased: !S.released[e.k],
+      release: () => this.setState({ released: { ...S.released, [e.k]: true } }),
+    }));
+    const activity = [
+      { cls: 'av-truck', icon: P.truck, who: 'รพ.บางพลี', text: 'ส่ง Adrenaline 1 mg/mL amp 20 amp ขึ้นรถ สป-04 แล้ว (#REQ-1050)', time: '19:05', hasTag: true, tag: 'กำลังจัดส่ง', tagCls: 'st-transit' },
+      { cls: 'av-hosp', icon: P.hosp, who: 'รพ.บางพลี', text: 'ยืนยันให้ยืม Adrenaline 20 amp', time: '18:58', hasTag: true, tag: 'อนุมัติแล้ว', tagCls: 'st-approved' },
+      { cls: 'av-sys', icon: P.clock, who: 'ระบบ:', text: 'คำขอ #1042 หมดเวลา (Timeout) – ไม่มีการตอบกลับภายใน 2 ชม.', time: '18:47', hasTag: true, tag: 'หมดเวลา', tagCls: 'st-timeout' },
+      { cls: 'av-agent', icon: P.sparkle, who: 'Agent', text: 'พยากรณ์ Insulin Glargine pen ต่ำกว่าเกณฑ์ และเสนอคำแนะนำการยืม (รอเจ้าหน้าที่อนุมัติ)', time: '18:30', hasTag: false },
+      { cls: 'av-hosp', icon: P.hosp, who: 'รพ.บางบ่อ', text: 'ส่งคำขอยืม Amlodipine 5 mg tab 500 tab (#REQ-1047)', time: '18:05', hasTag: true, tag: 'รอดำเนินการ', tagCls: 'st-pending' },
+      { cls: 'av-ok', icon: P.pkg, who: 'รพ.บางพลี', text: 'ยืนยันรับ Silver sulfadiazine 1% cream 10 หลอด (#REQ-1040)', time: '16:40', hasTag: true, tag: 'ส่งถึงแล้ว', tagCls: 'st-delivered' },
+    ];
+    const OK = ['Success', 'st-approved', P.checkc];
+    const BAD = ['Failed', 'st-rejected', P.xc];
+    const sessions = [
+      { date: '13 ต.ค. 69', time: '08:31', icon: P.monitor, browser: 'Chrome 129', os: 'Windows 11', ip: '10.24.6.18', loc: 'สมุทรปราการ (เครือข่าย รพ.)', s: OK, isCurrent: true, isActive: false },
+      { date: '13 ต.ค. 69', time: '07:12', icon: P.tablet, browser: 'Safari', os: 'iPadOS 18', ip: '10.24.7.40', loc: 'สมุทรปราการ (เครือข่าย รพ.)', s: OK, isActive: !S.othersOut },
+      { date: '12 ต.ค. 69', time: '21:47', icon: P.phone, browser: 'Chrome', os: 'Android 14', ip: '110.168.42.7', loc: 'บางพลี, สมุทรปราการ', s: OK, isActive: !S.othersOut },
+      { date: '12 ต.ค. 69', time: '21:45', icon: P.phone, browser: 'Chrome', os: 'Android 14', ip: '110.168.42.7', loc: 'บางพลี, สมุทรปราการ', s: BAD, note: 'รหัสผ่านไม่ถูกต้อง' },
+      { date: '11 ต.ค. 69', time: '02:13', icon: P.monitor, browser: 'Firefox 130', os: 'Linux', ip: '185.220.101.4', loc: 'ไม่ทราบ (ต่างประเทศ)', s: BAD, note: 'ตำแหน่งผิดปกติ · ถูกบล็อก' },
+    ].map((x) => ({ ...x, st: x.s[0], stCls: x.s[1], stIcon: x.s[2], rowCls: x.isCurrent ? 'cur-row' : '', isCurrent: !!x.isCurrent, isActive: !!x.isActive, hasNote: !!x.note }));
+
+    const A = S.agent;
+    const statusName = S.status ? ST[S.status][0] : '';
+
+    return {
+      nav, isAdmin, role,
+      roleTh: role === 'Admin' ? 'ผู้ดูแลระบบ (Admin)' : role === 'Officer' ? 'เจ้าหน้าที่คลังเวชภัณฑ์ (Officer)' : 'เภสัชกร (Pharmacist)',
+      userName: 'ภก.ณัฐวุฒิ ศรีสุข',
+      scopeLabel: isAdmin ? 'Viewing as: Admin – All hospitals' : 'Viewing as: รพ.สมุทรปราการ',
+      hospitalLabel: isAdmin ? 'ทุกโรงพยาบาล' : 'โรงพยาบาลสมุทรปราการ',
+      alertTabs, alerts, noAlerts: alerts.length === 0, showAgent,
+      qA: S.qA, qB: S.qB, agentTotal: S.qA + S.qB, adjusted: S.adjusted,
+      agentOpen: A === 'open', agentAdjusting: A === 'adjust', agentConfirming: A === 'confirm', agentSent: A === 'sent', agentRejected: A === 'rejected',
+      agentNotSent: A !== 'sent' && A !== 'rejected',
+      agentApprove: () => this.setState({ agent: 'confirm' }),
+      agentAdjust: () => this.setState({ agent: 'adjust' }),
+      agentReject: () => this.setState({ agent: 'rejected' }),
+      agentBack: () => this.setState({ agent: 'open' }),
+      agentSend: () => this.setState({ agent: 'sent' }),
+      agentSaveAdjust: () => this.setState({ agent: 'open', adjusted: S.qA !== 80 || S.qB !== 40 }),
+      incA: () => this.setState({ qA: Math.min(110, S.qA + 10) }),
+      decA: () => this.setState({ qA: Math.max(0, S.qA - 10) }),
+      incB: () => this.setState({ qB: Math.min(60, S.qB + 10) }),
+      decB: () => this.setState({ qB: Math.max(0, S.qB - 10) }),
+      reqTabs, flowTiles, failTiles, rows, noRows: rows.length === 0,
+      hasFilter: !!S.status, filterLabel: statusName,
+      clearFilter: () => this.setState({ status: null }),
+      nearby, work, expiry, activity, sessions,
+      othersOut: S.othersOut, othersActive: !S.othersOut,
+      logoutOthers: () => this.setState({ othersOut: true }),
+      agentStatus: S.agentOn ? 'Online' : 'Paused (ปิดโดย Admin)',
+      agentStatusColor: S.agentOn ? '#166534' : '#475569',
+      swCls: S.agentOn ? 'sw-on' : 'sw-off',
+      agentOnStr: S.agentOn ? 'true' : 'false',
+      toggleAgent: () => this.setState({ agentOn: !S.agentOn }),
+    };
+  }
+}
+</script>
+</body>
+</html>
