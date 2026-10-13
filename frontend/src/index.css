@@ -628,7 +628,7 @@ body.nav-open {
   height: 100vh;
   height: 100dvh;
   overflow-y: auto;
-  transition: width 0.18s ease, transform 0.22s ease;
+  transition: width 0.22s cubic-bezier(0.4, 0, 0.2, 1), transform 0.22s ease;
   z-index: 80;
 }
 .side-brand {
@@ -637,6 +637,15 @@ body.nav-open {
   justify-content: space-between;
   gap: 8px;
   padding: 4px 6px 4px 8px;
+}
+.side-brand-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.side-collapse .ic {
+  transition: transform 0.22s ease;
 }
 .side-brand-name {
   font-size: 16px;
@@ -679,24 +688,64 @@ body.nav-open {
   padding: 0;
   cursor: pointer;
 }
-/* Icon-only rail: the collapsed state applies on desktop only */
+/* Icon-only rail: the collapsed state applies on desktop only.
+   Labels shrink + fade (max-width/opacity) instead of display:none, so
+   expanding/collapsing animates instead of snapping. In the rail the brand
+   stacks vertically so the logo and the toggle never overlap. */
 @media (min-width: 1024px) {
+  .side-brand-text,
+  .nav-text,
+  .navbadge,
+  .sidefoot {
+    max-width: 240px;
+    overflow: hidden;
+    transition: max-width 0.22s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.16s ease;
+  }
+  .side-brand-text .side-brand-name,
+  .side-brand-text .en,
+  .nav-text span {
+    white-space: nowrap;
+  }
   .shell-collapsed .side {
     width: 64px;
   }
   .shell-collapsed .side-brand {
+    flex-direction: column;
     justify-content: center;
-    padding: 4px;
+    gap: 6px;
+    padding: 4px 0;
+  }
+  .shell-collapsed .side-brand-main {
+    gap: 0;
+  }
+  .shell-collapsed .side-collapse {
+    position: relative;
+    z-index: 2; /* toggle stays on top if the logo ever meets it */
   }
   .shell-collapsed .side-brand-text,
   .shell-collapsed .nav-text,
   .shell-collapsed .navbadge,
   .shell-collapsed .sidefoot {
-    display: none;
+    max-width: 0;
+    opacity: 0;
   }
   .shell-collapsed .navlink {
+    gap: 0;
     justify-content: center;
     padding: 6px;
+  }
+  .shell-collapsed .side-collapse .ic {
+    transform: rotate(180deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .side,
+  .side-collapse .ic,
+  .side-brand-text,
+  .nav-text,
+  .navbadge,
+  .sidefoot {
+    transition: none;
   }
 }
 

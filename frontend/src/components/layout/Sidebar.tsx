@@ -14,7 +14,7 @@ export function Sidebar({ collapsed, onToggle, onNavigate }: SidebarProps) {
   return (
     <aside className="side" id="app-sidebar" data-part="sidebar" aria-label="เมนูหลัก">
       <div className="side-brand">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+        <div className="side-brand-main">
           <span style={{ width: 32, height: 32, borderRadius: 8, background: '#1D4ED8', color: '#FFFFFF', display: 'grid', placeItems: 'center', flex: 'none' }}>
             <Icon name="plus" style={{ strokeWidth: 2.5 }} />
           </span>
