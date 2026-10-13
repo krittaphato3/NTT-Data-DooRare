@@ -41,7 +41,7 @@ summary: Role-based frontend restructure and full responsive adaptation of dashb
 - Components now carry `data-part="…"` attributes (12 of them) — these are the capture hooks; keep them when editing.
 - Root `package.json` + lock (tooling only: `npm run capture`, `capture:dev`, `ai:index`, `ai:session`); frontend Docker build untouched.
 - Deleted `tmp-compare/` (8 tracked PNGs from the previous session) — superseded by `artifacts/`; deletion left uncommitted.
-- Generated captures are gitignored (`artifacts/*` except `artifacts/README.md`), along with scratch `tmp-*/` and local `.freebuff/` tooling.
+- Generated captures committed as a review snapshot on request (42 images + gallery, ~4.7 MB); scratch `tmp-*/` and local `.freebuff/` tooling stay ignored.
 - Verified: gallery loads all 42 images (HTTP 200), frontend build exit 0, Docker rebuilt, :8080 HTTP 200.
 
 ## Follow-up 2026-10-14 (skills triage)
@@ -52,8 +52,14 @@ summary: Role-based frontend restructure and full responsive adaptation of dashb
 - `scripts/ai-index.mjs`: skills internals excluded from the index while keeping `skills/README.md`, so INDEX stayed at 14 files instead of 49.
 - Removals were untracked files (no git history to recover from); the full source collection remains in the account skills library.
 
+## Follow-up 2026-10-14 (collapsed rail + animation)
+
+- Collapsed rail no longer overlaps the logo with the toggle: the brand stacks vertically in the rail and the toggle keeps `z-index: 2`; its chevron rotates 180 degrees when collapsed.
+- Expand/collapse animates: sidebar width 0.22s cubic-bezier, labels shrink/fade via max-width+opacity instead of `display: none`, reduced-motion fallback.
+- Environment note: a machine-global `commit-msg` hook (`core.hooksPath`) strips Codebuff attribution lines from commit messages by design — respect it, do not use `--no-verify`.
+
 ## Next steps
 
-- Optional frozen review snapshot: until then the capture output stays gitignored; `git add -f artifacts/screenshots` pins a visual baseline if wanted.
+- Re-run `npm run capture` and re-commit `artifacts/` when the UI changes; the committed capture is the current review snapshot.
 - Visual pixel review vs mockup using the new gallery.
 - Wire real API replacing mock data; add remaining role pages (Stock, Requests, …) on the new structure.

@@ -2,7 +2,7 @@
 
 Goal: Pharmacist Hospital Dashboard frontend (React+TS, Docker, npm) — mockup-faithful, now role-structured and responsive to phones/tablets.
 
-Status: Reverted to remote `2e1313b` and continued from it. Restructured to `src/roles/pharmacist/{pages,components,data}` + shared `components/{common,layout}` and `data/{session,navigation}`. Responsive pass done (drawer nav <1024, phone top bar grid <768, 2-col KPI/tiles <640). Build passes; Docker rebuilt; :8080 HTTP 200.
+Status: Reverted to remote `2e1313b` and continued from it. Restructured to `src/roles/pharmacist/{pages,components,data}` + shared `components/{common,layout}` and `data/{session,navigation}`. Responsive pass done (drawer nav <1024, phone top bar grid <768, 2-col KPI/tiles <640). Build passes; Docker rebuilt; :8080 HTTP 200. Collapsed rail overlap fixed and expand/collapse animated; UI capture snapshot committed to `artifacts/`.
 
 Blockers: Browser-panel screenshots were unavailable ("webview not composited") — verified via DOM geometry; a visual pass is still worth doing.
 

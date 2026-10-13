@@ -31,4 +31,4 @@ phone 390×844 · small phone 360×800.
   keep those when editing components or the capture skips them.
 - The script drives the system Microsoft Edge / Google Chrome through `playwright-core`
   (no browser download); override with `--channel` or `--executable`.
-- Re-runs overwrite `screenshots/`. The generated output (images, `index.html`, `manifest.json`) is gitignored — force-add it (`git add -f artifacts/screenshots`) only when you want a frozen review snapshot committed.
+- Re-runs overwrite `screenshots/`; re-commit the refreshed images when you want a new frozen review snapshot.
