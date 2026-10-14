@@ -29,3 +29,10 @@ Relevant files: `frontend/src/App.tsx`, `frontend/src/roles/pharmacist/pages/Das
 - Zero emojis used; standard SVG icons and `.badge` tokens used throughout.
 - Docker rebuilt and serving on port 8080.
 - Next: integration with live backend events and WebSocket incident updates.
+
+## UI-02 Stock alert queue (branch feature/notification)
+
+- UI-02 built UI-only (pharmacist role); open `/?page=alerts`; sidebar "แจ้งเตือนสต็อก" links there. See `sessions/2026-10-14-stock-alert-queue-ui02.md`.
+- Files: `frontend/src/roles/pharmacist/{data/stockAlerts.ts,components/StockAlert*.tsx,pages/StockAlertsPage.tsx}`, `frontend/src/index.css` (`.sa-*`), `frontend/src/App.tsx`.
+- Verify: `cd frontend && npm run build`; page checks via `vite preview` + Playwright.
+- Next: wire `GET /alerts` (API-F1a-005) + ack/snooze POSTs, "สร้างคำขอ" → API-F1b-001; then UI-03 / UI-07.

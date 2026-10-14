@@ -84,6 +84,13 @@
     "date": "2026-10-14"
   },
   {
+    "path": "sessions\\2026-10-14-stock-alert-queue-ui02.md",
+    "title": "Stock alert queue UI (UI-02)",
+    "summary": "UI-only Stock alert queue page (pharmacist role) at ?page=alerts",
+    "tags": "session, frontend, alerts, forecast, pharmacist",
+    "date": "2026-10-14"
+  },
+  {
     "path": "sessions\\2026-10-14-transport-tracking-ui.md",
     "title": "Transport tracking UI (UI-14)",
     "summary": "UI-only Transport tracking page (warehouse role) on feature/dashboard-transport-tracking",
