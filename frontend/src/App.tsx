@@ -4,7 +4,6 @@ import { Sidebar } from './components/layout/Sidebar';
 import { TopBar } from './components/layout/TopBar';
 import { getNavForRole } from './data/navigation';
 import type { ShellNavEntry } from './data/navigation';
-import { USER } from './data/session';
 import { ALERTS } from './roles/pharmacist/data/dashboard';
 import { BorrowRequestsPage } from './roles/pharmacist/pages/BorrowRequestsPage';
 import { DashboardPage } from './roles/pharmacist/pages/DashboardPage';
@@ -13,9 +12,6 @@ import { TransportTrackingPage } from './roles/warehouse/pages/TransportTracking
 import type { TransportRole } from './roles/warehouse/pages/TransportTrackingPage';
 
 type Page = 'dashboard' | 'transport' | 'requests';
-
-/** Pharmacist on the ops-style top bar (UI-05 mockup: scope pill, agent pill, TH/EN). */
-const PHARMACIST_OPS_USER = { ...USER, scopeLabel: 'เห็นเฉพาะข้อมูล รพ.สมุทรปราการ' };
 
 /**
  * No router yet: `?page=transport` shows Transport tracking (UI-14),
@@ -68,10 +64,9 @@ export default function App() {
   const [route] = useState(initialRoute);
   const onTransport = route.page === 'transport';
   const onRequests = route.page === 'requests';
-  const warehouse = onTransport && route.transportRole === 'WAREHOUSE_OFFICER';
-  // Warehouse transport and UI-05 use the ops top bar (no footer); the dashboard keeps the standard shell.
-  const ops = warehouse || onRequests;
-  const navRole = warehouse ? 'WAREHOUSE_OFFICER' : 'PHARMACIST';
+  // The warehouse officer gets the ops top bar; pharmacist pages keep the standard shell.
+  const ops = onTransport && route.transportRole === 'WAREHOUSE_OFFICER';
+  const navRole = ops ? 'WAREHOUSE_OFFICER' : 'PHARMACIST';
   const navItems = withLinks(getNavForRole(navRole, onTransport ? 'tr' : onRequests ? 'req' : 'dash'), navRole);
 
   // Mobile drawer: lock page scroll, close on Escape and when resizing to desktop.
@@ -112,9 +107,9 @@ export default function App() {
           isAdmin={isAdmin}
           navOpen={navOpen}
           onMenu={() => setNavOpen((v) => !v)}
-          notifications={warehouse ? WAREHOUSE_NOTIFICATIONS : ALERTS.map((a) => ({ drug: a.drug, time: a.time }))}
+          notifications={ops ? WAREHOUSE_NOTIFICATIONS : ALERTS.map((a) => ({ drug: a.drug, time: a.time }))}
           variant={ops ? 'ops' : 'pharmacist'}
-          user={warehouse ? WAREHOUSE_USER : onRequests ? PHARMACIST_OPS_USER : undefined}
+          user={ops ? WAREHOUSE_USER : undefined}
         />
         <main className="mainpad">
           {onTransport ? (

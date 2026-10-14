@@ -5,7 +5,7 @@ import { BorrowDrawer } from '../components/BorrowDrawer';
 import type { Decision } from '../components/BorrowDrawer';
 import { BorrowStatusTiles } from '../components/BorrowStatusTiles';
 import { BorrowTable } from '../components/BorrowTable';
-import { BORROW_REQUESTS, GROUPS, groupOf, LENDER_QUEUE } from '../data/borrow';
+import { BORROW_REQUESTS, GROUPS, groupOf } from '../data/borrow';
 import type { BorrowContext, BorrowRequest, StatusGroup, Urgency } from '../data/borrow';
 import '../borrow.css';
 
@@ -45,7 +45,6 @@ export function BorrowRequestsPage() {
   const all = useMemo(() => BORROW_REQUESTS.map((r) => withDecision(r, decision[r.id])), [decision]);
   const inPeriod = all.filter((r) => r.daysAgo <= days);
   const counts = Object.fromEntries(GROUPS.map((g) => [g.id, inPeriod.filter((r) => groupOf(r.status) === g.id).length])) as Record<StatusGroup, number>;
-  const pendingAll = all.filter((r) => groupOf(r.status) === 'pending').length;
 
   const needle = q.trim().toLowerCase();
   const rows = inPeriod
@@ -82,38 +81,6 @@ export function BorrowRequestsPage() {
             สร้างคำขอยืมเอง <span style={{ fontWeight: 400 }}>UI-10</span>
           </button>
         </div>
-      </section>
-
-      {/* UI-06 (lender queue) is not built yet, so its tab is inert for now. */}
-      <section aria-label="มุมมองคำขอยืม" className="dirs">
-        <button className="dir dir-on" aria-pressed="true">
-          <span className="dir-icon" style={{ background: '#EFF6FF', color: '#1D4ED8' }}>
-            <Icon name="inArrow" className="ic20" />
-          </span>
-          <span style={{ flex: 1, minWidth: 0 }}>
-            <span className="dir-th">คำขอของเรา</span>
-            <span className="dir-en">เราเป็นผู้ยืม · UI-05</span>
-          </span>
-          <span className="num dir-count">{all.length}</span>
-          {pendingAll > 0 && (
-            <span className="badge t-amber" style={{ fontWeight: 600 }}>
-              รออนุมัติ {pendingAll}
-            </span>
-          )}
-        </button>
-        <button className="dir" aria-pressed="false" title="UI-06 คิวตอบคำขอ (ยังไม่เปิดในเวอร์ชันนี้)">
-          <span className="dir-icon" style={{ background: '#FFF7ED', color: '#9A3412' }}>
-            <Icon name="hand" className="ic20" />
-          </span>
-          <span style={{ flex: 1, minWidth: 0 }}>
-            <span className="dir-th">คิวตอบคำขอ</span>
-            <span className="dir-en">เราเป็นผู้ให้ยืม · UI-06</span>
-          </span>
-          <span className="num dir-count">{LENDER_QUEUE.total}</span>
-          <span className="badge t-amber" style={{ fontWeight: 600 }}>
-            รอเราตอบ {LENDER_QUEUE.toAnswer}
-          </span>
-        </button>
       </section>
 
       <section className="card" style={{ padding: 0 }}>

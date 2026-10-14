@@ -170,9 +170,6 @@ export const BORROW_REQUESTS: BorrowRequest[] = [
   },
 ];
 
-/** UI-06 tab summary (we are the lender) — that screen is not built yet. */
-export const LENDER_QUEUE = { total: 6, toAnswer: 2 };
-
 export const GROUPS: { id: StatusGroup; label: string; codes: string; tone: Tone; icon: IconName }[] = [
   { id: 'pending', label: 'รออนุมัติ', codes: 'PENDING_APPROVAL · DRAFT', tone: 'amber', icon: 'hourglass' },
   { id: 'progress', label: 'กำลังขอยืม', codes: 'APPROVED · IN_PROGRESS · PARTIALLY_FULFILLED', tone: 'blue', icon: 'send' },
