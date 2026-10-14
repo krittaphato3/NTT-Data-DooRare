@@ -11,7 +11,10 @@ Next action: Review preview at http://127.0.0.1:5173 (vite dev) or http://localh
 Relevant files: `frontend/src/App.tsx`, `frontend/src/roles/pharmacist/pages/DashboardPage.tsx`, `frontend/src/index.css`, `frontend/src/README.md`
 
 
-## Branch feature/dashboard-transport-tracking
+## Branch feature/dashboard-Incident
 
-- UI-14 Transport tracking (warehouse role) built UI-only; open `/?page=transport`. See `sessions/2026-10-14-transport-tracking-ui.md`.
-- Next: driver PWA states, IndexedDB queue, API wiring.
+- UI-11 – UI-13 Incident Console (`?page=incident`) built matching 4 mockup screens.
+- All 4 tabs implemented: แผนเวชภัณฑ์ UI-12, ยืมฉุกเฉิน, จัดชุด UI-13, สรุปหลังเหตุการณ์.
+- Zero emojis used; standard SVG icons and `.badge` tokens used throughout.
+- Docker rebuilt and serving on port 8080.
+- Next: integration with live backend events and WebSocket incident updates.
