@@ -1475,7 +1475,10 @@ def flat(prefix, o, out):
 
 
 _defaults = {}
-flat("", yaml.safe_load(open(ROOT.parent / "doorare-spec" / "config-defaults.yaml", encoding="utf-8")) if (ROOT.parent / "doorare-spec" / "config-defaults.yaml").exists() else {}, _defaults)
+_cfg_path = ROOT / "config" / "config-defaults.yaml"   # copy of the spec's config-defaults.yaml (kept in the repo so the output is reproducible)
+if not _cfg_path.exists():
+    sys.exit(f"missing {_cfg_path}: copy config-defaults.yaml from the spec into db/mock/config/")
+flat("", yaml.safe_load(open(_cfg_path, encoding="utf-8")), _defaults)
 for k, v in _defaults.items():
     add("config_setting", key=k, scope="GLOBAL", value=json.dumps(v, ensure_ascii=False), description="ค่าเริ่มต้นจาก config-defaults.yaml", updated_by="", updated_at=ts(START - dt.timedelta(days=5)))
 for h in HOSP:

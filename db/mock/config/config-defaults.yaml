@@ -1,0 +1,69 @@
+# DooRare default configuration. Every key is editable per scope (GLOBAL / REGION / HOSPITAL) via config_setting.
+# Items marked (proposal) are "ข้อเสนอ" from the requirement document => configurable business rules.
+forecast:
+  min_history_days_cold_start: 90
+  min_history_months_maes: 6
+  cv_threshold: 0.5
+  active_day_ratio_threshold: 0.30   # ASM: days-with-usage ratio; Q-01
+  price_high_thb: 1000
+  price_low_thb: 50
+  stale_days: 7
+  min_residuals: 26
+  coverage_tolerance: 0.05
+  overstock_multiple: 2
+ved:
+  z: {V: 1.65, E: 1.28, D: 0}
+  quantile: {V: 0.95, E: 0.90}
+  default_class: E
+abc: {cutoff_a: 0.70, cutoff_b: 0.90}
+borrow:
+  stop_ratio_V: 0.90
+  stop_ratio_E: 1.00
+  max_parallel: 3
+  urgency:
+    very_urgent_V_days: 2
+    urgent_V_days: 7
+    urgent_E_days: 2
+  timeout_min: {very_urgent: 120, urgent: 360, normal: 2880}
+  reminder_ratio: 0.5
+  score: {w_time: 0.45, w_fulfill: 0.28, w_stock_safety: 0.17, w_reliability: 0.10}
+  stock_safety_days: 30
+  reliability_default: 0.5
+  reliability_window_months: 12
+  lot_min_remaining_days: 180
+agent:
+  enabled: true
+  model_id: "REPLACE_WITH_BEDROCK_MODEL_ID"
+  f3_model_id: "REPLACE_WITH_SMALL_FAST_BEDROCK_MODEL_ID"   # Haiku-class, F3 only (ASM-46)
+  max_steps: 12
+  timeout_s: 60
+  f3_timeout_s: 8
+  urgency_raise_max: 1
+  daily_summary_time: "07:30"
+  auto_disable_failures: {count: 5, window_min: 10}
+expiry:
+  threshold_days_default: 180
+  transport_cost_ratio_max: 0.20
+  cost_model_thb: {base: 300, per_km: 8, cold_chain_surcharge: 500}   # (proposal) F-23
+  plan_approval_timeout_h: 48
+  repeat: {watch_count: 2, recommend_count: 3, recommend_value_thb: 10000, dismiss_days: 90, window_months: 12}
+return: {default_days: 30, reminder_days: [7, 1]}   # in kind only (ASM-24): same drug, same quantity
+emergency:
+  blood: {enabled: true, prc_o_max_units: 6, prc_o_min_remaining_days: 7}   # rev 1.2 ASM-47 PRC group O only; others reminder-only
+  timeout_critical_min: 3
+  timeout_supportive_min: 5
+  location_timeout_s: 3      # real-time route call; no speed-table fallback (ASM-19)
+  location_retries: 1
+  duplicate_window_min: 10
+  duplicate_radius_m: 500
+mapping:
+  threshold_high: 0.85
+  threshold_medium: 0.60
+  weights: {name: 0.40, strength: 0.30, form: 0.20, unit: 0.10}
+  sla_days: 3
+  bulk_verify_enabled: false
+network: {auto_approve: true}
+transport: {photos_max: 10}
+coldchain: {default_box_hours: 6}
+security: {rate_limit_per_min: 300, agent_rate_limit_per_min: 30, session_idle_min: 30, mfa_required_roles: [SYSTEM_ADMIN, REGION_ADMIN, HOSPITAL_ADMIN, DATA_ADMIN, AUDITOR]}
+retention: {audit_years: 7, ledger_years: 7, documents_years: 7, usage_years: 10, audit_context_months: 12, agent_run_years: 2, photos_years: 1}
