@@ -1,0 +1,203 @@
+# DooRare mock data config  (ปรับค่าแล้วรัน generate.py ใหม่ได้เลย)
+# ป้ายความเชื่อมั่น: [ยืนยัน] มีแหล่งจริง  [ประมาณ] อนุมาน  [สมมติ] ตั้งเอง ต้องปรับเทียบกับข้อมูลจริง
+seed: 20260930
+start_date: 2016-10-01
+end_date: 2026-09-30
+
+# ---------------- โรงพยาบาล (พิกัดตาม seed-data.json) ----------------
+# size = สัดส่วนปริมาณการใช้เทียบกับ A [สมมติ]; cold = รับของ cold chain จากการยืม/โอนได้ [สมมติ]
+# reliability = โอกาสตอบรับตรงเวลาเมื่อเป็นผู้ให้ยืม [สมมติ]
+hospitals:
+  - {code: HA, name_th: "โรงพยาบาลตัวอย่าง เอ (ตติยภูมิ)",     lat: 13.7563, lon: 100.5018, urban: true,  size: 1.00, cold: true,  reliability: 0.92, blood_bank: true, beds: 800}
+  - {code: HB, name_th: "โรงพยาบาลตัวอย่าง บี (ทุติยภูมิ)",     lat: 13.79,   lon: 100.54,   urban: true,  size: 0.60, cold: true,  reliability: 0.90, blood_bank: true, beds: 450}
+  - {code: HC, name_th: "โรงพยาบาลตัวอย่าง ซี (ทุติยภูมิ)",     lat: 13.70,   lon: 100.45,   urban: true,  size: 0.45, cold: false, reliability: 0.84, blood_bank: false, beds: 350}
+  - {code: HD, name_th: "โรงพยาบาลตัวอย่าง ดี (ชุมชน ชานเมือง)", lat: 14.02,   lon: 100.73,   urban: false, size: 0.22, cold: false, reliability: 0.70, blood_bank: false, beds: 120}
+  - {code: HE, name_th: "โรงพยาบาลตัวอย่าง อี (ทุติยภูมิ)",     lat: 13.85,   lon: 100.60,   urban: true,  size: 0.35, cold: true,  reliability: 0.80, blood_bank: true, beds: 250}
+
+# ---------------- ช่วงเหตุการณ์ COVID [ยืนยัน/ประมาณ/สมมติ ตามรายงาน A1] ----------------
+# favi/remd/atk = สัดส่วนของ "ค่าพีค" (ยาที่ไม่ใช้เลยก่อนโควิด); para/dexa/ppe = ตัวคูณจาก baseline
+# opd = ตัวคูณผู้ป่วยนอก [ยืนยัน 0.72 ล็อกดาวน์ / 0.89 หลังล็อกดาวน์]; elective = ผ่าตัดไม่เร่งด่วน
+covid_periods:      # วันที่ระลอก: ระลอก 2 (15 ธ.ค. 2563–31 มี.ค. 2564), ระลอก 3 (เม.ย.–มิ.ย. 2564), ระลอก 4 เริ่ม 6 ก.ค. 2564 [ยืนยัน: pmc 8519693, thaipbsworld, MDPI Trop Med 9(11):266]; ระลอก 1 ม.ค.–พ.ค. 2563 พีค มี.ค. [ยืนยัน]; ตัวคูณของยาแต่ละตัว [สมมติ]
+  - {name: baseline_pre_covid, start: 2016-10-01, end: 2020-01-24, favi: 0, remd: 0, dexa: 1.0, para: 1.0, ppe: 1.0, atk: 0, opd: 1.0,  elective: 1.0}
+  - {name: mask_rush_early_2020, start: 2020-01-25, end: 2020-03-25, favi: 0, remd: 0, dexa: 1.0, para: 1.0, ppe: 3.0, atk: 0, opd: 1.0,  elective: 1.0}
+  - {name: wave1_lockdown,     start: 2020-03-26, end: 2020-05-31, favi: 0, remd: 0, dexa: 1.1, para: 0.8,  ppe: 4.5, atk: 0, opd: 0.72, elective: 0.4}
+  - {name: after_wave1,        start: 2020-06-01, end: 2020-12-14, favi: 0, remd: 0, dexa: 1.0, para: 0.95, ppe: 1.7, atk: 0, opd: 0.89, elective: 0.9}
+  - {name: wave2,              start: 2020-12-15, end: 2021-03-31, favi: 0.08, remd: 0.08, dexa: 1.2, para: 1.0, ppe: 2.0, atk: 0, opd: 0.95, elective: 0.9}
+  - {name: alpha,              start: 2021-04-01, end: 2021-07-05, favi: 0.5, remd: 0.4, dexa: 2.0, para: 1.3, ppe: 2.7, atk: 0.2, opd: 0.90, elective: 0.7}
+  - {name: delta,              start: 2021-07-06, end: 2021-09-30, favi: 1.0, remd: 1.0, dexa: 5.0, para: 2.0, ppe: 4.0, atk: 0.8, opd: 0.85, elective: 0.5}
+  - {name: post_delta,         start: 2021-10-01, end: 2021-12-31, favi: 0.4, remd: 0.3, dexa: 2.0, para: 1.3, ppe: 2.0, atk: 0.4, opd: 0.95, elective: 0.9}
+  - {name: omicron,            start: 2022-01-01, end: 2022-04-30, favi: 1.5, remd: 0.4, dexa: 2.0, para: 2.7, ppe: 2.0, atk: 1.0, opd: 1.0,  elective: 0.95}
+  - {name: omicron_tail,       start: 2022-05-01, end: 2022-09-30, favi: 0.35, remd: 0.1, dexa: 1.2, para: 1.5, ppe: 1.4, atk: 0.3, opd: 1.0,  elective: 1.0}   # ก.ค. 2565 เฉลี่ย ~2,193 ราย/วัน [ยืนยัน WHO sitrep 242]
+  - {name: endemic,            start: 2022-10-01, end: 2026-09-30, favi: 0.07, remd: 0.03, dexa: 1.0, para: 1.05, ppe: 1.05, atk: 0.05, opd: 1.0, elective: 1.0}
+
+# ---------------- ฤดูกาล [สมมติ อิงรายงาน A2/A3] ----------------
+season_index:
+  flu:    [1.0, 1.1, 0.8, 0.5, 0.6, 1.0, 1.5, 1.8, 1.9, 1.4, 0.9, 0.8]
+  dengue: [0.5, 0.4, 0.4, 0.5, 0.8, 1.4, 1.9, 1.8, 1.5, 1.2, 0.9, 0.7]
+  flu_vaccine_campaign: [0.1, 0.1, 0.1, 0.2, 2.5, 3.2, 3.0, 1.8, 0.6, 0.3, 0.1, 0.1]
+flu_year_multiplier: {2016: 1.0, 2017: 1.1, 2018: 1.0, 2019: 1.2, 2020: 0.45, 2021: 0.3, 2022: 0.5, 2023: 1.0, 2024: 1.4, 2025: 1.2, 2026: 1.0}
+flu_early_peak_years: [2019, 2025]      # ม.ค.–ก.พ. x2 [ยืนยัน 2562/2568]
+flu_shift_july_years: [2024]
+dengue_year_multiplier: {2016: 1.0, 2017: 0.92, 2018: 1.19, 2019: 1.8, 2020: 1.0, 2021: 0.14, 2022: 0.64, 2023: 2.2, 2024: 1.5, 2025: 0.5, 2026: 0.8}   # ตัวเลขรายปีจาก A3 และอัตราป่วย/แสนคน 2559–2565 (100,92,119,184,100,37,43) [ยืนยัน: Aranca/กรมควบคุมโรค] ปี 2566 เพิ่ม ~4.75 เท่าของ 2565 ณ มิ.ย. [ยืนยัน: UNMC];  ส่วน 2568–69 [สมมติ]
+pm25:
+  months: [1, 2, 3]                 # กรุงเทพฯ ม.ค.–มี.ค. (ครึ่งหนึ่งของภาคเหนือ) [สมมติ]
+  salbutamol_mult: {default: 1.2, 2021: 1.15, 2022: 1.2, 2023: 1.3, 2024: 1.35, 2025: 1.3}   # ผู้ป่วยโรคจากมลพิษรายปี 7.79 ล้าน(2564)→10.36→11.23→12.37 ล้าน(2567) [ยืนยัน: Thairath]
+  n95_mult: 1.5
+trauma_windows:                     # 7 วันอันตราย สงกรานต์ + ปีใหม่ [ยืนยันช่วงวัน, ตัวคูณ สมมติ]
+  songkran: {start: "04-11", end: "04-17", peak_offset: 2}
+  newyear:  {start: "12-29", end: "01-04", peak_offset: 3}
+  songkran_2020_effect: 0.5         # ปี 2563 มีเคอร์ฟิว ผลลดลง
+songkran_year_mult: {2018: 1.08, 2019: 1.0, 2023: 0.7}   # 7 วันอันตราย: ตาย 418 (2561), 386 (2562), 264 (2566); อุบัติเหตุ 3,338 (2562) vs 2,203 (2566) [ยืนยัน: Khaosod, Malay Mail]
+holiday_like_days: ["04-13", "04-14", "04-15", "12-31", "01-01", "01-02"]   # ผู้ป่วยนอกเหมือนวันหยุด
+dow_opd: [1.1, 1.05, 1.0, 1.0, 1.0, 0.45, 0.35]   # จ–อา สำหรับยาผู้ป่วยนอก (เสาร์–อาทิตย์ ลด)
+
+# ---------------- น้ำท่วมเฉพาะ รพ. [สมมติ ทั้งเวลาและ รพ.] ----------------
+flood_events:
+  - {hospital: HD, start: 2021-10-04, note: "น้ำท่วมพื้นที่ชานเมือง (สมมติ)"}
+  - {hospital: HD, start: 2022-09-05, note: "น้ำท่วม 35 จังหวัดช่วง ก.ย. 2565 [ยืนยันเหตุการณ์ระดับชาติ รพ.ที่ได้รับผลสมมติ]"}
+  - {hospital: HD, start: 2024-09-12, note: "น้ำท่วมพื้นที่ชานเมือง (สมมติ)"}
+flood_week_multipliers:             # สัปดาห์ที่ 0–1 / 1–3 / 3–6 จากรายงาน A5
+  - {from_day: 0,  to_day: 7,  opd: 0.5, ors: 2.0, doxy: 3.0, ceftriaxone: 1.2, lead_mult: 2.0}
+  - {from_day: 7,  to_day: 21, opd: 0.8, ors: 2.0, doxy: 2.0, ceftriaxone: 2.0, lead_mult: 1.5}
+  - {from_day: 21, to_day: 42, opd: 1.0, ors: 1.2, doxy: 1.5, ceftriaxone: 1.5, lead_mult: 1.0}
+
+# ---------------- ช่วงยาขาด/ส่งของไม่ครบ (fill = สัดส่วนที่ส่งจริง) [สมมติ ตามรายงาน A7] ----------------
+supply_shortages:
+  - {drugs: [N95, PPE_SET, ALCOHOL_GEL], start: 2020-02-01, end: 2020-04-30, fill: 0.45, lead_mult: 2.5}
+  - {drugs: [ATK],                       start: 2021-07-15, end: 2021-09-30, fill: 0.5,  lead_mult: 2.0}
+  - {drugs: [FAVIPIRAVIR],               start: 2021-07-20, end: 2021-09-15, fill: 0.5,  lead_mult: 2.0}
+  - {drugs: [REMDESIVIR],                start: 2021-07-20, end: 2021-09-20, fill: 0.6,  lead_mult: 1.8}
+  - {drugs: [DEXAMETHASONE_INJ],         start: 2021-07-25, end: 2021-09-10, fill: 0.7,  lead_mult: 1.5}
+  - {drugs: [NSS_1000, RL_1000],         start: 2021-08-01, end: 2021-08-31, fill: 0.7,  lead_mult: 1.5}
+  - {drugs: [OSELTAMIVIR],               start: 2024-07-01, end: 2024-08-15, fill: 0.6,  lead_mult: 1.5}
+  - {drugs: [CEFTRIAXONE_1G],            start: 2023-03-01, end: 2023-05-15, fill: 0.5,  lead_mult: 2.0}
+  - {drugs: [ADRENALINE_1MG],            start: 2022-06-01, end: 2022-08-31, fill: 0.5,  lead_mult: 2.0}
+  - {drugs: [SUCCINYLCHOLINE],           start: 2025-01-15, end: 2025-03-31, fill: 0.4,  lead_mult: 2.0}
+  - {drugs: [INSULIN],                   start: 2022-11-01, end: 2022-12-15, fill: 0.7,  lead_mult: 1.5}
+
+fiscal_order_factor: {10: 0.8, 11: 0.8, 8: 1.25, 9: 1.25}   # ต.ค.–พ.ย. สั่งน้อย ส.ค.–ก.ย. สั่งเพิ่ม [สมมติ จาก A8]
+
+# ---------------- นโยบายสั่งซื้อ/ยืม ----------------
+replenish:
+  review_weekday: 0           # สั่งทุกวันจันทร์ ยกเว้นสต็อกเหลือ < 2 วัน (สั่งทันที)
+  z: {V: 1.65, E: 1.28, D: 0.84}
+  cover_days_after_order: {room: 30, cold: 14, locked: 21}
+  shelf_remaining_on_receipt: [0.55, 0.95]     # อายุคงเหลือตอนรับของ เป็นสัดส่วนของ shelf life
+borrow:
+  stop_ratio: {V: 0.90, E: 1.00}
+  timeout_min: {VERY_URGENT: 120, URGENT: 360, NORMAL: 2880}
+  score_weights: {time: 0.45, fulfill: 0.28, stock_safety: 0.17, reliability: 0.10}
+  max_legs: 4
+  request_probability: {V: 0.9, E: 0.55, D: 0.2}
+  cooldown_days: 15
+  return_days: 30
+  waive_probability: 0.03
+  lender_safety_days: 14
+  lot_min_remaining_days: 90
+expiry:
+  threshold_days_default: 180
+  threshold_days_V: 120          # ผู้เภสัชกรตั้งให้ยา V สั้นกว่า (ตัวอย่างค่าต่อรายการ)
+  min_value_thb: 1500
+  max_cost_ratio: 0.20
+  transport_base_thb: 350
+  transport_per_km_thb: 11
+  cold_chain_extra_thb: 600
+  scan_from: 2016-12-01
+data_quality_noise:              # [สมมติ จาก C3]
+  tmt_gpu_instead_of_tpu: 0.04
+  wrong_unit: 0.02
+  mapping_not_verified: 0.06     # ไม่ผ่านการยืนยัน (UNMATCHED/SUGGESTED/REJECTED)
+price_noise_between_hospitals: 0.08
+procurement_variance:            # [สมมติ] ความผิดพลาด/ส่วนลดการจัดซื้อที่ทำให้เกิดยาเกินและใกล้หมดอายุ (ให้ F2 มีเหตุการณ์จริงให้ใช้)
+  oversize_prob: 0.015           # สั่งเกินขนาด (x2.5–5) เฉพาะยาที่ใช้สม่ำเสมอ
+  oversize_mult: [2.5, 5.0]
+  oversize_short_prob: 0.7       # ในกรณีสั่งเกิน มักเป็นล็อตลดราคาที่อายุเหลือสั้นมาก
+  oversize_short_range: [0.06, 0.14]
+  short_dated_prob: 0.07         # ล็อตที่ส่งมามีอายุเหลือน้อย
+  short_dated_range: [0.20, 0.45]
+
+# ---------------- เลือด (spec v1.2, ASM-47) ----------------
+blood:
+  prc_o_max_units: 6
+  incident_borrow_prob: 0.35     # โอกาสที่เหตุหมู่ที่ รพ.มีธนาคารเลือดและต้องใช้ PRC O ≥ 3 ยูนิต จะยืมจาก รพ.ธนาคารเลือดอื่น [สมมติ]
+  replace_days: [3, 14]          # ทดแทนผ่านธนาคารเลือดภายในกี่วัน [สมมติ]
+
+# ---------------- F3 ----------------
+triage_default: {RED: 0.10, YELLOW: 0.30, GREEN: 0.60}   # ข้อมูลจริงที่เจอ: เหตุรถไฟชนที่ Placentia (148 ราย) START แดง 14.9% เหลือง 45.9% เขียว 39.2% [ยืนยัน 1 เหตุการณ์ เป็นกรณีที่หนักกว่าค่าเฉลี่ย] ค่านี้เป็นค่ากลางของเหตุหลายประเภท [สมมติ]
+black_fraction: {traffic: 0.07, fire_enclosed: 0.70, shooting: 0.35, other: 0.05}
+incidents_per_year: 8
+incident_types:
+  - {type: traffic,  label: "อุบัติเหตุรถหลายคัน",       weight: 0.45, n_median: 12, n_sigma: 0.55, kits_extra: []}
+  - {type: bus,      label: "รถโดยสารพลิกคว่ำ",          weight: 0.12, n_median: 25, n_sigma: 0.5,  kits_extra: []}
+  - {type: fire,     label: "เหตุเพลิงไหม้อาคาร/โรงงาน",  weight: 0.15, n_median: 15, n_sigma: 0.6,  kits_extra: [BURN]}
+  - {type: collapse, label: "อาคาร/โครงสร้างถล่ม",       weight: 0.05, n_median: 30, n_sigma: 0.6,  kits_extra: []}
+  - {type: chemical, label: "สารเคมีรั่วไหล",            weight: 0.08, n_median: 20, n_sigma: 0.5,  kits_extra: []}
+  - {type: shooting, label: "เหตุยิง/ทำร้ายหมู่",         weight: 0.05, n_median: 18, n_sigma: 0.7,  kits_extra: []}
+  - {type: crowd,    label: "เหตุในงานชุมนุม/เทศกาล",     weight: 0.10, n_median: 22, n_sigma: 0.5,  kits_extra: []}
+kits:           # ชุดปรับให้ใช้เฉพาะรายการในแคตตาล็อก 36 รายการ (ตัด ETT/splint/ลิโดเคน ฯลฯ ที่ยังไม่มีในแคตตาล็อก) [สมมติ — ต้องให้ทีมคลินิกตรวจ]
+  INTUBATION:   {name: "ชุดใส่ท่อช่วยหายใจ", cold: true,  components: {KETAMINE_500: 1, SUCCINYLCHOLINE: 2, IV_CATHETER_18G: 1, ADRENALINE_1MG: 1, NITRILE_GLOVES: 0.1}}
+  TRAUMA_RESUS: {name: "ชุดช่วยชีวิตผู้บาดเจ็บ",  cold: false, components: {IV_CATHETER_18G: 4, NSS_1000: 1, RL_1000: 1, TXA_250: 4, DRESSING_SET: 2, NITRILE_GLOVES: 0.1}}
+  IV_SET:       {name: "ชุดให้สารน้ำ",       cold: false, components: {IV_CATHETER_18G: 2, NSS_1000: 1, ALCOHOL_GEL: 0.05, NITRILE_GLOVES: 0.05}}
+  BURN:         {name: "ชุดแผลไฟไหม้",       cold: false, components: {RL_1000: 4, DRESSING_SET: 5, MORPHINE_10: 2, NITRILE_GLOVES: 0.1}}
+  CHEST_TUBE:   {name: "ชุดใส่ท่อระบายทรวงอก", cold: false, components: {DRESSING_SET: 1, FENTANYL_100: 1, NITRILE_GLOVES: 0.1, ALCOHOL_GEL: 0.05}}
+  SPLINT:       {name: "ชุดดามกระดูก/พันแผล", cold: false, components: {DRESSING_SET: 5, NITRILE_GLOVES: 0.05}}
+  MINOR_WOUND:  {name: "ชุดแผลเล็ก",         cold: false, components: {DRESSING_SET: 1, NSS_1000: 0.1, DT_VACCINE: 1, NITRILE_GLOVES: 0.05}}
+kit_recipe:     # ชุดต่อผู้ป่วย 1 ราย [สมมติ จากรายงาน C1]  RED / YELLOW / GREEN
+  IV_SET:       [2, 1, 0.2]
+  TRAUMA_RESUS: [1, 0.5, 0]
+  INTUBATION:   [0.5, 0.05, 0]
+  CHEST_TUBE:   [0.25, 0.05, 0]
+  SPLINT:       [1, 1, 0.5]
+  MINOR_WOUND:  [0.5, 1, 1]
+  BURN:         [1, 1, 1]          # ใช้เฉพาะเหตุไฟไหม้ (เลือกใน emergency_plan.steps)
+extra_rule:     # ของนอกเซ็ตต่อผู้ป่วย RED / YELLOW / GREEN [ประมาณ จากรายงาน C1]
+  ADRENALINE_1MG: [4, 0, 0]
+  ATROPINE_06:    [2.5, 0, 0]
+  FENTANYL_100:   [2.5, 1, 0]
+  CEFTRIAXONE_1G: [1.5, 1, 0]
+  ORS:            [0, 1, 1]
+  PRC_O:          [2, 0.3, 0]        # เลือด PRC กรุ๊ป O (v1.2) เฉพาะ รพ.ที่มีธนาคารเลือด [สมมติ ต้องให้ธนาคารเลือดตรวจ]
+kit_ready_stock: {HA: 1.0, HB: 0.6, HC: 0.4, HD: 0.2, HE: 0.3}   # ชุดพร้อมใช้ (ตัวคูณ) ตอนสิ้นสุดช่วงข้อมูล
+kit_ready_base: {INTUBATION: 10, TRAUMA_RESUS: 20, IV_SET: 40, BURN: 6, CHEST_TUBE: 6, SPLINT: 30, MINOR_WOUND: 50}
+
+# ---------------- รายการยา-เวชภัณฑ์ 37 รายการ (ชื่อ/ความแรง/รูปแบบตรงกับ TMT รอบ 5 ต.ค. 2569; รหัสอยู่ใน config/tmt_real.json) [ราคา/shelf life = ประมาณ/สมมติ] ----------------
+# mean_A = ค่าเฉลี่ยการใช้ต่อวันที่ รพ. A [สมมติ]; pattern: regular|erratic|intermittent|lumpy
+# carry = รพ. ที่มีรายการนี้; lead = วัน; pack = หน่วยฐานต่อแพ็ก; ev = แท็กเหตุการณ์ที่มีผล; opd_w = น้ำหนักผลผู้ป่วยนอก
+drugs:
+  - {key: PARACETAMOL_500, name: "Paracetamol", strength: "500 mg", form: "tablet", unit: "เม็ด", price: 0.30, shelf_y: 4, ved: E, store: room, pattern: regular, cv: 0.20, mean_A: 2500, carry: ABCDE, lead: 7, pack: 1000, ev: [para, flu, dengue], opd_w: 1.0, dow: opd}
+  - {key: PARACETAMOL_SYRUP, name: "Paracetamol", strength: "120 mg/5 mL", form: "syrup", unit: "ขวด", price: 10, shelf_y: 2.5, ved: E, store: room, pattern: regular, cv: 0.35, mean_A: 15, carry: ABCDE, lead: 7, pack: 48, ev: [para, flu, dengue], opd_w: 1.0, dow: opd}
+  - {key: AMLODIPINE_5, name: "Amlodipine", strength: "5 mg", form: "tablet", unit: "เม็ด", price: 0.45, shelf_y: 3, ved: E, store: room, pattern: regular, cv: 0.12, mean_A: 1500, carry: ABCDE, lead: 10, pack: 1000, ev: [], opd_w: 0.3, dow: opd}
+  - {key: METFORMIN_500, name: "Metformin hydrochloride", strength: "500 mg", form: "tablet", unit: "เม็ด", price: 0.40, shelf_y: 3, ved: E, store: room, pattern: regular, cv: 0.12, mean_A: 2000, carry: ABCDE, lead: 10, pack: 1000, ev: [], opd_w: 0.3, dow: opd}
+  - {key: SALBUTAMOL_MDI, name: "Salbutamol", strength: "100 mcg/1 dose", form: "pressurised inhalation, suspension", unit: "กระบอก", price: 75, shelf_y: 2, ved: V, store: room, pattern: regular, cv: 0.40, mean_A: 8, carry: ABCDE, lead: 10, pack: 1, ev: [pm25, flu], opd_w: 0.6, dow: opd}
+  - {key: SALBUTAMOL_NEB, name: "Salbutamol", strength: "2.5 mg/2.5 mL", form: "nebuliser solution", unit: "หลอด", price: 4.5, shelf_y: 2, ved: V, store: room, pattern: regular, cv: 0.45, mean_A: 30, carry: ABCDE, lead: 7, pack: 100, ev: [pm25, flu], opd_w: 0.2, dow: er}
+  - {key: OSELTAMIVIR, name: "Oseltamivir", strength: "75 mg", form: "capsule, hard", unit: "แคปซูล", price: 27, shelf_y: 6, ved: E, store: room, pattern: erratic, cv: 0.9, mean_A: 6, carry: ABCDE, lead: 10, pack: 100, ev: [flu], opd_w: 0.5, dow: opd}
+  - {key: FAVIPIRAVIR, name: "Favipiravir", strength: "200 mg", form: "film-coated tablet", unit: "เม็ด", price: 15, shelf_y: 2.5, ved: E, store: room, pattern: regular, cv: 0.35, mean_A: 2500, event_only: favi, carry: ABCDE, lead: 10, pack: 1000, ev: [favi], opd_w: 0, dow: flat, moq_days: 14}
+  - {key: REMDESIVIR, name: "Remdesivir", strength: "100 mg", form: "concentrate for solution for infusion", unit: "vial", price: 2200, shelf_y: 2.5, ved: V, store: room, pattern: regular, cv: 0.5, mean_A: 12, event_only: remd, carry: AB, lead: 14, pack: 6, ev: [remd], opd_w: 0, dow: flat}
+  - {key: DEXAMETHASONE_INJ, name: "Dexamethasone", strength: "4 mg/1 mL", form: "solution for injection", unit: "amp", price: 4.5, shelf_y: 2.5, ved: V, store: room, pattern: erratic, cv: 0.7, mean_A: 25, carry: ABCDE, lead: 7, pack: 100, ev: [dexa], opd_w: 0.2, dow: er}
+  - {key: CEFTRIAXONE_1G, name: "Ceftriaxone", strength: "1 g", form: "powder for solution for injection/infusion", unit: "vial", price: 14, shelf_y: 2.5, ved: V, store: room, pattern: erratic, cv: 0.75, mean_A: 60, carry: ABCDE, lead: 7, pack: 50, ev: [flood_ceftriaxone], opd_w: 0.3, dow: er}
+  - {key: DOXYCYCLINE_100, name: "Doxycycline", strength: "100 mg", form: "capsule, hard", unit: "แคปซูล", price: 0.75, shelf_y: 3, ved: E, store: room, pattern: regular, cv: 0.35, mean_A: 40, carry: ABCDE, lead: 7, pack: 500, ev: [flood_doxy], opd_w: 0.8, dow: opd}
+  - {key: NSS_1000, name: "Sodium chloride", strength: "900 mg/100 mL (1000 mL)", form: "solution for infusion", unit: "ถุง", price: 21, shelf_y: 2.5, ved: V, store: room, pattern: regular, cv: 0.15, mean_A: 150, carry: ABCDE, lead: 5, pack: 12, ev: [dengue, trauma:1.25], opd_w: 0.2, dow: flat}
+  - {key: RL_1000, name: "Ringer's lactate", strength: "1000 mL", form: "solution for infusion", unit: "ถุง", price: 25, shelf_y: 2.5, ved: V, store: room, pattern: regular, cv: 0.18, mean_A: 80, carry: ABCDE, lead: 5, pack: 12, ev: [dengue, trauma:1.35], opd_w: 0.2, dow: flat}
+  - {key: ORS, name: "Oral rehydration salts", strength: "sachet", form: "oral powder", unit: "ซอง", price: 2.2, shelf_y: 2.5, ved: E, store: room, pattern: regular, cv: 0.35, mean_A: 25, carry: ABCDE, lead: 7, pack: 100, ev: [dengue, flood_ors], opd_w: 0.6, dow: opd}
+  - {key: ADRENALINE_1MG, name: "Epinephrine (adrenaline)", strength: "1 mg/1 mL", form: "solution for injection", unit: "amp", price: 8, shelf_y: 1.75, ved: V, store: light, pattern: intermittent, cv: 0.4, mean_A: 2.0, avg_size: 1.6, carry: ABCDE, lead: 7, pack: 100, ev: [], opd_w: 0, dow: flat, high_alert: true, emergency: CRITICAL, par_A: 120}
+  - {key: ATROPINE_06, name: "Atropine sulfate", strength: "600 mcg/1 mL", form: "solution for injection", unit: "amp", price: 5, shelf_y: 3, ved: V, store: room, pattern: intermittent, cv: 0.4, mean_A: 1.5, avg_size: 1.8, carry: ABCDE, lead: 7, pack: 100, ev: [], opd_w: 0, dow: flat, emergency: CRITICAL, par_A: 60}
+  - {key: TXA_250, name: "Tranexamic acid", strength: "250 mg/5 mL", form: "solution for injection", unit: "amp", price: 8, shelf_y: 3, ved: V, store: room, pattern: intermittent, cv: 0.5, mean_A: 2.5, avg_size: 2.2, carry: ABCE, lead: 7, pack: 50, ev: [trauma:1.8], opd_w: 0, dow: flat, emergency: CRITICAL, par_A: 120}
+  - {key: MORPHINE_10, name: "Morphine sulfate", strength: "10 mg/1 mL", form: "solution for injection", unit: "amp", price: 14, shelf_y: 3, ved: V, store: locked, pattern: erratic, cv: 0.8, mean_A: 8, carry: ABCDE, lead: 10, pack: 100, ev: [trauma:1.5, elective_half], opd_w: 0, dow: flat, high_alert: true, emergency: CRITICAL, par_A: 150}
+  - {key: FENTANYL_100, name: "Fentanyl", strength: "100 mcg/2 mL", form: "solution for injection", unit: "amp", price: 25, shelf_y: 3, ved: V, store: locked, pattern: erratic, cv: 0.8, mean_A: 6, carry: ABCE, lead: 10, pack: 50, ev: [trauma:1.4, elective], opd_w: 0, dow: flat, high_alert: true, emergency: CRITICAL, par_A: 120}
+  - {key: KETAMINE_500, name: "Ketamine", strength: "500 mg/10 mL", form: "solution for injection", unit: "vial", price: 90, shelf_y: 2.5, ved: V, store: locked, pattern: intermittent, cv: 0.5, mean_A: 1, avg_size: 1.4, carry: ABCE, lead: 10, pack: 10, ev: [trauma:1.5, elective], opd_w: 0, dow: flat, high_alert: true, emergency: CRITICAL, par_A: 30}
+  - {key: SUCCINYLCHOLINE, name: "Suxamethonium chloride (succinylcholine)", strength: "500 mg/10 mL", form: "solution for injection", unit: "amp", price: 90, shelf_y: 2, ved: V, store: cold, pattern: intermittent, cv: 0.5, mean_A: 2, avg_size: 1.5, carry: ABCE, lead: 14, pack: 10, ev: [elective], opd_w: 0, dow: flat, high_alert: true, emergency: CRITICAL, par_A: 40}
+  - {key: INSULIN, name: "Insulin human", strength: "100 iu/1 mL", form: "solution for injection", unit: "vial", price: 110, shelf_y: 2.5, ved: V, store: cold, pattern: regular, cv: 0.15, mean_A: 12, carry: ABCDE, lead: 10, pack: 5, ev: [], opd_w: 0.3, dow: opd}
+  - {key: DT_VACCINE, name: "Diphtheria + tetanus toxoids (dT)", strength: "2 iu + 20 iu/0.5 mL", form: "suspension for injection", unit: "dose", price: 18, shelf_y: 2.5, ved: E, store: cold, pattern: erratic, cv: 0.6, mean_A: 3, carry: ABCDE, lead: 14, pack: 10, ev: [trauma:1.5], opd_w: 0.8, dow: opd}
+  - {key: INFLUENZA_VACCINE, name: "Influenza vaccine (quadrivalent)", strength: "0.5 mL", form: "suspension for injection", unit: "dose", price: 220, shelf_y: 1.0, ved: E, store: cold, pattern: regular, cv: 0.3, mean_A: 20, season: flu_vaccine_campaign, carry: ABCDE, lead: 21, pack: 10, ev: [], opd_w: 0.5, dow: opd}
+  - {key: RABIES_VACCINE, name: "Purified duck embryo rabies vaccine", strength: "2.5 iu/1 mL", form: "solution for injection", unit: "vial", price: 250, shelf_y: 3, ved: V, store: cold, pattern: intermittent, cv: 0.4, mean_A: 2.5, avg_size: 1.8, carry: ABCDE, lead: 14, pack: 10, ev: [], opd_w: 0.6, dow: opd, par_A: 40}
+  - {key: EQUINE_RIG, name: "Equine rabies immunoglobulin", strength: "1000 iu/5 mL", form: "solution for injection", unit: "vial", price: 450, shelf_y: 2.5, ved: V, store: cold, pattern: lumpy, cv: 0.7, mean_A: 0.4, avg_size: 2.5, carry: ABE, lead: 21, pack: 5, ev: [], opd_w: 0.5, dow: opd, par_A: 10}
+  - {key: ANTIVENOM_COBRA, name: "Cobra antivenin", strength: "600 mcg/1 mL", form: "powder and solvent for solution for injection", unit: "vial", price: 1800, shelf_y: 5, ved: V, store: room, pattern: lumpy, cv: 0.7, mean_A: 0.15, avg_size: 5, carry: ABCDE, lead: 21, pack: 5, ev: [], opd_w: 0, dow: flat, emergency: CRITICAL, par_A: 20}
+  - {key: PRALIDOXIME_1G, name: "Pralidoxime", strength: "1 g", form: "powder for solution for injection/infusion", unit: "vial", price: 450, shelf_y: 2.5, ved: V, store: room, pattern: lumpy, cv: 0.7, mean_A: 0.1, avg_size: 4, carry: AB, lead: 21, pack: 5, ev: [], opd_w: 0, dow: flat, emergency: CRITICAL, par_A: 12}
+  - {key: N95, name: "N95 respirator", strength: "-", form: "mask", unit: "ชิ้น", price: 28, shelf_y: 4, ved: E, store: room, pattern: regular, cv: 0.3, mean_A: 40, carry: ABCDE, lead: 10, pack: 20, ev: [ppe, pm25n95], opd_w: 0, dow: flat}
+  - {key: PPE_SET, name: "ชุด PPE", strength: "-", form: "set", unit: "ชุด", price: 150, shelf_y: 4, ved: E, store: room, pattern: regular, cv: 0.35, mean_A: 30, carry: ABCDE, lead: 10, pack: 10, ev: [ppe], opd_w: 0, dow: flat}
+  - {key: ATK, name: "ชุดตรวจ ATK", strength: "-", form: "test", unit: "test", price: 60, shelf_y: 1.75, ved: D, store: room, pattern: regular, cv: 0.4, mean_A: 150, event_only: atk, carry: ABCDE, lead: 10, pack: 25, ev: [atk], opd_w: 0, dow: flat}
+  - {key: NITRILE_GLOVES, name: "ถุงมือไนไตรล์", strength: "100 ชิ้น/กล่อง", form: "box", unit: "กล่อง", price: 180, shelf_y: 4, ved: E, store: room, pattern: regular, cv: 0.12, mean_A: 30, carry: ABCDE, lead: 7, pack: 10, ev: [ppe_half], opd_w: 0.4, dow: flat}
+  - {key: IV_CATHETER_18G, name: "IV catheter 18G", strength: "18G", form: "catheter", unit: "ชิ้น", price: 13, shelf_y: 4, ved: V, store: room, pattern: regular, cv: 0.15, mean_A: 80, carry: ABCDE, lead: 7, pack: 50, ev: [trauma:1.4, elective_half], opd_w: 0.2, dow: flat}
+  - {key: DRESSING_SET, name: "ชุดทำแผล", strength: "-", form: "set", unit: "ชุด", price: 27, shelf_y: 4, ved: E, store: room, pattern: regular, cv: 0.15, mean_A: 60, carry: ABCDE, lead: 7, pack: 50, ev: [trauma:1.5, elective_half], opd_w: 0.4, dow: flat}
+  - {key: PRC_O, name: "PRC group O (packed red cells)", strength: "1 unit ~300 mL", form: "blood component", unit: "ยูนิต", price: 450, shelf_y: 0.0959, ved: V, store: blood, blood: true, emergency: CRITICAL, pattern: erratic, cv: 0.55, mean_A: 14, carry: ABE, lead: 1, pack: 1, ev: [trauma:1.6, elective_half], opd_w: 0, dow: er}   # PRC อายุ ~35 วัน [ยืนยัน] ปริมาณใช้/ราคา [สมมติ]
+  - {key: ALCOHOL_GEL, name: "Ethyl alcohol", strength: "70 mL/100 mL", form: "gel", unit: "ขวด", price: 80, shelf_y: 2.5, ved: D, store: room, pattern: regular, cv: 0.25, mean_A: 12, carry: ABCDE, lead: 7, pack: 12, ev: [ppe], opd_w: 0, dow: flat}

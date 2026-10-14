@@ -1,0 +1,2203 @@
+{
+ "PARACETAMOL_500": {
+  "real": true,
+  "gp": "747132",
+  "gp_name": "paracetamol 500 mg tablet",
+  "disp": {
+   "name": "Paracetamol",
+   "strength": "500 mg",
+   "form": "tablet"
+  },
+  "subs": [
+   {
+    "id": "665824",
+    "name": "paracetamol"
+   }
+  ],
+  "vtm": [
+   {
+    "id": "747121",
+    "name": "paracetamol"
+   }
+  ],
+  "gpu": {
+   "id": "747145",
+   "name": "paracetamol 500 mg tablet, 1 tablet"
+  },
+  "gpp": [
+   {
+    "id": "1047595",
+    "name": "paracetamol 500 mg tablet, 1000 tablet, 1 bottle"
+   }
+  ],
+  "tps": [
+   {
+    "tp": {
+     "id": "276286",
+     "name": "CEMOL (ฟาร์มาสันต์แล็บบอราตอรี่ส์) (paracetamol 500 mg) tablet",
+     "mfr": "ฟาร์มาสันต์แล็บบอราตอรี่ส์"
+    },
+    "tpu": {
+     "id": "276293",
+     "name": "CEMOL (ฟาร์มาสันต์แล็บบอราตอรี่ส์) (paracetamol 500 mg) tablet, 1 tablet"
+    },
+    "tpp": [
+     {
+      "id": "1305472",
+      "name": "CEMOL (ฟาร์มาสันต์แล็บบอราตอรี่ส์) (paracetamol 500 mg) tablet, 10 tablet, 1 blister"
+     }
+    ]
+   },
+   {
+    "tp": {
+     "id": "367965",
+     "name": "MASAPARA (มาซา แลบ) (paracetamol 500 mg) tablet",
+     "mfr": "มาซา แลบ"
+    },
+    "tpu": {
+     "id": "367977",
+     "name": "MASAPARA (มาซา แลบ) (paracetamol 500 mg) tablet, 1 tablet"
+    },
+    "tpp": [
+     {
+      "id": "1209665",
+      "name": "MASAPARA (มาซา แลบ) (paracetamol 500 mg) tablet, 10 tablet, 1 blister"
+     }
+    ]
+   },
+   {
+    "tp": {
+     "id": "402925",
+     "name": "PARACAP (มาซา แลบ) (paracetamol 500 mg) tablet",
+     "mfr": "มาซา แลบ"
+    },
+    "tpu": {
+     "id": "402939",
+     "name": "PARACAP (มาซา แลบ) (paracetamol 500 mg) tablet, 1 tablet"
+    },
+    "tpp": [
+     {
+      "id": "1087171",
+      "name": "PARACAP (มาซา แลบ) (paracetamol 500 mg) tablet, 1000 tablet (100 x 10 tablet blister), 1 box"
+     }
+    ]
+   }
+  ],
+  "n_tp_total": 369
+ },
+ "PARACETAMOL_SYRUP": {
+  "real": true,
+  "gp": "747533",
+  "gp_name": "paracetamol 120 mg/5 mL syrup",
+  "disp": {
+   "name": "Paracetamol",
+   "strength": "120 mg/5 mL",
+   "form": "syrup"
+  },
+  "subs": [
+   {
+    "id": "665824",
+    "name": "paracetamol"
+   }
+  ],
+  "vtm": [
+   {
+    "id": "747121",
+    "name": "paracetamol"
+   }
+  ],
+  "gpu": {
+   "id": "627613",
+   "name": "paracetamol 120 mg/5 mL syrup, 1 L bottle"
+  },
+  "gpp": [
+   {
+    "id": "1131963",
+    "name": "paracetamol 120 mg/5 mL syrup, 1 x 60 mL bottle, 1 box"
+   }
+  ],
+  "tps": [
+   {
+    "tp": {
+     "id": "632764",
+     "name": "XEBRAMOL (RED) (เมดิซีน โปรดักส์) (paracetamol 120 mg/5 mL) syrup",
+     "mfr": "เมดิซีน โปรดักส์"
+    },
+    "tpu": {
+     "id": "632772",
+     "name": "XEBRAMOL (RED) (เมดิซีน โปรดักส์) (paracetamol 120 mg/5 mL) syrup, 60 mL bottle"
+    },
+    "tpp": [
+     {
+      "id": "1169563",
+      "name": "XEBRAMOL (RED) (เมดิซีน โปรดักส์) (paracetamol 120 mg/5 mL) syrup, 60 mL bottle"
+     }
+    ]
+   },
+   {
+    "tp": {
+     "id": "1021730",
+     "name": "XEBRAMOL (ORANGE) (เมดิซีน โปรดักส์) (paracetamol 120 mg/5 mL) syrup",
+     "mfr": "เมดิซีน โปรดักส์"
+    },
+    "tpu": {
+     "id": "1021748",
+     "name": "XEBRAMOL (ORANGE) (เมดิซีน โปรดักส์) (paracetamol 120 mg/5 mL) syrup, 60 mL bottle"
+    },
+    "tpp": [
+     {
+      "id": "1169544",
+      "name": "XEBRAMOL (ORANGE) (เมดิซีน โปรดักส์) (paracetamol 120 mg/5 mL) syrup, 60 mL bottle"
+     }
+    ]
+   },
+   {
+    "tp": {
+     "id": "1131944",
+     "name": "TEMPCOX (โรงงานเภสัชอุตสาหกรรม เจเอสพี) (paracetamol 120 mg/5 mL) syrup",
+     "mfr": "โรงงานเภสัชอุตสาหกรรม เจเอสพี"
+    },
+    "tpu": {
+     "id": "1131959",
+     "name": "TEMPCOX (โรงงานเภสัชอุตสาหกรรม เจเอสพี) (paracetamol 120 mg/5 mL) syrup, 60 mL bottle"
+    },
+    "tpp": [
+     {
+      "id": "1131992",
+      "name": "TEMPCOX (โรงงานเภสัชอุตสาหกรรม เจเอสพี) (paracetamol 120 mg/5 mL) syrup, 60 mL bottle, 1 bottle"
+     }
+    ]
+   }
+  ],
+  "n_tp_total": 184
+ },
+ "AMLODIPINE_5": {
+  "real": true,
+  "gp": "210476",
+  "gp_name": "amlodipine 5 mg tablet",
+  "disp": {
+   "name": "Amlodipine",
+   "strength": "5 mg",
+   "form": "tablet"
+  },
+  "subs": [
+   {
+    "id": "223251",
+    "name": "amlodipine"
+   }
+  ],
+  "vtm": [
+   {
+    "id": "220457",
+    "name": "amlodipine"
+   }
+  ],
+  "gpu": {
+   "id": "200142",
+   "name": "amlodipine 5 mg tablet, 1 tablet"
+  },
+  "gpp": [
+   {
+    "id": "1048570",
+    "name": "amlodipine 5 mg tablet, 10 tablet, 1 blister"
+   }
+  ],
+  "tps": [
+   {
+    "tp": {
+     "id": "155168",
+     "name": "AMLOD 5 (ยูนีซัน) (amlodipine 5 mg) tablet",
+     "mfr": "ยูนีซัน"
+    },
+    "tpu": {
+     "id": "108464",
+     "name": "AMLOD 5 (ยูนีซัน) (amlodipine 5 mg) tablet, 1 tablet"
+    },
+    "tpp": [
+     {
+      "id": "1185679",
+      "name": "AMLOD 5 (ยูนีซัน) (amlodipine 5 mg) tablet, 100 tablet (10 x 10 tablet blister), 1 box"
+     }
+    ]
+   },
+   {
+    "tp": {
+     "id": "155201",
+     "name": "AMLOPINE (เบอร์ลินฟาร์มาซูติคอลอินดัสตรี้) (amlodipine 5 mg) tablet",
+     "mfr": "เบอร์ลินฟาร์มาซูติคอลอินดัสตรี้"
+    },
+    "tpu": {
+     "id": "108504",
+     "name": "AMLOPINE (เบอร์ลินฟาร์มาซูติคอลอินดัสตรี้) (amlodipine 5 mg) tablet, 1 tablet"
+    },
+    "tpp": [
+     {
+      "id": "1055573",
+      "name": "AMLOPINE (เบอร์ลินฟาร์มาซูติคอลอินดัสตรี้) (amlodipine 5 mg) tablet, 1000 tablet (100 x 10 tablet blister), 1 box"
+     }
+    ]
+   },
+   {
+    "tp": {
+     "id": "155255",
+     "name": "NORVASC (PFIZER, AUSTRALIA) (amlodipine 5 mg) tablet",
+     "mfr": "PFIZER, AUSTRALIA"
+    },
+    "tpu": {
+     "id": "108558",
+     "name": "NORVASC (PFIZER, AUSTRALIA) (amlodipine 5 mg) tablet, 1 tablet"
+    },
+    "tpp": [
+     {
+      "id": "1081266",
+      "name": "NORVASC (PFIZER, AUSTRALIA) (amlodipine 5 mg) tablet, 10 tablet, 1 blister"
+     }
+    ]
+   }
+  ],
+  "n_tp_total": 16
+ },
+ "METFORMIN_500": {
+  "real": true,
+  "gp": "231927",
+  "gp_name": "metformin hydrochloride 500 mg tablet",
+  "disp": {
+   "name": "Metformin hydrochloride",
+   "strength": "500 mg",
+   "form": "tablet"
+  },
+  "subs": [
+   {
+    "id": "696815",
+    "name": "metformin hydrochloride"
+   }
+  ],
+  "vtm": [
+   {
+    "id": "696836",
+    "name": "metformin hydrochloride"
+   }
+  ],
+  "gpu": {
+   "id": "231936",
+   "name": "metformin hydrochloride 500 mg tablet, 1 tablet"
+  },
+  "gpp": [],
+  "tps": [
+   {
+    "tp": {
+     "id": "231943",
+     "name": "AFORMIN-500 (เอเชี่ยนยูเนียนแล็บบอราตอรี่ส์) (metformin hydrochloride 500 mg) tablet",
+     "mfr": "เอเชี่ยนยูเนียนแล็บบอราตอรี่ส์"
+    },
+    "tpu": {
+     "id": "231958",
+     "name": "AFORMIN-500 (เอเชี่ยนยูเนียนแล็บบอราตอรี่ส์) (metformin hydrochloride 500 mg) tablet, 1 tablet"
+    },
+    "tpp": []
+   },
+   {
+    "tp": {
+     "id": "259045",
+     "name": "B-COPHAGE (บุคคโลเทรดดิ้ง) (metformin hydrochloride 500 mg) tablet",
+     "mfr": "บุคคโลเทรดดิ้ง"
+    },
+    "tpu": {
+     "id": "259050",
+     "name": "B-COPHAGE (บุคคโลเทรดดิ้ง) (metformin hydrochloride 500 mg) tablet, 1 tablet"
+    },
+    "tpp": []
+   },
+   {
+    "tp": {
+     "id": "330568",
+     "name": "FORMON (เอช.เค.ฟาร์มาซูติคอล) (metformin hydrochloride 500 mg) tablet",
+     "mfr": "เอช.เค.ฟาร์มาซูติคอล"
+    },
+    "tpu": {
+     "id": "330575",
+     "name": "FORMON (เอช.เค.ฟาร์มาซูติคอล) (metformin hydrochloride 500 mg) tablet, 1 tablet"
+    },
+    "tpp": []
+   }
+  ],
+  "n_tp_total": 15
+ },
+ "SALBUTAMOL_MDI": {
+  "real": true,
+  "gp": "666141",
+  "gp_name": "salbutamol 100 mcg/1 dose pressurised inhalation, suspension",
+  "disp": {
+   "name": "Salbutamol",
+   "strength": "100 mcg/1 dose",
+   "form": "pressurised inhalation, suspension"
+  },
+  "subs": [
+   {
+    "id": "235473",
+    "name": "salbutamol"
+   }
+  ],
+  "vtm": [
+   {
+    "id": "247274",
+    "name": "salbutamol"
+   }
+  ],
+  "gpu": {
+   "id": "527368",
+   "name": "salbutamol 100 mcg/1 dose pressurised inhalation, suspension, 200 dose actuation"
+  },
+  "gpp": [
+   {
+    "id": "1187038",
+    "name": "salbutamol 100 mcg/1 dose pressurised inhalation, suspension, 200 dose actuation"
+   }
+  ],
+  "tps": [
+   {
+    "tp": {
+     "id": "1033698",
+     "name": "RESPIMOL (ที.โอ. เคมีคอลส์ (1979) (ปทุมธานี)) (salbutamol 100 mcg/1 dose) pressurised inhalation, suspension",
+     "mfr": "ที.โอ. เคมีคอลส์ (1979) (ปทุมธานี)"
+    },
+    "tpu": {
+     "id": "1033701",
+     "name": "RESPIMOL (ที.โอ. เคมีคอลส์ (1979) (ปทุมธานี)) (salbutamol 100 mcg/1 dose) pressurised inhalation, suspension, 200 dose actuation"
+    },
+    "tpp": [
+     {
+      "id": "1187064",
+      "name": "RESPIMOL (ที.โอ. เคมีคอลส์ (1979) (ปทุมธานี)) (salbutamol 100 mcg/1 dose) pressurised inhalation, suspension, 1 x 200 dose actuation, 1 box"
+     }
+    ]
+   },
+   {
+    "tp": {
+     "id": "527375",
+     "name": "BUTO-ASMA (LABORATORIO ALDO-UNION, SPAIN) (salbutamol 100 mcg/1 dose) pressurised inhalation, suspension",
+     "mfr": "LABORATORIO ALDO-UNION, SPAIN"
+    },
+    "tpu": {
+     "id": "527381",
+     "name": "BUTO-ASMA (LABORATORIO ALDO-UNION, SPAIN) (salbutamol 100 mcg/1 dose) pressurised inhalation, suspension, 200 dose actuation"
+    },
+    "tpp": []
+   },
+   {
+    "tp": {
+     "id": "666160",
+     "name": "AEROTAMOL (อินแพคฟาร์มา) (salbutamol 100 mcg/1 dose) pressurised inhalation, suspension",
+     "mfr": "อินแพคฟาร์มา"
+    },
+    "tpu": {
+     "id": "666173",
+     "name": "AEROTAMOL (อินแพคฟาร์มา) (salbutamol 100 mcg/1 dose) pressurised inhalation, suspension, 200 dose actuation"
+    },
+    "tpp": []
+   }
+  ],
+  "n_tp_total": 9
+ },
+ "SALBUTAMOL_NEB": {
+  "real": true,
+  "gp": "848856",
+  "gp_name": "salbutamol 2.5 mg/2.5 mL nebuliser solution",
+  "disp": {
+   "name": "Salbutamol",
+   "strength": "2.5 mg/2.5 mL",
+   "form": "nebuliser solution"
+  },
+  "subs": [
+   {
+    "id": "235473",
+    "name": "salbutamol"
+   }
+  ],
+  "vtm": [
+   {
+    "id": "247274",
+    "name": "salbutamol"
+   }
+  ],
+  "gpu": {
+   "id": "848860",
+   "name": "salbutamol 2.5 mg/2.5 mL nebuliser solution, 2.5 mL unit dose"
+  },
+  "gpp": [
+   {
+    "id": "1219064",
+    "name": "salbutamol 2.5 mg/2.5 mL nebuliser solution, 2.5 mL unit dose"
+   }
+  ],
+  "tps": [
+   {
+    "tp": {
+     "id": "1219040",
+     "name": "ASMASAL SDU (อินเตอร์ ฟาร์มา) (salbutamol 2.5 mg/2.5 mL) nebuliser solution",
+     "mfr": "อินเตอร์ ฟาร์มา"
+    },
+    "tpu": {
+     "id": "1219055",
+     "name": "ASMASAL SDU (อินเตอร์ ฟาร์มา) (salbutamol 2.5 mg/2.5 mL) nebuliser solution, 2.5 mL unit dose"
+    },
+    "tpp": [
+     {
+      "id": "1219093",
+      "name": "ASMASAL SDU (อินเตอร์ ฟาร์มา) (salbutamol 2.5 mg/2.5 mL) nebuliser solution, 21 x 2.5 mL unit dose, 1 box"
+     }
+    ]
+   },
+   {
+    "tp": {
+     "id": "1280786",
+     "name": "SALBULES (AMANTA HEALTHCARE, INDIA) (salbutamol 2.5 mg/2.5 mL) nebuliser solution",
+     "mfr": "AMANTA HEALTHCARE, INDIA"
+    },
+    "tpu": {
+     "id": "1280793",
+     "name": "SALBULES (AMANTA HEALTHCARE, INDIA) (salbutamol 2.5 mg/2.5 mL) nebuliser solution, 2.5 mL unit dose"
+    },
+    "tpp": [
+     {
+      "id": "1280803",
+      "name": "SALBULES (AMANTA HEALTHCARE, INDIA) (salbutamol 2.5 mg/2.5 mL) nebuliser solution, 2.5 mL unit dose"
+     }
+    ]
+   },
+   {
+    "tp": {
+     "id": "526261",
+     "name": "VENTOLIN (GLAXO WELLCOME, AUSTRALIA) (salbutamol 2.5 mg/2.5 mL) nebuliser solution",
+     "mfr": "GLAXO WELLCOME, AUSTRALIA"
+    },
+    "tpu": {
+     "id": "526274",
+     "name": "VENTOLIN (GLAXO WELLCOME, AUSTRALIA) (salbutamol 2.5 mg/2.5 mL) nebuliser solution, 2.5 mL unit dose"
+    },
+    "tpp": []
+   }
+  ],
+  "n_tp_total": 10
+ },
+ "OSELTAMIVIR": {
+  "real": true,
+  "gp": "339390",
+  "gp_name": "oseltamivir 75 mg capsule, hard",
+  "disp": {
+   "name": "Oseltamivir",
+   "strength": "75 mg",
+   "form": "capsule, hard"
+  },
+  "subs": [
+   {
+    "id": "339264",
+    "name": "oseltamivir"
+   }
+  ],
+  "vtm": [
+   {
+    "id": "339286",
+    "name": "oseltamivir"
+   }
+  ],
+  "gpu": {
+   "id": "339405",
+   "name": "oseltamivir 75 mg capsule, hard, 1 capsule"
+  },
+  "gpp": [
+   {
+    "id": "1096591",
+    "name": "oseltamivir 75 mg capsule, hard, 10 capsule, 1 strip"
+   }
+  ],
+  "tps": [
+   {
+    "tp": {
+     "id": "339414",
+     "name": "GPO-A-FLU (องค์การเภสัชกรรม) (oseltamivir 75 mg) capsule, hard",
+     "mfr": "องค์การเภสัชกรรม"
+    },
+    "tpu": {
+     "id": "339422",
+     "name": "GPO-A-FLU (องค์การเภสัชกรรม) (oseltamivir 75 mg) capsule, hard, 1 capsule"
+    },
+    "tpp": [
+     {
+      "id": "1096602",
+      "name": "GPO-A-FLU (องค์การเภสัชกรรม) (oseltamivir 75 mg) capsule, hard, 10 capsule, 1 strip"
+     }
+    ]
+   },
+   {
+    "tp": {
+     "id": "452428",
+     "name": "TAMIFLU (CENEXI, FRANCE) (oseltamivir 75 mg) capsule, hard",
+     "mfr": "CENEXI, FRANCE"
+    },
+    "tpu": {
+     "id": "452437",
+     "name": "TAMIFLU (CENEXI, FRANCE) (oseltamivir 75 mg) capsule, hard, 1 capsule"
+    },
+    "tpp": [
+     {
+      "id": "1096660",
+      "name": "TAMIFLU (CENEXI, FRANCE) (oseltamivir 75 mg) capsule, hard, 10 capsule (1 x 10 capsule blister), 1 box"
+     }
+    ]
+   },
+   {
+    "tp": {
+     "id": "1140530",
+     "name": "GPO-A-FLU (องค์การเภสัชกรรม (ปทุมธานี)) (oseltamivir 75 mg) capsule, hard",
+     "mfr": "องค์การเภสัชกรรม (ปทุมธานี)"
+    },
+    "tpu": {
+     "id": "1140548",
+     "name": "GPO-A-FLU (องค์การเภสัชกรรม (ปทุมธานี)) (oseltamivir 75 mg) capsule, hard, 1 capsule"
+    },
+    "tpp": [
+     {
+      "id": "1140576",
+      "name": "GPO-A-FLU (องค์การเภสัชกรรม (ปทุมธานี)) (oseltamivir 75 mg) capsule, hard, 250 capsule (25 x 10 capsule strip), 1 box"
+     }
+    ]
+   }
+  ],
+  "n_tp_total": 6
+ },
+ "FAVIPIRAVIR": {
+  "real": true,
+  "gp": "1140915",
+  "gp_name": "favipiravir 200 mg film-coated tablet",
+  "disp": {
+   "name": "Favipiravir",
+   "strength": "200 mg",
+   "form": "film-coated tablet"
+  },
+  "subs": [
+   {
+    "id": "1140887",
+    "name": "favipiravir"
+   }
+  ],
+  "vtm": [
+   {
+    "id": "1140904",
+    "name": "favipiravir"
+   }
+  ],
+  "gpu": {
+   "id": "1140927",
+   "name": "favipiravir 200 mg film-coated tablet, 1 tablet"
+  },
+  "gpp": [
+   {
+    "id": "1140958",
+    "name": "favipiravir 200 mg film-coated tablet, 10 tablet, 1 blister"
+   }
+  ],
+  "tps": [
+   {
+    "tp": {
+     "id": "1140936",
+     "name": "AVIGAN (TOYAMA CHEMICAL, JAPAN) (favipiravir 200 mg) film-coated tablet",
+     "mfr": "TOYAMA CHEMICAL, JAPAN"
+    },
+    "tpu": {
+     "id": "1140943",
+     "name": "AVIGAN (TOYAMA CHEMICAL, JAPAN) (favipiravir 200 mg) film-coated tablet, 1 tablet"
+    },
+    "tpp": [
+     {
+      "id": "1140989",
+      "name": "AVIGAN (TOYAMA CHEMICAL, JAPAN) (favipiravir 200 mg) film-coated tablet, 100 tablet (10 x 10 tablet blister), 1 box"
+     }
+    ]
+   },
+   {
+    "tp": {
+     "id": "1195232",
+     "name": "FAVIR (องค์การเภสัชกรรม) (favipiravir 200 mg) film-coated tablet",
+     "mfr": "องค์การเภสัชกรรม"
+    },
+    "tpu": {
+     "id": "1195245",
+     "name": "FAVIR (องค์การเภสัชกรรม) (favipiravir 200 mg) film-coated tablet, 1 tablet"
+    },
+    "tpp": [
+     {
+      "id": "1195266",
+      "name": "FAVIR (องค์การเภสัชกรรม) (favipiravir 200 mg) film-coated tablet, 100 tablet (10 x 10 tablet blister), 1 box"
+     }
+    ]
+   },
+   {
+    "tp": {
+     "id": "1198211",
+     "name": "FABIFLU (GLENMARK PHARMACEUTICALS, INDIA) (favipiravir 200 mg) film-coated tablet",
+     "mfr": "GLENMARK PHARMACEUTICALS, INDIA"
+    },
+    "tpu": {
+     "id": "1198224",
+     "name": "FABIFLU (GLENMARK PHARMACEUTICALS, INDIA) (favipiravir 200 mg) film-coated tablet, 1 tablet"
+    },
+    "tpp": [
+     {
+      "id": "1198269",
+      "name": "FABIFLU (GLENMARK PHARMACEUTICALS, INDIA) (favipiravir 200 mg) film-coated tablet, 34 tablet (1 x 34 tablet blister), 1 box"
+     }
+    ]
+   }
+  ],
+  "n_tp_total": 6
+ },
+ "REMDESIVIR": {
+  "real": true,
+  "gp": "1242065",
+  "gp_name": "remdesivir 100 mg concentrate for solution for infusion",
+  "disp": {
+   "name": "Remdesivir",
+   "strength": "100 mg",
+   "form": "concentrate for solution for infusion"
+  },
+  "subs": [
+   {
+    "id": "1164803",
+    "name": "remdesivir"
+   }
+  ],
+  "vtm": [
+   {
+    "id": "1164826",
+    "name": "remdesivir"
+   }
+  ],
+  "gpu": {
+   "id": "1242077",
+   "name": "remdesivir 100 mg concentrate for solution for infusion, 20 mL vial"
+  },
+  "gpp": [
+   {
+    "id": "1242106",
+    "name": "remdesivir 100 mg concentrate for solution for infusion, 20 mL vial"
+   }
+  ],
+  "tps": [
+   {
+    "tp": {
+     "id": "1242083",
+     "name": "REMDESIVIR-EVA PHARMA (EVA PHARMA FOR PHARMACEUTICALS & MEDICAL APPLIANCES, EGYPT) (remdesivir 100 mg) concentrate for solution for infusion",
+     "mfr": "EVA PHARMA FOR PHARMACEUTICALS & MEDICAL APPLIANCES, EGYPT"
+    },
+    "tpu": {
+     "id": "1242096",
+     "name": "REMDESIVIR-EVA PHARMA (EVA PHARMA FOR PHARMACEUTICALS & MEDICAL APPLIANCES, EGYPT) (remdesivir 100 mg) concentrate for solution for infusion, 20 mL vial"
+    },
+    "tpp": [
+     {
+      "id": "1242134",
+      "name": "REMDESIVIR-EVA PHARMA (EVA PHARMA FOR PHARMACEUTICALS & MEDICAL APPLIANCES, EGYPT) (remdesivir 100 mg) concentrate for solution for infusion, 1 x 20 mL vial, 1 box"
+     }
+    ]
+   }
+  ],
+  "n_tp_total": 1
+ },
+ "DEXAMETHASONE_INJ": {
+  "real": true,
+  "gp": "555722",
+  "gp_name": "dexamethasone 4 mg/1 mL solution for injection",
+  "disp": {
+   "name": "Dexamethasone",
+   "strength": "4 mg/1 mL",
+   "form": "solution for injection"
+  },
+  "subs": [
+   {
+    "id": "223866",
+    "name": "dexamethasone"
+   }
+  ],
+  "vtm": [
+   {
+    "id": "256574",
+    "name": "dexamethasone"
+   }
+  ],
+  "gpu": {
+   "id": "555733",
+   "name": "dexamethasone 4 mg/1 mL solution for injection, 1 mL ampoule"
+  },
+  "gpp": [
+   {
+    "id": "1188800",
+    "name": "dexamethasone 4 mg/1 mL solution for injection, 1 mL ampoule"
+   }
+  ],
+  "tps": [
+   {
+    "tp": {
+     "id": "555767",
+     "name": "DEXASONE (แอตแลนติค) (dexamethasone 4 mg/1 mL) solution for injection",
+     "mfr": "แอตแลนติค"
+    },
+    "tpu": {
+     "id": "555779",
+     "name": "DEXASONE (แอตแลนติค) (dexamethasone 4 mg/1 mL) solution for injection, 1 mL ampoule"
+    },
+    "tpp": [
+     {
+      "id": "1212739",
+      "name": "DEXASONE (แอตแลนติค) (dexamethasone 4 mg/1 mL) solution for injection, 50 x 1 mL ampoule, 1 box"
+     }
+    ]
+   },
+   {
+    "tp": {
+     "id": "555896",
+     "name": "LODEXA (แอล.บี.เอส. แลบบอเรตอรี่) (dexamethasone 4 mg/1 mL) solution for injection",
+     "mfr": "แอล.บี.เอส. แลบบอเรตอรี่"
+    },
+    "tpu": {
+     "id": "555906",
+     "name": "LODEXA (แอล.บี.เอส. แลบบอเรตอรี่) (dexamethasone 4 mg/1 mL) solution for injection, 1 mL ampoule"
+    },
+    "tpp": [
+     {
+      "id": "1188837",
+      "name": "LODEXA (แอล.บี.เอส. แลบบอเรตอรี่) (dexamethasone 4 mg/1 mL) solution for injection, 50 x 1 mL ampoule, 1 box"
+     }
+    ]
+   },
+   {
+    "tp": {
+     "id": "556404",
+     "name": "DEXA A.N.B. (เอ.เอ็น.บี. ลาบอราตอรี่) (dexamethasone 4 mg/1 mL) solution for injection",
+     "mfr": "เอ.เอ็น.บี. ลาบอราตอรี่"
+    },
+    "tpu": {
+     "id": "556415",
+     "name": "DEXA A.N.B. (เอ.เอ็น.บี. ลาบอราตอรี่) (dexamethasone 4 mg/1 mL) solution for injection, 10 mL vial"
+    },
+    "tpp": [
+     {
+      "id": "1208309",
+      "name": "DEXA A.N.B. (เอ.เอ็น.บี. ลาบอราตอรี่) (dexamethasone 4 mg/1 mL) solution for injection, 1 mL ampoule"
+     }
+    ]
+   }
+  ],
+  "n_tp_total": 27
+ },
+ "CEFTRIAXONE_1G": {
+  "real": true,
+  "gp": "694507",
+  "gp_name": "ceftriaxone 1 g powder for solution for injection/infusion",
+  "disp": {
+   "name": "Ceftriaxone",
+   "strength": "1 g",
+   "form": "powder for solution for injection/infusion"
+  },
+  "subs": [
+   {
+    "id": "548350",
+    "name": "ceftriaxone"
+   }
+  ],
+  "vtm": [
+   {
+    "id": "548378",
+    "name": "ceftriaxone"
+   }
+  ],
+  "gpu": {
+   "id": "694511",
+   "name": "ceftriaxone 1 g powder for solution for injection/infusion, 1 vial"
+  },
+  "gpp": [
+   {
+    "id": "1097935",
+    "name": "ceftriaxone 1 g powder for solution for injection/infusion, 10 vial (10 x 1 vial), 1 box"
+   }
+  ],
+  "tps": [
+   {
+    "tp": {
+     "id": "548563",
+     "name": "CEF-3 I.V. (สยามเภสัช) (ceftriaxone 1 g) powder for solution for injection/infusion",
+     "mfr": "สยามเภสัช"
+    },
+    "tpu": {
+     "id": "548571",
+     "name": "CEF-3 I.V. (สยามเภสัช) (ceftriaxone 1 g) powder for solution for injection/infusion, 1 vial"
+    },
+    "tpp": [
+     {
+      "id": "1191522",
+      "name": "CEF-3 I.V. (สยามเภสัช) (ceftriaxone 1 g) powder for solution for injection/infusion, 1 vial (1 x 1 vial), 1 box"
+     }
+    ]
+   },
+   {
+    "tp": {
+     "id": "548585",
+     "name": "ZEFAXONE (เอ็ม แอนด์ เอ็ช แมนูแฟคเจอริ่ง) (ceftriaxone 1 g) powder for solution for injection/infusion",
+     "mfr": "เอ็ม แอนด์ เอ็ช แมนูแฟคเจอริ่ง"
+    },
+    "tpu": {
+     "id": "548592",
+     "name": "ZEFAXONE (เอ็ม แอนด์ เอ็ช แมนูแฟคเจอริ่ง) (ceftriaxone 1 g) powder for solution for injection/infusion, 1 vial"
+    },
+    "tpp": [
+     {
+      "id": "1097942",
+      "name": "ZEFAXONE (เอ็ม แอนด์ เอ็ช แมนูแฟคเจอริ่ง) (ceftriaxone 1 g) powder for solution for injection/infusion, 10 vial (10 x 1 vial), 1 box"
+     }
+    ]
+   },
+   {
+    "tp": {
+     "id": "548730",
+     "name": "CEF-ZONE (มิลลิเมด) (ceftriaxone 1 g) powder for solution for injection/infusion",
+     "mfr": "มิลลิเมด"
+    },
+    "tpu": {
+     "id": "548748",
+     "name": "CEF-ZONE (มิลลิเมด) (ceftriaxone 1 g) powder for solution for injection/infusion, 1 vial"
+    },
+    "tpp": [
+     {
+      "id": "1098934",
+      "name": "CEF-ZONE (มิลลิเมด) (ceftriaxone 1 g) powder for solution for injection/infusion, 1 vial, 1 box"
+     }
+    ]
+   }
+  ],
+  "n_tp_total": 51
+ },
+ "DOXYCYCLINE_100": {
+  "real": true,
+  "gp": "226408",
+  "gp_name": "doxycycline 100 mg capsule, hard",
+  "disp": {
+   "name": "Doxycycline",
+   "strength": "100 mg",
+   "form": "capsule, hard"
+  },
+  "subs": [
+   {
+    "id": "226372",
+    "name": "doxycycline"
+   }
+  ],
+  "vtm": [
+   {
+    "id": "226393",
+    "name": "doxycycline"
+   }
+  ],
+  "gpu": {
+   "id": "226412",
+   "name": "doxycycline 100 mg capsule, hard, 1 capsule"
+  },
+  "gpp": [
+   {
+    "id": "1083571",
+    "name": "doxycycline 100 mg capsule, hard, 10 capsule, 1 blister"
+   }
+  ],
+  "tps": [
+   {
+    "tp": {
+     "id": "316311",
+     "name": "DOCYL (ยูนีซัน) (doxycycline 100 mg) capsule, hard",
+     "mfr": "ยูนีซัน"
+    },
+    "tpu": {
+     "id": "316324",
+     "name": "DOCYL (ยูนีซัน) (doxycycline 100 mg) capsule, hard, 1 capsule"
+    },
+    "tpp": [
+     {
+      "id": "1083585",
+      "name": "DOCYL (ยูนีซัน) (doxycycline 100 mg) capsule, hard, 10 capsule, 1 blister"
+     }
+    ]
+   },
+   {
+    "tp": {
+     "id": "412920",
+     "name": "POLICYCLINE 100 (โปลิฟาร์ม) (doxycycline 100 mg) capsule, hard",
+     "mfr": "โปลิฟาร์ม"
+    },
+    "tpu": {
+     "id": "412931",
+     "name": "POLICYCLINE 100 (โปลิฟาร์ม) (doxycycline 100 mg) capsule, hard, 1 capsule"
+    },
+    "tpp": [
+     {
+      "id": "1083626",
+      "name": "POLICYCLINE 100 (โปลิฟาร์ม) (doxycycline 100 mg) capsule, hard, 500 capsule (50 x 10 capsule blister), 1 box"
+     }
+    ]
+   },
+   {
+    "tp": {
+     "id": "226420",
+     "name": "693 MALBAC (ยูโทเปี้ยน) (doxycycline 100 mg) capsule, hard",
+     "mfr": "ยูโทเปี้ยน"
+    },
+    "tpu": {
+     "id": "226431",
+     "name": "693 MALBAC (ยูโทเปี้ยน) (doxycycline 100 mg) capsule, hard, 1 capsule"
+    },
+    "tpp": []
+   }
+  ],
+  "n_tp_total": 66
+ },
+ "NSS_1000": {
+  "real": true,
+  "gp": "698197",
+  "gp_name": "sodium chloride 900 mg/100 mL solution for infusion",
+  "disp": {
+   "name": "Sodium chloride",
+   "strength": "900 mg/100 mL (1000 mL)",
+   "form": "solution for infusion"
+  },
+  "subs": [
+   {
+    "id": "520688",
+    "name": "sodium chloride"
+   }
+  ],
+  "vtm": [
+   {
+    "id": "521118",
+    "name": "sodium chloride"
+   }
+  ],
+  "gpu": {
+   "id": "801465",
+   "name": "sodium chloride 900 mg/100 mL solution for infusion, 150 mL bag"
+  },
+  "gpp": [
+   {
+    "id": "1076145",
+    "name": "sodium chloride 900 mg/100 mL solution for infusion, 250 mL bag"
+   }
+  ],
+  "tps": [
+   {
+    "tp": {
+     "id": "761404",
+     "name": "SODIUM CHLORIDE INJECTION U.S.P. (HARD BAG) (ไทยโอซูก้า) (sodium chloride 900 mg/100 mL) solution for infusion",
+     "mfr": "ไทยโอซูก้า"
+    },
+    "tpu": {
+     "id": "761415",
+     "name": "SODIUM CHLORIDE INJECTION U.S.P. (HARD BAG) (ไทยโอซูก้า) (sodium chloride 900 mg/100 mL) solution for infusion, 1 L bag"
+    },
+    "tpp": [
+     {
+      "id": "1077039",
+      "name": "SODIUM CHLORIDE INJECTION U.S.P. (HARD BAG) (ไทยโอซูก้า) (sodium chloride 900 mg/100 mL) solution for infusion, 1 L bag"
+     }
+    ]
+   },
+   {
+    "tp": {
+     "id": "962071",
+     "name": "0.9% SODIUM CHLORIDE (BAXTER HEALTHCARE PHILS, PHILIPPINES) (sodium chloride 900 mg/100 mL) solution for infusion",
+     "mfr": "BAXTER HEALTHCARE PHILS, PHILIPPINES"
+    },
+    "tpu": {
+     "id": "801477",
+     "name": "0.9% SODIUM CHLORIDE (BAXTER HEALTHCARE PHILS, PHILIPPINES) (sodium chloride 900 mg/100 mL) solution for infusion, 150 mL bag"
+    },
+    "tpp": [
+     {
+      "id": "1091548",
+      "name": "0.9% SODIUM CHLORIDE (BAXTER HEALTHCARE PHILS, PHILIPPINES) (sodium chloride 900 mg/100 mL) solution for infusion, 250 mL bag, 1 bag"
+     }
+    ]
+   },
+   {
+    "tp": {
+     "id": "962092",
+     "name": "NORMAL SALINE 0.9% (เยเนอรัล ฮอสปิตัล โปรดัคส์ (มหาชน)) (sodium chloride 900 mg/100 mL) solution for infusion",
+     "mfr": "เยเนอรัล ฮอสปิตัล โปรดัคส์ (มหาชน)"
+    },
+    "tpu": {
+     "id": "787671",
+     "name": "NORMAL SALINE 0.9% (เยเนอรัล ฮอสปิตัล โปรดัคส์ (มหาชน)) (sodium chloride 900 mg/100 mL) solution for infusion, 250 mL bag"
+    },
+    "tpp": [
+     {
+      "id": "1076150",
+      "name": "NORMAL SALINE 0.9% (เยเนอรัล ฮอสปิตัล โปรดัคส์ (มหาชน)) (sodium chloride 900 mg/100 mL) solution for infusion, 250 mL bag"
+     }
+    ]
+   }
+  ],
+  "n_tp_total": 22
+ },
+ "RL_1000": {
+  "real": true,
+  "gp": "578054",
+  "gp_name": "calcium chloride 20 mg/100 mL + potassium chloride 30 mg/100 mL + sodium chloride 600 mg/100 mL + sodium lactate 310 mg/100 mL solution for injection",
+  "disp": {
+   "name": "Ringer's lactate",
+   "strength": "1000 mL",
+   "form": "solution for infusion"
+  },
+  "subs": [
+   {
+    "id": "558092",
+    "name": "sodium lactate"
+   },
+   {
+    "id": "519482",
+    "name": "potassium chloride"
+   },
+   {
+    "id": "520688",
+    "name": "sodium chloride"
+   }
+  ],
+  "vtm": [
+   {
+    "id": "578008",
+    "name": "calcium chloride + potassium chloride + sodium chloride + sodium lactate"
+   }
+  ],
+  "gpu": {
+   "id": "578065",
+   "name": "calcium chloride 20 mg/100 mL + potassium chloride 30 mg/100 mL + sodium chloride 600 mg/100 mL + sodium lactate 310 mg/100 mL solution for injection, 100 mL bag"
+  },
+  "gpp": [],
+  "tps": [
+   {
+    "tp": {
+     "id": "578077",
+     "name": "RINGER'S SOLUTION U.S.P. (ไทยโอซูก้า) (calcium chloride 20 mg/100 mL + potassium chloride 30 mg/100 mL + sodium chloride 600 mg/100 mL + sodium lactate 310 mg/100 mL) solution for injection",
+     "mfr": "ไทยโอซูก้า"
+    },
+    "tpu": {
+     "id": "578083",
+     "name": "RINGER'S SOLUTION U.S.P. (ไทยโอซูก้า) (calcium chloride 20 mg/100 mL + potassium chloride 30 mg/100 mL + sodium chloride 600 mg/100 mL + sodium lactate 310 mg/100 mL) solution for injection, 100 mL bag"
+    },
+    "tpp": []
+   }
+  ],
+  "n_tp_total": 1
+ },
+ "ORS": {
+  "real": true,
+  "gp": "707563",
+  "gp_name": "oral rehydration salts oral powder",
+  "disp": {
+   "name": "Oral rehydration salts",
+   "strength": "sachet",
+   "form": "oral powder"
+  },
+  "subs": [
+   {
+    "id": "707537",
+    "name": "oral rehydration salts"
+   }
+  ],
+  "vtm": [
+   {
+    "id": "707559",
+    "name": "oral rehydration salts"
+   }
+  ],
+  "gpu": null,
+  "gpp": [],
+  "tps": [],
+  "n_tp_total": 0
+ },
+ "ADRENALINE_1MG": {
+  "real": true,
+  "gp": "810845",
+  "gp_name": "epinephrine 1 mg/1 mL solution for injection",
+  "disp": {
+   "name": "Epinephrine (adrenaline)",
+   "strength": "1 mg/1 mL",
+   "form": "solution for injection"
+  },
+  "subs": [
+   {
+    "id": "536981",
+    "name": "epinephrine"
+   }
+  ],
+  "vtm": [
+   {
+    "id": "537006",
+    "name": "epinephrine"
+   }
+  ],
+  "gpu": {
+   "id": "810850",
+   "name": "epinephrine 1 mg/1 mL solution for injection, 1 mL ampoule"
+  },
+  "gpp": [
+   {
+    "id": "1098779",
+    "name": "epinephrine 1 mg/1 mL solution for injection, 50 x 1 mL ampoule, 1 box"
+   }
+  ],
+  "tps": [
+   {
+    "tp": {
+     "id": "537132",
+     "name": "ADRENALINE (แอตแลนติค) (epinephrine 1 mg/1 mL) solution for injection",
+     "mfr": "แอตแลนติค"
+    },
+    "tpu": {
+     "id": "537145",
+     "name": "ADRENALINE (แอตแลนติค) (epinephrine 1 mg/1 mL) solution for injection, 1 mL ampoule"
+    },
+    "tpp": [
+     {
+      "id": "1210820",
+      "name": "ADRENALINE (แอตแลนติค) (epinephrine 1 mg/1 mL) solution for injection, 50 x 1 mL ampoule, 1 box"
+     }
+    ]
+   },
+   {
+    "tp": {
+     "id": "537215",
+     "name": "ADRENALINE (องค์การเภสัชกรรม) (epinephrine 1 mg/1 mL) solution for injection",
+     "mfr": "องค์การเภสัชกรรม"
+    },
+    "tpu": {
+     "id": "537227",
+     "name": "ADRENALINE (องค์การเภสัชกรรม) (epinephrine 1 mg/1 mL) solution for injection, 1 mL ampoule"
+    },
+    "tpp": [
+     {
+      "id": "1255667",
+      "name": "ADRENALINE (องค์การเภสัชกรรม) (epinephrine 1 mg/1 mL) solution for injection, 1 mL ampoule"
+     }
+    ]
+   },
+   {
+    "tp": {
+     "id": "933778",
+     "name": "ADRENALINE GPO INJECTION (องค์การเภสัชกรรม) (epinephrine 1 mg/1 mL) solution for injection",
+     "mfr": "องค์การเภสัชกรรม"
+    },
+    "tpu": {
+     "id": "933784",
+     "name": "ADRENALINE GPO INJECTION (องค์การเภสัชกรรม) (epinephrine 1 mg/1 mL) solution for injection, 1 mL ampoule"
+    },
+    "tpp": [
+     {
+      "id": "1339384",
+      "name": "ADRENALINE GPO INJECTION (องค์การเภสัชกรรม) (epinephrine 1 mg/1 mL) solution for injection, 50 x 1 mL ampoule, 1 box"
+     }
+    ]
+   }
+  ],
+  "n_tp_total": 9
+ },
+ "ATROPINE_06": {
+  "real": true,
+  "gp": "770061",
+  "gp_name": "atropine sulfate 600 mcg/1 mL solution for injection",
+  "disp": {
+   "name": "Atropine sulfate",
+   "strength": "600 mcg/1 mL",
+   "form": "solution for injection"
+  },
+  "subs": [
+   {
+    "id": "756057",
+    "name": "atropine sulfate"
+   }
+  ],
+  "vtm": [
+   {
+    "id": "658651",
+    "name": "atropine sulfate"
+   }
+  ],
+  "gpu": {
+   "id": "802062",
+   "name": "atropine sulfate 600 mcg/1 mL solution for injection, 1 mL ampoule"
+  },
+  "gpp": [
+   {
+    "id": "1077672",
+    "name": "atropine sulfate 600 mcg/1 mL solution for injection, 50 x 1 mL ampoule, 1 box"
+   }
+  ],
+  "tps": [
+   {
+    "tp": {
+     "id": "770088",
+     "name": "ATROPINE SULFATE (องค์การเภสัชกรรม) (atropine sulfate 600 mcg/1 mL) solution for injection",
+     "mfr": "องค์การเภสัชกรรม"
+    },
+    "tpu": {
+     "id": "766735",
+     "name": "ATROPINE SULFATE (องค์การเภสัชกรรม) (atropine sulfate 600 mcg/1 mL) solution for injection, 1 mL ampoule"
+    },
+    "tpp": [
+     {
+      "id": "1274415",
+      "name": "ATROPINE SULFATE (องค์การเภสัชกรรม) (atropine sulfate 600 mcg/1 mL) solution for injection, 1 mL ampoule"
+     }
+    ]
+   },
+   {
+    "tp": {
+     "id": "811418",
+     "name": "ATROPINE SULFATE (แอตแลนติค) (atropine sulfate 600 mcg/1 mL) solution for injection",
+     "mfr": "แอตแลนติค"
+    },
+    "tpu": {
+     "id": "811425",
+     "name": "ATROPINE SULFATE (แอตแลนติค) (atropine sulfate 600 mcg/1 mL) solution for injection, 1 mL ampoule"
+    },
+    "tpp": [
+     {
+      "id": "1211159",
+      "name": "ATROPINE SULFATE (แอตแลนติค) (atropine sulfate 600 mcg/1 mL) solution for injection, 50 x 1 mL ampoule, 1 box"
+     }
+    ]
+   },
+   {
+    "tp": {
+     "id": "802070",
+     "name": "ATROPINE SULPHATE 1/100 GR. (เอ.เอ็น.บี. ลาบอราตอรี่) (atropine sulfate 600 mcg/1 mL) solution for injection",
+     "mfr": "เอ.เอ็น.บี. ลาบอราตอรี่"
+    },
+    "tpu": {
+     "id": "802089",
+     "name": "ATROPINE SULPHATE 1/100 GR. (เอ.เอ็น.บี. ลาบอราตอรี่) (atropine sulfate 600 mcg/1 mL) solution for injection, 1 mL ampoule"
+    },
+    "tpp": []
+   }
+  ],
+  "n_tp_total": 3
+ },
+ "TXA_250": {
+  "real": true,
+  "gp": "763354",
+  "gp_name": "tranexamic acid 250 mg/5 mL solution for injection",
+  "disp": {
+   "name": "Tranexamic acid",
+   "strength": "250 mg/5 mL",
+   "form": "solution for injection"
+  },
+  "subs": [
+   {
+    "id": "650849",
+    "name": "tranexamic acid"
+   }
+  ],
+  "vtm": [
+   {
+    "id": "650865",
+    "name": "tranexamic acid"
+   }
+  ],
+  "gpu": {
+   "id": "675396",
+   "name": "tranexamic acid 50 mg/1 mL solution for injection, 5 mL ampoule"
+  },
+  "gpp": [
+   {
+    "id": "1075760",
+    "name": "tranexamic acid 250 mg/5 mL solution for injection, 50 x 5 mL ampoule, 1 box"
+   }
+  ],
+  "tps": [
+   {
+    "tp": {
+     "id": "675401",
+     "name": "TRANSAMIN (โอลิค) (tranexamic acid 250 mg/5 mL) solution for injection",
+     "mfr": "โอลิค"
+    },
+    "tpu": {
+     "id": "675417",
+     "name": "TRANSAMIN (โอลิค) (tranexamic acid 250 mg/5 mL) solution for injection, 5 mL ampoule"
+    },
+    "tpp": [
+     {
+      "id": "1075773",
+      "name": "TRANSAMIN (โอลิค) (tranexamic acid 250 mg/5 mL) solution for injection, 50 x 5 mL ampoule, 1 box"
+     }
+    ]
+   },
+   {
+    "tp": {
+     "id": "1217657",
+     "name": "TRANEXAMIC ACID INJECTION (SIU GUAN CHEM, TAIWAN) (tranexamic acid 250 mg/5 mL) solution for injection",
+     "mfr": "SIU GUAN CHEM, TAIWAN"
+    },
+    "tpu": {
+     "id": "1217661",
+     "name": "TRANEXAMIC ACID INJECTION (SIU GUAN CHEM, TAIWAN) (tranexamic acid 250 mg/5 mL) solution for injection, 5 mL ampoule"
+    },
+    "tpp": [
+     {
+      "id": "1217688",
+      "name": "TRANEXAMIC ACID INJECTION (SIU GUAN CHEM, TAIWAN) (tranexamic acid 250 mg/5 mL) solution for injection, 5 mL ampoule"
+     }
+    ]
+   },
+   {
+    "tp": {
+     "id": "1257644",
+     "name": "GEMOTRAN (FARMAK, UKRAINE) (tranexamic acid 250 mg/5 mL) solution for injection",
+     "mfr": "FARMAK, UKRAINE"
+    },
+    "tpu": {
+     "id": "1257659",
+     "name": "GEMOTRAN (FARMAK, UKRAINE) (tranexamic acid 250 mg/5 mL) solution for injection, 5 mL ampoule"
+    },
+    "tpp": [
+     {
+      "id": "1257671",
+      "name": "GEMOTRAN (FARMAK, UKRAINE) (tranexamic acid 250 mg/5 mL) solution for injection, 10 x 5 mL ampoule, 1 box"
+     }
+    ]
+   }
+  ],
+  "n_tp_total": 5
+ },
+ "MORPHINE_10": {
+  "real": true,
+  "gp": "535897",
+  "gp_name": "morphine sulfate 10 mg/1 mL solution for injection",
+  "disp": {
+   "name": "Morphine sulfate",
+   "strength": "10 mg/1 mL",
+   "form": "solution for injection"
+  },
+  "subs": [
+   {
+    "id": "535486",
+    "name": "morphine sulfate"
+   }
+  ],
+  "vtm": [
+   {
+    "id": "535504",
+    "name": "morphine sulfate"
+   }
+  ],
+  "gpu": {
+   "id": "535907",
+   "name": "morphine sulfate 10 mg/1 mL solution for injection, 1 mL ampoule"
+  },
+  "gpp": [],
+  "tps": [
+   {
+    "tp": {
+     "id": "535911",
+     "name": "MORPHINE SULFATE (เอ็ม แอนด์ เอ็ช แมนูแฟคเจอริ่ง) (morphine sulfate 10 mg/1 mL) solution for injection",
+     "mfr": "เอ็ม แอนด์ เอ็ช แมนูแฟคเจอริ่ง"
+    },
+    "tpu": {
+     "id": "535924",
+     "name": "MORPHINE SULFATE (เอ็ม แอนด์ เอ็ช แมนูแฟคเจอริ่ง) (morphine sulfate 10 mg/1 mL) solution for injection, 1 mL ampoule"
+    },
+    "tpp": []
+   },
+   {
+    "tp": {
+     "id": "852147",
+     "name": "MORPHINE (องค์การเภสัชกรรม) (morphine sulfate 10 mg/1 mL) solution for injection",
+     "mfr": "องค์การเภสัชกรรม"
+    },
+    "tpu": {
+     "id": "852152",
+     "name": "MORPHINE (องค์การเภสัชกรรม) (morphine sulfate 10 mg/1 mL) solution for injection, 1 mL ampoule"
+    },
+    "tpp": []
+   }
+  ],
+  "n_tp_total": 2
+ },
+ "FENTANYL_100": {
+  "real": true,
+  "gp": "767330",
+  "gp_name": "fentanyl 100 mcg/2 mL solution for injection",
+  "disp": {
+   "name": "Fentanyl",
+   "strength": "100 mcg/2 mL",
+   "form": "solution for injection"
+  },
+  "subs": [
+   {
+    "id": "535222",
+    "name": "fentanyl"
+   }
+  ],
+  "vtm": [
+   {
+    "id": "535246",
+    "name": "fentanyl"
+   }
+  ],
+  "gpu": {
+   "id": "767348",
+   "name": "fentanyl 100 mcg/2 mL solution for injection, 2 mL ampoule"
+  },
+  "gpp": [
+   {
+    "id": "1051647",
+    "name": "fentanyl 100 mcg/2 mL solution for injection, 10 x 2 mL ampoule, 1 box"
+   }
+  ],
+  "tps": [
+   {
+    "tp": {
+     "id": "1051623",
+     "name": "FENTANYL CITRATE (YICHANG HUMANWELL PHARMACEUTICAL, CHINA) (fentanyl 100 mcg/2 mL) solution for injection",
+     "mfr": "YICHANG HUMANWELL PHARMACEUTICAL, CHINA"
+    },
+    "tpu": {
+     "id": "1051634",
+     "name": "FENTANYL CITRATE (YICHANG HUMANWELL PHARMACEUTICAL, CHINA) (fentanyl 100 mcg/2 mL) solution for injection, 2 mL ampoule"
+    },
+    "tpp": [
+     {
+      "id": "1051652",
+      "name": "FENTANYL CITRATE (YICHANG HUMANWELL PHARMACEUTICAL, CHINA) (fentanyl 100 mcg/2 mL) solution for injection, 10 x 2 mL ampoule, 1 box"
+     }
+    ]
+   },
+   {
+    "tp": {
+     "id": "1111165",
+     "name": "FENSTUD (RUSAN PHARMA, INDIA) (fentanyl 100 mcg/2 mL) solution for injection",
+     "mfr": "RUSAN PHARMA, INDIA"
+    },
+    "tpu": {
+     "id": "1111177",
+     "name": "FENSTUD (RUSAN PHARMA, INDIA) (fentanyl 100 mcg/2 mL) solution for injection, 2 mL ampoule"
+    },
+    "tpp": [
+     {
+      "id": "1111183",
+      "name": "FENSTUD (RUSAN PHARMA, INDIA) (fentanyl 100 mcg/2 mL) solution for injection, 10 x 2 mL ampoule, 1 box"
+     }
+    ]
+   },
+   {
+    "tp": {
+     "id": "1121655",
+     "name": "FENTANYL-HAMELN (HBM PHARMA, SLOVAKIA) (fentanyl 100 mcg/2 mL) solution for injection",
+     "mfr": "HBM PHARMA, SLOVAKIA"
+    },
+    "tpu": {
+     "id": "1121664",
+     "name": "FENTANYL-HAMELN (HBM PHARMA, SLOVAKIA) (fentanyl 100 mcg/2 mL) solution for injection, 2 mL ampoule"
+    },
+    "tpp": [
+     {
+      "id": "1121672",
+      "name": "FENTANYL-HAMELN (HBM PHARMA, SLOVAKIA) (fentanyl 100 mcg/2 mL) solution for injection, 10 x 2 mL ampoule, 1 box"
+     }
+    ]
+   }
+  ],
+  "n_tp_total": 13
+ },
+ "KETAMINE_500": {
+  "real": true,
+  "gp": "533794",
+  "gp_name": "ketamine 500 mg/10 mL solution for injection",
+  "disp": {
+   "name": "Ketamine",
+   "strength": "500 mg/10 mL",
+   "form": "solution for injection"
+  },
+  "subs": [
+   {
+    "id": "533760",
+    "name": "ketamine"
+   }
+  ],
+  "vtm": [
+   {
+    "id": "533787",
+    "name": "ketamine"
+   }
+  ],
+  "gpu": {
+   "id": "533804",
+   "name": "ketamine 500 mg/10 mL solution for injection, 10 mL ampoule"
+  },
+  "gpp": [
+   {
+    "id": "1048192",
+    "name": "ketamine 500 mg/10 mL solution for injection, 1 x 10 mL vial, 1 box"
+   }
+  ],
+  "tps": [
+   {
+    "tp": {
+     "id": "533815",
+     "name": "CALYPSOL (GEDEON RICHTER, HUNGARY) (ketamine 500 mg/10 mL) solution for injection",
+     "mfr": "GEDEON RICHTER, HUNGARY"
+    },
+    "tpu": {
+     "id": "533827",
+     "name": "CALYPSOL (GEDEON RICHTER, HUNGARY) (ketamine 500 mg/10 mL) solution for injection, 10 mL ampoule"
+    },
+    "tpp": [
+     {
+      "id": "1103834",
+      "name": "CALYPSOL (GEDEON RICHTER, HUNGARY) (ketamine 500 mg/10 mL) solution for injection, 10 mL vial, 1 box"
+     }
+    ]
+   },
+   {
+    "tp": {
+     "id": "882348",
+     "name": "KETAMINE HAMELN (HAMELN PHARMACEUTICALS, GERMANY) (ketamine 500 mg/10 mL) solution for injection",
+     "mfr": "HAMELN PHARMACEUTICALS, GERMANY"
+    },
+    "tpu": {
+     "id": "882353",
+     "name": "KETAMINE HAMELN (HAMELN PHARMACEUTICALS, GERMANY) (ketamine 500 mg/10 mL) solution for injection, 10 mL vial"
+    },
+    "tpp": [
+     {
+      "id": "1103810",
+      "name": "KETAMINE HAMELN (HAMELN PHARMACEUTICALS, GERMANY) (ketamine 500 mg/10 mL) solution for injection, 10 mL vial, 1 box"
+     }
+    ]
+   },
+   {
+    "tp": {
+     "id": "1039422",
+     "name": "KETAMINE-HAMELN (SIEGFRIED HAMELN, GERMANY) (ketamine 500 mg/10 mL) solution for injection",
+     "mfr": "SIEGFRIED HAMELN, GERMANY"
+    },
+    "tpu": {
+     "id": "1039433",
+     "name": "KETAMINE-HAMELN (SIEGFRIED HAMELN, GERMANY) (ketamine 500 mg/10 mL) solution for injection, 10 mL vial"
+    },
+    "tpp": [
+     {
+      "id": "1048205",
+      "name": "KETAMINE-HAMELN (SIEGFRIED HAMELN, GERMANY) (ketamine 500 mg/10 mL) solution for injection, 10 mL vial, 1 box"
+     }
+    ]
+   }
+  ],
+  "n_tp_total": 4
+ },
+ "SUCCINYLCHOLINE": {
+  "real": true,
+  "gp": "768789",
+  "gp_name": "suxamethonium chloride 500 mg/10 mL solution for injection",
+  "disp": {
+   "name": "Suxamethonium chloride (succinylcholine)",
+   "strength": "500 mg/10 mL",
+   "form": "solution for injection"
+  },
+  "subs": [
+   {
+    "id": "723402",
+    "name": "suxamethonium chloride"
+   }
+  ],
+  "vtm": [
+   {
+    "id": "723425",
+    "name": "suxamethonium chloride"
+   }
+  ],
+  "gpu": {
+   "id": "768791",
+   "name": "suxamethonium chloride 500 mg/10 mL solution for injection, 10 mL ampoule"
+  },
+  "gpp": [
+   {
+    "id": "1336892",
+    "name": "suxamethonium chloride 500 mg/10 mL solution for injection, 10 mL vial"
+   }
+  ],
+  "tps": [
+   {
+    "tp": {
+     "id": "1112752",
+     "name": "SUXAMETHONIUM CHLORIDE INJECTION B.P. (HARSON LABORATORIES, INDIA) (suxamethonium chloride 500 mg/10 mL) solution for injection",
+     "mfr": "HARSON LABORATORIES, INDIA"
+    },
+    "tpu": {
+     "id": "1112768",
+     "name": "SUXAMETHONIUM CHLORIDE INJECTION B.P. (HARSON LABORATORIES, INDIA) (suxamethonium chloride 500 mg/10 mL) solution for injection, 10 mL vial"
+    },
+    "tpp": [
+     {
+      "id": "1112781",
+      "name": "SUXAMETHONIUM CHLORIDE INJECTION B.P. (HARSON LABORATORIES, INDIA) (suxamethonium chloride 500 mg/10 mL) solution for injection, 10 x 10 mL vial, 1 box"
+     }
+    ]
+   },
+   {
+    "tp": {
+     "id": "1336871",
+     "name": "SUXAMETHONIUM CHLORIDE INJECTION (NAPROD LIFE SCIENCES, INDIA) (suxamethonium chloride 500 mg/10 mL) solution for injection",
+     "mfr": "NAPROD LIFE SCIENCES, INDIA"
+    },
+    "tpu": {
+     "id": "1336885",
+     "name": "SUXAMETHONIUM CHLORIDE INJECTION (NAPROD LIFE SCIENCES, INDIA) (suxamethonium chloride 500 mg/10 mL) solution for injection, 10 mL vial"
+    },
+    "tpp": [
+     {
+      "id": "1336925",
+      "name": "SUXAMETHONIUM CHLORIDE INJECTION (NAPROD LIFE SCIENCES, INDIA) (suxamethonium chloride 500 mg/10 mL) solution for injection, 10 x 10 mL vial, 1 box"
+     }
+    ]
+   },
+   {
+    "tp": {
+     "id": "768801",
+     "name": "SUXAMETHONIUM (HARSON LABORATORIES, INDIA) (suxamethonium chloride 500 mg/10 mL) solution for injection",
+     "mfr": "HARSON LABORATORIES, INDIA"
+    },
+    "tpu": {
+     "id": "768817",
+     "name": "SUXAMETHONIUM (HARSON LABORATORIES, INDIA) (suxamethonium chloride 500 mg/10 mL) solution for injection, 10 mL ampoule"
+    },
+    "tpp": []
+   }
+  ],
+  "n_tp_total": 3
+ },
+ "INSULIN": {
+  "real": true,
+  "gp": "654828",
+  "gp_name": "insulin human 100 iu/1 mL solution for injection",
+  "disp": {
+   "name": "Insulin human",
+   "strength": "100 iu/1 mL",
+   "form": "solution for injection"
+  },
+  "subs": [
+   {
+    "id": "654757",
+    "name": "insulin human"
+   }
+  ],
+  "vtm": [
+   {
+    "id": "654774",
+    "name": "insulin human"
+   }
+  ],
+  "gpu": {
+   "id": "654837",
+   "name": "insulin human 100 iu/1 mL solution for injection, 10 mL vial"
+  },
+  "gpp": [
+   {
+    "id": "1144619",
+    "name": "insulin human 100 iu/1 mL solution for injection, 1 x 10 mL vial, 1 box"
+   }
+  ],
+  "tps": [
+   {
+    "tp": {
+     "id": "663272",
+     "name": "BIOSULIN R (M.J. BIOPHARM, INDIA) (insulin human 100 iu/1 mL) solution for injection",
+     "mfr": "M.J. BIOPHARM, INDIA"
+    },
+    "tpu": {
+     "id": "663286",
+     "name": "BIOSULIN R (M.J. BIOPHARM, INDIA) (insulin human 100 iu/1 mL) solution for injection, 3 mL cartridge"
+    },
+    "tpp": [
+     {
+      "id": "1219212",
+      "name": "BIOSULIN R (M.J. BIOPHARM, INDIA) (insulin human 100 iu/1 mL) solution for injection, 1 x 10 mL vial, 1 box"
+     }
+    ]
+   },
+   {
+    "tp": {
+     "id": "967682",
+     "name": "WINSULIN-R (WOCKHARDT, INDIA) (insulin human 100 iu/1 mL) solution for injection",
+     "mfr": "WOCKHARDT, INDIA"
+    },
+    "tpu": {
+     "id": "967695",
+     "name": "WINSULIN-R (WOCKHARDT, INDIA) (insulin human 100 iu/1 mL) solution for injection, 10 mL vial"
+    },
+    "tpp": [
+     {
+      "id": "1227917",
+      "name": "WINSULIN-R (WOCKHARDT, INDIA) (insulin human 100 iu/1 mL) solution for injection, 10 mL vial"
+     }
+    ]
+   },
+   {
+    "tp": {
+     "id": "1144592",
+     "name": "ACTRAPID (NOVO NORDISK PRODUCTION, FRANCE) (insulin human 100 iu/1 mL) solution for injection",
+     "mfr": "NOVO NORDISK PRODUCTION, FRANCE"
+    },
+    "tpu": {
+     "id": "1144603",
+     "name": "ACTRAPID (NOVO NORDISK PRODUCTION, FRANCE) (insulin human 100 iu/1 mL) solution for injection, 10 mL vial"
+    },
+    "tpp": [
+     {
+      "id": "1144626",
+      "name": "ACTRAPID (NOVO NORDISK PRODUCTION) (insulin human 100 iu/1 mL) solution for injection, 10 mL vial, 1 box"
+     }
+    ]
+   }
+  ],
+  "n_tp_total": 11
+ },
+ "DT_VACCINE": {
+  "real": true,
+  "gp": "670609",
+  "gp_name": "diphtheria toxoid 2 iu/0.5 mL + tetanus toxoid 20 iu/0.5 mL suspension for injection",
+  "disp": {
+   "name": "Diphtheria + tetanus toxoids (dT)",
+   "strength": "2 iu + 20 iu/0.5 mL",
+   "form": "suspension for injection"
+  },
+  "subs": [
+   {
+    "id": "560907",
+    "name": "tetanus toxoid"
+   },
+   {
+    "id": "560884",
+    "name": "diphtheria toxoid"
+   }
+  ],
+  "vtm": [
+   {
+    "id": "668460",
+    "name": "diphtheria toxoid + tetanus toxoid"
+   }
+  ],
+  "gpu": {
+   "id": "670613",
+   "name": "diphtheria toxoid 2 iu/0.5 mL + tetanus toxoid 20 iu/0.5 mL suspension for injection, 0.5 mL prefilled syr"
+  },
+  "gpp": [],
+  "tps": [
+   {
+    "tp": {
+     "id": "670621",
+     "name": "TD PUR (NOVARTIS VACCINES AND DIAGNOSTICS, GERMANY) (diphtheria toxoid 2 iu/0.5 mL + tetanus toxoid 20 iu/0.5 mL) suspension for injection",
+     "mfr": "NOVARTIS VACCINES AND DIAGNOSTICS, GERMANY"
+    },
+    "tpu": {
+     "id": "670632",
+     "name": "TD PUR (NOVARTIS VACCINES AND DIAGNOSTICS, GERMANY) (diphtheria toxoid 2 iu/0.5 mL + tetanus toxoid 20 iu/0.5 mL) suspension for injection, 0.5 mL prefilled syr"
+    },
+    "tpp": []
+   }
+  ],
+  "n_tp_total": 1
+ },
+ "INFLUENZA_VACCINE": {
+  "real": true,
+  "gp": "1130328",
+  "gp_name": "influenza type A virus vaccine, A/Brisbane/02/2018 (H1N1)pdm09-like virus 15 mcg/0.5 mL + influenza type A virus vaccine, A/Kansas/14/2017 (H3N2)-like virus 15 mcg/0.5 mL + influenza type B virus vaccine, B/Colorado/06/2017-like virus 15 mcg/0.5 mL + influenza type B virus vaccine, B/Phuket/3073/2013-like virus 15 mcg/0.5 mL suspension for injection",
+  "disp": {
+   "name": "Influenza vaccine (quadrivalent)",
+   "strength": "0.5 mL",
+   "form": "suspension for injection"
+  },
+  "subs": [
+   {
+    "id": "1106479",
+    "name": "influenza type B virus vaccine, B/Colorado/06/2017-like virus"
+   },
+   {
+    "id": "668559",
+    "name": "influenza type B virus vaccine, B/Phuket/3073/2013-like virus"
+   },
+   {
+    "id": "1130274",
+    "name": "influenza type A virus vaccine, A/Brisbane/02/2018 (H1N1)pdm09-like virus"
+   }
+  ],
+  "vtm": [
+   {
+    "id": "1130316",
+    "name": "influenza type A virus vaccine, A/Brisbane/02/2018 (H1N1)pdm09-like virus + influenza type A virus vaccine, A/Kansas/14/2017 (H3N2)-like virus + influenza type B virus vaccine, B/Colorado/06/2017-like virus + influenza type B virus vaccine, B/Phuket/3073/2013-like virus"
+   }
+  ],
+  "gpu": {
+   "id": "1130337",
+   "name": "influenza type A virus vaccine, A/Brisbane/02/2018 (H1N1)pdm09-like virus 15 mcg/0.5 mL + influenza type A virus vaccine, A/Kansas/14/2017 (H3N2)-like virus 15 mcg/0.5 mL + influenza type B virus vaccine, B/Colorado/06/2017-like virus 15 mcg/0.5 mL + influenza type B virus vaccine, B/Phuket/3073/2013-like virus 15 mcg/0.5 mL suspension for injection, 0.5 mL prefilled syr"
+  },
+  "gpp": [
+   {
+    "id": "1130363",
+    "name": "influenza type A virus vaccine, A/Brisbane/02/2018 (H1N1)pdm09-like virus 15 mcg/0.5 mL + influenza type A virus vaccine, A/Kansas/14/2017 (H3N2)-like virus 15 mcg/0.5 mL + influenza type B virus vaccine, B/Colorado/06/2017-like virus 15 mcg/0.5 mL + influenza type B virus vaccine, B/Phuket/3073/2013-like virus 15 mcg/0.5 mL suspension for injection, 0.5 mL prefilled syr, 1 box"
+   }
+  ],
+  "tps": [
+   {
+    "tp": {
+     "id": "1130344",
+     "name": "FLUARIX TETRA (2019-2020) (GLAXOSMITHKLINE BIOLOGICALS, GERMANY) (influenza type A virus vaccine, A/Brisbane/02/2018 (H1N1)pdm09-like virus 15 mcg/0.5 mL + influenza type A virus vaccine, A/Kansas/14/2017 (H3N2)-like virus 15 mcg/0.5 mL + influenza type B virus vaccine, B/Colorado/06/2017-like virus 15 mcg/0.5 mL + influenza type B virus vaccine, B/Phuket/3073/2013-like virus 15 mcg/0.5 mL) suspension for injection",
+     "mfr": "GLAXOSMITHKLINE BIOLOGICALS, GERMANY"
+    },
+    "tpu": {
+     "id": "1130359",
+     "name": "FLUARIX TETRA (2019-2020) (GLAXOSMITHKLINE BIOLOGICALS, GERMANY) (influenza type A virus vaccine, A/Brisbane/02/2018 (H1N1)pdm09-like virus 15 mcg/0.5 mL + influenza type A virus vaccine, A/Kansas/14/2017 (H3N2)-like virus 15 mcg/0.5 mL + influenza type B virus vaccine, B/Colorado/06/2017-like virus 15 mcg/0.5 mL + influenza type B virus vaccine, B/Phuket/3073/2013-like virus 15 mcg/0.5 mL) suspension for injection, 0.5 mL prefilled syr"
+    },
+    "tpp": [
+     {
+      "id": "1130371",
+      "name": "FLUARIX TETRA (2019-2020) (GLAXOSMITHKLINE BIOLOGICALS, GERMANY) (influenza type A virus vaccine, A/Brisbane/02/2018 (H1N1)pdm09-like virus 15 mcg/0.5 mL + influenza type A virus vaccine, A/Kansas/14/2017 (H3N2)-like virus 15 mcg/0.5 mL + influenza type B virus vaccine, B/Colorado/06/2017-like virus 15 mcg/0.5 mL + influenza type B virus vaccine, B/Phuket/3073/2013-like virus 15 mcg/0.5 mL) suspension for injection, 0.5 mL prefilled syr, 1 box"
+     }
+    ]
+   },
+   {
+    "tp": {
+     "id": "1130513",
+     "name": "INFLUVAC TETRA (2019-2020) (ABBOTT BIOLOGICALS, NETHERLANDS) (influenza type A virus vaccine, A/Brisbane/02/2018 (H1N1)pdm09-like virus 15 mcg/0.5 mL + influenza type A virus vaccine, A/Kansas/14/2017 (H3N2)-like virus 15 mcg/0.5 mL + influenza type B virus vaccine, B/Colorado/06/2017-like virus 15 mcg/0.5 mL + influenza type B virus vaccine, B/Phuket/3073/2013-like virus 15 mcg/0.5 mL) suspension for injection",
+     "mfr": "ABBOTT BIOLOGICALS, NETHERLANDS"
+    },
+    "tpu": {
+     "id": "1130521",
+     "name": "INFLUVAC TETRA (2019-2020) (ABBOTT BIOLOGICALS, NETHERLANDS) (influenza type A virus vaccine, A/Brisbane/02/2018 (H1N1)pdm09-like virus 15 mcg/0.5 mL + influenza type A virus vaccine, A/Kansas/14/2017 (H3N2)-like virus 15 mcg/0.5 mL + influenza type B virus vaccine, B/Colorado/06/2017-like virus 15 mcg/0.5 mL + influenza type B virus vaccine, B/Phuket/3073/2013-like virus 15 mcg/0.5 mL) suspension for injection, 0.5 mL prefilled syr"
+    },
+    "tpp": [
+     {
+      "id": "1130532",
+      "name": "INFLUVAC TETRA (2019-2020) (ABBOTT BIOLOGICALS, NETHERLANDS) (influenza type A virus vaccine, A/Brisbane/02/2018 (H1N1)pdm09-like virus 15 mcg/0.5 mL + influenza type A virus vaccine, A/Kansas/14/2017 (H3N2)-like virus 15 mcg/0.5 mL + influenza type B virus vaccine, B/Colorado/06/2017-like virus 15 mcg/0.5 mL + influenza type B virus vaccine, B/Phuket/3073/2013-like virus 15 mcg/0.5 mL) suspension for injection, 0.5 mL prefilled syr, 1 box"
+     }
+    ]
+   }
+  ],
+  "n_tp_total": 2
+ },
+ "RABIES_VACCINE": {
+  "real": true,
+  "gp": "749225",
+  "gp_name": "purified duck embryo rabies vaccine 2.5 iu/1 mL solution for injection",
+  "disp": {
+   "name": "Purified duck embryo rabies vaccine",
+   "strength": "2.5 iu/1 mL",
+   "form": "solution for injection"
+  },
+  "subs": [
+   {
+    "id": "749195",
+    "name": "purified duck embryo rabies vaccine"
+   }
+  ],
+  "vtm": [
+   {
+    "id": "749218",
+    "name": "purified duck embryo rabies vaccine"
+   }
+  ],
+  "gpu": {
+   "id": "749239",
+   "name": "purified duck embryo rabies vaccine 2.5 iu/1 mL solution for injection, 1 mL vial"
+  },
+  "gpp": [],
+  "tps": [
+   {
+    "tp": {
+     "id": "749241",
+     "name": "LYSSAVAC N (CADILA HEALTHCARE, INDIA) (purified duck embryo rabies vaccine 2.5 iu/1 mL) solution for injection",
+     "mfr": "CADILA HEALTHCARE, INDIA"
+    },
+    "tpu": {
+     "id": "749256",
+     "name": "LYSSAVAC N (CADILA HEALTHCARE, INDIA) (purified duck embryo rabies vaccine 2.5 iu/1 mL) solution for injection, 1 mL vial"
+    },
+    "tpp": []
+   }
+  ],
+  "n_tp_total": 1
+ },
+ "EQUINE_RIG": {
+  "real": true,
+  "gp": "762650",
+  "gp_name": "equine rabies immunoglobulin 1000 iu/5 mL solution for injection",
+  "disp": {
+   "name": "Equine rabies immunoglobulin",
+   "strength": "1000 iu/5 mL",
+   "form": "solution for injection"
+  },
+  "subs": [
+   {
+    "id": "762621",
+    "name": "equine rabies immunoglobulin"
+   }
+  ],
+  "vtm": [
+   {
+    "id": "762645",
+    "name": "equine rabies immunoglobulin"
+   }
+  ],
+  "gpu": {
+   "id": "762666",
+   "name": "equine rabies immunoglobulin 1000 iu/5 mL solution for injection, 5 mL vial"
+  },
+  "gpp": [
+   {
+    "id": "1091697",
+    "name": "equine rabies immunoglobulin 1000 iu/5 mL solution for injection, 5 mL vial, 1 box"
+   }
+  ],
+  "tps": [
+   {
+    "tp": {
+     "id": "790872",
+     "name": "VINRAB (VINS BIOPRODUCTS, INDIA) (equine rabies immunoglobulin 1000 iu/5 mL) solution for injection",
+     "mfr": "VINS BIOPRODUCTS, INDIA"
+    },
+    "tpu": {
+     "id": "790886",
+     "name": "VINRAB (VINS BIOPRODUCTS, INDIA) (equine rabies immunoglobulin 1000 iu/5 mL) solution for injection, 5 mL vial"
+    },
+    "tpp": [
+     {
+      "id": "1091700",
+      "name": "VINRAB (VINS BIOPRODUCTS, INDIA) (equine rabies immunoglobulin 1000 iu/5 mL) solution for injection, 5 mL vial, 1 box"
+     }
+    ]
+   },
+   {
+    "tp": {
+     "id": "762678",
+     "name": "TRCS ERIG (สถานเสาวภา สภากาชาดไทย) (equine rabies immunoglobulin 1000 iu/5 mL) solution for injection",
+     "mfr": "สถานเสาวภา สภากาชาดไทย"
+    },
+    "tpu": {
+     "id": "762684",
+     "name": "TRCS ERIG (สถานเสาวภา สภากาชาดไทย) (equine rabies immunoglobulin 1000 iu/5 mL) solution for injection, 5 mL vial"
+    },
+    "tpp": []
+   },
+   {
+    "tp": {
+     "id": "813573",
+     "name": "FAVIRAB (SANOFI PASTEUR, FRANCE) (equine rabies immunoglobulin 1000 iu/5 mL) solution for injection",
+     "mfr": "SANOFI PASTEUR, FRANCE"
+    },
+    "tpu": {
+     "id": "813587",
+     "name": "FAVIRAB (SANOFI PASTEUR, FRANCE) (equine rabies immunoglobulin 1000 iu/5 mL) solution for injection, 5 mL vial"
+    },
+    "tpp": []
+   }
+  ],
+  "n_tp_total": 4
+ },
+ "ANTIVENOM_COBRA": {
+  "real": true,
+  "gp": "762264",
+  "gp_name": "cobra antivenin 600 mcg/1 mL powder and solvent for solution for injection",
+  "disp": {
+   "name": "Cobra antivenin",
+   "strength": "600 mcg/1 mL",
+   "form": "powder and solvent for solution for injection"
+  },
+  "subs": [
+   {
+    "id": "762238",
+    "name": "cobra antivenin"
+   }
+  ],
+  "vtm": [
+   {
+    "id": "762255",
+    "name": "cobra antivenin"
+   }
+  ],
+  "gpu": {
+   "id": "762272",
+   "name": "cobra antivenin 600 mcg/1 mL powder and solvent for solution for injection, 10 mL vial"
+  },
+  "gpp": [],
+  "tps": [
+   {
+    "tp": {
+     "id": "762286",
+     "name": "COBRA ANTIVENIN (สถานเสาวภา สภากาชาดไทย) (cobra antivenin 600 mcg/1 mL) powder and solvent for solution for injection",
+     "mfr": "สถานเสาวภา สภากาชาดไทย"
+    },
+    "tpu": {
+     "id": "762293",
+     "name": "COBRA ANTIVENIN (สถานเสาวภา สภากาชาดไทย) (cobra antivenin 600 mcg/1 mL) powder and solvent for solution for injection, 10 mL vial"
+    },
+    "tpp": []
+   }
+  ],
+  "n_tp_total": 1
+ },
+ "PRALIDOXIME_1G": {
+  "real": true,
+  "gp": "697750",
+  "gp_name": "pralidoxime 1 g powder for solution for injection/infusion",
+  "disp": {
+   "name": "Pralidoxime",
+   "strength": "1 g",
+   "form": "powder for solution for injection/infusion"
+  },
+  "subs": [
+   {
+    "id": "697721",
+    "name": "pralidoxime"
+   }
+  ],
+  "vtm": [
+   {
+    "id": "697745",
+    "name": "pralidoxime"
+   }
+  ],
+  "gpu": {
+   "id": "697766",
+   "name": "pralidoxime 1 g powder for solution for injection/infusion, 1 vial"
+  },
+  "gpp": [],
+  "tps": [
+   {
+    "tp": {
+     "id": "697778",
+     "name": "NEOPAM (TROIKAA PHARMACEUTICALS, INDIA) (pralidoxime 1 g) powder for solution for injection/infusion",
+     "mfr": "TROIKAA PHARMACEUTICALS, INDIA"
+    },
+    "tpu": {
+     "id": "697784",
+     "name": "NEOPAM (TROIKAA PHARMACEUTICALS, INDIA) (pralidoxime 1 g) powder for solution for injection/infusion, 1 vial"
+    },
+    "tpp": []
+   },
+   {
+    "tp": {
+     "id": "717764",
+     "name": "PROTOPAM (BAXTER HEALTHCARE, U.S.A.) (pralidoxime 1 g) powder for solution for injection/infusion",
+     "mfr": "BAXTER HEALTHCARE, U.S.A."
+    },
+    "tpu": {
+     "id": "717772",
+     "name": "PROTOPAM (BAXTER HEALTHCARE, U.S.A.) (pralidoxime 1 g) powder for solution for injection/infusion, 1 vial"
+    },
+    "tpp": []
+   },
+   {
+    "tp": {
+     "id": "722622",
+     "name": "PRALIDOXIME CHLORIDE (CHOONGWAE PHARMA, KOREA) (pralidoxime 1 g) powder for solution for injection/infusion",
+     "mfr": "CHOONGWAE PHARMA, KOREA"
+    },
+    "tpu": {
+     "id": "722633",
+     "name": "PRALIDOXIME CHLORIDE (CHOONGWAE PHARMA, KOREA) (pralidoxime 1 g) powder for solution for injection/infusion, 1 vial"
+    },
+    "tpp": []
+   }
+  ],
+  "n_tp_total": 3
+ },
+ "ALCOHOL_GEL": {
+  "real": true,
+  "gp": "816410",
+  "gp_name": "ethyl alcohol 70 mL/100 mL gel",
+  "disp": {
+   "name": "Ethyl alcohol",
+   "strength": "70 mL/100 mL",
+   "form": "gel"
+  },
+  "subs": [
+   {
+    "id": "707949",
+    "name": "ethyl alcohol"
+   }
+  ],
+  "vtm": [
+   {
+    "id": "707965",
+    "name": "ethyl alcohol"
+   }
+  ],
+  "gpu": {
+   "id": "816423",
+   "name": "ethyl alcohol 70 mL/100 mL gel, 450 mL bottle"
+  },
+  "gpp": [
+   {
+    "id": "1178634",
+    "name": "ethyl alcohol 70 mL/100 mL gel, 450 mL bottle"
+   }
+  ],
+  "tps": [
+   {
+    "tp": {
+     "id": "1178521",
+     "name": "ALCOHOL GEL 1000 ML (F 12499) (ethyl alcohol 70 mL/100 mL) gel",
+     "mfr": "สำนักอนามัยกรุงเทพมหานคร"
+    },
+    "tpu": {
+     "id": "1178532",
+     "name": "ALCOHOL GEL 1000 ML (F 12499) (ethyl alcohol 70 mL/100 mL) gel, 1 L gallon"
+    },
+    "tpp": [
+     {
+      "id": "1178550",
+      "name": "ALCOHOL GEL 1000 ML (F 12499) (ethyl alcohol 70 mL/100 mL) gel, 1 L gallon"
+     }
+    ]
+   },
+   {
+    "tp": {
+     "id": "1178578",
+     "name": "ALCOHOL GEL 300 ML (F 12499) (ethyl alcohol 70 mL/100 mL) gel",
+     "mfr": "สำนักอนามัยกรุงเทพมหานคร"
+    },
+    "tpu": {
+     "id": "1178584",
+     "name": "ALCOHOL GEL 300 ML (F 12499) (ethyl alcohol 70 mL/100 mL) gel, 300 mL bottle"
+    },
+    "tpp": [
+     {
+      "id": "1178606",
+      "name": "ALCOHOL GEL 300 ML (F 12499) (ethyl alcohol 70 mL/100 mL) gel, 300 mL bottle"
+     }
+    ]
+   },
+   {
+    "tp": {
+     "id": "1178610",
+     "name": "ALCOHOL GEL 450 ML (F 12499) (ethyl alcohol 70 mL/100 mL) gel",
+     "mfr": "สำนักอนามัยกรุงเทพมหานคร"
+    },
+    "tpu": {
+     "id": "1178623",
+     "name": "ALCOHOL GEL 450 ML (F 12499) (ethyl alcohol 70 mL/100 mL) gel, 450 mL bottle"
+    },
+    "tpp": [
+     {
+      "id": "1178647",
+      "name": "ALCOHOL GEL 450 ML (F 12499) (ethyl alcohol 70 mL/100 mL) gel, 450 mL bottle"
+     }
+    ]
+   }
+  ],
+  "n_tp_total": 8
+ }
+}

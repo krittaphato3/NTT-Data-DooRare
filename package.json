@@ -9,7 +9,11 @@
     "capture:dev": "node scripts/capture-screenshots.mjs --url http://127.0.0.1:5173",
     "e2e:loadmore": "node scripts/e2e-loadmore.mjs",
     "ai:index": "node scripts/ai-index.mjs",
-    "ai:session": "node scripts/ai-session.mjs"
+    "ai:session": "node scripts/ai-session.mjs",
+    "db:up": "bash scripts/db.sh up",
+    "db:load": "bash scripts/db.sh load",
+    "db:reset": "bash scripts/db.sh reset",
+    "db:psql": "bash scripts/db.sh psql"
   },
   "devDependencies": {
     "playwright-core": "^1.64.0"
