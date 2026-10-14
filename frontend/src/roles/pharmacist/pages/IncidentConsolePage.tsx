@@ -12,14 +12,38 @@ import {
   PRESET_KITS,
 } from '../data/incident';
 
+type Scenario = 'normal' | 's1' | 's2' | 's3' | 's4' | 's5' | 's6' | 's7';
+
 export function IncidentConsolePage() {
+  const [scenario, setScenario] = useState<Scenario>('normal');
   const [activeTab, setActiveTab] = useState<'plan' | 'borrow' | 'pack' | 'summary'>('plan');
+  const [showIntakeModal, setShowIntakeModal] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
+  const [customEta, setCustomEta] = useState('');
+
+  // Tab 1 state
   const [kits, setKits] = useState(PRESET_KITS);
   const [burnKitOption, setBurnKitOption] = useState<'none' | 'add'>('none');
   const [prcOption, setPrcOption] = useState<'4' | '6'>('4');
+
+  // Tab 3 state
   const [assemblyList, setAssemblyList] = useState(KIT_ASSEMBLIES);
+
+  // Tab 4 state
   const [returnsList, setReturnsList] = useState(INCIDENT_RETURNS);
   const [isClosed, setIsClosed] = useState(false);
+
+  // Intake modal state
+  const [intakeCategory, setIntakeCategory] = useState('รถโดยสาร / อุบัติเหตุจราจรหมู่');
+  const [intakeLocation, setIntakeLocation] = useState('ถ.เทพารักษ์ กม.12 ขาออก');
+  const [intakeDetail, setIntakeDetail] = useState('รถตู้ชนท้ายรถบัสที่คว่ำ มีผู้บาดเจ็บเพิ่ม');
+  const [triageRed, setTriageRed] = useState('2');
+  const [triageYellow, setTriageYellow] = useState('3');
+  const [triageGreen, setTriageGreen] = useState('4');
+  const [triageBlack, setTriageBlack] = useState('0');
+  const [intakeEta, setIntakeEta] = useState('20');
+  const [unsureEta, setUnsureEta] = useState(true);
 
   const tick = useTick();
   const etaLeft = Math.max(0, INCIDENT_HEADER.etaMinutes - tick);
@@ -74,8 +98,464 @@ export function IncidentConsolePage() {
     );
   };
 
+  // If S7 (Empty State: No active incident) is selected:
+  if (scenario === 's7') {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {/* Scenario Switcher Bar */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', background: '#f8fafc', padding: '6px 10px', borderRadius: 8, border: '1px solid #e2e8f0' }}>
+          <span style={{ fontSize: 11, fontWeight: 600, color: '#64748b' }}>จำลองสถานะพิเศษ (S1–S7):</span>
+          {(['normal', 's1', 's2', 's3', 's4', 's5', 's6', 's7'] as Scenario[]).map((s) => (
+            <button
+              key={s}
+              type="button"
+              className="btn btn-sm"
+              style={{
+                height: 24,
+                fontSize: 11,
+                padding: '0 8px',
+                background: scenario === s ? '#2563eb' : '#ffffff',
+                color: scenario === s ? '#ffffff' : '#334155',
+                border: scenario === s ? '1px solid #2563eb' : '1px solid #cbd5e1',
+                fontWeight: scenario === s ? 600 : 400,
+              }}
+              onClick={() => {
+                setScenario(s);
+                if (s === 's6') setShowCancelModal(true);
+              }}
+            >
+              {s === 'normal' ? 'เหตุปกติ' : s.toUpperCase()}
+            </button>
+          ))}
+        </div>
+
+        {/* S7 Card */}
+        <div
+          className="card"
+          style={{
+            padding: '60px 20px',
+            textAlign: 'center',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 12,
+          }}
+        >
+          <div
+            style={{
+              width: 52,
+              height: 52,
+              borderRadius: 26,
+              background: '#dcfce7',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#16a34a',
+            }}
+          >
+            <Icon name="checkc" className="ic24" />
+          </div>
+          <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: '#0f2a5c' }}>
+            ไม่มีเหตุฉุกเฉินที่เปิดอยู่
+          </h2>
+          <div style={{ fontSize: 13, color: '#64748b' }}>
+            ชุดพร้อมใช้: Trauma Set 30 · IV Set 12 · Intubation Set 0 (ต่ำกว่าเป้า)
+          </div>
+          <div style={{ marginTop: 8 }}>
+            <button
+              type="button"
+              className="btn btn-p"
+              style={{ background: '#b91c1c', border: 'none', fontWeight: 600, padding: '8px 20px' }}
+              onClick={() => setShowIntakeModal(true)}
+            >
+              <Icon name="siren" className="ic14" />
+              + แจ้งเหตุใหม่
+            </button>
+          </div>
+        </div>
+
+        {/* Intake Modal if triggered */}
+        {showIntakeModal && renderIntakeModal()}
+      </div>
+    );
+  }
+
+  function renderIntakeModal() {
+    return (
+      <div
+        style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(15, 23, 42, 0.45)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          padding: 16,
+        }}
+        onClick={() => setShowIntakeModal(false)}
+      >
+        <div
+          className="card"
+          style={{
+            width: '100%',
+            maxWidth: 620,
+            maxHeight: '92vh',
+            overflowY: 'auto',
+            background: '#ffffff',
+            borderRadius: 12,
+            padding: '20px 24px',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Modal Header */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
+            <div>
+              <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#0f2a5c' }}>
+                แจ้งเหตุฉุกเฉินหมู่
+              </h2>
+              <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
+                บันทึกจำนวนตามระดับคัดแยกเท่านั้น ไม่ต้องใส่ชื่อผู้ป่วย
+              </div>
+            </div>
+            <button
+              type="button"
+              className="icbtn"
+              onClick={() => setShowIntakeModal(false)}
+            >
+              <Icon name="x" className="ic14" />
+            </button>
+          </div>
+
+          {/* Duplicate Detection Alert */}
+          <div
+            style={{
+              background: '#fffbeb',
+              border: '1px solid #fef3c7',
+              borderRadius: 8,
+              padding: '10px 12px',
+              marginBottom: 14,
+            }}
+          >
+            <div style={{ fontSize: 12, color: '#92400e', lineHeight: '18px', marginBottom: 8 }}>
+              อาจเป็นเหตุเดียวกับ INC-2026-000015 · แจ้งเมื่อ 6 นาทีที่ก่อน ห่างจากจุดนี้ 180 ม. (เกณฑ์ 10 นาที / 500 ม.) · รถโดยสารคว่ำ ถ.เทพารักษ์ กม.12
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                type="button"
+                className="btn btn-p btn-sm"
+                style={{ fontSize: 11.5 }}
+                onClick={() => setShowIntakeModal(false)}
+              >
+                รวมกับเหตุเดิม (อัปเดตจำนวน)
+              </button>
+              <button
+                type="button"
+                className="btn btn-s btn-sm"
+                style={{ fontSize: 11.5 }}
+              >
+                เป็นเหตุใหม่
+              </button>
+            </div>
+          </div>
+
+          {/* Form Fields */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#334155', marginBottom: 4 }}>
+                  ประเภทเหตุ <span style={{ color: '#dc2626' }}>*</span>
+                </label>
+                <select
+                  value={intakeCategory}
+                  onChange={(e) => setIntakeCategory(e.target.value)}
+                  style={{
+                    width: '100%',
+                    height: 36,
+                    border: '1px solid #cbd5e1',
+                    borderRadius: 6,
+                    padding: '0 8px',
+                    fontSize: 12.5,
+                    fontFamily: 'inherit',
+                  }}
+                >
+                  <option value="รถโดยสาร / อุบัติเหตุจราจรหมู่">รถโดยสาร / อุบัติเหตุจราจรหมู่</option>
+                  <option value="ไฟไหม้โรงงาน">ไฟไหม้โรงงาน</option>
+                  <option value="สารเคมีรั่วไหล">สารเคมีรั่วไหล</option>
+                  <option value="อาคารถล่ม">อาคารถล่ม</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#334155', marginBottom: 4 }}>
+                  สถานที่เกิดเหตุ <span style={{ color: '#dc2626' }}>*</span>
+                </label>
+                <input
+                  type="text"
+                  value={intakeLocation}
+                  onChange={(e) => setIntakeLocation(e.target.value)}
+                  style={{
+                    width: '100%',
+                    height: 36,
+                    border: '1px solid #cbd5e1',
+                    borderRadius: 6,
+                    padding: '0 10px',
+                    fontSize: 12.5,
+                    fontFamily: 'inherit',
+                    boxSizing: 'border-box',
+                  }}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#334155', marginBottom: 4 }}>
+                รายละเอียด
+              </label>
+              <textarea
+                rows={2}
+                value={intakeDetail}
+                onChange={(e) => setIntakeDetail(e.target.value)}
+                style={{
+                  width: '100%',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: 6,
+                  padding: '8px 10px',
+                  fontSize: 12.5,
+                  fontFamily: 'inherit',
+                  boxSizing: 'border-box',
+                }}
+              />
+            </div>
+
+            {/* Triage Inputs */}
+            <div>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#334155', marginBottom: 6 }}>
+                จำนวนผู้ป่วยตามระดับคัดแยก
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+                <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: 8, padding: '8px', textAlign: 'center' }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: '#b91c1c', marginBottom: 4 }}>แดง · วิกฤต</div>
+                  <input
+                    type="number"
+                    value={triageRed}
+                    onChange={(e) => setTriageRed(e.target.value)}
+                    style={{ width: '100%', height: 32, textAlign: 'center', fontSize: 16, fontWeight: 700, color: '#b91c1c', border: '1px solid #f87171', borderRadius: 6, fontFamily: 'inherit' }}
+                  />
+                </div>
+                <div style={{ background: '#fef3c7', border: '1px solid #fcd34d', borderRadius: 8, padding: '8px', textAlign: 'center' }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: '#b45309', marginBottom: 4 }}>เหลือง · เร่งด่วน</div>
+                  <input
+                    type="number"
+                    value={triageYellow}
+                    onChange={(e) => setTriageYellow(e.target.value)}
+                    style={{ width: '100%', height: 32, textAlign: 'center', fontSize: 16, fontWeight: 700, color: '#b45309', border: '1px solid #fbbf24', borderRadius: 6, fontFamily: 'inherit' }}
+                  />
+                </div>
+                <div style={{ background: '#dcfce7', border: '1px solid #86efac', borderRadius: 8, padding: '8px', textAlign: 'center' }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: '#15803d', marginBottom: 4 }}>เขียว · ไม่เร่งด่วน</div>
+                  <input
+                    type="number"
+                    value={triageGreen}
+                    onChange={(e) => setTriageGreen(e.target.value)}
+                    style={{ width: '100%', height: 32, textAlign: 'center', fontSize: 16, fontWeight: 700, color: '#15803d', border: '1px solid #4ade80', borderRadius: 6, fontFamily: 'inherit' }}
+                  />
+                </div>
+                <div style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: 8, padding: '8px', textAlign: 'center' }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: '#334155', marginBottom: 4 }}>ดำ · เสียชีวิต</div>
+                  <input
+                    type="number"
+                    value={triageBlack}
+                    onChange={(e) => setTriageBlack(e.target.value)}
+                    style={{ width: '100%', height: 32, textAlign: 'center', fontSize: 16, fontWeight: 700, color: '#334155', border: '1px solid #94a3b8', borderRadius: 6, fontFamily: 'inherit' }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* ETA Comparison */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#334155', marginBottom: 4 }}>
+                  ETA จากหน่วยกู้ภัย (นาที)
+                </label>
+                <input
+                  type="number"
+                  value={intakeEta}
+                  onChange={(e) => setIntakeEta(e.target.value)}
+                  style={{
+                    width: '100%',
+                    height: 36,
+                    border: '1px solid #cbd5e1',
+                    borderRadius: 6,
+                    padding: '0 10px',
+                    fontSize: 13,
+                    fontFamily: 'inherit',
+                    boxSizing: 'border-box',
+                  }}
+                />
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6, fontSize: 11.5, color: '#475569', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={unsureEta}
+                    onChange={(e) => setUnsureEta(e.target.checked)}
+                    style={{ accentColor: '#2563eb' }}
+                  />
+                  <span>ไม่แน่ใจ (ให้ระบบเทียบกับเดินทางจริง)</span>
+                </label>
+              </div>
+
+              <div
+                style={{
+                  background: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: 8,
+                  padding: '10px 12px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'center',
+                }}
+              >
+                <div style={{ fontSize: 12, fontWeight: 600, color: '#0f2a5c', lineHeight: '17px' }}>
+                  เดินทางจริงตอนนี้ 22 นาที (Amazon Location Service - เดินรถเหตุจริง)
+                </div>
+                <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>
+                  ไม่แน่ใจ → ใช้ค่าที่น้อยกว่า = 20 นาที
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Modal Footer */}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 18, borderTop: '1px solid #e2e8f0', paddingTop: 14 }}>
+            <button
+              type="button"
+              className="btn btn-s"
+              onClick={() => setShowIntakeModal(false)}
+            >
+              ยกเลิก
+            </button>
+            <button
+              type="button"
+              className="btn btn-p"
+              style={{ background: '#b91c1c', border: 'none', fontWeight: 600 }}
+              onClick={() => {
+                setShowIntakeModal(false);
+                setScenario('normal');
+              }}
+            >
+              บันทึกเหตุและคำนวณแผน
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  function renderCancelModal() {
+    return (
+      <div
+        style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(15, 23, 42, 0.45)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          padding: 16,
+        }}
+        onClick={() => setShowCancelModal(false)}
+      >
+        <div
+          className="card"
+          style={{
+            width: '100%',
+            maxWidth: 480,
+            background: '#ffffff',
+            borderRadius: 12,
+            padding: '20px 24px',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: '#0f2a5c', marginBottom: 8 }}>
+            ยกเลิก INC-2026-000015 เพราะแจ้งผิด?
+          </h2>
+          <div style={{ fontSize: 12.5, color: '#475569', lineHeight: '18px', marginBottom: 12 }}>
+            คำขอที่ยังไม่มีผู้ยืนยัน 2 รายการจะถูกยกเลิกทันที · ของที่ยืนยันแล้ว 3 รายการจะถูกส่งคืนผู้ให้ยืม · ชุดที่จัดเสร็จแล้วยังคงอยู่ในคลังเป็นชุดพร้อมใช้
+          </div>
+          <textarea
+            rows={3}
+            placeholder="เหตุผล (จำเป็น)"
+            value={cancelReason}
+            onChange={(e) => setCancelReason(e.target.value)}
+            style={{
+              width: '100%',
+              border: '1px solid #cbd5e1',
+              borderRadius: 6,
+              padding: '8px 10px',
+              fontSize: 12.5,
+              fontFamily: 'inherit',
+              boxSizing: 'border-box',
+              marginBottom: 14,
+            }}
+          />
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <button
+              type="button"
+              className="btn btn-s"
+              onClick={() => setShowCancelModal(false)}
+            >
+              ไม่ยกเลิก
+            </button>
+            <button
+              type="button"
+              className="btn btn-p"
+              style={{ background: '#b91c1c', border: 'none', fontWeight: 600 }}
+              onClick={() => {
+                setShowCancelModal(false);
+                setScenario('s7');
+              }}
+            >
+              ยืนยันยกเลิกเหตุ
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      {/* ─── Scenario Switcher Bar (For Testing S1–S7) ─────────────── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', background: '#f8fafc', padding: '6px 10px', borderRadius: 8, border: '1px solid #e2e8f0' }}>
+        <span style={{ fontSize: 11, fontWeight: 600, color: '#64748b' }}>จำลองสถานะพิเศษ (S1–S7):</span>
+        {(['normal', 's1', 's2', 's3', 's4', 's5', 's6', 's7'] as Scenario[]).map((s) => (
+          <button
+            key={s}
+            type="button"
+            className="btn btn-sm"
+            style={{
+              height: 24,
+              fontSize: 11,
+              padding: '0 8px',
+              background: scenario === s ? '#2563eb' : '#ffffff',
+              color: scenario === s ? '#ffffff' : '#334155',
+              border: scenario === s ? '1px solid #2563eb' : '1px solid #cbd5e1',
+              fontWeight: scenario === s ? 600 : 400,
+            }}
+            onClick={() => {
+              setScenario(s);
+              if (s === 's6') setShowCancelModal(true);
+            }}
+          >
+            {s === 'normal' ? 'เหตุปกติ' : s.toUpperCase()}
+          </button>
+        ))}
+      </div>
+
       {/* ─── Breadcrumb ────────────────────────────────────────────── */}
       <nav
         style={{
@@ -92,6 +572,157 @@ export function IncidentConsolePage() {
         <Icon name="chev" className="ic12" style={{ transform: 'rotate(-90deg)', color: '#94a3b8' }} />
         <span style={{ color: '#64748b' }}>เหตุฉุกเฉิน</span>
       </nav>
+
+      {/* ─── S1 Banner: ผู้ป่วยถึงแล้ว (ETA หมด · PATIENTS_ARRIVED) ── */}
+      {scenario === 's1' && (
+        <div
+          style={{
+            background: '#b91c1c',
+            color: '#ffffff',
+            borderRadius: 10,
+            padding: '12px 18px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 14,
+            flexWrap: 'wrap',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <Icon name="tri" className="ic18" style={{ color: '#ffffff', flex: 'none' }} />
+            <div style={{ fontSize: 13, lineHeight: '19px', fontWeight: 500 }}>
+              ผู้ป่วยถึงโรงพยาบาลแล้ว · คำขอที่ยังไม่มีผู้ยืนยันใช้เวลารอ 1 นาที · ของที่ยืนยันแล้ว 2 รายการยังอยู่ระหว่างทาง (Intubation Set ถึง 19:44, Tranexamic acid ถึงราว 19:50)
+            </div>
+          </div>
+          <button
+            type="button"
+            className="btn btn-sm"
+            style={{
+              background: '#ffffff',
+              color: '#b91c1c',
+              border: 'none',
+              fontWeight: 700,
+              fontSize: 12,
+              padding: '6px 14px',
+              flex: 'none',
+            }}
+            onClick={() => setActiveTab('borrow')}
+          >
+            ดูของที่ยังไม่ถึง
+          </button>
+        </div>
+      )}
+
+      {/* ─── S2 Banner: หา ETA ไม่ได้ (ETA_UNAVAILABLE) ─────────────── */}
+      {scenario === 's2' && (
+        <div
+          style={{
+            background: '#fff7ed',
+            border: '1px solid #fed7aa',
+            borderRadius: 10,
+            padding: '12px 18px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 14,
+            flexWrap: 'wrap',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: '1 1 500px' }}>
+            <Icon name="tri" className="ic18" style={{ color: '#ea580c', flex: 'none' }} />
+            <div style={{ fontSize: 12.5, color: '#9a3412', lineHeight: '18px' }}>
+              ไม่สามารถคำนวณ ETA — ใช้วิทยุสื่อสาร · บริการเดินทางไม่ตอบกลับใน 3 วินาที (ลองซ้ำแล้ว) และไม่มี ETA จากหน่วยกู้ภัย · ระบบคิดผู้ให้ยืมตามเวลาเดินทางไม่ได้ ให้เลือกการโทรศัพท์/วิทยุ · เวลาเฉลี่ย 3/5 นาที/ครั้ง · แจ้ง ER และเภสัชกรแล้ว
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 'none' }}>
+            <span style={{ fontSize: 12, color: '#9a3412', fontWeight: 600 }}>ใส่ ETA เอง</span>
+            <input
+              type="text"
+              placeholder=""
+              value={customEta}
+              onChange={(e) => setCustomEta(e.target.value)}
+              style={{
+                width: 50,
+                height: 30,
+                border: '1px solid #fdba74',
+                borderRadius: 6,
+                padding: '0 6px',
+                textAlign: 'center',
+                fontFamily: 'inherit',
+                fontSize: 13,
+              }}
+            />
+            <span style={{ fontSize: 12, color: '#9a3412' }}>นาที</span>
+            <button
+              type="button"
+              className="btn btn-p btn-sm"
+              style={{ height: 30, fontSize: 12 }}
+              onClick={() => alert('บันทึก ETA แล้ว')}
+            >
+              บันทึก
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ─── S3 Card: ทุกโรงพยาบาลปฏิเสธ ──────────────────────────── */}
+      {scenario === 's3' && (
+        <div
+          style={{
+            background: '#ffffff',
+            border: '1.5px solid #ef4444',
+            borderRadius: 10,
+            padding: '14px 18px',
+          }}
+        >
+          <div style={{ fontSize: 15, fontWeight: 700, color: '#dc2626', marginBottom: 4 }}>
+            ไม่มีโรงพยาบาลใดให้ Tranexamic acid ได้
+          </div>
+          <div style={{ fontSize: 12.5, color: '#475569', marginBottom: 12 }}>
+            รพ.พระสมุทรเจดีย์ฯ ปฏิเสธ · รพ.บางพลี หมดเวลา · รพ.บางเสาธง ปฏิเสธ · ยังขาด 8 AMP · แจ้งหัวหน้าเวร ER และเภสัชกรแล้ว
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button type="button" className="btn btn-p btn-sm">
+              เพิ่มผู้ให้ยืมเอง
+            </button>
+            <button type="button" className="btn btn-s btn-sm">
+              โทรคลังเขต
+            </button>
+            <button
+              type="button"
+              className="btn btn-g btn-sm"
+              onClick={() => setScenario('normal')}
+            >
+              รับทราบ
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ─── S5 Card: ชุดที่ยังไม่มีสูตร (NO_RECIPE) ───────────────── */}
+      {scenario === 's5' && (
+        <div
+          style={{
+            background: '#fffbeb',
+            border: '1px solid #fef3c7',
+            borderRadius: 10,
+            padding: '14px 18px',
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 14, fontWeight: 700, color: '#92400e' }}>Burn Kit</span>
+              <span className="badge" style={{ background: '#fef3c7', color: '#b45309', border: '1px solid #fcd34d', height: 18, fontSize: 10.5 }}>
+                NO_RECIPE
+              </span>
+            </div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: '#92400e' }}>ประมาณการ 6</div>
+          </div>
+          <div style={{ fontSize: 12, color: '#78350f', lineHeight: '18px' }}>
+            ยังไม่มีสูตรส่วนประกอบของชุดนี้ ระบบจัดกระจายและเช็คสต็อกให้ไม่ได้ · จัดการเองโดยเภสัชกร หรือเพิ่มสูตรในหน้าตั้งค่าชุด (ต้องนำเข้าเข้าทางการคลังอนุมัติ)
+          </div>
+        </div>
+      )}
 
       {/* ─── Page Heading ─────────────────────────────────────────── */}
       <div
@@ -142,9 +773,10 @@ export function IncidentConsolePage() {
               border: 'none',
               fontWeight: 600,
             }}
+            onClick={() => setShowIntakeModal(true)}
           >
             <Icon name="siren" className="ic14" />
-            แจ้งเหตุใหม่
+            + แจ้งเหตุใหม่
           </button>
         </div>
       </div>
@@ -288,6 +920,7 @@ export function IncidentConsolePage() {
               <button
                 className="link"
                 style={{ fontSize: 11, color: '#2563eb', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                onClick={() => setShowIntakeModal(true)}
               >
                 แก้จำนวนผู้ป่วย
               </button>
@@ -737,79 +1370,101 @@ export function IncidentConsolePage() {
                   <span>Agent ประเมินเหตุการณ์</span>
                 </div>
                 <span className="badge st-approved" style={{ height: 20, fontSize: 11 }}>
-                  มั่นใจสูง · HIGH
+                  {scenario === 's4' ? 'FALLBACK' : 'มั่นใจสูง · HIGH'}
                 </span>
               </div>
-              <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 8 }}>
-                F3_T1 · v2 · 19:27 · ใช้เวลา 3.1 วินาที · สถานะ OK
-              </div>
-              <p style={{ margin: '0 0 10px', fontSize: 12.5, color: '#334155', lineHeight: '19px' }}>
-                รถโดยสารคว่ำ ผู้บาดเจ็บหลายระบบ มีเลือดออกมากและทางเดินหายใจ จึงเลือก Trauma Set ทุกคน, IV Set สำหรับแดงและเหลือง และ Intubation Set สำหรับผู้ป่วยแดง พร้อมยาห้ามเลือด สารน้ำ และวัคซีนบาดทะยัก
-              </p>
-              <ul style={{ margin: '0 0 12px', paddingLeft: 16, fontSize: 12, color: '#475569', lineHeight: '18px' }}>
-                <li>Intubation Set ขาด 1 ชุด เพราะ stylet แยกมีแค่ 3 ชิ้น</li>
-                <li>Tranexamic acid ต้องยืม 8 amp และเป็นรายการวิกฤต</li>
-                <li>ผู้ป่วยดำ 1 ราย ไม่นำมาคิดชุด</li>
-              </ul>
 
-              {/* Questions to Staff */}
-              <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: 10, display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <div style={{ fontSize: 11.5, fontWeight: 600, color: '#0f2a5c' }}>คำถามถึงเจ้าหน้าที่</div>
-
-                {/* Question 1: Burn Kit */}
-                <div style={{ background: '#f8fafc', padding: '8px 10px', borderRadius: 8, border: '1px solid #e2e8f0' }}>
-                  <div style={{ fontSize: 11.5, color: '#334155', marginBottom: 6 }}>
-                    มีผู้ป่วยแผลไหม้ร่วมด้วยหรือไม่ ถ้ามีควรเพิ่ม Burn Kit
+              {scenario === 's4' ? (
+                /* S4: Agent Fallback View */
+                <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: 8, padding: '10px 12px', marginTop: 4 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#0369a1', marginBottom: 4 }}>
+                    เลือกชุดตามกฎของโรงพยาบาล
                   </div>
-                  <div style={{ display: 'flex', gap: 6 }}>
-                    <button
-                      type="button"
-                      className={`btn btn-sm ${burnKitOption === 'none' ? 'btn-p' : 'btn-s'}`}
-                      style={{ flex: 1, height: 28, fontSize: 11 }}
-                      onClick={() => setBurnKitOption('none')}
-                    >
-                      ไม่มี
-                    </button>
-                    <button
-                      type="button"
-                      className={`btn btn-sm ${burnKitOption === 'add' ? 'btn-p' : 'btn-s'}`}
-                      style={{ flex: 1.5, height: 28, fontSize: 11 }}
-                      onClick={() => setBurnKitOption('add')}
-                    >
-                      มี - เพิ่ม Burn Kit
-                    </button>
+                  <div style={{ fontSize: 12, color: '#0369a1', lineHeight: '18px' }}>
+                    Agent ไม่ตอบภายใน 8 วินาที ระบบเลือกชุดจาก incident_kit_rule ของ &ldquo;รถโดยสาร / อุบัติเหตุจราจรหมู่&rdquo; แทน · จำนวนยังคำนวณเหมือนเดิม · ไม่มีคำถามเพิ่มเติม
+                  </div>
+                  <div style={{ fontSize: 11, color: '#0284c7', marginTop: 6 }}>
+                    เหตุผลของการตัดสินใจ: FALLBACK · บันทึกใน agent_run แล้ว
                   </div>
                 </div>
-
-                {/* Question 2: PRC O */}
-                <div style={{ background: '#f8fafc', padding: '8px 10px', borderRadius: 8, border: '1px solid #e2e8f0' }}>
-                  <div style={{ fontSize: 11.5, color: '#334155', marginBottom: 6 }}>
-                    ต้องการ PRC group O เพิ่มจาก 4 ยูนิตหรือไม่ (สูงสุด 6)
+              ) : (
+                /* Normal Agent Assessment View */
+                <>
+                  <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 8 }}>
+                    F3_T1 · v2 · 19:27 · ใช้เวลา 3.1 วินาที · สถานะ OK
                   </div>
-                  <div style={{ display: 'flex', gap: 6 }}>
-                    <button
-                      type="button"
-                      className={`btn btn-sm ${prcOption === '4' ? 'btn-p' : 'btn-s'}`}
-                      style={{ flex: 1, height: 28, fontSize: 11 }}
-                      onClick={() => setPrcOption('4')}
-                    >
-                      คง 4 ยูนิต
-                    </button>
-                    <button
-                      type="button"
-                      className={`btn btn-sm ${prcOption === '6' ? 'btn-p' : 'btn-s'}`}
-                      style={{ flex: 1, height: 28, fontSize: 11 }}
-                      onClick={() => setPrcOption('6')}
-                    >
-                      เพิ่มเป็น 6
-                    </button>
-                  </div>
-                </div>
-              </div>
+                  <p style={{ margin: '0 0 10px', fontSize: 12.5, color: '#334155', lineHeight: '19px' }}>
+                    รถโดยสารคว่ำ ผู้บาดเจ็บหลายระบบ มีเลือดออกมากและทางเดินหายใจ จึงเลือก Trauma Set ทุกคน, IV Set สำหรับแดงและเหลือง และ Intubation Set สำหรับผู้ป่วยแดง พร้อมยาห้ามเลือด สารน้ำ และวัคซีนบาดทะยัก
+                  </p>
+                  <ul style={{ margin: '0 0 12px', paddingLeft: 16, fontSize: 12, color: '#475569', lineHeight: '18px' }}>
+                    <li>Intubation Set ขาด 1 ชุด เพราะ stylet แยกมีแค่ 3 ชิ้น</li>
+                    <li>Tranexamic acid ต้องยืม 8 amp และเป็นรายการวิกฤต</li>
+                    <li>ผู้ป่วยดำ 1 ราย ไม่นำมาคิดชุด</li>
+                  </ul>
 
-              <div style={{ fontSize: 10.5, color: '#94a3b8', marginTop: 10, lineHeight: '14px' }}>
-                Agent เลือกชุดและรายการยาตามลักษณะเหตุการณ์ ตามกฎตั้งต้นของโรงพยาบาล · จำนวนคำนวณโดยระบบ · ถ้าเกิน 8 วินาทีใช้กฎแทน (FALLBACK)
-              </div>
+                  {/* Questions to Staff */}
+                  <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: 10, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <div style={{ fontSize: 11.5, fontWeight: 600, color: '#0f2a5c' }}>คำถามถึงเจ้าหน้าที่</div>
+
+                    {/* Question 1: Burn Kit */}
+                    <div style={{ background: '#f8fafc', padding: '8px 10px', borderRadius: 8, border: '1px solid #e2e8f0' }}>
+                      <div style={{ fontSize: 11.5, color: '#334155', marginBottom: 6 }}>
+                        มีผู้ป่วยแผลไหม้ร่วมด้วยหรือไม่ ถ้ามีควรเพิ่ม Burn Kit
+                      </div>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button
+                          type="button"
+                          className={`btn btn-sm ${burnKitOption === 'none' ? 'btn-p' : 'btn-s'}`}
+                          style={{ flex: 1, height: 28, fontSize: 11 }}
+                          onClick={() => setBurnKitOption('none')}
+                        >
+                          ไม่มี
+                        </button>
+                        <button
+                          type="button"
+                          className={`btn btn-sm ${burnKitOption === 'add' ? 'btn-p' : 'btn-s'}`}
+                          style={{ flex: 1.5, height: 28, fontSize: 11 }}
+                          onClick={() => {
+                            setBurnKitOption('add');
+                            setScenario('s5'); // Preview S5 no recipe
+                          }}
+                        >
+                          มี - เพิ่ม Burn Kit
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Question 2: PRC O */}
+                    <div style={{ background: '#f8fafc', padding: '8px 10px', borderRadius: 8, border: '1px solid #e2e8f0' }}>
+                      <div style={{ fontSize: 11.5, color: '#334155', marginBottom: 6 }}>
+                        ต้องการ PRC group O เพิ่มจาก 4 ยูนิตหรือไม่ (สูงสุด 6)
+                      </div>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button
+                          type="button"
+                          className={`btn btn-sm ${prcOption === '4' ? 'btn-p' : 'btn-s'}`}
+                          style={{ flex: 1, height: 28, fontSize: 11 }}
+                          onClick={() => setPrcOption('4')}
+                        >
+                          คง 4 ยูนิต
+                        </button>
+                        <button
+                          type="button"
+                          className={`btn btn-sm ${prcOption === '6' ? 'btn-p' : 'btn-s'}`}
+                          style={{ flex: 1, height: 28, fontSize: 11 }}
+                          onClick={() => setPrcOption('6')}
+                        >
+                          เพิ่มเป็น 6
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ fontSize: 10.5, color: '#94a3b8', marginTop: 10, lineHeight: '14px' }}>
+                    Agent เลือกชุดและรายการยาตามลักษณะเหตุการณ์ ตามกฎตั้งต้นของโรงพยาบาล · จำนวนคำนวณโดยระบบ · ถ้าเกิน 8 วินาทีใช้กฎแทน (FALLBACK)
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Requirement Summary Card */}
@@ -1222,6 +1877,10 @@ export function IncidentConsolePage() {
           </div>
         </div>
       )}
+
+      {/* ─── Modals ────────────────────────────────────────────────── */}
+      {showIntakeModal && renderIntakeModal()}
+      {showCancelModal && renderCancelModal()}
     </div>
   );
 }
