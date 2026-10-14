@@ -26,6 +26,8 @@ export interface Alert {
   time: string;
   action: string;
   primary: boolean;
+  /** Linked borrow request shown under the status badge (e.g. `#REQ-1050`). */
+  req?: string;
 }
 
 export interface ReqRow {
@@ -49,11 +51,11 @@ export interface ReqRow {
 }
 
 export const ALERT_TABS: AlertTab[] = [
-  { key: 'all', label: 'ทั้งหมด', count: 6 },
-  { key: 'shortage', label: 'ขาดแคลน', count: 2 },
+  { key: 'all', label: 'ทั้งหมด', count: 8 },
+  { key: 'shortage', label: 'ขาดแคลน', count: 3 },
   { key: 'expiry', label: 'ใกล้หมดอายุ', count: 2 },
   { key: 'request', label: 'คำขอ', count: 1 },
-  { key: 'emergency', label: 'เหตุฉุกเฉิน', count: 1 },
+  { key: 'emergency', label: 'เหตุฉุกเฉิน', count: 2 },
 ];
 
 export const ALERTS: Alert[] = [
@@ -67,7 +69,7 @@ export const ALERTS: Alert[] = [
     type: 'shortage', sevCls: 'sev-crit', sevLabel: 'ระดับวิกฤต', icon: 'tri',
     drug: 'Adrenaline 1 mg/mL amp', ved: 'V', vedLabel: 'Vital', typeLabel: 'ขาดแคลน',
     msg: 'เหลือ 24 amp (ใช้ได้ 2 วัน) – ER ใช้เพิ่มขึ้น 40% สัปดาห์นี้ · คำขอ #REQ-1050 กำลังจัดส่ง',
-    msgCritical: false, time: '25 นาทีที่แล้ว', action: 'ดูรายละเอียด', primary: false,
+    msgCritical: false, time: '25 นาทีที่แล้ว', action: 'ดูรายละเอียด', primary: false, req: 'REQ-1050',
   },
   {
     type: 'emergency', sevCls: 'sev-crit', sevLabel: 'ระดับวิกฤต', icon: 'siren',
@@ -79,7 +81,7 @@ export const ALERTS: Alert[] = [
     type: 'request', sevCls: 'sev-urg', sevLabel: 'ระดับเร่งด่วน', icon: 'inbox',
     drug: 'Amlodipine 5 mg tab', ved: 'E', vedLabel: 'Essential', typeLabel: 'คำขอ',
     msg: 'คำขอ #REQ-1047 จาก รพ.บางบ่อ (500 tab) รอคุณอนุมัติ',
-    msgCritical: false, liveSecs: 2530, time: '1 ชม.ที่แล้ว', action: 'พิจารณา', primary: true,
+    msgCritical: false, liveSecs: 2530, time: '1 ชม.ที่แล้ว', action: 'พิจารณา', primary: true, req: 'REQ-1047',
   },
   {
     type: 'expiry', sevCls: 'sev-urg', sevLabel: 'ระดับเร่งด่วน', icon: 'calx',
@@ -93,12 +95,24 @@ export const ALERTS: Alert[] = [
     msg: 'Lot SS2311 · 40 หลอด หมดอายุใน 60 วัน',
     msgCritical: false, time: 'วันนี้ 08:00', action: 'ดูรายละเอียด', primary: false,
   },
+  {
+    type: 'shortage', sevCls: 'sev-urg', sevLabel: 'ระดับเร่งด่วน', icon: 'inbox',
+    drug: 'CefTRIAXone 1 g inj', ved: 'V', vedLabel: 'Vital', typeLabel: 'ขาดแคลน',
+    msg: 'เหลือ 8 vial (ใช้ได้ 0.9 วัน) – มีผู้ให้ยืม 2 แห่งตอบรับแล้ว',
+    msgCritical: true, time: '1 ชม.ที่แล้ว', action: 'ดูคำขอ', primary: false, req: 'REQ-1053',
+  },
+  {
+    type: 'emergency', sevCls: 'sev-urg', sevLabel: 'ระดับเร่งด่วน', icon: 'siren',
+    drug: 'Dopamine 40 mg/mL inj', ved: 'E', vedLabel: 'Essential', typeLabel: 'เหตุฉุกเฉิน',
+    msg: 'ER ขอสำรองเพิ่ม 30 amp สำหรับเวรดึก – สต็อกคงเหลือ 45 amp',
+    msgCritical: false, time: '2 ชม.ที่แล้ว', action: 'ดูรายละเอียด', primary: false,
+  },
 ];
 
 export const ME = 'รพ.สมุทรปราการ';
 
 export const INCOMING: ReqRow[] = [
-  { id: 'REQ-1051', drug: 'Insulin Glargine pen', qty: '40', unit: 'pen', from: 'รพ.บางบ่อ', to: ME, ug: 'critical', ugLabel: 'เร่งด่วนมาก', st: 'pending', stTh: 'รอดำเนินการ', stEn: 'Pending', secs: 1125, action: 'ติดตาม', actionPrimary: false },
+  { id: 'REQ-1051', drug: 'Insulin Glargine pen', qty: '40', unit: 'pen', from: 'รพ.บางบ่อ', to: ME, ug: 'critical', ugLabel: 'เร่งด่วนมาก', st: 'pending', stTh: 'รอดำเนินการ', stEn: 'Pending', secs: 1125, action: 'ตรวจและอนุมัติ', actionPrimary: true },
   { id: 'REQ-1050', drug: 'Adrenaline 1 mg/mL amp', qty: '20', unit: 'amp', from: 'รพ.บางพลี', to: ME, ug: 'critical', ugLabel: 'เร่งด่วนมาก', st: 'transit', stTh: 'กำลังจัดส่ง', stEn: 'In Transit', step: 2, note: 'รถ สป-04 · ถึงประมาณ 19:40 น.', action: 'ติดตาม', actionPrimary: false },
   { id: 'REQ-1049', drug: 'Tranexamic acid 500 mg inj', qty: '60', unit: 'amp', from: 'รพ.พระสมุทรเจดีย์ฯ', to: ME, ug: 'urgent', ugLabel: 'เร่งด่วน', st: 'pending', stTh: 'รอดำเนินการ', stEn: 'Pending', secs: 4532, action: 'ติดตาม', actionPrimary: false },
   { id: 'REQ-1046', drug: 'Adrenaline 1 mg/mL amp', qty: '10', unit: 'amp', from: 'รพ.บางเสาธง', to: ME, ug: 'critical', ugLabel: 'เร่งด่วนมาก', st: 'approved', stTh: 'อนุมัติแล้ว', stEn: 'Approved', note: 'รอรถรับของ 19:30 น.', action: 'ดู', actionPrimary: false },
@@ -122,6 +136,8 @@ export const NEARBY = [
   { n: '2', name: 'รพ.บางพลี', km: '15.4', min: '25', lend: '12' },
   { n: '3', name: 'รพ.บางเสาธง', km: '21.0', min: '30', lend: '3' },
   { n: '4', name: 'รพ.บางบ่อ', km: '28.6', min: '38', lend: '8' },
+  { n: '5', name: 'รพ.พระประแดง', km: '12.8', min: '22', lend: '6' },
+  { n: '6', name: 'รพ.บางจาก', km: '18.3', min: '28', lend: '4' },
 ];
 
 export const WORK = [
@@ -129,13 +145,17 @@ export const WORK = [
   { cls: 'av-edit', icon: 'edit', text: 'ปรับจำนวน #REQ-1050 Adrenaline จาก 30 → 20 amp (Agent เสนอ 30)', time: '17:30', sub: 'ปรับคำแนะนำ Agent' },
   { cls: 'av-ok', icon: 'pkg', text: 'ยืนยันปล่อย Lot SS2309 · Silver sulfadiazine 15 หลอด เข้าคลังกลาง', time: '15:05', sub: 'Near-Expiry Pool' },
   { cls: 'av-bad', icon: 'x', text: 'ปฏิเสธคำขอ #REQ-1041 จาก รพ.บางบ่อ (Adrenaline) – สต็อก V ต่ำกว่าเกณฑ์', time: '11:20', sub: 'คำขอยืม' },
+  { cls: 'av-hosp', icon: 'hosp', text: 'ส่งคำขอยืม #REQ-1055 · CefTRIAXone 1 g 14 vial → รพ.บางพลี', time: '10:15', sub: 'คำขอยืม' },
   { cls: 'av-sys', icon: 'login', text: 'เข้าสู่ระบบ · Chrome / Windows 11', time: '08:31', sub: 'เซสชัน' },
+  { cls: 'av-sys', icon: 'clock', text: 'HIS ซิงก์สต็อกประจำวันเสร็จ · 12 รายการอัปเดต', time: '07:30', sub: 'ระบบ' },
 ];
 
 export const EXPIRY = [
   { k: 'MF2405', drug: 'Metformin 500 mg tab', ved: 'E' as const, lot: 'MF2405', qty: '3,000 tab', where: 'คลังยาหลัก', days: '45', exp: '27 พ.ย. 2569', value: '2,400', urgent: true },
   { k: 'SS2311', drug: 'Silver sulfadiazine 1% cream', ved: 'D' as const, lot: 'SS2311', qty: '40 หลอด', where: 'คลังยา OPD', days: '60', exp: '12 ธ.ค. 2569', value: '3,200', urgent: false },
   { k: 'AM2402', drug: 'Amlodipine 5 mg tab', ved: 'E' as const, lot: 'AM2402', qty: '1,200 tab', where: 'คลังยาหลัก', days: '74', exp: '26 ธ.ค. 2569', value: '600', urgent: false },
+  { k: 'AX2408', drug: 'Amoxicillin 500 mg cap', ved: 'E' as const, lot: 'AX2408', qty: '2,500 แคปซูล', where: 'คลังยาหลัก', days: '88', exp: '9 ม.ค. 2570', value: '1,750', urgent: false },
+  { k: 'OM2403', drug: 'Omeprazole 20 mg cap', ved: 'E' as const, lot: 'OM2403', qty: '900 แคปซูล', where: 'คลังยา OPD', days: '102', exp: '23 ม.ค. 2570', value: '540', urgent: false },
 ];
 
 export const ACTIVITY = [
@@ -156,4 +176,63 @@ export const UG_CLS: Record<string, string> = { critical: 'ug-critical', urgent:
 export const ST_CLS: Record<string, string> = {
   pending: 'st-pending', approved: 'st-approved', transit: 'st-transit',
   delivered: 'st-delivered', rejected: 'st-rejected', timeout: 'st-timeout',
+};
+
+/**
+ * Return obligations — mockup `owe` list verbatim (Return obligations · UI section).
+ * `overdue` renders the red "เกินกำหนด" highlight; pharmacist-critical.
+ */
+export interface ReturnObligation {
+  drug: string;
+  qty: number;
+  unit: string;
+  /** Hospital we owe to. */
+  to: string;
+  ref: string;
+  mode: string;
+  due: string;
+  overdue: boolean;
+}
+
+export const RETURNS_OWE: ReturnObligation[] = [
+  { drug: 'CefTRIAXone 1 g', qty: 20, unit: 'VIAL', to: 'รพ.บางพลี', ref: 'BR-2026-000091', mode: 'คืนเป็นยาเดิม', due: '12 ต.ค. (เมื่อวาน)', overdue: true },
+  { drug: 'NORepinephrine 4 mg', qty: 20, unit: 'AMP', to: 'รพ.บางพลี', ref: 'BR-2026-000117', mode: 'คืนเป็นยาเดิม', due: '10 พ.ย.', overdue: false },
+  { drug: 'NORepinephrine 4 mg', qty: 10, unit: 'AMP', to: 'รพ.พระสมุทรเจดีย์ฯ', ref: 'BR-2026-000117', mode: 'คืนเป็นยาเดิม', due: '10 พ.ย.', overdue: false },
+  { drug: 'PRC group O', qty: 4, unit: 'UNIT', to: 'รพ.บางพลี', ref: 'BR-2026-000120', mode: 'คืนผ่านธนาคารเลือด', due: '11 พ.ย.', overdue: false },
+  { drug: 'Omeprazole 40 mg', qty: 100, unit: 'VIAL', to: 'รพ.บางเสาธง', ref: 'BR-2026-000122', mode: 'คืนเป็นยาเดิม', due: '15 พ.ย.', overdue: false },
+  { drug: 'Metformin 500 mg tab', qty: 2000, unit: 'เม็ด', to: 'รพ.บางบ่อ', ref: 'BR-2026-000123', mode: 'คืนเป็นยาเดิม', due: '18 พ.ย.', overdue: false },
+];
+
+export interface ReturnInbound {
+  drug: string;
+  qty: number;
+  unit: string;
+  from: string;
+  ref: string;
+  due: string;
+}
+
+export const RETURNS_INBOUND: ReturnInbound = {
+  drug: 'AMLOdipine 5 mg tab', qty: 300, unit: 'เม็ด', from: 'รพ.บางเสาธง', ref: 'BR-2026-000115', due: '8 พ.ย.',
+};
+
+/** Held lot excluded from lendable stock — mockup near-expiry planning row verbatim. */
+export const HELD_LOT = {
+  drug: 'Omeprazole 40 mg',
+  lot: 'OMP-2403',
+  qty: '180',
+  unit: 'vial',
+  plan: 'AP-2026-000045',
+  note: 'ยังไม่เริ่มเรียกใช้',
+};
+
+/** Agent daily summary — mockup "สรุปประจำวันจาก Agent" (agentbox) verbatim. */
+export const AGENT_SUMMARY = {
+  title: 'สรุปประจำวันจาก Agent',
+  conf: 'มั่นใจสูง · HIGH',
+  confCls: 't-green',
+  meta: 'F1_T6 · สร้างอัตโนมัติ 07:30 น. วันนี้ · สถานะ OK',
+  text: 'เช้านี้ยังไม่มีคำขอยืมเปิดอยู่ ยาที่ควรจับตาคือ CefTRIAXone 1 g (ใช้ได้อีก 1.3 วัน), 5-FU 120 SYRINGE (1.8 วัน) และ ALprostadil (6 วัน) ภาระคืน CefTRIAXone 20 vial ให้ รพ.บางพลี ครบกำหนดเมื่อวาน 12 ต.ค. และยังไม่ได้คืน',
+  risk: ['CefTRIAXone 1 g · 1.3 วัน', '5-FU 120 SYRINGE · 1.8 วัน', 'ALprostadil · 6 วัน'],
+  flags: ['RETURN_OVERDUE'],
 };

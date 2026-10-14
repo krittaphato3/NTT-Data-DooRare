@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { ALERTS, ALERT_TABS } from '../data/dashboard';
+import type { Alert } from '../data/dashboard';
 import { fmtTime, useTick } from '../../../lib/time';
 import { AgentSuggestion } from './AgentSuggestion';
 import { Icon } from '../../../components/common/icons';
@@ -12,8 +13,38 @@ interface AlertsPanelProps {
 
 const ALL_HOSPITALS = 'ทุกโรงพยาบาล (12)';
 
+/** Visible rows before Load more is pressed (card stays nonscrollable by default). */
+const ALERTS_PAGE = 6;
+
+type AlertStatus = 'open' | 'linked' | 'acked' | 'snoozed';
+
+const STATUS_META: Record<AlertStatus, { label: string; cls: string; icon: IconName }> = {
+  open: { label: 'เปิด', cls: 't-amber', icon: 'bell' },
+  linked: { label: 'ผูกคำขอแล้ว', cls: 't-green', icon: 'link' },
+  acked: { label: 'รับทราบแล้ว', cls: 't-blue', icon: 'eye' },
+  snoozed: { label: 'เลื่อนเตือน', cls: 't-grey', icon: 'moon' },
+};
+
+function statusOf(a: Alert, acked: boolean, snoozed: boolean): AlertStatus {
+  if (snoozed) return 'snoozed';
+  if (acked) return 'acked';
+  if (a.req) return 'linked';
+  return 'open';
+}
+
 export function AlertsPanel({ query, hospital }: AlertsPanelProps) {
   const [tab, setTab] = useState('all');
+  const [expanded, setExpanded] = useState(false);
+  const tableWrap = useRef<HTMLDivElement>(null);
+  /** Show more must not grow the card: freeze the table height at click, then scroll. */
+  const [frozenBody, setFrozenBody] = useState<number | undefined>(undefined);
+  const applyExpanded = (next: boolean) => {
+    const el = tableWrap.current;
+    setFrozenBody(next && el ? Math.round(el.getBoundingClientRect().height) : undefined);
+    setExpanded(next);
+  };
+  const [acked, setAcked] = useState<ReadonlySet<string>>(new Set());
+  const [snoozed, setSnoozed] = useState<ReadonlySet<string>>(new Set());
   const tick = useTick();
   const q = query.trim().toLowerCase();
   const h = hospital !== ALL_HOSPITALS ? hospital : '';
@@ -25,6 +56,8 @@ export function AlertsPanel({ query, hospital }: AlertsPanelProps) {
     return true;
   });
   const showAgent = tab === 'all' || tab === 'shortage';
+  const visible = expanded ? filtered : filtered.slice(0, ALERTS_PAGE);
+  const remaining = filtered.length - visible.length;
 
   return (
     <div className="card equal-card cardpad--alerts" data-part="alerts" style={{ flex: '3 1 560px', minWidth: 0 }}>
@@ -41,7 +74,10 @@ export function AlertsPanel({ query, hospital }: AlertsPanelProps) {
             role="tab"
             className={`tab ${tab === t.key ? 'tab-on' : ''}`}
             aria-selected={tab === t.key ? 'true' : 'false'}
-            onClick={() => setTab(t.key)}
+            onClick={() => {
+              setTab(t.key);
+              applyExpanded(false);
+            }}
           >
             {t.label} <span className="cnt">{t.count}</span>
           </button>
@@ -50,35 +86,115 @@ export function AlertsPanel({ query, hospital }: AlertsPanelProps) {
 
       {showAgent && <AgentSuggestion />}
 
-      <ul className="equal-scroll" style={{ listStyle: 'none', margin: 0, padding: 0 }}>
-        {filtered.map((a) => (              <li key={a.drug} className="alert-item">
-            <span className={`sev ${a.sevCls}`} title={a.sevLabel}>
-              <Icon name={a.icon as IconName} />
-            </span>
-            <div className="alert-main">
-              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '6px 8px' }}>
-                <span style={{ fontWeight: 600, color: '#0F2A5C' }}>{a.drug}</span>
-                <span className={`ved ved-${a.ved}`} title={a.vedLabel}>{a.ved}</span>
-                <span style={{ fontSize: 12, color: '#475569', border: '1px solid #E2E8F0', borderRadius: 6, padding: '0 6px', lineHeight: '18px' }}>
-                  {a.typeLabel}
-                </span>
-              </div>
-              <div style={{ fontSize: 13, lineHeight: '20px', marginTop: 2, color: a.msgCritical ? '#B91C1C' : '#475569' }}>
-                {a.msg}
-                {a.liveSecs !== undefined && (
-                  <> – เหลือ <span className="num">{fmtTime(a.liveSecs - tick)}</span></>
-                )}
-              </div>
-            </div>
-            <div className="alert-side">
-              <span style={{ fontSize: 12, lineHeight: '16px' }}>{a.time}</span>
-              <button className={`btn btn-sm ${a.primary ? 'btn-p' : 'btn-s'}`}>{a.action}</button>
-            </div>
-          </li>
-        ))}
-      </ul>
+      <div
+        ref={tableWrap}
+        className="scroll-x equal-scroll"
+        style={{ maxHeight: 'none', height: expanded ? frozenBody : undefined }}
+      >
+        <table className="qt">
+          <thead>
+            <tr>
+              <th scope="col">ยา</th>
+              <th scope="col">เงื่อนไข</th>
+              <th scope="col">คงเหลือ · ใช้ได้อีก</th>
+              <th scope="col">สถานะ</th>
+              <th scope="col" className="r"><span className="srt">การดำเนินการ</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            {visible.map((a) => {
+              const st = statusOf(a, acked.has(a.drug), snoozed.has(a.drug));
+              const meta = STATUS_META[st];
+              const showAck = st === 'open';
+              const showSnooze = st === 'open' || st === 'acked';
+              return (
+                <tr key={a.drug}>
+                  <td style={{ minWidth: 200 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span className={`sev ${a.sevCls}`} title={a.sevLabel}>
+                        <Icon name={a.icon as IconName} className="ic20" />
+                      </span>
+                      <span style={{ fontWeight: 600, color: '#0F2A5C' }}>{a.drug}</span>
+                      <span className={`ved ved-${a.ved} ved-sm`} title={a.vedLabel}>{a.ved}</span>
+                    </div>
+                  </td>
+                  <td>
+                    <span className={`badge ${a.sevCls}`} title={a.sevLabel}>
+                      <Icon name={a.icon as IconName} className="ic14" />
+                      {a.sevLabel}
+                    </span>
+                    <span style={{ display: 'block', fontSize: 12, marginTop: 2 }}>{a.typeLabel}</span>
+                  </td>
+                  <td>
+                    <span style={{ color: a.msgCritical ? '#B91C1C' : undefined }}>
+                      {a.msg}
+                      {a.liveSecs !== undefined && (
+                        <> – เหลือ <span className="num">{fmtTime(a.liveSecs - tick)}</span></>
+                      )}
+                    </span>
+                  </td>
+                  <td>
+                    <span className={`badge ${meta.cls}`}>
+                      <Icon name={meta.icon} className="ic14" />
+                      {meta.label}
+                    </span>
+                    {a.req && (
+                      <a href="#" className="code alert-req" style={{ color: '#1D4ED8' }} onClick={(e) => e.preventDefault()}>
+                        {a.req}
+                      </a>
+                    )}
+                  </td>
+                  <td className="r" style={{ whiteSpace: 'nowrap' }}>
+                    <button className={`btn btn-sm ${a.primary ? 'btn-p' : 'btn-s'}`}>{a.action}</button>
+                    {(showAck || showSnooze) && (
+                      <span className="alert-actions">
+                        {showAck && (
+                          <button
+                            className="link"
+                            style={{ fontSize: 12.5 }}
+                            onClick={() => setAcked((prev) => new Set(prev).add(a.drug))}
+                          >
+                            รับทราบ
+                          </button>
+                        )}
+                        {showSnooze && (
+                          <button
+                            className="link"
+                            style={{ fontSize: 12.5 }}
+                            title="เลื่อนการแจ้งเตือน 4 ชั่วโมง"
+                            onClick={() => setSnoozed((prev) => new Set(prev).add(a.drug))}
+                          >
+                            เลื่อน 4 ชม.
+                          </button>
+                        )}
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
       {filtered.length === 0 && (
         <div style={{ padding: '24px 0', textAlign: 'center', borderTop: '1px solid #E2E8F0' }}>ไม่มีการแจ้งเตือนในหมวดนี้</div>
+      )}
+      {filtered.length > ALERTS_PAGE && (
+        <div style={{ paddingTop: 8 }}>
+          <button
+            type="button"
+            className="tab"
+            aria-expanded={expanded ? 'true' : 'false'}
+            onClick={() => applyExpanded(!expanded)}
+            style={{ width: '100%', justifyContent: 'center', borderColor: '#E2E8F0' }}
+          >
+            {expanded ? (
+              <span>แสดงน้อยลง <span style={{ color: '#94A3B8' }}>· Show less</span></span>
+            ) : (
+              <span>โหลดเพิ่มเติม (เหลือ {remaining}) <span style={{ color: '#94A3B8' }}>· Load more</span></span>
+            )}
+          </button>
+        </div>
       )}
       <div className="equal-footer" style={{ borderTop: '1px solid #E2E8F0', padding: '12px 0', display: 'flex', justifyContent: 'center' }}>
         <a href="#" className="link">

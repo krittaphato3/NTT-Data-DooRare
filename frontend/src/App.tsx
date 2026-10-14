@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Footer } from './components/layout/Footer';
 import { Sidebar } from './components/layout/Sidebar';
 import { TopBar } from './components/layout/TopBar';
+import { NAV } from './data/navigation';
 import { ALERTS } from './roles/pharmacist/data/dashboard';
 import { DashboardPage } from './roles/pharmacist/pages/DashboardPage';
 
@@ -48,7 +49,7 @@ export default function App() {
 
   return (
     <div className={shellClass}>
-      <Sidebar collapsed={collapsed} onToggle={() => setCollapsed((v) => !v)} onNavigate={() => setNavOpen(false)} />
+      <Sidebar collapsed={collapsed} onToggle={() => setCollapsed((v) => !v)} onNavigate={() => setNavOpen(false)} items={NAV} />
       {navOpen && <button className="nav-scrim" aria-label="ปิดเมนู" onClick={() => setNavOpen(false)} />}
       <div className="content">
         <TopBar
