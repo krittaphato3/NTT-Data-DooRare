@@ -1,0 +1,4089 @@
+openapi: 3.1.0
+info:
+  title: DooRare API
+  version: 1.0.0
+  description: 'Base path /api/v1. Auth: Cognito JWT (Bearer). All state changes audited.
+    Numbers are computed server-side; agents never write numeric fields.'
+servers:
+- url: https://api.doorare.example/api/v1
+security:
+- bearerAuth: []
+paths:
+  /me:
+    get:
+      operationId: API_PL_001
+      summary: Current user profile & permissions
+      tags:
+      - PL
+      x-id: API-PL-001
+      x-roles:
+      - ALL
+      parameters: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /hospitals:
+    get:
+      operationId: API_PL_002
+      summary: List hospitals (region scope)
+      tags:
+      - PL
+      x-id: API-PL-002
+      x-roles:
+      - ALL
+      parameters:
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HospitalList'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /hospitals/{hospitalId}:
+    get:
+      operationId: API_PL_003
+      summary: Hospital detail
+      tags:
+      - PL
+      x-id: API-PL-003
+      x-roles:
+      - ALL
+      parameters:
+      - name: hospitalId
+        in: path
+        required: true
+        schema: &id001
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Hospital'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /notifications:
+    get:
+      operationId: API_PL_004
+      summary: List my notifications
+      tags:
+      - PL
+      x-id: API-PL-004
+      x-roles:
+      - ALL
+      parameters:
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationList'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /notifications/{id}/read:
+    post:
+      operationId: API_PL_005
+      summary: Mark notification read
+      tags:
+      - PL
+      x-id: API-PL-005
+      x-roles:
+      - ALL
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id001
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ok'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /dashboard:
+    get:
+      operationId: API_PL_006
+      summary: Dashboard summary tiles
+      tags:
+      - PL
+      x-id: API-PL-006
+      x-roles:
+      - ALL
+      parameters:
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Dashboard'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /forecasts:
+    get:
+      operationId: API_F1a_001
+      summary: Latest forecast results (filter hospital, drug, ved)
+      tags:
+      - F1a
+      x-id: API-F1a-001
+      x-roles:
+      - PHARMACIST
+      - PROCUREMENT_OFFICER
+      - HOSPITAL_ADMIN
+      - REGION_ADMIN
+      parameters:
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForecastList'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /forecasts/{hospitalDrugId}:
+    get:
+      operationId: API_F1a_002
+      summary: Forecast detail with history and backtest
+      tags:
+      - F1a
+      x-id: API-F1a-002
+      x-roles:
+      - PHARMACIST
+      - PROCUREMENT_OFFICER
+      - HOSPITAL_ADMIN
+      parameters:
+      - name: hospitalDrugId
+        in: path
+        required: true
+        schema: *id001
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForecastDetail'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /forecasts/runs:
+    post:
+      operationId: API_F1a_003
+      summary: Trigger forecast run (admin)
+      tags:
+      - F1a
+      x-id: API-F1a-003
+      x-roles:
+      - SYSTEM_ADMIN
+      - REGION_ADMIN
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobRef'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ForecastRunRequest'
+  /hospital-drugs/{id}/classification:
+    patch:
+      operationId: API_F1a_004
+      summary: Set VED / expiry threshold
+      tags:
+      - F1a
+      x-id: API-F1a-004
+      x-roles:
+      - PHARMACIST
+      - HOSPITAL_ADMIN
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id001
+      - $ref: '#/components/parameters/IfMatch'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HospitalDrug'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClassificationUpdate'
+  /alerts:
+    get:
+      operationId: API_F1a_005
+      summary: Stock alert queue (ordered by ABC then days cover)
+      tags:
+      - F1a
+      x-id: API-F1a-005
+      x-roles:
+      - PHARMACIST
+      - PROCUREMENT_OFFICER
+      - HOSPITAL_ADMIN
+      parameters:
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AlertList'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /alerts/{id}/ack:
+    post:
+      operationId: API_F1a_006
+      summary: Acknowledge alert
+      tags:
+      - F1a
+      x-id: API-F1a-006
+      x-roles:
+      - PHARMACIST
+      - PROCUREMENT_OFFICER
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id001
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Alert'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /alerts/{id}/snooze:
+    post:
+      operationId: API_F1a_007
+      summary: Snooze alert
+      tags:
+      - F1a
+      x-id: API-F1a-007
+      x-roles:
+      - PHARMACIST
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id001
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Alert'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SnoozeRequest'
+  /borrow-requests:
+    post:
+      operationId: API_F1b_001
+      summary: Create borrow request (DRAFT) from alert or manual
+      tags:
+      - F1b
+      x-id: API-F1b-001
+      x-roles:
+      - PHARMACIST
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BorrowRequest'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BorrowRequestCreate'
+    get:
+      operationId: API_F1b_002
+      summary: List requests (as borrower or lender)
+      tags:
+      - F1b
+      x-id: API-F1b-002
+      x-roles:
+      - PHARMACIST
+      - HOSPITAL_ADMIN
+      - PROCUREMENT_OFFICER
+      - REGION_ADMIN
+      parameters:
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BorrowRequestList'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /borrow-requests/{id}:
+    get:
+      operationId: API_F1b_003
+      summary: Request detail with legs, ladder, agent proposal
+      tags:
+      - F1b
+      x-id: API-F1b-003
+      x-roles:
+      - PHARMACIST
+      - HOSPITAL_ADMIN
+      - PROCUREMENT_OFFICER
+      - REGION_ADMIN
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id001
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BorrowRequest'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /borrow-requests/{id}/propose:
+    post:
+      operationId: API_F1b_004
+      summary: Run calculation + agent proposal
+      tags:
+      - F1b
+      x-id: API-F1b-004
+      x-roles:
+      - PHARMACIST
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id001
+      - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BorrowRequest'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /borrow-requests/{id}/approve:
+    post:
+      operationId: API_F1b_005
+      summary: Approve ladder (HITL)
+      tags:
+      - F1b
+      x-id: API-F1b-005
+      x-roles:
+      - PHARMACIST
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id001
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/IfMatch'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BorrowRequest'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApproveRequest'
+  /borrow-requests/{id}/reject:
+    post:
+      operationId: API_F1b_006
+      summary: Reject / cancel
+      tags:
+      - F1b
+      x-id: API-F1b-006
+      x-roles:
+      - PHARMACIST
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id001
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BorrowRequest'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+  /borrow-requests/{id}/ladder:
+    patch:
+      operationId: API_F1b_007
+      summary: Edit ladder before approval
+      tags:
+      - F1b
+      x-id: API-F1b-007
+      x-roles:
+      - PHARMACIST
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id001
+      - $ref: '#/components/parameters/IfMatch'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BorrowRequest'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LadderUpdate'
+  /lender-queue:
+    get:
+      operationId: API_F1b_008
+      summary: Incoming requests awaiting my response
+      tags:
+      - F1b
+      x-id: API-F1b-008
+      x-roles:
+      - PHARMACIST
+      parameters:
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LegList'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /borrow-legs/{legId}/respond:
+    post:
+      operationId: API_F1b_009
+      summary: Lender accept / partial / reject
+      tags:
+      - F1b
+      x-id: API-F1b-009
+      x-roles:
+      - PHARMACIST
+      parameters:
+      - name: legId
+        in: path
+        required: true
+        schema: *id001
+      - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BorrowLeg'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LegResponse'
+  /borrow-legs/{legId}/load:
+    post:
+      operationId: API_F1b_010
+      summary: Warehouse confirms LOADED (stock out)
+      tags:
+      - F1b
+      x-id: API-F1b-010
+      x-roles:
+      - WAREHOUSE_OFFICER
+      parameters:
+      - name: legId
+        in: path
+        required: true
+        schema: *id001
+      - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BorrowLeg'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoadConfirm'
+  /borrow-legs/{legId}/receive:
+    post:
+      operationId: API_F1b_011
+      summary: Borrower confirms receipt (stock in)
+      tags:
+      - F1b
+      x-id: API-F1b-011
+      x-roles:
+      - WAREHOUSE_OFFICER
+      - PHARMACIST
+      parameters:
+      - name: legId
+        in: path
+        required: true
+        schema: *id001
+      - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BorrowLeg'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReceiveConfirm'
+  /borrow-requests/{id}/escalate-manual:
+    post:
+      operationId: API_F1b_012
+      summary: Add manual lender after escalation
+      tags:
+      - F1b
+      x-id: API-F1b-012
+      x-roles:
+      - PHARMACIST
+      - HOSPITAL_ADMIN
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id001
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BorrowRequest'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ManualLender'
+  /borrow-requests/{id}/agent-runs:
+    get:
+      operationId: API_F1b_013
+      summary: Agent decision log for request
+      tags:
+      - F1b
+      x-id: API-F1b-013
+      x-roles:
+      - PHARMACIST
+      - AUDITOR
+      - HOSPITAL_ADMIN
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id001
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentRunList'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /documents/{id}:
+    get:
+      operationId: API_XC_001
+      summary: Get document metadata + signed URL
+      tags:
+      - XC
+      x-id: API-XC-001
+      x-roles:
+      - ALL
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id001
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /documents:
+    post:
+      operationId: API_XC_002
+      summary: Generate document for a ref
+      tags:
+      - XC
+      x-id: API-XC-002
+      x-roles:
+      - PHARMACIST
+      - WAREHOUSE_OFFICER
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocumentCreate'
+  /return-obligations:
+    get:
+      operationId: API_XC_003
+      summary: List return obligations
+      tags:
+      - XC
+      x-id: API-XC-003
+      x-roles:
+      - PHARMACIST
+      - HOSPITAL_ADMIN
+      - WAREHOUSE_OFFICER
+      parameters:
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReturnList'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /return-obligations/{id}/return:
+    post:
+      operationId: API_XC_004
+      summary: Record return in kind (same drug, same quantity; partial allowed); blood = replacement via blood bank (BR-XC-013)
+      tags:
+      - XC
+      x-id: API-XC-004
+      x-roles:
+      - WAREHOUSE_OFFICER
+      - PHARMACIST
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id001
+      - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReturnObligation'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReturnConfirm'
+  /return-obligations/{id}/waive:
+    post:
+      operationId: API_XC_005
+      summary: Waive obligation
+      tags:
+      - XC
+      x-id: API-XC-005
+      x-roles:
+      - HOSPITAL_ADMIN
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id001
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReturnObligation'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+  /value:
+    get:
+      operationId: API_XC_006
+      summary: Value dashboard metrics
+      tags:
+      - XC
+      x-id: API-XC-006
+      x-roles:
+      - HOSPITAL_ADMIN
+      - REGION_ADMIN
+      - PROCUREMENT_OFFICER
+      parameters:
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValueSummary'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /context-signals:
+    get:
+      operationId: API_XC_007
+      summary: List context signals
+      tags:
+      - XC
+      x-id: API-XC-007
+      x-roles:
+      - PHARMACIST
+      - REGION_ADMIN
+      parameters:
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContextSignalList'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+    post:
+      operationId: API_XC_008
+      summary: Create / approve context signal
+      tags:
+      - XC
+      x-id: API-XC-008
+      x-roles:
+      - REGION_ADMIN
+      - DATA_ADMIN
+      parameters: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContextSignal'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContextSignalCreate'
+  /near-expiry:
+    get:
+      operationId: API_F2a_001
+      summary: Near-expiry items for my hospital
+      tags:
+      - F2a
+      x-id: API-F2a-001
+      x-roles:
+      - PHARMACIST
+      - HOSPITAL_ADMIN
+      parameters: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NearExpiryList'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /near-expiry/{id}/release:
+    post:
+      operationId: API_F2a_002
+      summary: Release lot to regional pool
+      tags:
+      - F2a
+      x-id: API-F2a-002
+      x-roles:
+      - PHARMACIST
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id001
+      - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NearExpiryItem'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReleaseRequest'
+  /near-expiry/{id}/keep:
+    post:
+      operationId: API_F2a_003
+      summary: Keep & re-evaluate later
+      tags:
+      - F2a
+      x-id: API-F2a-003
+      x-roles:
+      - PHARMACIST
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id001
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NearExpiryItem'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KeepRequest'
+  /near-expiry/{id}/dismiss:
+    post:
+      operationId: API_F2a_004
+      summary: Dismiss
+      tags:
+      - F2a
+      x-id: API-F2a-004
+      x-roles:
+      - PHARMACIST
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id001
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NearExpiryItem'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+  /near-expiry/{id}/withdraw:
+    post:
+      operationId: API_F2a_005
+      summary: Withdraw from pool (no active plan)
+      tags:
+      - F2a
+      x-id: API-F2a-005
+      x-roles:
+      - PHARMACIST
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id001
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NearExpiryItem'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+  /pool:
+    get:
+      operationId: API_F2a_006
+      summary: Regional central pool
+      tags:
+      - F2a
+      x-id: API-F2a-006
+      x-roles:
+      - PHARMACIST
+      - REGION_ADMIN
+      - HOSPITAL_ADMIN
+      parameters:
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PoolList'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /allocation-plans:
+    get:
+      operationId: API_F2a_007
+      summary: List allocation plans
+      tags:
+      - F2a
+      x-id: API-F2a-007
+      x-roles:
+      - PHARMACIST
+      - REGION_ADMIN
+      - HOSPITAL_ADMIN
+      parameters:
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlanList'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /allocation-plans/{id}:
+    get:
+      operationId: API_F2a_008
+      summary: Plan detail incl. cost check & 4 options
+      tags:
+      - F2a
+      x-id: API-F2a-008
+      x-roles:
+      - PHARMACIST
+      - REGION_ADMIN
+      - HOSPITAL_ADMIN
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id001
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AllocationPlan'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /allocation-plans/{id}/decision:
+    post:
+      operationId: API_F2a_009
+      summary: Approve / reject as involved hospital
+      tags:
+      - F2a
+      x-id: API-F2a-009
+      x-roles:
+      - PHARMACIST
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id001
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/IfMatch'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AllocationPlan'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlanDecision'
+  /allocation-plans/{id}/option:
+    post:
+      operationId: API_F2a_010
+      summary: Choose option for uneconomical lot
+      tags:
+      - F2a
+      x-id: API-F2a-010
+      x-roles:
+      - PHARMACIST
+      - REGION_ADMIN
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id001
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AllocationPlan'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlanOption'
+  /allocation-plans/{id}/cancel:
+    post:
+      operationId: API_F2a_011
+      summary: Cancel (mutual consent, waiting dispatch)
+      tags:
+      - F2a
+      x-id: API-F2a-011
+      x-roles:
+      - PHARMACIST
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id001
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AllocationPlan'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+  /transport-tasks:
+    get:
+      operationId: API_F2a_012
+      summary: Transport tasks
+      tags:
+      - F2a
+      x-id: API-F2a-012
+      x-roles:
+      - WAREHOUSE_OFFICER
+      - DRIVER
+      - PHARMACIST
+      parameters:
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransportList'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /transport-tasks/{id}/status:
+    post:
+      operationId: API_F2a_013
+      summary: Advance transport status with photos
+      tags:
+      - F2a
+      x-id: API-F2a-013
+      x-roles:
+      - WAREHOUSE_OFFICER
+      - DRIVER
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id001
+      - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransportTask'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransportAdvance'
+  /transport-tasks/{id}/events:sync:
+    post:
+      operationId: API_F2a_017
+      summary: Offline-first batch sync of driver events (idempotent by clientEventId)
+      tags:
+      - F2a
+      x-id: API-F2a-017
+      x-roles:
+      - WAREHOUSE_OFFICER
+      - DRIVER
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id001
+      - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransportSyncResult'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransportEventBatch'
+  /transport-tasks/{id}/photos:
+    post:
+      operationId: API_F2a_014
+      summary: Get presigned upload URL
+      tags:
+      - F2a
+      x-id: API-F2a-014
+      x-roles:
+      - WAREHOUSE_OFFICER
+      - DRIVER
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id001
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PresignedUpload'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PhotoUploadRequest'
+  /repeat-expiry:
+    get:
+      operationId: API_F2a_015
+      summary: Repeated-expiry flags
+      tags:
+      - F2a
+      x-id: API-F2a-015
+      x-roles:
+      - PHARMACIST
+      - PROCUREMENT_OFFICER
+      parameters: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RepeatList'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /repeat-expiry/{id}/dismiss:
+    post:
+      operationId: API_F2a_016
+      summary: Dismiss flag (90 days)
+      tags:
+      - F2a
+      x-id: API-F2a-016
+      x-roles:
+      - PHARMACIST
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id001
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RepeatFlag'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /imports/drug-list:
+    post:
+      operationId: API_F2b_001
+      summary: Upload HIS drug list (CSV/XLSX)
+      tags:
+      - F2b
+      x-id: API-F2b-001
+      x-roles:
+      - DATA_ADMIN
+      - PHARMACIST
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportRef'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ImportRequest'
+  /mappings:
+    get:
+      operationId: API_F2b_002
+      summary: Mapping queue (status filter)
+      tags:
+      - F2b
+      x-id: API-F2b-002
+      x-roles:
+      - DATA_ADMIN
+      - PHARMACIST
+      parameters:
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MappingList'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /mappings/{id}:
+    get:
+      operationId: API_F2b_003
+      summary: Mapping detail with candidates
+      tags:
+      - F2b
+      x-id: API-F2b-003
+      x-roles:
+      - DATA_ADMIN
+      - PHARMACIST
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id001
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Mapping'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /mappings/{id}/verify:
+    post:
+      operationId: API_F2b_004
+      summary: Verify (confirm or choose candidate)
+      tags:
+      - F2b
+      x-id: API-F2b-004
+      x-roles:
+      - DATA_ADMIN
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id001
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/IfMatch'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Mapping'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MappingVerify'
+  /mappings/{id}/reject:
+    post:
+      operationId: API_F2b_005
+      summary: Reject mapping
+      tags:
+      - F2b
+      x-id: API-F2b-005
+      x-roles:
+      - DATA_ADMIN
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id001
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Mapping'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+  /drug-master:
+    get:
+      operationId: API_F2b_006
+      summary: Search canonical drugs
+      tags:
+      - F2b
+      x-id: API-F2b-006
+      x-roles:
+      - ALL
+      parameters: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DrugMasterList'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /central-items:
+    get:
+      operationId: API_F2b_007
+      summary: List central-list items (non-drug supplies and blood)
+      tags:
+      - F2b
+      x-id: API-F2b-007
+      x-roles:
+      - ALL
+      parameters: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CentralItemList'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+    post:
+      operationId: API_F2b_008
+      summary: Create or update a central-list item (internal_code, name, spec, base unit, item_type SUPPLY or BLOOD)
+      tags:
+      - F2b
+      x-id: API-F2b-008
+      x-roles:
+      - DATA_ADMIN
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CentralItem'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CentralItem'
+  /incidents:
+    post:
+      operationId: API_F3_001
+      summary: Create incident
+      tags:
+      - F3
+      x-id: API-F3-001
+      x-roles:
+      - ER_STAFF
+      - PHARMACIST
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Incident'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IncidentCreate'
+    get:
+      operationId: API_F3_002
+      summary: List incidents
+      tags:
+      - F3
+      x-id: API-F3-002
+      x-roles:
+      - ER_STAFF
+      - PHARMACIST
+      - HOSPITAL_ADMIN
+      - REGION_ADMIN
+      parameters:
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IncidentList'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /incidents/{id}:
+    get:
+      operationId: API_F3_003
+      summary: Incident detail with plan
+      tags:
+      - F3
+      x-id: API-F3-003
+      x-roles:
+      - ER_STAFF
+      - PHARMACIST
+      - HOSPITAL_ADMIN
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id001
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Incident'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /incidents/{id}/counts:
+    patch:
+      operationId: API_F3_004
+      summary: Update triage counts (new plan revision)
+      tags:
+      - F3
+      x-id: API-F3-004
+      x-roles:
+      - ER_STAFF
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id001
+      - $ref: '#/components/parameters/IfMatch'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Incident'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CountsUpdate'
+  /incidents/{id}/plan:
+    post:
+      operationId: API_F3_005
+      summary: Calculate / recalculate plan
+      tags:
+      - F3
+      x-id: API-F3-005
+      x-roles:
+      - ER_STAFF
+      - PHARMACIST
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id001
+      - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmergencyPlan'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /incidents/{id}/plan/approve:
+    post:
+      operationId: API_F3_006
+      summary: Approve plan (HITL)
+      tags:
+      - F3
+      x-id: API-F3-006
+      x-roles:
+      - PHARMACIST
+      - HOSPITAL_ADMIN
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id001
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/IfMatch'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmergencyPlan'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApproveRequest'
+  /incidents/{id}/emergency-borrow:
+    post:
+      operationId: API_F3_007
+      summary: Send urgent whole-set requests
+      tags:
+      - F3
+      x-id: API-F3-007
+      x-roles:
+      - PHARMACIST
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id001
+      - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BorrowRequestList'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /emergency-legs/{legId}/confirm:
+    post:
+      operationId: API_F3_008
+      summary: Lender officer confirms (first wins)
+      tags:
+      - F3
+      x-id: API-F3-008
+      x-roles:
+      - WAREHOUSE_OFFICER
+      - PHARMACIST
+      parameters:
+      - name: legId
+        in: path
+        required: true
+        schema: *id001
+      - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BorrowLeg'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LegResponse'
+  /kit-tasks:
+    get:
+      operationId: API_F3_009
+      summary: Kit preparation tasks
+      tags:
+      - F3
+      x-id: API-F3-009
+      x-roles:
+      - WAREHOUSE_OFFICER
+      - PHARMACIST
+      parameters:
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KitTaskList'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /kit-tasks/{id}/confirm:
+    post:
+      operationId: API_F3_010
+      summary: Confirm pack done (stock moves)
+      tags:
+      - F3
+      x-id: API-F3-010
+      x-roles:
+      - WAREHOUSE_OFFICER
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id001
+      - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KitTask'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /incidents/{id}/usage:
+    post:
+      operationId: API_F3_011
+      summary: Record usage
+      tags:
+      - F3
+      x-id: API-F3-011
+      x-roles:
+      - ER_STAFF
+      - PHARMACIST
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id001
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Incident'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UsageRecord'
+  /incidents/{id}/close:
+    post:
+      operationId: API_F3_012
+      summary: Request close -> reconciliation
+      tags:
+      - F3
+      x-id: API-F3-012
+      x-roles:
+      - ER_STAFF
+      - PHARMACIST
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id001
+      - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Incident'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /incidents/{id}/reconciliation:
+    get:
+      operationId: API_F3_013
+      summary: Borrow/return + usage summary
+      tags:
+      - F3
+      x-id: API-F3-013
+      x-roles:
+      - PHARMACIST
+      - HOSPITAL_ADMIN
+      - AUDITOR
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id001
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reconciliation'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /kit-stock:
+    get:
+      operationId: API_F3_014
+      summary: Ready-set stock
+      tags:
+      - F3
+      x-id: API-F3-014
+      x-roles:
+      - PHARMACIST
+      - WAREHOUSE_OFFICER
+      - ER_STAFF
+      parameters: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KitStockList'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /kit-stock/{kitTypeId}:
+    put:
+      operationId: API_F3_015
+      summary: Set ready-set count
+      tags:
+      - F3
+      x-id: API-F3-015
+      x-roles:
+      - WAREHOUSE_OFFICER
+      parameters:
+      - name: kitTypeId
+        in: path
+        required: true
+        schema: *id001
+      - $ref: '#/components/parameters/IfMatch'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KitStock'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KitStockUpdate'
+  /kit-types:
+    get:
+      operationId: API_F3_016
+      summary: Kit types & recipes
+      tags:
+      - F3
+      x-id: API-F3-016
+      x-roles:
+      - ALL
+      parameters:
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KitTypeList'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /config:
+    get:
+      operationId: API_AD_001
+      summary: List configuration
+      tags:
+      - AD
+      x-id: API-AD-001
+      x-roles:
+      - HOSPITAL_ADMIN
+      - REGION_ADMIN
+      - SYSTEM_ADMIN
+      parameters: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConfigList'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /config/{key}:
+    put:
+      operationId: API_AD_002
+      summary: Update configuration (audited)
+      tags:
+      - AD
+      x-id: API-AD-002
+      x-roles:
+      - HOSPITAL_ADMIN
+      - REGION_ADMIN
+      - SYSTEM_ADMIN
+      parameters:
+      - name: key
+        in: path
+        required: true
+        schema: *id001
+      - $ref: '#/components/parameters/IfMatch'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConfigItem'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfigUpdate'
+  /audit-log:
+    get:
+      operationId: API_AD_003
+      summary: Query audit log
+      tags:
+      - AD
+      x-id: API-AD-003
+      x-roles:
+      - AUDITOR
+      - SYSTEM_ADMIN
+      - HOSPITAL_ADMIN
+      parameters: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditList'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /agent/kill-switch:
+    post:
+      operationId: API_AD_004
+      summary: Toggle agent kill switch
+      tags:
+      - AD
+      x-id: API-AD-004
+      x-roles:
+      - SYSTEM_ADMIN
+      - REGION_ADMIN
+      parameters: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KillSwitchState'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KillSwitch'
+  /reports/{reportId}:
+    get:
+      operationId: API_AD_005
+      summary: Run / download report
+      tags:
+      - AD
+      x-id: API-AD-005
+      x-roles:
+      - HOSPITAL_ADMIN
+      - REGION_ADMIN
+      - AUDITOR
+      parameters:
+      - name: reportId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Report'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /users:
+    get:
+      operationId: API_AD_006
+      summary: List users
+      tags:
+      - AD
+      x-id: API-AD-006
+      x-roles:
+      - HOSPITAL_ADMIN
+      - SYSTEM_ADMIN
+      parameters:
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserList'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+    post:
+      operationId: API_AD_007
+      summary: Create / invite user
+      tags:
+      - AD
+      x-id: API-AD-007
+      x-roles:
+      - HOSPITAL_ADMIN
+      - SYSTEM_ADMIN
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreate'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    Cursor:
+      name: cursor
+      in: query
+      schema:
+        type: string
+    Limit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 200
+        default: 50
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema:
+        type: string
+        maxLength: 128
+    IfMatch:
+      name: If-Match
+      in: header
+      required: false
+      description: Resource version; mismatch -> 409 VERSION_CONFLICT
+      schema:
+        type: string
+  responses:
+    Problem:
+      description: RFC 9457 problem+json
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+  schemas:
+    Ok:
+      type: object
+      properties:
+        ok:
+          type: boolean
+    Problem:
+      type: object
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        code:
+          type: string
+          description: Machine code e.g. NO_LENDER, VERSION_CONFLICT, MAPPING_NOT_VERIFIED,
+            GUARDRAIL_REJECTED
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              message:
+                type: string
+      required:
+      - title
+      - status
+    JobRef:
+      type: object
+      properties:
+        jobId: *id001
+        status:
+          type: string
+    ReasonRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          minLength: 3
+      required:
+      - reason
+    BorrowRequestCreate:
+      type: object
+      properties:
+        context:
+          type: string
+          enum:
+          - STOCK_ALERT
+          - MANUAL
+        stockAlertId: *id001
+        reason:
+          type: string
+        items:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            properties:
+              drugMasterId: *id001
+              qtyRequested:
+                type: number
+                exclusiveMinimum: 0
+            required:
+            - drugMasterId
+        urgency:
+          type: string
+          enum:
+          - NORMAL
+          - URGENT
+          - VERY_URGENT
+        preferredLenderIds:
+          type: array
+          items: *id001
+      required:
+      - context
+    ApproveRequest:
+      type: object
+      properties:
+        version:
+          type: integer
+        comment:
+          type: string
+      required:
+      - version
+    LadderUpdate:
+      type: object
+      properties:
+        version:
+          type: integer
+        ladder:
+          type: array
+          items:
+            type: object
+            properties:
+              lenderHospitalId: *id001
+              qtyAsk: &id002
+                type: number
+            required:
+            - lenderHospitalId
+            - qtyAsk
+      required:
+      - version
+      - ladder
+    LegResponse:
+      type: object
+      properties:
+        decision:
+          type: string
+          enum:
+          - ACCEPT
+          - PARTIAL
+          - REJECT
+        qtyAccepted: *id002
+        lots:
+          type: array
+          items:
+            type: object
+            properties:
+              lotId: *id001
+              qty: *id002
+            required:
+            - lotId
+            - qty
+        rejectReason:
+          type: string
+      required:
+      - decision
+    PlanDecision:
+      type: object
+      properties:
+        decision:
+          type: string
+          enum:
+          - APPROVED
+          - REJECTED
+        comment:
+          type: string
+        version:
+          type: integer
+      required:
+      - decision
+      - version
+    IncidentCreate:
+      type: object
+      properties:
+        hospitalId: *id001
+        locationLat: *id002
+        locationLon: *id002
+        locationText:
+          type: string
+        reportedEtaMin:
+          type: integer
+          minimum: 0
+        counts:
+          type: object
+          properties:
+            RED:
+              type: integer
+              minimum: 0
+            YELLOW:
+              type: integer
+              minimum: 0
+            GREEN:
+              type: integer
+              minimum: 0
+            BLACK:
+              type: integer
+              minimum: 0
+      required:
+      - counts
+    TransportAdvance:
+      type: object
+      properties:
+        toStatus:
+          type: string
+          enum:
+          - LOADED
+          - IN_TRANSIT
+          - ARRIVED
+          - RECEIVED
+        photoKeys:
+          type: array
+          maxItems: 10
+          items:
+            type: string
+        version:
+          type: integer
+      required:
+      - toStatus
+      - version
+    TransportEventBatch:
+      type: object
+      properties:
+        events:
+          type: array
+          minItems: 1
+          maxItems: 200
+          items:
+            type: object
+            properties:
+              clientEventId: *id001
+              seq:
+                type: integer
+                minimum: 0
+              toStatus:
+                type: string
+                enum:
+                - LOADED
+                - IN_TRANSIT
+                - ARRIVED
+                - RECEIVED
+              capturedAt: &id003
+                type: string
+                format: date-time
+              photoKeys:
+                type: array
+                maxItems: 10
+                items:
+                  type: string
+            required:
+            - clientEventId
+            - seq
+            - toStatus
+            - capturedAt
+      required:
+      - events
+    TransportSyncResult:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            type: object
+            properties:
+              clientEventId: *id001
+              outcome:
+                type: string
+                enum:
+                - APPLIED
+                - DUPLICATE
+                - REJECTED_OUT_OF_ORDER
+                - REJECTED_INVALID_TRANSITION
+              detail:
+                type: string
+    PhotoUploadRequest:
+      type: object
+      properties:
+        clientPhotoId: *id001
+        stage:
+          type: string
+          enum:
+          - LOADED
+          - IN_TRANSIT
+          - ARRIVED
+        contentType:
+          type: string
+          enum:
+          - image/jpeg
+          - image/png
+        sizeBytes:
+          type: integer
+          maximum: 1572864
+        capturedAt: *id003
+      required:
+      - clientPhotoId
+      - stage
+      - contentType
+    ReturnConfirm:
+      type: object
+      properties:
+        drugMasterId: *id001
+        qtyLocal:
+          type: number
+          exclusiveMinimum: 0
+        lotId: *id001
+        version:
+          type: integer
+      required:
+      - drugMasterId
+      - qtyLocal
+      description: 'In kind only: same drug and quantity as borrowed (F-30). No payment
+        option exists.'
+    MappingVerify:
+      type: object
+      properties:
+        drugMasterId: *id001
+        gpId:
+          type: string
+        unitConversionFactor:
+          type: number
+          exclusiveMinimum: 0
+          default: 1
+        localPackUnit:
+          type: string
+        baseUnitsPerPack:
+          type: number
+          exclusiveMinimum: 0
+        manufacturer:
+          type: string
+        version:
+          type: integer
+      required:
+      - version
+      - baseUnitsPerPack
+    ConfigUpdate:
+      type: object
+      properties:
+        value: {}
+        scope:
+          type: string
+        reason:
+          type: string
+      required:
+      - value
+    KillSwitch:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        reason:
+          type: string
+      required:
+      - enabled
+    AgentRunList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        nextCursor:
+          type:
+          - string
+          - 'null'
+    Alert:
+      type: object
+      properties:
+        id: *id001
+        version:
+          type: integer
+        data:
+          type: object
+          additionalProperties: true
+      description: 'Alert: see §12 entity fields; list types wrap `items` + `nextCursor`.'
+    AlertList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        nextCursor:
+          type:
+          - string
+          - 'null'
+    AllocationPlan:
+      type: object
+      properties:
+        id: *id001
+        version:
+          type: integer
+        data:
+          type: object
+          additionalProperties: true
+      description: 'AllocationPlan: see §12 entity fields; list types wrap `items`
+        + `nextCursor`.'
+    AuditList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        nextCursor:
+          type:
+          - string
+          - 'null'
+    BorrowLeg:
+      type: object
+      properties:
+        id: *id001
+        version:
+          type: integer
+        data:
+          type: object
+          additionalProperties: true
+      description: 'BorrowLeg: see §12 entity fields; list types wrap `items` + `nextCursor`.'
+    BorrowRequest:
+      type: object
+      properties:
+        id: *id001
+        version:
+          type: integer
+        data:
+          type: object
+          additionalProperties: true
+      description: 'BorrowRequest: see §12 entity fields; list types wrap `items`
+        + `nextCursor`.'
+    BorrowRequestList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        nextCursor:
+          type:
+          - string
+          - 'null'
+    ClassificationUpdate:
+      type: object
+      properties:
+        id: *id001
+        version:
+          type: integer
+        data:
+          type: object
+          additionalProperties: true
+      description: 'ClassificationUpdate: see §12 entity fields; list types wrap `items`
+        + `nextCursor`.'
+    ConfigItem:
+      type: object
+      properties:
+        id: *id001
+        version:
+          type: integer
+        data:
+          type: object
+          additionalProperties: true
+      description: 'ConfigItem: see §12 entity fields; list types wrap `items` + `nextCursor`.'
+    ConfigList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        nextCursor:
+          type:
+          - string
+          - 'null'
+    ContextSignal:
+      type: object
+      properties:
+        id: *id001
+        version:
+          type: integer
+        data:
+          type: object
+          additionalProperties: true
+      description: 'ContextSignal: see §12 entity fields; list types wrap `items`
+        + `nextCursor`.'
+    ContextSignalCreate:
+      type: object
+      properties:
+        id: *id001
+        version:
+          type: integer
+        data:
+          type: object
+          additionalProperties: true
+      description: 'ContextSignalCreate: see §12 entity fields; list types wrap `items`
+        + `nextCursor`.'
+    ContextSignalList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        nextCursor:
+          type:
+          - string
+          - 'null'
+    CountsUpdate:
+      type: object
+      properties:
+        id: *id001
+        version:
+          type: integer
+        data:
+          type: object
+          additionalProperties: true
+      description: 'CountsUpdate: see §12 entity fields; list types wrap `items` +
+        `nextCursor`.'
+    Dashboard:
+      type: object
+      properties:
+        id: *id001
+        version:
+          type: integer
+        data:
+          type: object
+          additionalProperties: true
+      description: 'Dashboard: see §12 entity fields; list types wrap `items` + `nextCursor`.'
+    Document:
+      type: object
+      properties:
+        id: *id001
+        version:
+          type: integer
+        data:
+          type: object
+          additionalProperties: true
+      description: 'Document: see §12 entity fields; list types wrap `items` + `nextCursor`.'
+    DocumentCreate:
+      type: object
+      properties:
+        id: *id001
+        version:
+          type: integer
+        data:
+          type: object
+          additionalProperties: true
+      description: 'DocumentCreate: see §12 entity fields; list types wrap `items`
+        + `nextCursor`.'
+    CentralItem:
+      type: object
+      required:
+      - item_type
+      - internal_code
+      - generic_name
+      - base_unit
+      properties:
+        id: *id001
+        item_type:
+          type: string
+          enum:
+          - SUPPLY
+          - BLOOD
+        internal_code:
+          type: string
+        generic_name:
+          type: string
+        strength:
+          type:
+          - string
+          - 'null'
+        dosage_form:
+          type:
+          - string
+          - 'null'
+        base_unit:
+          type: string
+      description: 'Central-list item (rev 1.3, ASM-48): non-drug supply or blood component without a TMT code.'
+    CentralItemList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CentralItem'
+        nextCursor:
+          type:
+          - string
+          - 'null'
+    DrugMasterList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        nextCursor:
+          type:
+          - string
+          - 'null'
+    EmergencyPlan:
+      type: object
+      properties:
+        id: *id001
+        version:
+          type: integer
+        data:
+          type: object
+          additionalProperties: true
+      description: 'EmergencyPlan: see §12 entity fields; list types wrap `items`
+        + `nextCursor`.'
+    ForecastDetail:
+      type: object
+      properties:
+        id: *id001
+        version:
+          type: integer
+        data:
+          type: object
+          additionalProperties: true
+      description: 'ForecastDetail: see §12 entity fields; list types wrap `items`
+        + `nextCursor`.'
+    ForecastList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        nextCursor:
+          type:
+          - string
+          - 'null'
+    ForecastRunRequest:
+      type: object
+      properties:
+        id: *id001
+        version:
+          type: integer
+        data:
+          type: object
+          additionalProperties: true
+      description: 'ForecastRunRequest: see §12 entity fields; list types wrap `items`
+        + `nextCursor`.'
+    Hospital:
+      type: object
+      properties:
+        id: *id001
+        version:
+          type: integer
+        data:
+          type: object
+          additionalProperties: true
+      description: 'Hospital: see §12 entity fields; list types wrap `items` + `nextCursor`.'
+    HospitalDrug:
+      type: object
+      properties:
+        id: *id001
+        version:
+          type: integer
+        data:
+          type: object
+          additionalProperties: true
+      description: 'HospitalDrug: see §12 entity fields; list types wrap `items` +
+        `nextCursor`.'
+    HospitalList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        nextCursor:
+          type:
+          - string
+          - 'null'
+    ImportRef:
+      type: object
+      properties:
+        id: *id001
+        version:
+          type: integer
+        data:
+          type: object
+          additionalProperties: true
+      description: 'ImportRef: see §12 entity fields; list types wrap `items` + `nextCursor`.'
+    ImportRequest:
+      type: object
+      properties:
+        id: *id001
+        version:
+          type: integer
+        data:
+          type: object
+          additionalProperties: true
+      description: 'ImportRequest: see §12 entity fields; list types wrap `items`
+        + `nextCursor`.'
+    Incident:
+      type: object
+      properties:
+        id: *id001
+        version:
+          type: integer
+        data:
+          type: object
+          additionalProperties: true
+      description: 'Incident: see §12 entity fields; list types wrap `items` + `nextCursor`.'
+    IncidentList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        nextCursor:
+          type:
+          - string
+          - 'null'
+    KeepRequest:
+      type: object
+      properties:
+        id: *id001
+        version:
+          type: integer
+        data:
+          type: object
+          additionalProperties: true
+      description: 'KeepRequest: see §12 entity fields; list types wrap `items` +
+        `nextCursor`.'
+    KillSwitchState:
+      type: object
+      properties:
+        id: *id001
+        version:
+          type: integer
+        data:
+          type: object
+          additionalProperties: true
+      description: 'KillSwitchState: see §12 entity fields; list types wrap `items`
+        + `nextCursor`.'
+    KitStock:
+      type: object
+      properties:
+        id: *id001
+        version:
+          type: integer
+        data:
+          type: object
+          additionalProperties: true
+      description: 'KitStock: see §12 entity fields; list types wrap `items` + `nextCursor`.'
+    KitStockList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        nextCursor:
+          type:
+          - string
+          - 'null'
+    KitStockUpdate:
+      type: object
+      properties:
+        id: *id001
+        version:
+          type: integer
+        data:
+          type: object
+          additionalProperties: true
+      description: 'KitStockUpdate: see §12 entity fields; list types wrap `items`
+        + `nextCursor`.'
+    KitTask:
+      type: object
+      properties:
+        id: *id001
+        version:
+          type: integer
+        data:
+          type: object
+          additionalProperties: true
+      description: 'KitTask: see §12 entity fields; list types wrap `items` + `nextCursor`.'
+    KitTaskList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        nextCursor:
+          type:
+          - string
+          - 'null'
+    KitTypeList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        nextCursor:
+          type:
+          - string
+          - 'null'
+    LegList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        nextCursor:
+          type:
+          - string
+          - 'null'
+    LoadConfirm:
+      type: object
+      properties:
+        id: *id001
+        version:
+          type: integer
+        data:
+          type: object
+          additionalProperties: true
+      description: 'LoadConfirm: see §12 entity fields; list types wrap `items` +
+        `nextCursor`.'
+    ManualLender:
+      type: object
+      properties:
+        id: *id001
+        version:
+          type: integer
+        data:
+          type: object
+          additionalProperties: true
+      description: 'ManualLender: see §12 entity fields; list types wrap `items` +
+        `nextCursor`.'
+    Mapping:
+      type: object
+      properties:
+        id: *id001
+        version:
+          type: integer
+        data:
+          type: object
+          additionalProperties: true
+      description: 'Mapping: see §12 entity fields; list types wrap `items` + `nextCursor`.'
+    MappingList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        nextCursor:
+          type:
+          - string
+          - 'null'
+    NearExpiryItem:
+      type: object
+      properties:
+        id: *id001
+        version:
+          type: integer
+        data:
+          type: object
+          additionalProperties: true
+      description: 'NearExpiryItem: see §12 entity fields; list types wrap `items`
+        + `nextCursor`.'
+    NearExpiryList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        nextCursor:
+          type:
+          - string
+          - 'null'
+    NotificationList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        nextCursor:
+          type:
+          - string
+          - 'null'
+    PlanList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        nextCursor:
+          type:
+          - string
+          - 'null'
+    PlanOption:
+      type: object
+      properties:
+        id: *id001
+        version:
+          type: integer
+        data:
+          type: object
+          additionalProperties: true
+      description: 'PlanOption: see §12 entity fields; list types wrap `items` + `nextCursor`.'
+    PoolList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        nextCursor:
+          type:
+          - string
+          - 'null'
+    PresignedUpload:
+      type: object
+      properties:
+        id: *id001
+        version:
+          type: integer
+        data:
+          type: object
+          additionalProperties: true
+      description: 'PresignedUpload: see §12 entity fields; list types wrap `items`
+        + `nextCursor`.'
+    ReceiveConfirm:
+      type: object
+      properties:
+        id: *id001
+        version:
+          type: integer
+        data:
+          type: object
+          additionalProperties: true
+      description: 'ReceiveConfirm: see §12 entity fields; list types wrap `items`
+        + `nextCursor`.'
+    Reconciliation:
+      type: object
+      properties:
+        id: *id001
+        version:
+          type: integer
+        data:
+          type: object
+          additionalProperties: true
+      description: 'Reconciliation: see §12 entity fields; list types wrap `items`
+        + `nextCursor`.'
+    ReleaseRequest:
+      type: object
+      properties:
+        id: *id001
+        version:
+          type: integer
+        data:
+          type: object
+          additionalProperties: true
+      description: 'ReleaseRequest: see §12 entity fields; list types wrap `items`
+        + `nextCursor`.'
+    RepeatFlag:
+      type: object
+      properties:
+        id: *id001
+        version:
+          type: integer
+        data:
+          type: object
+          additionalProperties: true
+      description: 'RepeatFlag: see §12 entity fields; list types wrap `items` + `nextCursor`.'
+    RepeatList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        nextCursor:
+          type:
+          - string
+          - 'null'
+    Report:
+      type: object
+      properties:
+        id: *id001
+        version:
+          type: integer
+        data:
+          type: object
+          additionalProperties: true
+      description: 'Report: see §12 entity fields; list types wrap `items` + `nextCursor`.'
+    ReturnList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        nextCursor:
+          type:
+          - string
+          - 'null'
+    ReturnObligation:
+      type: object
+      properties:
+        id: *id001
+        version:
+          type: integer
+        data:
+          type: object
+          additionalProperties: true
+      description: 'ReturnObligation: see §12 entity fields; list types wrap `items`
+        + `nextCursor`.'
+    SnoozeRequest:
+      type: object
+      properties:
+        id: *id001
+        version:
+          type: integer
+        data:
+          type: object
+          additionalProperties: true
+      description: 'SnoozeRequest: see §12 entity fields; list types wrap `items`
+        + `nextCursor`.'
+    TransportList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        nextCursor:
+          type:
+          - string
+          - 'null'
+    TransportTask:
+      type: object
+      properties:
+        id: *id001
+        version:
+          type: integer
+        data:
+          type: object
+          additionalProperties: true
+      description: 'TransportTask: see §12 entity fields; list types wrap `items`
+        + `nextCursor`.'
+    UsageRecord:
+      type: object
+      properties:
+        id: *id001
+        version:
+          type: integer
+        data:
+          type: object
+          additionalProperties: true
+      description: 'UsageRecord: see §12 entity fields; list types wrap `items` +
+        `nextCursor`.'
+    User:
+      type: object
+      properties:
+        id: *id001
+        version:
+          type: integer
+        data:
+          type: object
+          additionalProperties: true
+      description: 'User: see §12 entity fields; list types wrap `items` + `nextCursor`.'
+    UserCreate:
+      type: object
+      properties:
+        id: *id001
+        version:
+          type: integer
+        data:
+          type: object
+          additionalProperties: true
+      description: 'UserCreate: see §12 entity fields; list types wrap `items` + `nextCursor`.'
+    UserList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        nextCursor:
+          type:
+          - string
+          - 'null'
+    ValueSummary:
+      type: object
+      properties:
+        id: *id001
+        version:
+          type: integer
+        data:
+          type: object
+          additionalProperties: true
+      description: 'ValueSummary: see §12 entity fields; list types wrap `items` +
+        `nextCursor`.'
