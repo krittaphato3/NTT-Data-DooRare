@@ -21,3 +21,11 @@ Relevant files: `frontend/src/App.tsx`, `frontend/src/roles/pharmacist/pages/Das
 - Built UI-only at `/?page=requests`; see `sessions/2026-10-14-2039-claude-borrow-requests-ui05.md`.
 - Shared ops CSS (table/filters/drawer/tabs) now lives in `index.css`.
 - Next: UI-06 lender queue, UI-10 manual request, API wiring.
+
+## Branch feature/dashboard-Incident
+
+- UI-11 – UI-13 Incident Console (`?page=incident`) built matching 4 mockup screens.
+- All 4 tabs implemented: แผนเวชภัณฑ์ UI-12, ยืมฉุกเฉิน, จัดชุด UI-13, สรุปหลังเหตุการณ์.
+- Zero emojis used; standard SVG icons and `.badge` tokens used throughout.
+- Docker rebuilt and serving on port 8080.
+- Next: integration with live backend events and WebSocket incident updates.
