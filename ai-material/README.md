@@ -10,7 +10,7 @@ Store only concise notes, decisions, reusable knowledge, and curated context.
 - `templates/` - reusable note templates
 - `context/` - current project context: task, status, architecture, conventions, quality checklist, runbook
 - `decisions/` - numbered decision records
-- `skills/` - reusable skill notes
+- `skills/` - curated agent skills (one folder per skill; see `skills/README.md`)
 - `prompts/` - reusable prompt starters
 - `errors/` - recurring error notes and fixes
 - `sessions/` - short session notes

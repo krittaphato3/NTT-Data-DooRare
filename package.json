@@ -1,0 +1,17 @@
+{
+  "name": "ntt-data-doorare-tools",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Repo tooling: UI artifact capture and ai-material scripts (not part of the frontend build).",
+  "type": "commonjs",
+  "scripts": {
+    "capture": "node scripts/capture-screenshots.mjs",
+    "capture:dev": "node scripts/capture-screenshots.mjs --url http://127.0.0.1:5173",
+    "e2e:loadmore": "node scripts/e2e-loadmore.mjs",
+    "ai:index": "node scripts/ai-index.mjs",
+    "ai:session": "node scripts/ai-session.mjs"
+  },
+  "devDependencies": {
+    "playwright-core": "^1.64.0"
+  }
+}

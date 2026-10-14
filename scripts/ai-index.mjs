@@ -90,6 +90,15 @@ function isTemplateFile(relPath) {
   return relPath.split(/[\\\/]/)[0] === 'templates';
 }
 
+/* Skills stay out of the index: `skills/README.md` lists the curated set,
+   and indexing every SKILL.md (plus its agent/reference files) would drown
+   the index in low-value rows. */
+function isSkillFile(relPath) {
+  const parts = relPath.split(/[\\\/]/);
+  if (parts[0] !== 'skills') return false;
+  return !(parts.length === 2 && parts[1] === 'README.md');
+}
+
 function isHiddenFile(relPath) {
   return relPath.split(/[\\\/]/).some((part) => part.startsWith('.'));
 }
@@ -97,6 +106,7 @@ function isHiddenFile(relPath) {
 function acceptEntry(relPath) {
   if (!relPath) return false;
   if (isTemplateFile(relPath)) return false;
+  if (isSkillFile(relPath)) return false;
   if (isIndexFile(relPath)) return false;
   if (isHiddenFile(relPath)) return false;
   return true;

@@ -6,3 +6,9 @@ logs/
 build/
 dist/
 .DS_Store
+
+# Local Freebuff tooling state (.freebuff/project-id)
+.freebuff/
+
+# Scratch screenshot comparison output
+tmp-*/

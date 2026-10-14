@@ -1,0 +1,300 @@
+{
+  "url": "http://localhost:4173",
+  "generatedAt": "2026-10-14T10:34:16.378Z",
+  "devices": [
+    {
+      "name": "desktop-1440x900",
+      "width": 1440,
+      "height": 900,
+      "files": [
+        {
+          "file": "full-page.png",
+          "width": 1440,
+          "height": 2935,
+          "bytes": 597106
+        },
+        {
+          "file": "topbar.png",
+          "width": 1200,
+          "height": 69,
+          "bytes": 15923
+        },
+        {
+          "file": "sidebar.png",
+          "width": 240,
+          "height": 900,
+          "bytes": 43655
+        },
+        {
+          "file": "page-header.png",
+          "width": 1136,
+          "height": 67,
+          "bytes": 19661
+        },
+        {
+          "file": "kpi-row.png",
+          "width": 1136,
+          "height": 178,
+          "bytes": 33243
+        },
+        {
+          "file": "alerts-panel.png",
+          "width": 640,
+          "height": 1239,
+          "bytes": 149417
+        },
+        {
+          "file": "agent-suggestion.png",
+          "width": 590,
+          "height": 248,
+          "bytes": 39182
+        },
+        {
+          "file": "request-status-panel.png",
+          "width": 473,
+          "height": 1239,
+          "bytes": 81867
+        },
+        {
+          "file": "nearby-hospitals.png",
+          "width": 363,
+          "height": 743,
+          "bytes": 46283
+        },
+        {
+          "file": "work-history.png",
+          "width": 364,
+          "height": 743,
+          "bytes": 61706
+        },
+        {
+          "file": "near-expiry.png",
+          "width": 363,
+          "height": 743,
+          "bytes": 63730
+        },
+        {
+          "file": "recent-activity.png",
+          "width": 1136,
+          "height": 442,
+          "bytes": 62412
+        },
+        {
+          "file": "footer.png",
+          "width": 1200,
+          "height": 41,
+          "bytes": 13149
+        }
+      ]
+    },
+    {
+      "name": "laptop-1280x800",
+      "width": 1280,
+      "height": 800,
+      "files": [
+        {
+          "file": "full-page.png",
+          "width": 1280,
+          "height": 4166,
+          "bytes": 609456
+        }
+      ]
+    },
+    {
+      "name": "tablet-1024x768",
+      "width": 1024,
+      "height": 768,
+      "files": [
+        {
+          "file": "full-page.png",
+          "width": 1024,
+          "height": 4566,
+          "bytes": 608696
+        },
+        {
+          "file": "topbar.png",
+          "width": 784,
+          "height": 121,
+          "bytes": 13236
+        },
+        {
+          "file": "sidebar.png",
+          "width": 240,
+          "height": 768,
+          "bytes": 43061
+        },
+        {
+          "file": "page-header.png",
+          "width": 724,
+          "height": 123,
+          "bytes": 19916
+        },
+        {
+          "file": "kpi-row.png",
+          "width": 724,
+          "height": 308,
+          "bytes": 36081
+        },
+        {
+          "file": "alerts-panel.png",
+          "width": 724,
+          "height": 1221,
+          "bytes": 163306
+        },
+        {
+          "file": "agent-suggestion.png",
+          "width": 674,
+          "height": 248,
+          "bytes": 39202
+        },
+        {
+          "file": "request-status-panel.png",
+          "width": 724,
+          "height": 834,
+          "bytes": 82164
+        },
+        {
+          "file": "nearby-hospitals.png",
+          "width": 350,
+          "height": 676,
+          "bytes": 45368
+        },
+        {
+          "file": "work-history.png",
+          "width": 350,
+          "height": 676,
+          "bytes": 62828
+        },
+        {
+          "file": "near-expiry.png",
+          "width": 724,
+          "height": 578,
+          "bytes": 72944
+        },
+        {
+          "file": "recent-activity.png",
+          "width": 724,
+          "height": 442,
+          "bytes": 54691
+        },
+        {
+          "file": "footer.png",
+          "width": 784,
+          "height": 41,
+          "bytes": 12826
+        }
+      ]
+    },
+    {
+      "name": "tablet-portrait-768x1024",
+      "width": 768,
+      "height": 1024,
+      "files": [
+        {
+          "file": "full-page.png",
+          "width": 768,
+          "height": 4506,
+          "bytes": 553257
+        }
+      ]
+    },
+    {
+      "name": "phone-390x844",
+      "width": 390,
+      "height": 844,
+      "files": [
+        {
+          "file": "full-page.png",
+          "width": 579,
+          "height": 6004,
+          "bytes": 495752
+        },
+        {
+          "file": "topbar.png",
+          "width": 390,
+          "height": 113,
+          "bytes": 8348
+        },
+        {
+          "file": "page-header.png",
+          "width": 358,
+          "height": 153,
+          "bytes": 15892
+        },
+        {
+          "file": "kpi-row.png",
+          "width": 358,
+          "height": 482,
+          "bytes": 37331
+        },
+        {
+          "file": "alerts-panel.png",
+          "width": 358,
+          "height": 1515,
+          "bytes": 108519
+        },
+        {
+          "file": "agent-suggestion.png",
+          "width": 324,
+          "height": 456,
+          "bytes": 39140
+        },
+        {
+          "file": "request-status-panel.png",
+          "width": 358,
+          "height": 1017,
+          "bytes": 80697
+        },
+        {
+          "file": "nearby-hospitals.png",
+          "width": 358,
+          "height": 574,
+          "bytes": 45661
+        },
+        {
+          "file": "work-history.png",
+          "width": 358,
+          "height": 668,
+          "bytes": 65595
+        },
+        {
+          "file": "near-expiry.png",
+          "width": 358,
+          "height": 619,
+          "bytes": 64028
+        },
+        {
+          "file": "recent-activity.png",
+          "width": 358,
+          "height": 610,
+          "bytes": 59830
+        },
+        {
+          "file": "footer.png",
+          "width": 390,
+          "height": 65,
+          "bytes": 12573
+        },
+        {
+          "file": "drawer-open.png",
+          "width": 300,
+          "height": 844,
+          "bytes": 44789
+        }
+      ]
+    },
+    {
+      "name": "phone-small-360x800",
+      "width": 360,
+      "height": 800,
+      "files": [
+        {
+          "file": "full-page.png",
+          "width": 579,
+          "height": 6329,
+          "bytes": 497657
+        }
+      ]
+    }
+  ]
+}
