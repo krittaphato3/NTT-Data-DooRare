@@ -1,0 +1,213 @@
+import { useEffect, useMemo, useState } from 'react';
+import { Icon } from '../../../components/common/icons';
+import { AuditHistoryDrawer } from '../components/AuditHistoryDrawer';
+import { DirectionTabs } from '../components/DirectionTabs';
+import type { Direction, DirectionOption } from '../components/DirectionTabs';
+import { ShipmentDrawer } from '../components/ShipmentDrawer';
+import type { CancelDecision, ReceiptState } from '../components/ShipmentDrawer';
+import { ShipmentTable } from '../components/ShipmentTable';
+import type { ShipmentRowState } from '../components/ShipmentTable';
+import { StatusTiles } from '../components/StatusTiles';
+import { SyncBar } from '../components/SyncBar';
+import { DRIVERS, isOutbound, SHIPMENTS, TILE_ORDER } from '../data/transport';
+import type { Shipment, ShipmentKind, TransportStatus } from '../data/transport';
+import '../transport.css';
+
+function useOnline(): boolean {
+  const [online, setOnline] = useState(() => (typeof navigator === 'undefined' ? true : navigator.onLine));
+  useEffect(() => {
+    const on = () => setOnline(true);
+    const off = () => setOnline(false);
+    window.addEventListener('online', on);
+    window.addEventListener('offline', off);
+    return () => {
+      window.removeEventListener('online', on);
+      window.removeEventListener('offline', off);
+    };
+  }, []);
+  return online;
+}
+
+export type TransportRole = 'WAREHOUSE_OFFICER' | 'PHARMACIST';
+
+/**
+ * UI-14 Transport tracking. UI only — data is mock, actions are local state.
+ * WAREHOUSE_OFFICER operates (status, photos, receipt); PHARMACIST is read-only
+ * (API-F2a-012 lets the pharmacist list tasks, POST status/photos is warehouse/driver only).
+ * Both see only their own hospital's tasks (SEC-002).
+ */
+export function TransportTrackingPage({ role = 'WAREHOUSE_OFFICER' }: { role?: TransportRole }) {
+  const canOperate = role === 'WAREHOUSE_OFFICER';
+  const online = useOnline();
+  const [dir, setDir] = useState<Direction>('all');
+  const [status, setStatus] = useState<TransportStatus | null>(null);
+  const [selId, setSelId] = useState<string>('TR-2026-000341');
+  // Detail drawer starts open on desktop only; on phones/tablets it would cover the list.
+  const [drawerOpen, setDrawerOpen] = useState(() => window.matchMedia('(min-width: 1024px)').matches);
+  const [histOpen, setHistOpen] = useState(false);
+  const [synced, setSynced] = useState(false);
+  const [receipt, setReceipt] = useState<Record<string, ReceiptState>>({});
+  const [counted, setCounted] = useState<Record<string, string>>({});
+  const [cancel, setCancel] = useState<Record<string, CancelDecision>>({});
+  const [q, setQ] = useState('');
+  const [kind, setKind] = useState<'all' | ShipmentKind>('all');
+  const [driver, setDriver] = useState('all');
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      if (histOpen) setHistOpen(false);
+      else setDrawerOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [histOpen]);
+
+  const effective = (s: Shipment): ShipmentRowState => {
+    let st = s.status;
+    if (receipt[s.id] === 'done') st = 'RECEIVED';
+    if (cancel[s.id] === 'yes') st = 'CANCELLED';
+    return { shipment: s, status: st, pending: canOperate && !!s.pending && !synced, cancelRequested: !!s.cancelRequest && st === 'WAITING_DISPATCH' && cancel[s.id] !== 'no' };
+  };
+
+  const all = useMemo(() => SHIPMENTS.map(effective), [receipt, cancel, synced]); // eslint-disable-line react-hooks/exhaustive-deps
+  const queued = all.filter((r) => r.pending).length;
+
+  const byDir = all.filter((r) => dir === 'all' || (dir === 'out' ? isOutbound(r.shipment) : !isOutbound(r.shipment)));
+  const counts = Object.fromEntries(TILE_ORDER.map((c) => [c, byDir.filter((r) => r.status === c).length])) as Record<TransportStatus, number>;
+
+  const needle = q.trim().toLowerCase();
+  const rows = byDir
+    .filter((r) => !status || r.status === status)
+    .filter((r) => kind === 'all' || r.shipment.kind === kind)
+    .filter((r) => driver === 'all' || r.shipment.driver === driver)
+    .filter((r) => !needle || [r.shipment.id, r.shipment.ref, r.shipment.drug].some((t) => t.toLowerCase().includes(needle)));
+
+  const outAll = all.filter((r) => isOutbound(r.shipment));
+  const inAll = all.filter((r) => !isOutbound(r.shipment));
+  const waiting = outAll.filter((r) => r.status === 'WAITING_DISPATCH').length;
+  const toReceive = inAll.filter((r) => r.status === 'ARRIVED').length;
+  const options: DirectionOption[] = [
+    { id: 'all', th: 'ทั้งหมด', en: '7 วันล่าสุด', icon: 'truck', count: all.length, todo: '', iconBg: '#F1F5F9', iconFg: '#475569' },
+    { id: 'out', th: 'ส่งออกจากเรา', en: 'ต้นทาง รพ.สมุทรปราการ', icon: 'outArrow', count: outAll.length, todo: canOperate && waiting ? `รอขึ้นรถ ${waiting}` : '', iconBg: '#FFF7ED', iconFg: '#9A3412' },
+    { id: 'in', th: 'รับเข้าเรา', en: 'ปลายทาง รพ.สมุทรปราการ', icon: 'inArrow', count: inAll.length, todo: canOperate && toReceive ? `รอรับ ${toReceive}` : '', iconBg: '#EFF6FF', iconFg: '#1D4ED8' },
+  ];
+
+  const open = (id: string) => {
+    setSelId(id);
+    setDrawerOpen(true);
+  };
+  const onAction = (r: ShipmentRowState) => {
+    if (r.status === 'ARRIVED' && !isOutbound(r.shipment) && receipt[r.shipment.id] !== 'done') setReceipt((m) => ({ ...m, [r.shipment.id]: 'open' }));
+    if (r.status === 'LOADED' && r.pending) setSynced(true);
+    open(r.shipment.id);
+  };
+
+  const sel = all.find((r) => r.shipment.id === selId) ?? all[0];
+  const countedFor = (s: Shipment) => counted[s.id] ?? String(s.qty);
+
+  return (
+    <>
+      <section className="pagehead">
+        <div>
+          <nav aria-label="breadcrumb" style={{ fontSize: 12, lineHeight: '16px' }}>
+            <a href="/" className="link" style={{ fontSize: 12, fontWeight: 400 }}>หน้าหลัก</a> <span aria-hidden="true">›</span> <span aria-current="page">ติดตามการขนส่ง</span>
+          </nav>
+          <h1 className="tr-title">
+            ติดตามการขนส่ง <span>/ Transport tracking · UI-14</span>
+          </h1>
+          <div style={{ fontSize: 13 }}>รพ.สมุทรปราการ · สต็อกต้นทางตัดเมื่อขึ้นรถ (LOADED) ปลายทางรับเข้าเมื่อยืนยันรับ (RECEIVED) · ขั้นตอนขนส่งไม่มี Agent</div>
+        </div>
+        <div className="pagehead-actions">
+          <button className="btn btn-s" onClick={() => setHistOpen(true)}>
+            <Icon name="history" />
+            ประวัติ
+          </button>
+          <button className="btn btn-s">
+            <Icon name="printer" />
+            พิมพ์เอกสาร <span style={{ fontWeight: 400 }}>UI-15</span>
+          </button>
+        </div>
+      </section>
+
+      {canOperate ? (
+        <SyncBar online={online} queued={queued} onSync={() => setSynced(true)} />
+      ) : (
+        <section role="status" className="syncbar" style={{ background: '#EFF6FF', borderColor: '#DBEAFE' }}>
+          <span className="syncbar-icon" style={{ color: '#1D4ED8' }}>
+            <Icon name="eye" />
+          </span>
+          <span className="syncbar-text">
+            <b>ดูอย่างเดียว</b> · ติดตามงานขนส่งของ รพ.เราเท่านั้น การขึ้นรถ ถ่ายรูป และยืนยันรับของทำโดยเจ้าหน้าที่คลังและคนขับ
+          </span>
+        </section>
+      )}
+
+      <DirectionTabs
+        options={options}
+        value={dir}
+        onChange={(d) => {
+          setDir(d);
+          setStatus(null);
+        }}
+      />
+
+      <section className="card" style={{ padding: 0 }}>
+        <div className="tr-card-head">
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+            <h2 className="sec-h">
+              สถานะงานขนส่ง <span className="en">SM-6 · 7 วันล่าสุด</span>
+            </h2>
+            {status && (
+              <button className="link" onClick={() => setStatus(null)}>
+                ล้างตัวกรองสถานะ
+              </button>
+            )}
+          </div>
+          <StatusTiles counts={counts} active={status} onPick={setStatus} />
+        </div>
+        <div className="tr-filters">
+          <label className="tr-search">
+            <Icon name="search" />
+            <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="เลขงาน TR- / เลขคำขอ / ชื่อยา" aria-label="ค้นหางานขนส่ง" />
+          </label>
+          <select className={`sel ${kind !== 'all' ? 'sel-on' : ''}`} aria-label="ประเภทงาน" value={kind} onChange={(e) => setKind(e.target.value as 'all' | ShipmentKind)}>
+            <option value="all">ประเภท: ทั้งหมด</option>
+            <option value="F1">ยืม (BORROW_LEG)</option>
+            <option value="F2">โอนยาใกล้หมดอายุ (ALLOCATION_LINE)</option>
+          </select>
+          <select className={`sel ${driver !== 'all' ? 'sel-on' : ''}`} aria-label="คนขับ" value={driver} onChange={(e) => setDriver(e.target.value)}>
+            <option value="all">คนขับ: ทั้งหมด</option>
+            {DRIVERS.map((d) => (
+              <option key={d} value={d}>{d}</option>
+            ))}
+          </select>
+          <span style={{ flex: '1 1 0' }} />
+          <span style={{ fontSize: 12 }}>เรียง: ต้องทำก่อน → อัปเดตล่าสุด</span>
+        </div>
+        <ShipmentTable rows={rows} activeId={drawerOpen ? sel.shipment.id : null} onOpen={open} onAction={onAction} canOperate={canOperate} />
+      </section>
+
+      {drawerOpen && (
+        <ShipmentDrawer
+          key={sel.shipment.id}
+          shipment={sel.shipment}
+          status={sel.status}
+          pending={sel.pending}
+          receipt={receipt[sel.shipment.id]}
+          counted={countedFor(sel.shipment)}
+          cancel={cancel[sel.shipment.id]}
+          onClose={() => setDrawerOpen(false)}
+          onSync={() => setSynced(true)}
+          onCounted={(v) => setCounted((m) => ({ ...m, [sel.shipment.id]: v }))}
+          onOpenReceipt={() => setReceipt((m) => ({ ...m, [sel.shipment.id]: 'open' }))}
+          onConfirmReceipt={() => setReceipt((m) => ({ ...m, [sel.shipment.id]: 'done' }))}
+          onUndoReceipt={() => setReceipt((m) => ({ ...m, [sel.shipment.id]: 'open' }))}
+          onCancelDecision={(d) => setCancel((m) => ({ ...m, [sel.shipment.id]: d }))}
+          canOperate={canOperate}
+        />
+      )}
+      {histOpen && <AuditHistoryDrawer onClose={() => setHistOpen(false)} />}
+    </>
+  );
+}

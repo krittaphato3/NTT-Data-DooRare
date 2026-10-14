@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { USER } from '../../data/session';
+import type { UserProfile } from '../../data/session';
 import { Icon } from '../common/icons';
 import { AccountMenu } from './AccountMenu';
+import { LangToggle } from './LangToggle';
 
 interface TopBarProps {
   query: string;
@@ -11,9 +13,13 @@ interface TopBarProps {
   onMenu: () => void;
   /** Unread notifications for the bell popover (role-scoped data passed in). */
   notifications: { drug: string; time: string }[];
+  /** `pharmacist` = hospital selector + scope chip; `ops` = scope pill, agent pill, TH/EN switch. */
+  variant?: 'pharmacist' | 'ops';
+  user?: UserProfile;
 }
 
-export function TopBar({ query, onQuery, isAdmin, navOpen, onMenu, notifications }: TopBarProps) {
+export function TopBar({ query, onQuery, isAdmin, navOpen, onMenu, notifications, variant = 'pharmacist', user = USER }: TopBarProps) {
+  const ops = variant === 'ops';
   const [bellOpen, setBellOpen] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
   const bellRef = useRef<HTMLDivElement>(null);
@@ -40,8 +46,8 @@ export function TopBar({ query, onQuery, isAdmin, navOpen, onMenu, notifications
     return () => document.removeEventListener('mousedown', onDoc);
   }, [bellOpen]);
 
-  const scopeLabel = isAdmin ? 'Viewing as: Admin – All hospitals' : USER.scopeLabel;
-  const hospitalLabel = isAdmin ? 'ทุกโรงพยาบาล' : USER.hospitalLabel;
+  const scopeLabel = isAdmin ? 'Viewing as: Admin – All hospitals' : user.scopeLabel;
+  const hospitalLabel = isAdmin ? 'ทุกโรงพยาบาล' : user.hospitalLabel;
 
   return (
     <header className="topbar" data-part="topbar">
@@ -61,23 +67,39 @@ export function TopBar({ query, onQuery, isAdmin, navOpen, onMenu, notifications
           type="search"
           value={query}
           onChange={(e) => onQuery(e.target.value)}
-          placeholder="ค้นหายา, เลขคำขอ, โรงพยาบาล…"
+          placeholder={ops ? 'ค้นหายา รหัสยา เลขคำขอ BR-…' : 'ค้นหายา, เลขคำขอ, โรงพยาบาล…'}
           aria-label="ค้นหา / Search"
           style={{ border: 0, outline: 'none', flex: 1, minWidth: 0, font: 'inherit', color: '#0F2A5C', background: 'transparent' }}
         />
-        <span className="num kbd-hint">Ctrl K</span>
+        {!ops && <span className="num kbd-hint">Ctrl K</span>}
       </label>
       <span className="topbar-spacer" />
-      <span className="topbar-scope">
-        <Icon name="eye" className="ic14" />
-        {scopeLabel}
-      </span>
-      <button className="btn btn-g topbar-hospital" aria-label="เลือกโรงพยาบาลและเขต">
-        <Icon name="hosp" />
-        <span className="label">{hospitalLabel}</span>
-        <span className="region" style={{ color: '#475569', fontWeight: 400 }}>· เขตสุขภาพที่ 6</span>
-        <Icon name="chev" />
-      </button>
+      {ops ? (
+        <>
+          <span className="topbar-scope topbar-scope-plain" title="SEC-002: ผู้ใช้เห็นเฉพาะสต็อกของโรงพยาบาลตัวเอง">
+            <Icon name="lock" className="ic14" />
+            {scopeLabel}
+          </span>
+          <span className="topbar-scope" title="Agent ทำหน้าที่สรุปและร่างข้อความเท่านั้น ตัวเลขทั้งหมดคำนวณโดยระบบ">
+            <Icon name="spark" className="ic14" />
+            Agent พร้อม
+          </span>
+          <LangToggle />
+        </>
+      ) : (
+        <>
+          <span className="topbar-scope">
+            <Icon name="eye" className="ic14" />
+            {scopeLabel}
+          </span>
+          <button className="btn btn-g topbar-hospital" aria-label="เลือกโรงพยาบาลและเขต">
+            <Icon name="hosp" />
+            <span className="label">{hospitalLabel}</span>
+            <span className="region" style={{ color: '#475569', fontWeight: 400 }}>· เขตสุขภาพที่ 6</span>
+            <Icon name="chev" />
+          </button>
+        </>
+      )}
       <div className="menu-wrap bell-wrap" ref={bellRef}>
         <button
           className="icbtn bell-btn"
@@ -104,7 +126,7 @@ export function TopBar({ query, onQuery, isAdmin, navOpen, onMenu, notifications
           </div>
         )}
       </div>
-      <AccountMenu isAdmin={isAdmin} />
+      <AccountMenu isAdmin={isAdmin} user={user} chevron={!ops} />
     </header>
   );
 }

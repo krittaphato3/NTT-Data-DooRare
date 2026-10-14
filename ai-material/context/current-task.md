@@ -9,3 +9,9 @@ Blockers: Browser-panel screenshots were unavailable ("webview not composited") 
 Next action: Review preview at http://127.0.0.1:5173 (vite dev) or http://localhost:8080 (docker). Then wire real API replacing mock data, and add the remaining role pages on the new structure.
 
 Relevant files: `frontend/src/App.tsx`, `frontend/src/roles/pharmacist/pages/DashboardPage.tsx`, `frontend/src/index.css`, `frontend/src/README.md`
+
+
+## Branch feature/dashboard-transport-tracking
+
+- UI-14 Transport tracking (warehouse role) built UI-only; open `/?page=transport`. See `sessions/2026-10-14-transport-tracking-ui.md`.
+- Next: driver PWA states, IndexedDB queue, API wiring.

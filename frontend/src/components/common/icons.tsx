@@ -84,6 +84,13 @@ export const PATHS = {
   moon: 'M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z',
   undo: 'M3 7v6h6M21 17a9 9 0 0 0-15-6.7L3 13',
   menu: 'M4 6h16M4 12h16M4 18h16',
+  history: 'M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5M12 7v5l4 2',
+  camera: 'M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3zM12 17a4 4 0 1 0 0-8a4 4 0 1 0 0 8z',
+  wifiOff: 'M2 2l20 20M8.5 16.5a5 5 0 0 1 7 0M2 8.8a15 15 0 0 1 4.2-2.6M10.7 5.1A15 15 0 0 1 22 8.8M5 12.9a10 10 0 0 1 5.2-2.8M19 12.9a10 10 0 0 0-2.3-1.7M12 20h.01',
+  sync: 'M21 12a9 9 0 0 1-15.5 6.3L3 16M3 12a9 9 0 0 1 15.5-6.3L21 8M21 3v5h-5M3 21v-5h5',
+  outArrow: 'M7 17L17 7M9 7h8v8',
+  inArrow: 'M17 7L7 17M7 9v8h8',
+  spark: 'M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z',
 } as const;
 
 export type IconName = keyof typeof PATHS;

@@ -15,7 +15,16 @@ export interface SessionRow {
   note: string;
 }
 
-export const USER = {
+export interface UserProfile {
+  name: string;
+  role: string;
+  roleTh: string;
+  scopeLabel: string;
+  hospitalLabel: string;
+  initial: string;
+}
+
+export const USER: UserProfile = {
   name: 'ภก.ณัฐวุฒิ ศรีสุข',
   role: 'PHARMACIST',
   roleTh: 'เภสัชกร (Pharmacist)',

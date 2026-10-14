@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>DooRare – Transport states</title>
+<script src="./vendor/react.js"></script>
+<script src="./vendor/react-dom.js"></script>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Noto+Sans+Thai:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F5F8FC}
+*{box-sizing:border-box}
+a{color:#1D4ED8}a:hover{color:#1E40AF}
+button,select,input,textarea{font-family:inherit}
+.num{font-family:Inter,"Noto Sans Thai",system-ui,sans-serif;font-variant-numeric:tabular-nums}
+.en{font-size:12px;line-height:16px;color:#94A3B8;font-weight:400}
+.card{background:#FFFFFF;border:1px solid #E2E8F0;border-radius:12px;box-shadow:0 1px 2px rgba(15,42,92,.04),0 2px 8px rgba(15,42,92,.05)}
+.ic{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.ic20{width:20px;height:20px}.ic14{width:14px;height:14px}.ic12{width:12px;height:12px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:40px;padding:0 16px;border-radius:8px;border:1px solid transparent;font-size:14px;font-weight:500;line-height:1;cursor:pointer;white-space:nowrap;text-decoration:none}
+.btn:focus-visible,.tab:focus-visible,.navlink:focus-visible,.icbtn:focus-visible,.tile:focus-visible,.dir:focus-visible,.sel:focus-visible,.link:focus-visible,.pg:focus-visible,.rowbtn:focus-visible{outline:2px solid #1D4ED8;outline-offset:2px}
+.btn-p{background:#1D4ED8;color:#FFFFFF}.btn-p:hover{background:#1E40AF;color:#FFFFFF}
+.btn-s{background:#FFFFFF;color:#1D4ED8;border-color:#94A3B8}.btn-s:hover{background:#EFF6FF;color:#1D4ED8}
+.btn-g{background:transparent;color:#475569}.btn-g:hover{background:#F1F5F9}
+.btn-sm{height:32px;padding:0 12px;font-size:13px}
+.icbtn{width:32px;height:32px;display:inline-grid;place-items:center;border-radius:8px;border:1px solid transparent;background:transparent;color:#475569;cursor:pointer}
+.icbtn:hover{background:#F1F5F9;border-color:#E2E8F0}
+.link{color:#1D4ED8;text-decoration:none;font-weight:500;font-size:13px;background:none;border:0;padding:0;cursor:pointer}
+.link:hover{text-decoration:underline}
+.navlink{display:flex;align-items:center;gap:10px;min-height:40px;padding:6px 10px;border-radius:8px;color:#475569;text-decoration:none;font-size:14px;line-height:18px}
+.navlink:hover{background:#F1F5F9;color:#0F2A5C}
+.nav-on,.nav-on:hover{background:#EFF6FF;color:#1D4ED8;font-weight:600}
+.navlink .en{display:block}.nav-on .en{color:#1D4ED8}
+.navbadge{margin-left:auto;font-family:Inter,sans-serif;font-size:11px;font-weight:600;line-height:18px;min-width:20px;text-align:center;border-radius:9999px;padding:0 6px;background:#FEE2E2;color:#B91C1C}
+.badge{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 8px;border-radius:6px;font-size:12px;font-weight:500;line-height:1;white-space:nowrap}
+.st-pending{background:#FEF3C7;color:#92400E}
+.st-approved{background:#DCFCE7;color:#166534}
+.st-transit{background:#DBEAFE;color:#1E40AF}
+.st-delivered{background:#CCFBF1;color:#115E59}
+.st-rejected{background:#FEE2E2;color:#991B1B}
+.st-timeout{background:#F1F5F9;color:#475569}
+.ug-critical{background:#FEE2E2;color:#B91C1C;font-weight:600}
+.ug-urgent{background:#FFEDD5;color:#9A3412}
+.ug-normal{background:#EEF2F7;color:#475569}
+.ved{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:20px;padding:0 5px;border-radius:6px;border:1.5px solid;background:#FFFFFF;font-family:Inter,sans-serif;font-size:11px;font-weight:600;line-height:1}
+.ved-V{border-color:#DC2626;color:#B91C1C}.ved-E{border-color:#D97706;color:#92400E}.ved-D{border-color:#94A3B8;color:#475569}
+.dir{flex:1 1 220px;display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:10px;border:1px solid #E2E8F0;background:#FFFFFF;cursor:pointer;text-align:left;color:#475569}
+.dir:hover{border-color:#94A3B8}
+.dir-on,.dir-on:hover{border:2px solid #1D4ED8;padding:11px 15px;background:#EFF6FF}
+.tile{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:10px 12px;border-radius:8px;border:1px solid #E2E8F0;background:#FFFFFF;cursor:pointer;text-align:left;min-width:0}
+.tile:hover{border-color:#94A3B8}
+.tile-on{border-width:2px;padding:9px 11px}
+.tile-pending.tile-on{border-color:#92400E;background:#FFFBEB}
+.tile-approved.tile-on{border-color:#166534;background:#F0FDF4}
+.tile-transit.tile-on{border-color:#1E40AF;background:#EFF6FF}
+.tile-delivered.tile-on{border-color:#115E59;background:#F0FDFA}
+.tile-rejected.tile-on{border-color:#991B1B;background:#FEF2F2}
+.tile-timeout.tile-on{border-color:#475569;background:#F8FAFC}
+.tl{font-size:12px;line-height:16px;font-weight:500;display:flex;align-items:center;gap:4px;white-space:nowrap}
+.c-pending{color:#92400E}.c-approved{color:#166534}.c-transit{color:#1E40AF}.c-delivered{color:#115E59}.c-rejected{color:#991B1B}.c-timeout{color:#475569}
+.sel{height:36px;border:1px solid #94A3B8;border-radius:8px;background:#FFFFFF;color:#0F2A5C;font-size:13px;padding:0 28px 0 10px;cursor:pointer;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 9px center}
+.sel-on{border-color:#1D4ED8;background-color:#EFF6FF;color:#1E40AF;font-weight:500}
+.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:13px;line-height:18px;min-width:1160px}
+.tbl th{position:sticky;top:0;z-index:2;background:#F1F5F9;text-align:left;font-weight:500;color:#475569;padding:0 10px;height:40px;border-bottom:1px solid #E2E8F0;white-space:nowrap;font-size:12.5px}
+.tbl td{padding:10px;border-bottom:1px solid #E2E8F0;color:#475569;vertical-align:middle;background:#FFFFFF}
+.tbl tbody tr:hover td{background:#F5F9FF}
+.tbl tr.r-mine td{background:#FFFBEB}
+.tbl tr.r-active td{background:#DBEAFE}
+.r{text-align:right}
+.rowbtn{border:0;background:none;padding:0;cursor:pointer;text-align:left;font:inherit;color:inherit}
+.timer{font-family:Inter,sans-serif;font-variant-numeric:tabular-nums;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+.timer-warn{color:#92400E}.timer-crit{color:#B91C1C}
+.seg{height:6px;border-radius:9999px;flex:1}
+.seg-done{background:#1D4ED8}.seg-cur{background:#93C5FD}.seg-todo{background:#E2E8F0}
+.pg{min-width:32px;height:32px;padding:0 8px;border-radius:8px;border:1px solid #E2E8F0;background:#FFFFFF;color:#475569;font-size:13px;cursor:pointer;font-family:Inter,sans-serif}
+.pg-on{background:#1D4ED8;border-color:#1D4ED8;color:#FFFFFF;font-weight:600}
+.dl{display:grid;grid-template-columns:120px minmax(0,1fr);gap:6px 12px;margin:0;font-size:13px;line-height:20px}
+.dl dt{color:#475569}.dl dd{margin:0;color:#0F2A5C}
+
+.t-amber{background:#FEF3C7;color:#92400E}.t-green{background:#DCFCE7;color:#166534}.t-blue{background:#DBEAFE;color:#1E40AF}.t-teal{background:#CCFBF1;color:#115E59}.t-red{background:#FEE2E2;color:#991B1B}.t-grey{background:#F1F5F9;color:#475569}.t-orange{background:#FFEDD5;color:#9A3412}
+.code{font-family:Inter,ui-monospace,monospace;font-size:11.5px;letter-spacing:.01em;color:#475569;font-variant-numeric:tabular-nums}
+.sec-h{margin:0;font-size:16px;line-height:26px;font-weight:600;color:#0F2A5C}
+.sub{font-size:12px;line-height:16px;color:#475569}
+.navgrp{padding:10px 10px 2px;font-size:11px;line-height:14px;font-weight:600;color:#475569;letter-spacing:.04em}
+.pill{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border-radius:6px;font-size:12px;font-weight:500;white-space:nowrap}
+.agentbox{background:#EFF6FF;border:1px solid #DBEAFE;border-radius:12px}
+.bar{position:relative;height:8px;border-radius:9999px;background:#E2E8F0;overflow:hidden}
+.bar>span{position:absolute;left:0;top:0;bottom:0;border-radius:9999px}
+.tabbtn{height:40px;padding:0 4px;margin-right:20px;border:0;border-bottom:2px solid transparent;background:none;cursor:pointer;font-size:14px;color:#475569;font-weight:500}
+.tabbtn:hover{color:#0F2A5C}
+.tab-on,.tab-on:hover{border-bottom-color:#1D4ED8;color:#1D4ED8;font-weight:600}
+.tabbtn:focus-visible,.chipbtn:focus-visible,.icbtn:focus-visible{outline:2px solid #1D4ED8;outline-offset:2px}
+.chipbtn{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border-radius:9999px;border:1px solid #94A3B8;background:#FFFFFF;color:#0F2A5C;font-size:13px;cursor:pointer;white-space:nowrap}
+.chipbtn:hover{background:#F1F5F9}
+.chip-on,.chip-on:hover{background:#1D4ED8;border-color:#1D4ED8;color:#FFFFFF}
+.chip-n{font-family:Inter,sans-serif;font-size:11.5px;font-weight:600;padding:0 6px;border-radius:9999px;background:#F1F5F9;color:#475569;line-height:18px}
+.chip-on .chip-n{background:rgba(255,255,255,.22);color:#FFFFFF}
+.tile2{display:flex;flex-direction:column;gap:4px;padding:14px 16px;border-radius:12px;border:1px solid #E2E8F0;background:#FFFFFF;text-decoration:none;color:#475569;min-width:0}
+.tile2:hover{border-color:#94A3B8}
+.tile2:focus-visible{outline:2px solid #1D4ED8;outline-offset:2px}
+.listrow{display:flex;align-items:center;gap:12px;padding:12px 16px;border-top:1px solid #E2E8F0}
+.btn-d{background:#B91C1C;color:#FFFFFF}.btn-d:hover{background:#991B1B;color:#FFFFFF}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.skel{border-radius:6px;background:linear-gradient(90deg,#EEF2F7 25%,#F8FAFC 50%,#EEF2F7 75%);background-size:200% 100%;animation:sk 1.4s ease-in-out infinite}
+@keyframes sk{0%{background-position:200% 0}100%{background-position:-200% 0}}
+@media (prefers-reduced-motion:reduce){.skel{animation:none}}
+.inp{height:36px;border:1px solid #94A3B8;border-radius:8px;padding:0 10px;font-size:13px;color:#0F2A5C;background:#FFFFFF}
+.inp:focus{outline:2px solid #1D4ED8;outline-offset:0;border-color:#1D4ED8}
+textarea.inp{height:auto;padding:8px 10px;line-height:20px;resize:vertical}
+.srt{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+.wrap{padding:28px;display:grid;grid-template-columns:380px minmax(0,1fr);gap:24px;font-family:'Noto Sans Thai','IBM Plex Sans Thai',Inter,system-ui,sans-serif;color:#475569;font-size:14px;line-height:22px;background:#F5F8FC;min-height:100vh;box-sizing:border-box}
+.lab{font-size:12px;font-weight:600;color:#0F2A5C;margin-bottom:8px;letter-spacing:.02em}
+.col{display:flex;flex-direction:column;gap:20px;min-width:0}
+.phone{width:360px;border-radius:28px;border:8px solid #0F2A5C;background:#F5F8FC;overflow:hidden;box-shadow:0 12px 32px rgba(15,42,92,.18)}
+
+</style>
+</helmet>
+
+<div class="wrap">
+  <div>
+    <div class="lab">S1 · มือถือคนขับ (PWA) · ออฟไลน์ มีคิวรอซิงก์</div>
+    <div class="phone" role="img" aria-label="ตัวอย่างหน้าจอมือถือคนขับ">
+      <div style="background: #FFFFFF; padding: 12px 16px; border-bottom: 1px solid #E2E8F0; display: flex; align-items: center; justify-content: space-between;">
+        <span style="font-size: 15px; font-weight: 600; color: #0F2A5C;">งานของฉัน</span>
+        <span class="badge t-amber"><svg class="ic ic14" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 2l20 20M8.5 16.5a5 5 0 0 1 7 0M2 8.8a15 15 0 0 1 4.2-2.6M10.7 5.1A15 15 0 0 1 22 8.8M5 12.9a10 10 0 0 1 5.2-2.8M19 12.9a10 10 0 0 0-2.3-1.7M12 20h.01"></path></svg>ออฟไลน์</span>
+      </div>
+      <div style="padding: 14px; display: flex; flex-direction: column; gap: 12px;">
+        <div style="padding: 10px 12px; border-radius: 10px; background: #FFFBEB; border: 1px solid #FDE68A; font-size: 12.5px; line-height: 18px; color: #0F2A5C;"><b style="font-weight: 600;">รอซิงก์ 2 รายการ</b> · บันทึกในเครื่องแล้ว จะส่งอัตโนมัติเมื่อมีสัญญาณ</div>
+        <div class="card" style="padding: 14px; display: flex; flex-direction: column; gap: 10px;">
+          <div style="display: flex; align-items: center; justify-content: space-between;"><span class="code" style="font-weight: 600; color: #0F2A5C;">TR-2026-000336</span><span class="badge t-green">ถึงปลายทาง · รอซิงก์</span></div>
+          <div style="font-size: 14px; color: #0F2A5C;"><b style="font-weight: 600;">CefTRIAXone 1 g</b> · 10 VIAL</div>
+          <div style="font-size: 13px;">รพ.พระสมุทรเจดีย์ฯ → รพ.สมุทรปราการ</div>
+          <div style="display: flex; gap: 3px;"><span style="flex: 1; height: 6px; border-radius: 9999px; background: #1D4ED8;"></span><span style="flex: 1; height: 6px; border-radius: 9999px; background: #1D4ED8;"></span><span style="flex: 1; height: 6px; border-radius: 9999px; background: #1D4ED8;"></span><span style="flex: 1; height: 6px; border-radius: 9999px; background: #93C5FD;"></span><span style="flex: 1; height: 6px; border-radius: 9999px; background: #E2E8F0;"></span></div>
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;">
+            <div style="aspect-ratio: 1/1; border-radius: 8px; background: #EEF2F7; display: grid; place-items: center; font-size: 10px;" class="code">LOADED</div>
+            <div style="aspect-ratio: 1/1; border-radius: 8px; background: #EEF2F7; display: grid; place-items: center; font-size: 10px;" class="code">LOADED</div>
+            <div style="position: relative; aspect-ratio: 1/1; border-radius: 8px; background: #EEF2F7; display: grid; place-items: center; font-size: 10px;" class="code">ARRIVED<span class="badge t-amber" style="position: absolute; left: 4px; right: 4px; bottom: 4px; justify-content: center; height: 18px; font-size: 10px;">รอซิงก์</span></div>
+          </div>
+          <div style="height: 52px; border-radius: 8px; background: #DCFCE7; color: #166534; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 15px; font-weight: 600;"><svg class="ic ic20" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5L20 7"></path></svg>บันทึก “ถึงปลายทาง” แล้ว</div>
+          <div style="font-size: 12px; line-height: 17px;">กดแล้ว (ออฟไลน์ 19:08) · ระบบจะใช้เวลาที่กดจริงเมื่อซิงก์ · รูปบีบอัดเหลือ 0.9 MB</div>
+        </div>
+        <div class="card" style="padding: 14px; display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+          <span><span class="code" style="font-weight: 600; color: #0F2A5C;">TR-2026-000341</span><span style="display: block; font-size: 12.5px;">AMPIcillin 20 VIAL · ขึ้นรถแล้ว</span></span>
+          <button class="btn btn-s btn-sm">ออกเดินทาง</button>
+        </div>
+        <button class="btn btn-s" disabled="" style="height: 44px;"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a9 9 0 0 1-15.5 6.3L3 16M3 12a9 9 0 0 1 15.5-6.3L21 8M21 3v5h-5M3 21v-5h5"></path></svg>ซิงก์ตอนนี้ (รอสัญญาณ)</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="col">
+    <div>
+      <div class="lab">S2 · ซิงก์ไม่สำเร็จบางรายการ</div>
+      <div role="alert" style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; padding: 12px 16px; border-radius: 10px; background: #FEF2F2; border: 1px solid #FECACA;">
+        <svg class="ic ic20" viewBox="0 0 24 24" aria-hidden="true" style="color: #991B1B;"><path d="M12 2a10 10 0 1 0 0 20a10 10 0 1 0 0-20zM12 8v4M12 16h.01"></path></svg>
+        <span style="flex: 1 1 360px; font-size: 13px; line-height: 20px; color: #0F2A5C;"><b style="font-weight: 600;">ส่งรูป 1 รูปไม่สำเร็จ</b> · ไฟล์ใหญ่เกิน 1.5 MB หลังบีบอัด (TR-2026-000336 · ARRIVED) · ขั้นตอนอื่นซิงก์แล้ว</span>
+        <button class="btn btn-s btn-sm">ถ่ายใหม่</button><button class="btn btn-p btn-sm">ลองส่งอีกครั้ง</button>
+      </div>
+    </div>
+
+    <div>
+      <div class="lab">S3 · ข้อมูลชนกัน (409) ขณะกดขั้นตอน</div>
+      <div class="card" role="alertdialog" aria-labelledby="c409" style="padding: 18px 20px; display: flex; gap: 12px;">
+        <span style="width: 40px; height: 40px; border-radius: 9999px; background: #FEF3C7; color: #92400E; display: grid; place-items: center; flex: none;"><svg class="ic ic20" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5M12 7v5l4 2"></path></svg></span>
+        <div style="flex: 1;">
+          <div id="c409" style="font-size: 15px; font-weight: 600; color: #0F2A5C;">งานนี้ถูกอัปเดตไปแล้ว</div>
+          <div style="font-size: 13px; line-height: 20px;">คุณกด “ขึ้นรถ” แต่คนขับบันทึก “ออกเดินทาง” ไปแล้วเมื่อ 18:40 น. (version 4) ระบบจึงไม่บันทึกซ้ำ</div>
+          <div class="code" style="margin-top: 2px;">HTTP 409 · TR-2026-000336 · version 3 → 4</div>
+          <div style="display: flex; gap: 8px; margin-top: 10px;"><button class="btn btn-p btn-sm">โหลดสถานะล่าสุด</button><button class="btn btn-g btn-sm">ปิด</button></div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px;">
+      <div>
+        <div class="lab">S4 · กำลังโหลด</div>
+        <div class="card" style="padding: 14px 16px; display: flex; flex-direction: column; gap: 12px;" aria-busy="true">
+          <div style="display: flex; gap: 10px; align-items: center;"><span class="skel" style="width: 110px; height: 14px;"></span><span class="skel" style="flex: 1; height: 14px;"></span><span class="skel" style="width: 70px; height: 22px;"></span></div>
+          <div style="display: flex; gap: 10px; align-items: center;"><span class="skel" style="width: 110px; height: 14px;"></span><span class="skel" style="flex: 1; height: 14px;"></span><span class="skel" style="width: 70px; height: 22px;"></span></div>
+          <div style="display: flex; gap: 10px; align-items: center;"><span class="skel" style="width: 110px; height: 14px;"></span><span class="skel" style="flex: 1; height: 14px;"></span><span class="skel" style="width: 70px; height: 22px;"></span></div>
+          <div style="display: flex; gap: 10px; align-items: center;"><span class="skel" style="width: 110px; height: 14px;"></span><span class="skel" style="flex: 1; height: 14px;"></span><span class="skel" style="width: 70px; height: 22px;"></span></div>
+        </div>
+      </div>
+      <div>
+        <div class="lab">S5 · ไม่มีงานขนส่ง</div>
+        <div class="card" style="padding: 24px 16px; display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center;">
+          <span style="width: 44px; height: 44px; border-radius: 9999px; background: #F1F5F9; color: #475569; display: grid; place-items: center;"><svg class="ic ic20" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 6h12v10H2zM14 9h4l4 4v3h-8M6 20a2 2 0 1 0 0-4a2 2 0 1 0 0 4zM18 20a2 2 0 1 0 0-4a2 2 0 1 0 0 4z"></path></svg></span>
+          <div style="font-size: 15px; font-weight: 600; color: #0F2A5C;">ยังไม่มีงานขนส่งวันนี้</div>
+          <div style="font-size: 12.5px; line-height: 18px;">งานจะสร้างอัตโนมัติเมื่อผู้ให้ยืมตอบรับ หรือแผนจัดสรรยาใกล้หมดอายุได้รับอนุมัติ</div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="lab">S6 · ยกเลิกไม่ได้หลังขึ้นรถ (tooltip ปุ่มที่ปิดใช้งาน)</div>
+      <div class="card" style="padding: 20px; position: relative; min-height: 160px;">
+        <button class="btn btn-g" disabled="" aria-describedby="tc">ขอยกเลิก</button>
+        <div id="tc" role="tooltip" style="position: absolute; left: 20px; top: 66px; width: 360px; background: #0F2A5C; color: #FFFFFF; border-radius: 8px; padding: 10px 12px; font-size: 12.5px; line-height: 19px; box-shadow: 0 8px 20px rgba(15,42,92,.25);">ยกเลิกได้เฉพาะสถานะ “รอขึ้นรถ” และต้องได้ความยินยอมทั้งสองฝ่าย · งานนี้ขึ้นรถแล้ว (สต็อกต้นทางตัดแล้ว) ให้ส่งตามปกติ แล้วปลายทางแจ้งส่วนต่างตอนยืนยันรับ</div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview": {"width": 1040, "height": 900}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

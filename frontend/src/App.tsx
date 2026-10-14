@@ -2,9 +2,40 @@ import { useEffect, useState } from 'react';
 import { Footer } from './components/layout/Footer';
 import { Sidebar } from './components/layout/Sidebar';
 import { TopBar } from './components/layout/TopBar';
-import { NAV } from './data/navigation';
+import { getNavForRole } from './data/navigation';
+import type { ShellNavEntry } from './data/navigation';
 import { ALERTS } from './roles/pharmacist/data/dashboard';
 import { DashboardPage } from './roles/pharmacist/pages/DashboardPage';
+import { WAREHOUSE_NOTIFICATIONS, WAREHOUSE_USER } from './roles/warehouse/data/session';
+import { TransportTrackingPage } from './roles/warehouse/pages/TransportTrackingPage';
+import type { TransportRole } from './roles/warehouse/pages/TransportTrackingPage';
+
+/**
+ * No router yet: `?page=transport` shows Transport tracking (UI-14).
+ * `&role=pharmacist` = read-only pharmacist view, otherwise the warehouse officer view.
+ */
+function initialRoute(): { page: 'dashboard' | 'transport'; transportRole: TransportRole } {
+  try {
+    const q = new URLSearchParams(window.location.search);
+    return {
+      page: q.get('page') === 'transport' ? 'transport' : 'dashboard',
+      transportRole: q.get('role')?.toLowerCase() === 'pharmacist' ? 'PHARMACIST' : 'WAREHOUSE_OFFICER',
+    };
+  } catch {
+    return { page: 'dashboard', transportRole: 'WAREHOUSE_OFFICER' };
+  }
+}
+
+/** Point the catalogue's mockup hrefs (`*.dc.html`) at the screens that exist in this app. */
+function withLinks(items: ShellNavEntry[], role: string): ShellNavEntry[] {
+  const suffix = role === 'PHARMACIST' ? '&role=pharmacist' : '';
+  return items.map((e) => {
+    if ('kind' in e) return e;
+    if (e.key === 'tr') return { ...e, href: `?page=transport${suffix}` };
+    if (e.key === 'dash' && role === 'PHARMACIST') return { ...e, href: '/' };
+    return e;
+  });
+}
 
 function initialRole(): boolean {
   try {
@@ -24,6 +55,12 @@ export default function App() {
   const [navOpen, setNavOpen] = useState(false);
   const [hospital, setHospital] = useState('ทุกโรงพยาบาล (12)');
   const [isAdmin] = useState(initialRole);
+  const [route] = useState(initialRoute);
+  const onTransport = route.page === 'transport';
+  // The warehouse officer gets the ops top bar; the pharmacist keeps the standard shell.
+  const ops = onTransport && route.transportRole === 'WAREHOUSE_OFFICER';
+  const navRole = ops ? 'WAREHOUSE_OFFICER' : 'PHARMACIST';
+  const navItems = withLinks(getNavForRole(navRole, onTransport ? 'tr' : 'dash'), navRole);
 
   // Mobile drawer: lock page scroll, close on Escape and when resizing to desktop.
   useEffect(() => {
@@ -49,7 +86,12 @@ export default function App() {
 
   return (
     <div className={shellClass}>
-      <Sidebar collapsed={collapsed} onToggle={() => setCollapsed((v) => !v)} onNavigate={() => setNavOpen(false)} items={NAV} />
+      <Sidebar
+        collapsed={collapsed}
+        onToggle={() => setCollapsed((v) => !v)}
+        onNavigate={() => setNavOpen(false)}
+        items={navItems}
+      />
       {navOpen && <button className="nav-scrim" aria-label="ปิดเมนู" onClick={() => setNavOpen(false)} />}
       <div className="content">
         <TopBar
@@ -58,12 +100,14 @@ export default function App() {
           isAdmin={isAdmin}
           navOpen={navOpen}
           onMenu={() => setNavOpen((v) => !v)}
-          notifications={ALERTS.map((a) => ({ drug: a.drug, time: a.time }))}
+          notifications={ops ? WAREHOUSE_NOTIFICATIONS : ALERTS.map((a) => ({ drug: a.drug, time: a.time }))}
+          variant={ops ? 'ops' : 'pharmacist'}
+          user={ops ? WAREHOUSE_USER : undefined}
         />
         <main className="mainpad">
-          <DashboardPage isAdmin={isAdmin} query={query} hospital={hospital} onHospital={setHospital} />
+          {onTransport ? <TransportTrackingPage role={route.transportRole} /> : <DashboardPage isAdmin={isAdmin} query={query} hospital={hospital} onHospital={setHospital} />}
         </main>
-        <Footer isAdmin={isAdmin} />
+        {!ops && <Footer isAdmin={isAdmin} />}
       </div>
     </div>
   );
