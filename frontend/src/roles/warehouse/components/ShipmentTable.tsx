@@ -15,9 +15,12 @@ interface ShipmentTableProps {
   activeId: string | null;
   onOpen: (id: string) => void;
   onAction: (row: ShipmentRowState) => void;
+  /** false = read-only role (pharmacist): every action opens the detail only. */
+  canOperate: boolean;
 }
 
-function actionFor(r: ShipmentRowState): [string, string] {
+function actionFor(r: ShipmentRowState, canOperate: boolean): [string, string] {
+  if (!canOperate) return ['ดูรายละเอียด', 'btn-s'];
   const out = isOutbound(r.shipment);
   if (r.status === 'ARRIVED' && !out) return ['ยืนยันรับของ', 'btn-p'];
   if (r.status === 'WAITING_DISPATCH' && out) return r.cancelRequested ? ['ตอบคำขอยกเลิก', 'btn-p'] : ['ขึ้นรถ + ถ่ายรูป', 'btn-p'];
@@ -25,7 +28,7 @@ function actionFor(r: ShipmentRowState): [string, string] {
   return ['ดูรายละเอียด', 'btn-s'];
 }
 
-export function ShipmentTable({ rows, activeId, onOpen, onAction }: ShipmentTableProps) {
+export function ShipmentTable({ rows, activeId, onOpen, onAction, canOperate }: ShipmentTableProps) {
   return (
     <>
       <div className="scroll-x">
@@ -49,7 +52,7 @@ export function ShipmentTable({ rows, activeId, onOpen, onAction }: ShipmentTabl
               const s = r.shipment;
               const out = isOutbound(s);
               const idx = r.status === 'CANCELLED' ? -1 : STEP_ORDER.indexOf(r.status);
-              const [label, cls] = actionFor(r);
+              const [label, cls] = actionFor(r, canOperate);
               return (
                 <tr key={s.id} className={activeId === s.id ? 'r-active' : ''}>
                   <td>

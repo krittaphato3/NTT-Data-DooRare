@@ -28,8 +28,16 @@ function useOnline(): boolean {
   return online;
 }
 
-/** UI-14 Transport tracking (WAREHOUSE_OFFICER view). UI only — data is mock, actions are local state. */
-export function TransportTrackingPage() {
+export type TransportRole = 'WAREHOUSE_OFFICER' | 'PHARMACIST';
+
+/**
+ * UI-14 Transport tracking. UI only — data is mock, actions are local state.
+ * WAREHOUSE_OFFICER operates (status, photos, receipt); PHARMACIST is read-only
+ * (API-F2a-012 lets the pharmacist list tasks, POST status/photos is warehouse/driver only).
+ * Both see only their own hospital's tasks (SEC-002).
+ */
+export function TransportTrackingPage({ role = 'WAREHOUSE_OFFICER' }: { role?: TransportRole }) {
+  const canOperate = role === 'WAREHOUSE_OFFICER';
   const online = useOnline();
   const [dir, setDir] = useState<Direction>('all');
   const [status, setStatus] = useState<TransportStatus | null>(null);
@@ -59,7 +67,7 @@ export function TransportTrackingPage() {
     let st = s.status;
     if (receipt[s.id] === 'done') st = 'RECEIVED';
     if (cancel[s.id] === 'yes') st = 'CANCELLED';
-    return { shipment: s, status: st, pending: !!s.pending && !synced, cancelRequested: !!s.cancelRequest && st === 'WAITING_DISPATCH' && cancel[s.id] !== 'no' };
+    return { shipment: s, status: st, pending: canOperate && !!s.pending && !synced, cancelRequested: !!s.cancelRequest && st === 'WAITING_DISPATCH' && cancel[s.id] !== 'no' };
   };
 
   const all = useMemo(() => SHIPMENTS.map(effective), [receipt, cancel, synced]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -81,8 +89,8 @@ export function TransportTrackingPage() {
   const toReceive = inAll.filter((r) => r.status === 'ARRIVED').length;
   const options: DirectionOption[] = [
     { id: 'all', th: 'ทั้งหมด', en: '7 วันล่าสุด', icon: 'truck', count: all.length, todo: '', iconBg: '#F1F5F9', iconFg: '#475569' },
-    { id: 'out', th: 'ส่งออกจากเรา', en: 'ต้นทาง รพ.สมุทรปราการ', icon: 'outArrow', count: outAll.length, todo: waiting ? `รอขึ้นรถ ${waiting}` : '', iconBg: '#FFF7ED', iconFg: '#9A3412' },
-    { id: 'in', th: 'รับเข้าเรา', en: 'ปลายทาง รพ.สมุทรปราการ', icon: 'inArrow', count: inAll.length, todo: toReceive ? `รอรับ ${toReceive}` : '', iconBg: '#EFF6FF', iconFg: '#1D4ED8' },
+    { id: 'out', th: 'ส่งออกจากเรา', en: 'ต้นทาง รพ.สมุทรปราการ', icon: 'outArrow', count: outAll.length, todo: canOperate && waiting ? `รอขึ้นรถ ${waiting}` : '', iconBg: '#FFF7ED', iconFg: '#9A3412' },
+    { id: 'in', th: 'รับเข้าเรา', en: 'ปลายทาง รพ.สมุทรปราการ', icon: 'inArrow', count: inAll.length, todo: canOperate && toReceive ? `รอรับ ${toReceive}` : '', iconBg: '#EFF6FF', iconFg: '#1D4ED8' },
   ];
 
   const open = (id: string) => {
@@ -122,7 +130,18 @@ export function TransportTrackingPage() {
         </div>
       </section>
 
-      <SyncBar online={online} queued={queued} onSync={() => setSynced(true)} />
+      {canOperate ? (
+        <SyncBar online={online} queued={queued} onSync={() => setSynced(true)} />
+      ) : (
+        <section role="status" className="syncbar" style={{ background: '#EFF6FF', borderColor: '#DBEAFE' }}>
+          <span className="syncbar-icon" style={{ color: '#1D4ED8' }}>
+            <Icon name="eye" />
+          </span>
+          <span className="syncbar-text">
+            <b>ดูอย่างเดียว</b> · ติดตามงานขนส่งของ รพ.เราเท่านั้น การขึ้นรถ ถ่ายรูป และยืนยันรับของทำโดยเจ้าหน้าที่คลังและคนขับ
+          </span>
+        </section>
+      )}
 
       <DirectionTabs
         options={options}
@@ -166,7 +185,7 @@ export function TransportTrackingPage() {
           <span style={{ flex: '1 1 0' }} />
           <span style={{ fontSize: 12 }}>เรียง: ต้องทำก่อน → อัปเดตล่าสุด</span>
         </div>
-        <ShipmentTable rows={rows} activeId={drawerOpen ? sel.shipment.id : null} onOpen={open} onAction={onAction} />
+        <ShipmentTable rows={rows} activeId={drawerOpen ? sel.shipment.id : null} onOpen={open} onAction={onAction} canOperate={canOperate} />
       </section>
 
       {drawerOpen && (
@@ -185,6 +204,7 @@ export function TransportTrackingPage() {
           onConfirmReceipt={() => setReceipt((m) => ({ ...m, [sel.shipment.id]: 'done' }))}
           onUndoReceipt={() => setReceipt((m) => ({ ...m, [sel.shipment.id]: 'open' }))}
           onCancelDecision={(d) => setCancel((m) => ({ ...m, [sel.shipment.id]: d }))}
+          canOperate={canOperate}
         />
       )}
       {histOpen && <AuditHistoryDrawer onClose={() => setHistOpen(false)} />}

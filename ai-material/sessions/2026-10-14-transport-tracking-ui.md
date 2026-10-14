@@ -19,6 +19,12 @@ summary: UI-only Transport tracking page (warehouse role) on feature/dashboard-t
 - Design refs copied to `Mockups/Transport Tracking/` (3 `.dc.html`, no vendored runtime).
 - Verified: `npm run build` ok; 1440px matches both mockup screenshots (341 pending-sync, 334 receipt); confirm/undo, filters work; phone layout ok; dashboard unchanged.
 
+## Update: pharmacist read-only view
+
+- `TransportTrackingPage role="PHARMACIST"` (`?page=transport&role=pharmacist`): no photo upload/status/receipt/sync/cancel controls; read-only notice bar; pharmacist shell (standard TopBar + friend's `getNavForRole`).
+- `App.tsx` `withLinks()` points the `tr` (and pharmacist `dash`) sidebar hrefs at real routes; `navigation.ts` untouched.
+- Merged `origin/feature/dashboard-pharma`; conflicts resolved by adopting upstream `Sidebar items` API.
+
 ## Decisions
 
 - Drawer auto-opens only at >=1024px (full-screen on phones would hide the list).

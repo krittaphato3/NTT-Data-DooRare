@@ -22,6 +22,8 @@ interface ShipmentDrawerProps {
   onConfirmReceipt: () => void;
   onUndoReceipt: () => void;
   onCancelDecision: (d: 'yes' | 'no') => void;
+  /** false = read-only role (pharmacist): no photo upload, status, receipt or cancel controls. */
+  canOperate: boolean;
 }
 
 function returnNote(s: Shipment): string {
@@ -38,15 +40,17 @@ export function ShipmentDrawer(p: ShipmentDrawerProps) {
   const out = isOutbound(s);
   const idx = status === 'CANCELLED' ? -1 : STEP_ORDER.indexOf(status);
   const cancelReq = s.cancelRequest;
-  const showReceipt = !out && status === 'ARRIVED' && p.receipt === 'open';
-  const canPhoto = ['WAITING_DISPATCH', 'LOADED', 'IN_TRANSIT'].includes(status) && s.photos.length < 10;
-  const primary =
-    status === 'WAITING_DISPATCH' && out && !cancelReq
+  const op = p.canOperate;
+  const showReceipt = op && !out && status === 'ARRIVED' && p.receipt === 'open';
+  const canPhoto = op && ['WAITING_DISPATCH', 'LOADED', 'IN_TRANSIT'].includes(status) && s.photos.length < 10;
+  const primary = !op
+    ? null
+    : status === 'WAITING_DISPATCH' && out && !cancelReq
       ? { label: 'ยืนยันขึ้นรถ + ถ่ายรูป', onClick: undefined as (() => void) | undefined }
       : status === 'ARRIVED' && !out && !showReceipt
         ? { label: 'ยืนยันรับของ', onClick: p.onOpenReceipt }
         : null;
-  const canCancel = status === 'WAITING_DISPATCH' && out && !cancelReq;
+  const canCancel = op && status === 'WAITING_DISPATCH' && out && !cancelReq;
 
   return (
     <aside className="tr-drawer" aria-label="รายละเอียดงานขนส่ง">
@@ -80,7 +84,11 @@ export function ShipmentDrawer(p: ShipmentDrawerProps) {
               <br />
               เหตุผล: “{cancelReq.reason}” · ยกเลิกได้เพราะยังไม่ขึ้นรถ ต้องได้ความยินยอมจากเรา (ผู้ส่ง)
             </div>
-            {!p.cancel ? (
+            {!op ? (
+              <div role="status" style={{ fontSize: 13, color: '#0F2A5C', background: '#FFFFFF', borderRadius: 8, padding: '8px 10px' }}>
+                รอเจ้าหน้าที่คลังตอบคำขอยกเลิก
+              </div>
+            ) : !p.cancel ? (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                 <button className="btn btn-p btn-sm" onClick={() => p.onCancelDecision('yes')}>
                   ยินยอมยกเลิก
@@ -146,7 +154,7 @@ export function ShipmentDrawer(p: ShipmentDrawerProps) {
         </div>
 
         {showReceipt && <ReceiptForm shipment={s} counted={p.counted} onCounted={p.onCounted} onConfirm={p.onConfirmReceipt} />}
-        {!out && p.receipt === 'done' && (
+        {op && !out && p.receipt === 'done' && (
           <div role="status" className="receipt-done">
             <Icon name="checkc" style={{ marginTop: 2 }} />
             <span style={{ flex: 1 }}>
@@ -188,7 +196,7 @@ export function ShipmentDrawer(p: ShipmentDrawerProps) {
           </div>
         </div>
 
-        {p.pending && (
+        {op && p.pending && (
           <div className="queue-box">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
               <span style={{ fontSize: 13, fontWeight: 600, color: '#0F2A5C' }}>คิวในเครื่อง · รอซิงก์ 1 รายการ</span>
