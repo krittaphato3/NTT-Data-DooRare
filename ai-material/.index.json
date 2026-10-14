@@ -84,6 +84,13 @@
     "date": "2026-10-14"
   },
   {
+    "path": "sessions\\2026-10-14-reports-value-ui.md",
+    "title": "Reports and Value UI (UI-19, RPT-01 to RPT-08)",
+    "summary": "Built Reports and Value UI (UI-19) matching 4 mockup screenshots across all…",
+    "tags": "session, frontend, reports, value, pharmacist",
+    "date": "2026-10-14"
+  },
+  {
     "path": "sessions\\2026-10-14-stock-alert-queue-ui02.md",
     "title": "Stock alert queue UI (UI-02)",
     "summary": "UI-only Stock alert queue page (pharmacist role) at ?page=alerts",

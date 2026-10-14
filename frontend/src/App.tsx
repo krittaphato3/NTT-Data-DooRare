@@ -10,12 +10,13 @@ import { BorrowRequestsPage } from './roles/pharmacist/pages/BorrowRequestsPage'
 import { DashboardPage } from './roles/pharmacist/pages/DashboardPage';
 import { IncidentConsolePage } from './roles/pharmacist/pages/IncidentConsolePage';
 import { LenderQueuePage } from './roles/pharmacist/pages/LenderQueuePage';
+import { ReportsPage } from './roles/pharmacist/pages/ReportsPage';
 import { StockAlertsPage } from './roles/pharmacist/pages/StockAlertsPage';
 import { WAREHOUSE_NOTIFICATIONS, WAREHOUSE_USER } from './roles/warehouse/data/session';
 import { TransportTrackingPage } from './roles/warehouse/pages/TransportTrackingPage';
 import type { TransportRole } from './roles/warehouse/pages/TransportTrackingPage';
 
-type Page = 'dashboard' | 'transport' | 'requests' | 'lend' | 'incident' | 'alerts';
+type Page = 'dashboard' | 'transport' | 'requests' | 'lend' | 'incident' | 'alerts' | 'report';
 
 /** Pharmacist on the ops-style top bar (UI-05 mockup: scope pill, agent pill, TH/EN). */
 const PHARMACIST_OPS_USER = { ...USER, scopeLabel: 'เห็นเฉพาะข้อมูล รพ.สมุทรปราการ' };
@@ -26,7 +27,8 @@ const PHARMACIST_OPS_USER = { ...USER, scopeLabel: 'เห็นเฉพาะ�
  * `?page=requests` shows Borrow requests (UI-05),
  * `?page=lend` shows Lender queue (UI-06),
  * `?page=incident` shows Incident console (UI-11 – UI-13),
- * `?page=alerts` shows Stock alert queue (UI-02).
+ * `?page=alerts` shows Stock alert queue (UI-02),
+ * `?page=report` shows Reports & Value (UI-19).
  * `&role=pharmacist` = read-only pharmacist transport view, otherwise the warehouse officer view.
  */
 function initialRoute(): { page: Page; transportRole: TransportRole } {
@@ -39,6 +41,7 @@ function initialRoute(): { page: Page; transportRole: TransportRole } {
     else if (p === 'lend') page = 'lend';
     else if (p === 'incident' || p === 'inc') page = 'incident';
     else if (p === 'alerts') page = 'alerts';
+    else if (p === 'report' || p === 'rep') page = 'report';
     return {
       page,
       transportRole: q.get('role')?.toLowerCase() === 'pharmacist' ? 'PHARMACIST' : 'WAREHOUSE_OFFICER',
@@ -57,6 +60,7 @@ function withLinks(items: ShellNavEntry[], role: string): ShellNavEntry[] {
     if (e.key === 'lend') return { ...e, href: '?page=lend' };
     if (e.key === 'inc') return { ...e, href: '?page=incident' };
     if (e.key === 'alerts') return { ...e, href: '?page=alerts' };
+    if (e.key === 'rep') return { ...e, href: `?page=report${suffix}` };
     if (e.key === 'dash' && role === 'PHARMACIST') return { ...e, href: '/' };
     if (e.key === 'req' && role === 'PHARMACIST') return { ...e, href: '?page=requests' };
     return e;
@@ -87,11 +91,12 @@ export default function App() {
   const onLend = route.page === 'lend';
   const onIncident = route.page === 'incident';
   const onAlerts = route.page === 'alerts';
+  const onReport = route.page === 'report';
   const warehouse = onTransport && route.transportRole === 'WAREHOUSE_OFFICER';
-  // Warehouse transport, UI-05, and UI-06 use the ops top bar (no footer); dashboard, alerts, and incident console keep standard shell.
+  // Warehouse transport, UI-05, and UI-06 use the ops top bar (no footer); dashboard, alerts, report, and incident console keep standard shell.
   const ops = warehouse || onRequests || onLend;
   const navRole = warehouse ? 'WAREHOUSE_OFFICER' : 'PHARMACIST';
-  const activeKey = onTransport ? 'tr' : onRequests ? 'req' : onLend ? 'lend' : onIncident ? 'inc' : onAlerts ? 'alerts' : 'dash';
+  const activeKey = onTransport ? 'tr' : onRequests ? 'req' : onLend ? 'lend' : onIncident ? 'inc' : onAlerts ? 'alerts' : onReport ? 'rep' : 'dash';
   const navItems = withLinks(getNavForRole(navRole, activeKey), navRole);
 
   // Mobile drawer: lock page scroll, close on Escape and when resizing to desktop.
@@ -147,6 +152,8 @@ export default function App() {
             <IncidentConsolePage />
           ) : onAlerts ? (
             <StockAlertsPage />
+          ) : onReport ? (
+            <ReportsPage />
           ) : (
             <DashboardPage isAdmin={isAdmin} query={query} hospital={hospital} onHospital={setHospital} />
           )}
