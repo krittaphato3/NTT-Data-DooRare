@@ -4,6 +4,17 @@ import { Sidebar } from './components/layout/Sidebar';
 import { TopBar } from './components/layout/TopBar';
 import { ALERTS } from './roles/pharmacist/data/dashboard';
 import { DashboardPage } from './roles/pharmacist/pages/DashboardPage';
+import { WAREHOUSE_NAV, WAREHOUSE_NOTIFICATIONS, WAREHOUSE_USER } from './roles/warehouse/data/session';
+import { TransportTrackingPage } from './roles/warehouse/pages/TransportTrackingPage';
+
+/** No router yet: `?page=transport` shows the warehouse Transport tracking screen (UI-14). */
+function initialPage(): 'dashboard' | 'transport' {
+  try {
+    return new URLSearchParams(window.location.search).get('page') === 'transport' ? 'transport' : 'dashboard';
+  } catch {
+    return 'dashboard';
+  }
+}
 
 function initialRole(): boolean {
   try {
@@ -23,6 +34,8 @@ export default function App() {
   const [navOpen, setNavOpen] = useState(false);
   const [hospital, setHospital] = useState('ทุกโรงพยาบาล (12)');
   const [isAdmin] = useState(initialRole);
+  const [page] = useState(initialPage);
+  const ops = page === 'transport';
 
   // Mobile drawer: lock page scroll, close on Escape and when resizing to desktop.
   useEffect(() => {
@@ -48,7 +61,16 @@ export default function App() {
 
   return (
     <div className={shellClass}>
-      <Sidebar collapsed={collapsed} onToggle={() => setCollapsed((v) => !v)} onNavigate={() => setNavOpen(false)} />
+      <Sidebar
+        collapsed={collapsed}
+        onToggle={() => setCollapsed((v) => !v)}
+        onNavigate={() => setNavOpen(false)}
+        {...(ops && {
+          nav: WAREHOUSE_NAV,
+          brand: { name: <>DooRare <span style={{ fontWeight: 500, color: '#475569' }}>ดูแร์</span></>, sub: 'เครือข่ายเขตสุขภาพที่ 6' },
+          footer: { title: 'ศูนย์ประสานยา เขตสุขภาพที่ 6', text: <>HIS นำเข้าล่าสุด <span className="num">06:10</span> น.</> },
+        })}
+      />
       {navOpen && <button className="nav-scrim" aria-label="ปิดเมนู" onClick={() => setNavOpen(false)} />}
       <div className="content">
         <TopBar
@@ -57,12 +79,14 @@ export default function App() {
           isAdmin={isAdmin}
           navOpen={navOpen}
           onMenu={() => setNavOpen((v) => !v)}
-          notifications={ALERTS.map((a) => ({ drug: a.drug, time: a.time }))}
+          notifications={ops ? WAREHOUSE_NOTIFICATIONS : ALERTS.map((a) => ({ drug: a.drug, time: a.time }))}
+          variant={ops ? 'ops' : 'pharmacist'}
+          user={ops ? WAREHOUSE_USER : undefined}
         />
         <main className="mainpad">
-          <DashboardPage isAdmin={isAdmin} query={query} hospital={hospital} onHospital={setHospital} />
+          {ops ? <TransportTrackingPage /> : <DashboardPage isAdmin={isAdmin} query={query} hospital={hospital} onHospital={setHospital} />}
         </main>
-        <Footer isAdmin={isAdmin} />
+        {!ops && <Footer isAdmin={isAdmin} />}
       </div>
     </div>
   );

@@ -1,4 +1,5 @@
 import { NAV } from '../../data/navigation';
+import type { NavItem } from '../../data/navigation';
 import { Icon } from '../common/icons';
 import type { IconName } from '../common/icons';
 
@@ -8,9 +9,18 @@ interface SidebarProps {
   onToggle: () => void;
   /** Called when a nav link is used, so the mobile drawer can close itself. */
   onNavigate: () => void;
+  /** Role menu; defaults to the pharmacist menu. */
+  nav?: NavItem[];
+  /** Brand block; defaults to the dashboard branding. */
+  brand?: { name: React.ReactNode; sub: string };
+  /** Footer card; defaults to the dashboard help card. */
+  footer?: { title: string; text: React.ReactNode };
 }
 
-export function Sidebar({ collapsed, onToggle, onNavigate }: SidebarProps) {
+const DEFAULT_BRAND = { name: 'MedSupply Link', sub: 'เครือข่ายเขตสุขภาพที่ 6' };
+const DEFAULT_FOOTER = { title: 'ต้องการความช่วยเหลือ?', text: 'ศูนย์ประสานยา เขต 6 · โทร 1669 ต่อ 214' };
+
+export function Sidebar({ collapsed, onToggle, onNavigate, nav = NAV, brand = DEFAULT_BRAND, footer = DEFAULT_FOOTER }: SidebarProps) {
   return (
     <aside className="side" id="app-sidebar" data-part="sidebar" aria-label="เมนูหลัก">
       <div className="side-brand">
@@ -19,8 +29,8 @@ export function Sidebar({ collapsed, onToggle, onNavigate }: SidebarProps) {
             <Icon name="plus" style={{ strokeWidth: 2.5 }} />
           </span>
           <div className="side-brand-text">
-            <div className="side-brand-name">MedSupply Link</div>
-            <div className="en">เครือข่ายเขตสุขภาพที่ 6</div>
+            <div className="side-brand-name">{brand.name}</div>
+            <div className="en">{brand.sub}</div>
           </div>
         </div>
         <button
@@ -37,10 +47,10 @@ export function Sidebar({ collapsed, onToggle, onNavigate }: SidebarProps) {
         </button>
       </div>
       <nav className="sidenav" aria-label="เมนูหลัก">
-        {NAV.map((n) => (
+        {nav.map((n) => (
           <a
             key={n.en}
-            href="#"
+            href={n.href ?? '#'}
             className={`navlink ${n.active ? 'nav-on' : ''}`}
             aria-current={n.active ? 'page' : 'false'}
             onClick={onNavigate}
@@ -51,7 +61,7 @@ export function Sidebar({ collapsed, onToggle, onNavigate }: SidebarProps) {
               <span className="en">{n.en}</span>
             </span>
             {n.badge !== '' && (
-              <span className="navbadge" aria-label={`${n.badge} รายการรอดำเนินการ`}>
+              <span className={`navbadge ${n.badgeTone === 'grey' ? 'navbadge-grey' : ''}`} aria-label={`${n.badge} รายการรอดำเนินการ`}>
                 {n.badge}
               </span>
             )}
@@ -59,8 +69,8 @@ export function Sidebar({ collapsed, onToggle, onNavigate }: SidebarProps) {
         ))}
       </nav>
       <div className="sidefoot">
-        <div className="sidefoot-title">ต้องการความช่วยเหลือ?</div>
-        <div>ศูนย์ประสานยา เขต 6 · โทร 1669 ต่อ 214</div>
+        <div className="sidefoot-title">{footer.title}</div>
+        <div>{footer.text}</div>
       </div>
     </aside>
   );

@@ -6,6 +6,9 @@ export interface NavItem {
   icon: string;
   active: boolean;
   badge: string;
+  /** Badge colour; defaults to red (needs attention). */
+  badgeTone?: 'red' | 'grey';
+  href?: string;
 }
 
 export const NAV: NavItem[] = [
