@@ -4,6 +4,7 @@
 --                        hospital/drug flags (agent_participation, is_controlled, lend_in_packs, ...), document versioning
 --   G2 security        : RLS on pool_entry, allocation_plan, transport_task, return_obligation, document;
 --                        audit_log hash chain serialised via audit_chain_head (+1 table = 63) and audit_chain_verify() for JOB-15
+--   G2b bug fix        : borrow_request <-> borrow_leg RLS policies recursed infinitely (spec v1.3); now via app_is_lender_of / app_is_borrower_of
 --   G3 enums           : mapping_status +DEPRECATED, alert_type +ORDER_AHEAD/ORDER_EARLIER/MIN_MAX
 --   All new columns are nullable or defaulted, so existing v1.3 data/CSV still loads.
 -- Multi-tenant by hospital via Row-Level Security. Session vars set per request:
@@ -553,14 +554,18 @@ DO $$ DECLARE t text; BEGIN
   END LOOP;
 END $$;
 -- Borrowing is bilateral: borrower and each lender can see the request / legs.
+-- v1.4 fix: the two policies used to query each other's table, which Postgres rejects with
+-- "infinite recursion detected in policy". These SECURITY DEFINER helpers read the other table without RLS.
+CREATE OR REPLACE FUNCTION app_is_lender_of(req uuid) RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS
+$$ SELECT EXISTS (SELECT 1 FROM borrow_leg l WHERE l.request_id = req AND l.lender_hospital_id = app_hospital() AND l.status <> 'PENDING') $$;
+CREATE OR REPLACE FUNCTION app_is_borrower_of(req uuid) RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS
+$$ SELECT EXISTS (SELECT 1 FROM borrow_request r WHERE r.id = req AND r.borrower_hospital_id = app_hospital()) $$;
 ALTER TABLE borrow_request ENABLE ROW LEVEL SECURITY;
 CREATE POLICY borrow_request_party ON borrow_request USING (
-  app_role() IN ('SYSTEM_ADMIN','AUDITOR','REGION_ADMIN') OR borrower_hospital_id = app_hospital()
-  OR EXISTS (SELECT 1 FROM borrow_leg l WHERE l.request_id = borrow_request.id AND l.lender_hospital_id = app_hospital() AND l.status <> 'PENDING'));
+  app_role() IN ('SYSTEM_ADMIN','AUDITOR','REGION_ADMIN') OR borrower_hospital_id = app_hospital() OR app_is_lender_of(id));
 ALTER TABLE borrow_leg ENABLE ROW LEVEL SECURITY;
 CREATE POLICY borrow_leg_party ON borrow_leg USING (
-  app_role() IN ('SYSTEM_ADMIN','AUDITOR','REGION_ADMIN') OR lender_hospital_id = app_hospital()
-  OR EXISTS (SELECT 1 FROM borrow_request r WHERE r.id = borrow_leg.request_id AND r.borrower_hospital_id = app_hospital()));
+  app_role() IN ('SYSTEM_ADMIN','AUDITOR','REGION_ADMIN') OR lender_hospital_id = app_hospital() OR app_is_borrower_of(request_id));
 ALTER TABLE plan_approval ENABLE ROW LEVEL SECURITY;
 CREATE POLICY plan_approval_party ON plan_approval USING (app_role() IN ('SYSTEM_ADMIN','AUDITOR','REGION_ADMIN') OR hospital_id = app_hospital());
 -- v1.4: remaining hospital-scoped tables (SEC-003)
