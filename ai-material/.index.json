@@ -1,8 +1,22 @@
 [
   {
+    "path": "GUIDELINES.md",
+    "title": "Guidelines",
+    "summary": "Guidelines",
+    "tags": "session",
+    "date": "2026-10-14"
+  },
+  {
     "path": "README.md",
     "title": "ai-material",
     "summary": "ai-material",
+    "tags": "session",
+    "date": "2026-10-14"
+  },
+  {
+    "path": "context\\architecture.md",
+    "title": "Architecture",
+    "summary": "Architecture",
     "tags": "session",
     "date": "2026-10-14"
   },
@@ -14,9 +28,23 @@
     "date": "2026-10-14"
   },
   {
+    "path": "context\\current-status.md",
+    "title": "Current Status",
+    "summary": "Current Status",
+    "tags": "session",
+    "date": "2026-10-14"
+  },
+  {
     "path": "context\\current-task.md",
     "title": "Current Task",
     "summary": "Current Task",
+    "tags": "session",
+    "date": "2026-10-14"
+  },
+  {
+    "path": "context\\quality-checklist.md",
+    "title": "Quality Checklist",
+    "summary": "Quality Checklist",
     "tags": "session",
     "date": "2026-10-14"
   },
@@ -35,213 +63,17 @@
     "date": "2026-10-14"
   },
   {
-    "path": "sessions\\2026-10-14-agent-summary-panel.md",
-    "title": "Floating Agent summary panel",
-    "summary": "Collapsible right-edge agent daily summary panel",
-    "tags": "session, frontend, agent-summary, floating-panel",
+    "path": "sessions\\2026-10-14-1955-antigravity-ui-spec-lender.md",
+    "title": "UI Spec Lender",
+    "summary": "Read all pharmacist dashboard source files; generated UI-01 spec; identified UI-06 Lender…",
+    "tags": "session, ui-spec, dashboard, pharmacist, lender",
     "date": "2026-10-14"
   },
   {
-    "path": "sessions\\2026-10-14-alerts-6-requests-3.md",
-    "title": "Alerts six requests three defaults",
-    "summary": "Alerts paged at 6, Request Status at 3, nonscroll default",
-    "tags": "session, frontend, paging, load-more",
-    "date": "2026-10-14"
-  },
-  {
-    "path": "sessions\\2026-10-14-alerts-queue-table.md",
-    "title": "Alerts panel as stock alert queue table",
-    "summary": "Alerts panel list converted to mockup queue table",
-    "tags": "session, frontend, alerts, table",
-    "date": "2026-10-14"
-  },
-  {
-    "path": "sessions\\2026-10-14-artifacts-capture.md",
-    "title": "Artifacts screenshots refreshed",
-    "summary": "42 fresh screenshots from current build",
-    "tags": "session, artifacts, capture",
-    "date": "2026-10-14"
-  },
-  {
-    "path": "sessions\\2026-10-14-autohide-scrollbars.md",
-    "title": "Auto-hiding scrollbars",
-    "summary": "Scrollbars appear only on hover focus scroll",
-    "tags": "session, frontend, scrollbar, ux",
-    "date": "2026-10-14"
-  },
-  {
-    "path": "sessions\\2026-10-14-cards-auto-height.md",
-    "title": "Cards auto height with button reserve",
-    "summary": "Removed fixed height keeps small button slot",
-    "tags": "session, frontend, layout, load-more",
-    "date": "2026-10-14"
-  },
-  {
-    "path": "sessions\\2026-10-14-cards-filled-default.md",
-    "title": "Cards filled to full size by default",
-    "summary": "Taller cards show all rows with no buttons",
-    "tags": "session, frontend, layout, load-more",
-    "date": "2026-10-14"
-  },
-  {
-    "path": "sessions\\2026-10-14-cards-load-more.md",
-    "title": "Cards load-more with locked bodies",
-    "summary": "MiddleRow cards show pages with load-more scroll",
-    "tags": "session, frontend, load-more, layout",
-    "date": "2026-10-14"
-  },
-  {
-    "path": "sessions\\2026-10-14-defaults-fit-all.md",
-    "title": "Defaults fit all rows without scroll",
-    "summary": "Page sizes match data so no buttons appear",
-    "tags": "session, frontend, layout, load-more",
-    "date": "2026-10-14"
-  },
-  {
-    "path": "sessions\\2026-10-14-e2e-loadmore.md",
-    "title": "E2E load-more size invariant",
-    "summary": "12/12 pass cards never resize on expand",
-    "tags": "session, e2e, load-more, verification",
-    "date": "2026-10-14"
-  },
-  {
-    "path": "sessions\\2026-10-14-expand-no-grow.md",
-    "title": "Show more scrolls without growing",
-    "summary": "Expand freezes list height and enables scrolling",
-    "tags": "session, frontend, load-more, layout",
-    "date": "2026-10-14"
-  },
-  {
-    "path": "sessions\\2026-10-14-fixed-card-scroll.md",
-    "title": "Fixed-height cards with vertical scroll",
-    "summary": "MiddleRow cards fixed height with scroll bodies",
-    "tags": "session, frontend, layout, scroll",
-    "date": "2026-10-14"
-  },
-  {
-    "path": "sessions\\2026-10-14-load-more-label.md",
-    "title": "Load-more button label",
-    "summary": "Show-more button relabeled to load more",
-    "tags": "session, frontend, copy",
-    "date": "2026-10-14"
-  },
-  {
-    "path": "sessions\\2026-10-14-middle-equal-height.md",
-    "title": "MiddleRow cards equal height",
-    "summary": "Three cards share one height via stretch",
-    "tags": "session, frontend, layout, middle-row",
-    "date": "2026-10-14"
-  },
-  {
-    "path": "sessions\\2026-10-14-more-mock-rows.md",
-    "title": "Extra mock rows for load-more demo",
-    "summary": "Mock lists extended so paging appears",
-    "tags": "session, frontend, mock-data, load-more",
-    "date": "2026-10-14"
-  },
-  {
-    "path": "sessions\\2026-10-14-near-expiry-fefo.md",
-    "title": "Near-expiry FEFO and held-lot rows",
-    "summary": "FEFO queue lines plus held-lot planning row",
-    "tags": "session, frontend, near-expiry, fefo",
-    "date": "2026-10-14"
-  },
-  {
-    "path": "sessions\\2026-10-14-paging-restored.md",
-    "title": "Paging buttons restored",
-    "summary": "Smaller pages bring back load-more buttons",
-    "tags": "session, frontend, load-more, paging",
-    "date": "2026-10-14"
-  },
-  {
-    "path": "sessions\\2026-10-14-pharmacist-dashboard-restructure-responsive.md",
-    "title": "Pharmacist dashboard restructure + responsive pass",
-    "summary": "Role-based frontend restructure and full responsive adaptation of dashboard",
-    "tags": "session, frontend, structure, responsive",
-    "date": "2026-10-14"
-  },
-  {
-    "path": "sessions\\2026-10-14-queue-drug-cell-order.md",
-    "title": "Queue drug cell order icon-name-VED",
-    "summary": "Drug cell reordered to severity icon name small VED",
-    "tags": "session, frontend, alerts, table",
-    "date": "2026-10-14"
-  },
-  {
-    "path": "sessions\\2026-10-14-request-block-restyle.md",
-    "title": "Request rows as mockup detail blocks",
-    "summary": "Request rows restyled to mockup block layout",
-    "tags": "session, frontend, requests, layout",
-    "date": "2026-10-14"
-  },
-  {
-    "path": "sessions\\2026-10-14-request-rows-fill.md",
-    "title": "Request rows fill card height",
-    "summary": "Collapsed rows stretch to remove dead space",
-    "tags": "session, frontend, layout, request-status",
-    "date": "2026-10-14"
-  },
-  {
-    "path": "sessions\\2026-10-14-request-rows-natural.md",
-    "title": "Request rows natural no fit",
-    "summary": "Removed row fill leftover is plain space",
-    "tags": "session, frontend, request-status, layout, e2e",
-    "date": "2026-10-14"
-  },
-  {
-    "path": "sessions\\2026-10-14-review-approve-example.md",
-    "title": "Review-approve button example row",
-    "summary": "REQ-1051 now shows primary review-approve button",
-    "tags": "session, frontend, requests, mockup",
-    "date": "2026-10-14"
-  },
-  {
-    "path": "sessions\\2026-10-14-scroll-glow-indicator.md",
-    "title": "Scroll-only glowing indicator",
-    "summary": "Indicator shows only while scrolling blue glow",
-    "tags": "session, frontend, scrollbar, ux",
-    "date": "2026-10-14"
-  },
-  {
-    "path": "sessions\\2026-10-14-scrollbars-visible.md",
-    "title": "Scrollbars always visible again",
-    "summary": "Reverted auto-hide keeps blue glow style",
-    "tags": "session, frontend, scrollbar, ux",
-    "date": "2026-10-14"
-  },
-  {
-    "path": "sessions\\2026-10-14-sidebar-mockup-parity.md",
-    "title": "Sidebar mockup parity + rail alignment",
-    "summary": "Sidebar rebuilt to mockup catalogue with aligned rail",
-    "tags": "session, frontend, sidebar, mockup",
-    "date": "2026-10-14"
-  },
-  {
-    "path": "sessions\\2026-10-14-six-seven-defaults.md",
-    "title": "Nearby six work seven defaults",
-    "summary": "Nearby and work pages show all rows",
-    "tags": "session, frontend, paging, defaults",
-    "date": "2026-10-14"
-  },
-  {
-    "path": "sessions\\2026-10-14-slim-scrollbars.md",
-    "title": "Slim custom scrollbars",
-    "summary": "Thin themed scrollbars for scroll regions",
-    "tags": "session, frontend, scrollbar, style",
-    "date": "2026-10-14"
-  },
-  {
-    "path": "sessions\\2026-10-14-work-history-returns.md",
-    "title": "Work history split with return obligations",
-    "summary": "Work card split into activity timeline plus returns",
-    "tags": "session, frontend, work-history, returns",
-    "date": "2026-10-14"
-  },
-  {
-    "path": "sessions\\2026-10-14-work-history-tabs.md",
-    "title": "Work history sub-sections as tabs",
-    "summary": "Stacked sub-sections converted to switchable tabs",
-    "tags": "session, frontend, work-history, tabs",
+    "path": "sessions\\2026-10-14-transport-tracking-ui.md",
+    "title": "Transport tracking UI (UI-14)",
+    "summary": "UI-only Transport tracking page (warehouse role) on feature/dashboard-transport-tracking",
+    "tags": "session, frontend, transport, warehouse",
     "date": "2026-10-14"
   },
   {
@@ -250,41 +82,6 @@
     "summary": "Which agent skills this repo keeps, why, and how to add more.",
     "tags": "skill, workflow, context",
     "date": "2026-10-14"
-  },
-  {
-    "path": "GUIDELINES.md",
-    "title": "Guidelines",
-    "summary": "Guidelines",
-    "tags": "session",
-    "date": "2026-10-13"
-  },
-  {
-    "path": "context\\architecture.md",
-    "title": "Architecture",
-    "summary": "Architecture",
-    "tags": "session",
-    "date": "2026-10-13"
-  },
-  {
-    "path": "context\\current-status.md",
-    "title": "Current Status",
-    "summary": "Current Status",
-    "tags": "session",
-    "date": "2026-10-13"
-  },
-  {
-    "path": "context\\quality-checklist.md",
-    "title": "Quality Checklist",
-    "summary": "Quality Checklist",
-    "tags": "session",
-    "date": "2026-10-13"
-  },
-  {
-    "path": "sessions\\2026-10-13-pharmacist-dashboard-frontend.md",
-    "title": "Pharmacist dashboard frontend (npm + Docker)",
-    "summary": "Built pharmacist dashboard React frontend with npm Docker build",
-    "tags": "session",
-    "date": "2026-10-13"
   },
   {
     "path": "decisions\\0001-shared-ai-context.md",
