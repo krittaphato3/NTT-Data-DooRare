@@ -1,0 +1,302 @@
+import { useEffect, useState } from 'react';
+import { Icon } from '../../../components/common/icons';
+import { AllocationDrawer } from '../components/AllocationDrawer';
+import {
+  ALLOCATION_PLANS,
+  COST_LIMIT_PCT,
+  POOL_LOTS,
+  POOL_TOTAL_VALUE,
+  planStatusMeta,
+} from '../data/pool';
+import type { AllocationPlan, PlanStatus } from '../data/pool';
+import '../pool.css';
+
+type PoolTab = 'pool' | 'plans';
+
+const TABS: { id: PoolTab; label: string; ui: string }[] = [
+  { id: 'pool', label: 'คลังกลาง (ถูกกันไว้)', ui: 'UI-08' },
+  { id: 'plans', label: 'แผนจัดสรร', ui: 'UI-09' },
+];
+
+const RECEIVER_COUNT = new Set(POOL_LOTS.map((l) => l.from)).size + 3;
+
+/**
+ * UI-08 Central pool + UI-09 Allocation plan review (spec F2a). UI only: mock
+ * data; approve / uneconomical decisions are local state. Pool quantities are
+ * held (ถูกกันไว้) at the origin hospital until a plan ships them.
+ */
+export function PoolAllocationPage() {
+  const [tab, setTab] = useState<PoolTab>('plans');
+  const [selId, setSelId] = useState('');
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [plans, setPlans] = useState<AllocationPlan[]>(ALLOCATION_PLANS);
+  const [decisions, setDecisions] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setDrawerOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  const pendingMine = plans.filter((p) => p.status === 'PENDING_MY_APPROVAL').length;
+  const needDoc = plans.filter((p) => p.status === 'APPROVED').length;
+
+  const open = (id: string) => {
+    setSelId(id);
+    setDrawerOpen(true);
+  };
+
+  const sel = plans.find((p) => p.id === selId) ?? plans[0];
+
+  const approve = (id: string) => {
+    setPlans((prev) =>
+      prev.map((p) =>
+        p.id === id
+          ? {
+              ...p,
+              status: 'APPROVED' as PlanStatus,
+              approvals: p.approvals.map((a) =>
+                a.state === 'WAITING' && a.hospital === 'รพ.สมุทรปราการ'
+                  ? { ...a, state: 'APPROVED' as const, at: '13 ต.ค. · 19:22 น.' }
+                  : a,
+              ),
+            }
+          : p,
+      ),
+    );
+    setDecisions((m) => ({ ...m, [id]: 'เห็นชอบแผนแล้ว 19:22 น. · ระบบสร้างเอกสารให้พิมพ์ทันที (XC-1)' }));
+  };
+
+  const decideUneconomical = (id: string, label: string) => {
+    setDecisions((m) => ({ ...m, [id]: `บันทึกตัดสินใจแล้ว: ${label} · 19:22 น. (audit_log)` }));
+  };
+
+  return (
+    <>
+      <section className="pagehead">
+        <div>
+          <nav aria-label="breadcrumb" style={{ fontSize: 12, lineHeight: '16px' }}>
+            <a href="/" className="link" style={{ fontSize: 12, fontWeight: 400 }}>
+              หน้าหลัก
+            </a>{' '}
+            <span aria-hidden="true">›</span> <span aria-current="page">คลังกลาง · แผนจัดสรร</span>
+          </nav>
+          <h1 className="tr-title">
+            คลังกลาง · แผนจัดสรร <span>/ Central pool · UI-08 · Allocation plans · UI-09</span>
+          </h1>
+          <div style={{ fontSize: 13 }}>
+            เขตสุขภาพที่ 6 · คลังกลางรวมเฉพาะข้อมูล (ถูกกันไว้ = กันออกจากสต็อกใช้งาน) · อัปเดตล่าสุด 02:30 น. ·
+            แผนที่ไม่คุ้มค่าขนส่ง (F-23 ≥ {COST_LIMIT_PCT}%) ต้องเลือก 1 ใน 4 ทางก่อนส่ง
+          </div>
+        </div>
+        <div className="pagehead-actions">
+          <button className="btn btn-s">
+            <Icon name="download" />
+            CSV
+          </button>
+          <button className="btn btn-s">
+            <Icon name="fileText" />
+            PDF
+          </button>
+        </div>
+      </section>
+
+      {/* KPI row */}
+      <section className="pl-kpis">
+        <div className="pl-kpi">
+          <div className="pl-kpi-label">
+            ในคลังกลาง (ถูกกันไว้) <span className="en">POOL · ASM-12</span>
+          </div>
+          <div className="pl-kpi-val num">{POOL_LOTS.length} ล็อต</div>
+          <div className="pl-kpi-sub num">
+            รวม ฿{POOL_TOTAL_VALUE.toLocaleString()} · รอส่งให้ {RECEIVER_COUNT} โรงพยาบาล
+          </div>
+        </div>
+        <div className="pl-kpi pl-kpi-warn">
+          <div className="pl-kpi-label">
+            รอฉันเห็นชอบ <span className="en">MY APPROVAL</span>
+          </div>
+          <div className="pl-kpi-val num">{pendingMine} แผน</div>
+          <div className="pl-kpi-sub">AP-2026-000046 ใกล้หมดเวลา 14:30 น. · เตือน 50% เมื่อเหลือครึ่งเวลา</div>
+        </div>
+        <div className="pl-kpi">
+          <div className="pl-kpi-label">
+            รอออกเอกสาร <span className="en">XC-1</span>
+          </div>
+          <div className="pl-kpi-val num">{needDoc} แผน</div>
+          <div className="pl-kpi-sub">อนุมัติครบแล้ว ระบบสร้างใบส่งของให้พิมพ์ทันที</div>
+        </div>
+      </section>
+
+      <section className="card" style={{ padding: 0 }}>
+        <div className="tr-card-head">
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
+            {TABS.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                className={`tab ${tab === t.id ? 'tab-on' : ''}`}
+                onClick={() => setTab(t.id)}
+              >
+                {t.label} <span className="cnt">{t.id === 'pool' ? POOL_LOTS.length : plans.length}</span>
+              </button>
+            ))}
+            <span className="sub" style={{ marginLeft: 6 }}>
+              {tab === 'pool'
+                ? 'สินค้ายังอยู่ที่ รพ.ต้นทาง · เบิกใช้ไม่ได้จนกว่าจะส่งมอบ'
+                : 'กดแถวเพื่อดูสูตร F-22 / F-23 และตัดสินใจ'}
+            </span>
+          </div>
+        </div>
+
+        {tab === 'pool' ? (
+          <div className="ne-tablewrap">
+            <table className="tbl pl-tbl" aria-label="คลังกลาง">
+              <thead>
+                <tr>
+                  <th>ล็อต</th>
+                  <th>ยา</th>
+                  <th style={{ width: 110 }}>จำนวน</th>
+                  <th style={{ width: 110, textAlign: 'right' }}>มูลค่า</th>
+                  <th style={{ width: 170 }}>หมดอายุ</th>
+                  <th>ปล่อยโดย</th>
+                  <th style={{ width: 120 }}>สถานะ</th>
+                </tr>
+              </thead>
+              <tbody>
+                {POOL_LOTS.map((l) => (
+                  <tr key={l.id}>
+                    <td>
+                      <span className="code" style={{ fontWeight: 600, color: '#1D4ED8' }}>
+                        {l.id}
+                      </span>
+                    </td>
+                    <td>
+                      <b style={{ color: '#0F2A5C', fontWeight: 600 }}>{l.drug}</b>
+                      <div className="sub code">รหัส {l.code}</div>
+                    </td>
+                    <td className="num" style={{ fontWeight: 600, color: '#0F2A5C' }}>
+                      {l.qty} {l.unit}
+                    </td>
+                    <td style={{ textAlign: 'right' }} className="num">
+                      ฿{l.value.toLocaleString()}
+                    </td>
+                    <td>
+                      {l.expiry} <span className="sub num">· เหลือ {l.daysLeft} วัน</span>
+                    </td>
+                    <td>
+                      {l.from}
+                      <div className="sub">
+                        {l.releasedBy} · {l.releasedAt}
+                      </div>
+                    </td>
+                    <td>
+                      <span className="badge t-teal">ถูกกันไว้</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="ne-tablewrap">
+            <table className="tbl pl-tbl" aria-label="แผนจัดสรร">
+              <thead>
+                <tr>
+                  <th>แผน</th>
+                  <th>ยา</th>
+                  <th>ต้นทาง → ปลายทาง</th>
+                  <th style={{ width: 100, textAlign: 'right' }}>มูลค่า</th>
+                  <th style={{ width: 190 }}>ค่าขนส่ง / F-23</th>
+                  <th style={{ width: 190 }}>สถานะ</th>
+                </tr>
+              </thead>
+              <tbody>
+                {plans.map((p) => {
+                  const meta = planStatusMeta(p.status);
+                  return (
+                    <tr key={p.id} className={drawerOpen && sel?.id === p.id ? 'r-active' : ''}>
+                      <td>
+                        <button className="rowbtn" onClick={() => open(p.id)}>
+                          <span className="code" style={{ fontWeight: 600, color: '#1D4ED8' }}>
+                            {p.id}
+                          </span>
+                          <div className="sub">v{p.version}</div>
+                        </button>
+                      </td>
+                      <td>
+                        <button className="rowbtn" onClick={() => open(p.id)}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span className={`ved ved-${p.ved} ved-sm`}>{p.ved}</span>
+                            <b style={{ color: '#0F2A5C', fontWeight: 600 }}>{p.drug}</b>
+                          </div>
+                          <div className="sub num">
+                            {p.qty} {p.unit} · Lot {p.lotNo}
+                          </div>
+                        </button>
+                      </td>
+                      <td>
+                        {p.from} <span aria-hidden="true">→</span> {p.to}
+                        <div className="sub num">{p.distanceKm} กม.</div>
+                      </td>
+                      <td style={{ textAlign: 'right' }} className="num">
+                        ฿{p.totalValue.toLocaleString()}
+                      </td>
+                      <td>
+                        <div className="pl-ratio">
+                          <div className="pl-ratio-bar">
+                            <span
+                              style={{
+                                width: `${Math.min(100, (p.costRatioPct / 40) * 100)}%`,
+                                background: p.economical ? '#2563EB' : '#DC2626',
+                              }}
+                            />
+                            <i title={`เกณฑ์ ${COST_LIMIT_PCT}%`} />
+                          </div>
+                          <span className="num pl-ratio-num">
+                            ฿{p.transportCost.toLocaleString()} · {p.costRatioPct}%
+                          </span>
+                        </div>
+                      </td>
+                      <td>
+                        <span className={`badge ${meta.tone}`}>{meta.label}</span>
+                        {p.status === 'NEEDS_DISCUSSION' && (
+                          <div className="sub">ถูกตีกลับ · แก้แผนแล้วส่งใหม่</div>
+                        )}
+                        {!p.economical && p.status === 'PENDING_MY_APPROVAL' && (
+                          <div className="pl-warn-line">⚠ เกินเกณฑ์ {COST_LIMIT_PCT}% · ต้องเลือก 1 ใน 4 ทาง</div>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        <div className="tbl-foot">
+          <span>
+            {tab === 'pool'
+              ? `รวม ${POOL_LOTS.length} ล็อต · ฿${POOL_TOTAL_VALUE.toLocaleString()} · กันออกจากสต็อกใช้งานทั้งหมด (FR-F2a-013)`
+              : `รวม ${plans.length} แผน · รอฉันเห็นชอบ ${pendingMine} · ค่าขนส่งคำนวณจาก 300 + 8 บาท/กม. (+500 ค่าความเย็น)`}
+          </span>
+          <span className="num">อัปเดตล่าสุด 02:30 น. · JOB-06</span>
+        </div>
+      </section>
+
+      {drawerOpen && sel && (
+        <AllocationDrawer
+          key={sel.id}
+          plan={sel}
+          decision={decisions[sel.id]}
+          onApprove={() => approve(sel.id)}
+          onUneconomical={(label) => decideUneconomical(sel.id, label)}
+          onClose={() => setDrawerOpen(false)}
+        />
+      )}
+    </>
+  );
+}

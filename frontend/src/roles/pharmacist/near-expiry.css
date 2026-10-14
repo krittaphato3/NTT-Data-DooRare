@@ -1,0 +1,35 @@
+/* UI-07 Near-expiry review — values replicated from the design capture.
+   Table, tabs, drawer base styles are the shared ops primitives in index.css. */
+
+.ne-kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.ne-kpi { border: 1px solid; border-left-width: 4px; border-radius: 10px; padding: 12px 14px; }
+.ne-kpi-label { font-size: 12.5px; font-weight: 600; color: #334155; }
+.ne-kpi-label .en { font-size: 10.5px; letter-spacing: 0.04em; }
+.ne-kpi-val { font-size: 24px; line-height: 32px; font-weight: 700; margin-top: 2px; }
+.ne-kpi-sub { font-size: 12px; line-height: 17px; color: #64748B; margin-top: 2px; }
+
+.ne-tablewrap { overflow-x: auto; }
+.ne-tbl { min-width: 940px; }
+.ne-r-flag td:first-child { box-shadow: inset 3px 0 0 #DC2626; }
+
+.ne-bar { display: block; width: 100%; max-width: 150px; height: 6px; border-radius: 9999px; background: #E2E8F0; overflow: hidden; margin-top: 4px; }
+.ne-bar > span { display: block; height: 100%; border-radius: inherit; }
+
+.ne-adv-go { color: #1D4ED8; font-size: 12.5px; font-weight: 600; }
+.ne-adv-ok { color: #166534; font-size: 12.5px; }
+.ne-adv-kept { color: #64748B; font-size: 12.5px; }
+.ne-adv-dead { color: #B91C1C; font-size: 12.5px; font-weight: 600; }
+
+.ne-formula { margin-top: 4px; padding: 8px 10px; background: #EFF6FF; border: 1px solid #DBEAFE; border-radius: 8px; font-size: 13px; line-height: 20px; color: #1E3A8A; }
+
+.ne-decide { border: 1px solid #BFDBFE; background: #F8FAFF; border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+.ne-qtyrow { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px; color: #334155; }
+.ne-qtyinput { width: 84px; height: 34px; border: 1px solid #94A3B8; border-radius: 8px; padding: 0 8px; font: inherit; font-size: 14px; color: #0F2A5C; }
+.ne-reason { width: 100%; min-height: 60px; border: 1px solid #94A3B8; border-radius: 8px; padding: 8px 10px; font: inherit; font-size: 13px; color: #0F2A5C; resize: vertical; }
+
+.ne-done { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; border-radius: 10px; background: #F0FDF4; border: 1px solid #BBF7D0; font-size: 13px; line-height: 19px; color: #14532D; }
+
+.ne-hist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.ne-hist li { display: flex; flex-direction: column; border-left: 2px solid #E2E8F0; padding-left: 10px; }
+
+@media (max-width: 900px) { .ne-kpis { grid-template-columns: 1fr; } }
