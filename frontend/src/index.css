@@ -1513,3 +1513,228 @@ body.nav-open {
     transition: none;
   }
 }
+
+/* ==========================================================================
+   UI-02 Stock alert queue (แจ้งเตือนสต็อกและการพยากรณ์)
+   Page-scoped classes only — tokens/primitives (.card, .btn, .badge, .tab,
+   .qt, .ved, .t-*, .ug-*) come from the blocks above. Breakpoints match the
+   shell: <768 sort dropdown goes full width, <640 actions stack.
+   ========================================================================== */
+.sa-cards {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr));
+}
+.sa-card {
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+}
+a.sa-card:hover {
+  border-color: var(--border-strong);
+}
+.sa-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+.sa-card-title {
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--ink);
+  font-weight: 500;
+}
+.sa-card-num {
+  font-size: 28px;
+  line-height: 34px;
+  font-weight: 600;
+}
+.sa-card-sub {
+  font-size: 12px;
+  line-height: 17px;
+  color: var(--body);
+}
+.sa-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.sa-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+.sa-search {
+  flex: 1 1 220px;
+  min-width: 0;
+  max-width: 340px;
+  height: 40px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  color: var(--body);
+}
+.sa-search:focus-within {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.15);
+}
+.sa-search input {
+  border: 0;
+  outline: none;
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  color: var(--ink);
+  background: transparent;
+}
+.sa-search input:focus-visible {
+  outline: none;
+}
+.sa-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.sa-chip {
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 9999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--body);
+  font-size: 13px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.sa-chip:hover {
+  border-color: var(--border-strong);
+}
+.sa-chip-on,
+.sa-chip-on:hover {
+  background: var(--primary-soft);
+  border-color: var(--primary-border);
+  color: var(--primary-dark);
+}
+.sa-ved-chip {
+  width: 34px;
+  padding: 0;
+  justify-content: center;
+  font-family: Inter, sans-serif;
+  font-weight: 600;
+}
+.sa-sort-label {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+}
+.sa-sort {
+  height: 36px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  padding: 0 10px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--ink);
+  background: var(--surface);
+  max-width: 100%;
+}
+/* The 8-column table keeps its readable min-width and scrolls inside this box.
+   `contain: content` stops its scrollable overflow from stretching the page
+   (without it the document scroll area grows and the page pans sideways). */
+.sa-scroll {
+  contain: content;
+}
+.sa-bar {
+  position: relative;
+  height: 8px;
+  border-radius: 9999px;
+  background: #e2e8f0;
+  overflow: hidden;
+  min-width: 76px;
+  margin: 5px 0 4px;
+}
+.sa-bar span {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  border-radius: 9999px;
+}
+.sa-bar-mark {
+  position: absolute;
+  top: -3px;
+  width: 2px;
+  height: 14px;
+  border-radius: 2px;
+  background: var(--ink);
+}
+.sa-note {
+  font-size: 11.5px;
+  line-height: 16px;
+}
+.sa-alert-meta {
+  display: block;
+  margin-top: 3px;
+  font-size: 12px;
+  line-height: 17px;
+  color: var(--body);
+}
+.sa-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+.sa-links {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.sa-cell-num {
+  font-weight: 600;
+  color: var(--ink);
+}
+.sa-empty {
+  margin: 0;
+  padding: 24px;
+  text-align: center;
+  color: var(--body);
+  border-top: 1px solid var(--border);
+}
+
+@media (max-width: 767px) {
+  .sa-sort-label {
+    flex: 1 1 100%;
+  }
+  .sa-sort {
+    width: 100%;
+  }
+}
+
+@media (max-width: 639px) {
+  .sa-card-num {
+    font-size: 26px;
+    line-height: 32px;
+  }
+  .sa-actions {
+    align-items: stretch;
+  }
+  .sa-links {
+    justify-content: flex-start;
+  }
+}

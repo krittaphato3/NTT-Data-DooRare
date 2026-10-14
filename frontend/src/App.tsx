@@ -6,19 +6,22 @@ import { getNavForRole } from './data/navigation';
 import type { ShellNavEntry } from './data/navigation';
 import { ALERTS } from './roles/pharmacist/data/dashboard';
 import { DashboardPage } from './roles/pharmacist/pages/DashboardPage';
+import { StockAlertsPage } from './roles/pharmacist/pages/StockAlertsPage';
 import { WAREHOUSE_NOTIFICATIONS, WAREHOUSE_USER } from './roles/warehouse/data/session';
 import { TransportTrackingPage } from './roles/warehouse/pages/TransportTrackingPage';
 import type { TransportRole } from './roles/warehouse/pages/TransportTrackingPage';
 
 /**
- * No router yet: `?page=transport` shows Transport tracking (UI-14).
+ * No router yet: `?page=transport` shows Transport tracking (UI-14),
+ * `?page=alerts` shows the Stock alert queue (UI-02).
  * `&role=pharmacist` = read-only pharmacist view, otherwise the warehouse officer view.
  */
-function initialRoute(): { page: 'dashboard' | 'transport'; transportRole: TransportRole } {
+function initialRoute(): { page: 'dashboard' | 'transport' | 'alerts'; transportRole: TransportRole } {
   try {
     const q = new URLSearchParams(window.location.search);
+    const page = q.get('page');
     return {
-      page: q.get('page') === 'transport' ? 'transport' : 'dashboard',
+      page: page === 'transport' ? 'transport' : page === 'alerts' ? 'alerts' : 'dashboard',
       transportRole: q.get('role')?.toLowerCase() === 'pharmacist' ? 'PHARMACIST' : 'WAREHOUSE_OFFICER',
     };
   } catch {
@@ -32,6 +35,7 @@ function withLinks(items: ShellNavEntry[], role: string): ShellNavEntry[] {
   return items.map((e) => {
     if ('kind' in e) return e;
     if (e.key === 'tr') return { ...e, href: `?page=transport${suffix}` };
+    if (e.key === 'alerts') return { ...e, href: '?page=alerts' };
     if (e.key === 'dash' && role === 'PHARMACIST') return { ...e, href: '/' };
     return e;
   });
@@ -57,10 +61,12 @@ export default function App() {
   const [isAdmin] = useState(initialRole);
   const [route] = useState(initialRoute);
   const onTransport = route.page === 'transport';
+  const onAlerts = route.page === 'alerts';
   // The warehouse officer gets the ops top bar; the pharmacist keeps the standard shell.
   const ops = onTransport && route.transportRole === 'WAREHOUSE_OFFICER';
   const navRole = ops ? 'WAREHOUSE_OFFICER' : 'PHARMACIST';
-  const navItems = withLinks(getNavForRole(navRole, onTransport ? 'tr' : 'dash'), navRole);
+  const activeKey = onTransport ? 'tr' : onAlerts ? 'alerts' : 'dash';
+  const navItems = withLinks(getNavForRole(navRole, activeKey), navRole);
 
   // Mobile drawer: lock page scroll, close on Escape and when resizing to desktop.
   useEffect(() => {
@@ -105,7 +111,13 @@ export default function App() {
           user={ops ? WAREHOUSE_USER : undefined}
         />
         <main className="mainpad">
-          {onTransport ? <TransportTrackingPage role={route.transportRole} /> : <DashboardPage isAdmin={isAdmin} query={query} hospital={hospital} onHospital={setHospital} />}
+          {onTransport ? (
+            <TransportTrackingPage role={route.transportRole} />
+          ) : onAlerts ? (
+            <StockAlertsPage />
+          ) : (
+            <DashboardPage isAdmin={isAdmin} query={query} hospital={hospital} onHospital={setHospital} />
+          )}
         </main>
         {!ops && <Footer isAdmin={isAdmin} />}
       </div>
