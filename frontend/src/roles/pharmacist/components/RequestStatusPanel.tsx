@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { INCOMING, LENDING, ST_CLS, ST_ICON, UG_CLS, UG_ICON } from '../data/dashboard';
 import { fmtTime, useTick } from '../../../lib/time';
 import { Icon } from '../../../components/common/icons';
@@ -26,6 +26,14 @@ export function RequestStatusPanel({ query, hospital }: RequestStatusPanelProps)
   const [reqTab, setReqTab] = useState<'in' | 'out'>('in');
   const [status, setStatus] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<boolean>(false);
+  const listBody = useRef<HTMLDivElement>(null);
+  /** Show more must not grow the card: freeze the list height at click, then scroll. */
+  const [frozenBody, setFrozenBody] = useState<number | undefined>(undefined);
+  const applyExpanded = (next: boolean) => {
+    const el = listBody.current;
+    setFrozenBody(next && el ? Math.round(el.getBoundingClientRect().height) : undefined);
+    setExpanded(next);
+  };
   const tick = useTick();
   const q = query.trim().toLowerCase();
   const h = hospital !== ALL_HOSPITALS ? hospital : '';
@@ -39,8 +47,8 @@ export function RequestStatusPanel({ query, hospital }: RequestStatusPanelProps)
   });
   const count = (k: string) => list.filter((r) => r.st === k).length;
   const filterName = status !== null ? FLOW.concat(FAIL).find((f) => f.key === status)?.th ?? '' : '';
-  const resetPage = () => setExpanded(false);
-  const PAGE = 5;
+  const resetPage = () => applyExpanded(false);
+  const PAGE = 3;
   const visible = expanded ? rows : rows.slice(0, PAGE);
   const remaining = rows.length - visible.length;
 
@@ -124,73 +132,77 @@ export function RequestStatusPanel({ query, hospital }: RequestStatusPanelProps)
         </h3>
         <a href="#" className="link">ดูทั้งหมด</a>
       </div>
-      <div role="table" aria-label="คำขอล่าสุด" style={{ display: 'flex', flexDirection: 'column', flex: '1 1 auto', minHeight: 0 }}>
-        <div role="row" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: 8, padding: '6px 0', borderBottom: '1px solid #E2E8F0', fontSize: 12, lineHeight: '16px', fontWeight: 500 }}>
-          <span role="columnheader">คำขอ · ยา · จาก → ถึง</span>
-          <span role="columnheader" style={{ textAlign: 'right' }}>จำนวน</span>
-        </div>
-        <div className="equal-scroll">
+      <div aria-label="คำขอล่าสุด" style={{ display: 'flex', flexDirection: 'column', flex: '1 1 auto', minHeight: 0 }}>
+        <div ref={listBody} className="equal-scroll" style={{ maxHeight: 'none', height: expanded ? frozenBody : undefined }}>
         {visible.map((r) => {
           const left = (r.secs ?? 0) - tick;
           const urgent = r.st === 'pending' && left < 1800;
+          const stBadge = (
+            <span className={`badge ${ST_CLS[r.st]}`} title={r.stEn}>
+              <Icon name={ST_ICON[r.st] as IconName} className="ic14" />
+              {r.stTh}
+            </span>
+          );
+          const ugBadge = (
+            <span className={`badge ${UG_CLS[r.ug]}`}>
+              <Icon name={UG_ICON[r.ug] as IconName} className="ic14" />
+              {r.ugLabel}
+            </span>
+          );
           return (
-            <div key={r.id} role="row" style={{ padding: '12px 0', borderBottom: '1px solid #E2E8F0', background: urgent ? '#FFFBFB' : 'transparent' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: '4px 8px', alignItems: 'start' }}>
-                <div role="cell" style={{ minWidth: 0 }}>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '2px 8px' }}>
-                    <span className="num" style={{ fontSize: 12, color: '#1D4ED8', fontWeight: 500 }}>#{r.id}</span>
-                    <span style={{ fontWeight: 600, color: '#0F2A5C', fontSize: 13 }}>{r.drug}</span>
-                  </div>
-                  <div style={{ fontSize: 12, lineHeight: '18px', display: 'flex', alignItems: 'center', gap: 4 }}>
-                    {r.from} <Icon name="arrow" className="ic14" /> {r.to}
-                  </div>
-                </div>
-                <div role="cell" style={{ textAlign: 'right' }}>
-                  <span className="num" style={{ fontSize: 14, fontWeight: 600, color: '#0F2A5C' }}>{r.qty}</span>{' '}
-                  <span style={{ fontSize: 12 }}>{r.unit}</span>
-                </div>
+            <div
+              key={r.id}
+              style={{
+                padding: '12px 0',
+                borderBottom: '1px solid #E2E8F0',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 6,
+                background: urgent ? '#FFFBFB' : 'transparent',
+              }}
+            >
+              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '6px 8px' }}>
+                <span className="num" style={{ fontSize: 12.5, color: '#1D4ED8', fontWeight: 500 }}>#{r.id}</span>
+                {reqTab === 'in' ? stBadge : ugBadge}
+                {reqTab === 'in' ? ugBadge : stBadge}
+                <span style={{ flex: '1 1 0' }} />
+                {r.st === 'pending' && (
+                  <span className={`timer ${left < 1800 ? 'timer-crit' : 'timer-warn'}`}>
+                    <Icon name="clock" className="ic14" />
+                    เหลือ {fmtTime(left)}
+                  </span>
+                )}
               </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '6px 8px', marginTop: 8 }}>
-                <span role="cell" className={`badge ${UG_CLS[r.ug]}`}>
-                  <Icon name={UG_ICON[r.ug] as IconName} className="ic14" />
-                  {r.ugLabel}
+              <div style={{ fontSize: 14, color: '#0F2A5C' }}>
+                {reqTab === 'out' ? <>{r.to} ขอ </> : null}
+                <b style={{ fontWeight: 600 }}>{r.drug}</b>
+                {' · '}<span className="num">{r.qty}</span> {r.unit}
+              </div>
+              <div style={{ fontSize: 12, lineHeight: '18px', display: 'flex', alignItems: 'center', gap: 4 }}>
+                {r.from} <Icon name="arrow" className="ic14" /> {r.to}
+              </div>
+              {r.st === 'transit' && (
+                <span style={{ display: 'block', minWidth: 150 }}>
+                  <span style={{ display: 'flex', gap: 3 }}>
+                    {STEPS.map((_, i) => (
+                      <span key={i} className={`seg ${i < (r.step ?? 1) - 1 ? 'seg-done' : i === (r.step ?? 1) - 1 ? 'seg-cur' : 'seg-todo'}`} />
+                    ))}
+                  </span>
+                  <span style={{ display: 'flex', gap: 3, marginTop: 3 }}>
+                    {STEPS.map((l, i) => (
+                      <span key={l} className={`sl ${i < (r.step ?? 1) - 1 ? 'sl-done' : i === (r.step ?? 1) - 1 ? 'sl-cur' : 'sl-todo'}`}>{l}</span>
+                    ))}
+                  </span>
                 </span>
-                <span role="cell" className={`badge ${ST_CLS[r.st]}`} title={r.stEn}>
-                  <Icon name={ST_ICON[r.st] as IconName} className="ic14" />
-                  {r.stTh}
-                </span>
-                <span role="cell" style={{ flex: '1 1 140px', minWidth: 0 }}>
-                  {r.st === 'pending' && (
-                    <span className={`timer ${left < 1800 ? 'timer-crit' : 'timer-warn'}`}>
-                      <Icon name="clock" className="ic14" />
-                      เหลือ {fmtTime(left)}
-                    </span>
-                  )}
-                  {r.st === 'transit' && (
-                    <span style={{ display: 'block', minWidth: 150 }}>
-                      <span style={{ display: 'flex', gap: 3 }}>
-                        {STEPS.map((_, i) => (
-                          <span key={i} className={`seg ${i < (r.step ?? 1) - 1 ? 'seg-done' : i === (r.step ?? 1) - 1 ? 'seg-cur' : 'seg-todo'}`} />
-                        ))}
-                      </span>
-                      <span style={{ display: 'flex', gap: 3, marginTop: 3 }}>
-                        {STEPS.map((l, i) => (
-                          <span key={l} className={`sl ${i < (r.step ?? 1) - 1 ? 'sl-done' : i === (r.step ?? 1) - 1 ? 'sl-cur' : 'sl-todo'}`}>{l}</span>
-                        ))}
-                      </span>
-                    </span>
-                  )}
-                  {r.st !== 'pending' && r.st !== 'transit' && (
-                    <span style={{ fontSize: 12, lineHeight: '16px' }}>{r.note}</span>
-                  )}
-                </span>
-                <button className={`btn btn-sm ${r.actionPrimary ? 'btn-p' : 'btn-g'}`} style={{ marginLeft: 'auto' }}>
+              )}
+              {r.note && (
+                <div style={{ fontSize: 12.5, lineHeight: '18px', color: r.st === 'transit' ? '#1E40AF' : undefined }}>{r.note}</div>
+              )}
+              <div>
+                <button className={`btn btn-sm ${r.actionPrimary ? 'btn-p' : 'btn-g'}`}>
                   {r.action}
                 </button>
               </div>
-              {r.st === 'transit' && r.note && (
-                <div style={{ fontSize: 12, lineHeight: '16px', marginTop: 4, color: '#1E40AF' }}>{r.note}</div>
-              )}
             </div>
           );
         })}
@@ -204,13 +216,13 @@ export function RequestStatusPanel({ query, hospital }: RequestStatusPanelProps)
             type="button"
             className="tab"
             aria-expanded={expanded ? 'true' : 'false'}
-            onClick={() => setExpanded((v) => !v)}
+            onClick={() => applyExpanded(!expanded)}
             style={{ width: '100%', justifyContent: 'center', borderColor: '#E2E8F0' }}
           >
             {expanded ? (
               <span>แสดงน้อยลง <span style={{ color: '#94A3B8' }}>· Show less</span></span>
             ) : (
-              <span>แสดงเพิ่มเติม (เหลือ {remaining}) <span style={{ color: '#94A3B8' }}>· Show more</span></span>
+              <span>โหลดเพิ่มเติม (เหลือ {remaining}) <span style={{ color: '#94A3B8' }}>· Load more</span></span>
             )}
           </button>
           </div>

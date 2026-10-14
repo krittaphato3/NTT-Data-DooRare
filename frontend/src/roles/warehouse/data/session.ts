@@ -1,4 +1,3 @@
-import type { NavItem } from '../../../data/navigation';
 import type { UserProfile } from '../../../data/session';
 
 export const WAREHOUSE_USER: UserProfile = {
@@ -9,14 +8,6 @@ export const WAREHOUSE_USER: UserProfile = {
   hospitalLabel: 'โรงพยาบาลสมุทรปราการ',
   initial: 'ป',
 };
-
-/** Spec §15.1 UI catalogue, filtered for WAREHOUSE_OFFICER. */
-export const WAREHOUSE_NAV: NavItem[] = [
-  { th: 'ภาพรวม', en: 'Dashboard', icon: 'grid', active: false, badge: '' },
-  { th: 'ติดตามการขนส่ง', en: 'Transport tracking', icon: 'truck', active: true, badge: '3', badgeTone: 'grey' },
-  { th: 'เหตุฉุกเฉิน · ชุดยา', en: 'Incidents & kits', icon: 'siren', active: false, badge: '' },
-  { th: 'พิมพ์เอกสาร', en: 'Documents', icon: 'printer', active: false, badge: '' },
-];
 
 export const WAREHOUSE_NOTIFICATIONS = [
   { drug: 'TR-2026-000334 ถึงปลายทาง · รอยืนยันรับ', time: '18:58' },

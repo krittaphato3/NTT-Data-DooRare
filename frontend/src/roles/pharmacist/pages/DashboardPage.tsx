@@ -1,4 +1,5 @@
 import { AlertsPanel } from '../components/AlertsPanel';
+import { AgentSummaryPanel } from '../components/AgentSummaryPanel';
 import { BottomRow } from '../components/BottomRow';
 import { KpiRow } from '../components/KpiRow';
 import { MiddleRow } from '../components/MiddleRow';
@@ -24,6 +25,7 @@ export function DashboardPage({ isAdmin, query, hospital, onHospital }: Dashboar
       </section>
       <MiddleRow />
       <BottomRow />
+      <AgentSummaryPanel />
     </>
   );
 }

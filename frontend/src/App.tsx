@@ -2,10 +2,13 @@ import { useEffect, useState } from 'react';
 import { Footer } from './components/layout/Footer';
 import { Sidebar } from './components/layout/Sidebar';
 import { TopBar } from './components/layout/TopBar';
+import { getNavForRole, NAV } from './data/navigation';
 import { ALERTS } from './roles/pharmacist/data/dashboard';
 import { DashboardPage } from './roles/pharmacist/pages/DashboardPage';
-import { WAREHOUSE_NAV, WAREHOUSE_NOTIFICATIONS, WAREHOUSE_USER } from './roles/warehouse/data/session';
+import { WAREHOUSE_NOTIFICATIONS, WAREHOUSE_USER } from './roles/warehouse/data/session';
 import { TransportTrackingPage } from './roles/warehouse/pages/TransportTrackingPage';
+
+const WAREHOUSE_NAV_ITEMS = getNavForRole('WAREHOUSE_OFFICER', 'tr');
 
 /** No router yet: `?page=transport` shows the warehouse Transport tracking screen (UI-14). */
 function initialPage(): 'dashboard' | 'transport' {
@@ -65,11 +68,7 @@ export default function App() {
         collapsed={collapsed}
         onToggle={() => setCollapsed((v) => !v)}
         onNavigate={() => setNavOpen(false)}
-        {...(ops && {
-          nav: WAREHOUSE_NAV,
-          brand: { name: <>DooRare <span style={{ fontWeight: 500, color: '#475569' }}>ดูแร์</span></>, sub: 'เครือข่ายเขตสุขภาพที่ 6' },
-          footer: { title: 'ศูนย์ประสานยา เขตสุขภาพที่ 6', text: <>HIS นำเข้าล่าสุด <span className="num">06:10</span> น.</> },
-        })}
+        items={ops ? WAREHOUSE_NAV_ITEMS : NAV}
       />
       {navOpen && <button className="nav-scrim" aria-label="ปิดเมนู" onClick={() => setNavOpen(false)} />}
       <div className="content">

@@ -1,0 +1,609 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>DooRare – Dashboard</title>
+<script src="./vendor/react.js"></script>
+<script src="./vendor/react-dom.js"></script>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Noto+Sans+Thai:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F5F8FC}
+*{box-sizing:border-box}
+a{color:#1D4ED8}a:hover{color:#1E40AF}
+button,select,input,textarea{font-family:inherit}
+.num{font-family:Inter,"Noto Sans Thai",system-ui,sans-serif;font-variant-numeric:tabular-nums}
+.en{font-size:12px;line-height:16px;color:#94A3B8;font-weight:400}
+.card{background:#FFFFFF;border:1px solid #E2E8F0;border-radius:12px;box-shadow:0 1px 2px rgba(15,42,92,.04),0 2px 8px rgba(15,42,92,.05)}
+.ic{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.ic20{width:20px;height:20px}.ic14{width:14px;height:14px}.ic12{width:12px;height:12px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:40px;padding:0 16px;border-radius:8px;border:1px solid transparent;font-size:14px;font-weight:500;line-height:1;cursor:pointer;white-space:nowrap;text-decoration:none}
+.btn:focus-visible,.tab:focus-visible,.navlink:focus-visible,.icbtn:focus-visible,.tile:focus-visible,.dir:focus-visible,.sel:focus-visible,.link:focus-visible,.pg:focus-visible,.rowbtn:focus-visible{outline:2px solid #1D4ED8;outline-offset:2px}
+.btn-p{background:#1D4ED8;color:#FFFFFF}.btn-p:hover{background:#1E40AF;color:#FFFFFF}
+.btn-s{background:#FFFFFF;color:#1D4ED8;border-color:#94A3B8}.btn-s:hover{background:#EFF6FF;color:#1D4ED8}
+.btn-g{background:transparent;color:#475569}.btn-g:hover{background:#F1F5F9}
+.btn-sm{height:32px;padding:0 12px;font-size:13px}
+.icbtn{width:32px;height:32px;display:inline-grid;place-items:center;border-radius:8px;border:1px solid transparent;background:transparent;color:#475569;cursor:pointer}
+.icbtn:hover{background:#F1F5F9;border-color:#E2E8F0}
+.link{color:#1D4ED8;text-decoration:none;font-weight:500;font-size:13px;background:none;border:0;padding:0;cursor:pointer}
+.link:hover{text-decoration:underline}
+.navlink{display:flex;align-items:center;gap:10px;min-height:40px;padding:6px 10px;border-radius:8px;color:#475569;text-decoration:none;font-size:14px;line-height:18px}
+.navlink:hover{background:#F1F5F9;color:#0F2A5C}
+.nav-on,.nav-on:hover{background:#EFF6FF;color:#1D4ED8;font-weight:600}
+.navlink .en{display:block}.nav-on .en{color:#1D4ED8}
+.navbadge{margin-left:auto;font-family:Inter,sans-serif;font-size:11px;font-weight:600;line-height:18px;min-width:20px;text-align:center;border-radius:9999px;padding:0 6px;background:#FEE2E2;color:#B91C1C}
+.badge{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 8px;border-radius:6px;font-size:12px;font-weight:500;line-height:1;white-space:nowrap}
+.st-pending{background:#FEF3C7;color:#92400E}
+.st-approved{background:#DCFCE7;color:#166534}
+.st-transit{background:#DBEAFE;color:#1E40AF}
+.st-delivered{background:#CCFBF1;color:#115E59}
+.st-rejected{background:#FEE2E2;color:#991B1B}
+.st-timeout{background:#F1F5F9;color:#475569}
+.ug-critical{background:#FEE2E2;color:#B91C1C;font-weight:600}
+.ug-urgent{background:#FFEDD5;color:#9A3412}
+.ug-normal{background:#EEF2F7;color:#475569}
+.ved{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:20px;padding:0 5px;border-radius:6px;border:1.5px solid;background:#FFFFFF;font-family:Inter,sans-serif;font-size:11px;font-weight:600;line-height:1}
+.ved-V{border-color:#DC2626;color:#B91C1C}.ved-E{border-color:#D97706;color:#92400E}.ved-D{border-color:#94A3B8;color:#475569}
+.dir{flex:1 1 220px;display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:10px;border:1px solid #E2E8F0;background:#FFFFFF;cursor:pointer;text-align:left;color:#475569}
+.dir:hover{border-color:#94A3B8}
+.dir-on,.dir-on:hover{border:2px solid #1D4ED8;padding:11px 15px;background:#EFF6FF}
+.tile{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:10px 12px;border-radius:8px;border:1px solid #E2E8F0;background:#FFFFFF;cursor:pointer;text-align:left;min-width:0}
+.tile:hover{border-color:#94A3B8}
+.tile-on{border-width:2px;padding:9px 11px}
+.tile-pending.tile-on{border-color:#92400E;background:#FFFBEB}
+.tile-approved.tile-on{border-color:#166534;background:#F0FDF4}
+.tile-transit.tile-on{border-color:#1E40AF;background:#EFF6FF}
+.tile-delivered.tile-on{border-color:#115E59;background:#F0FDFA}
+.tile-rejected.tile-on{border-color:#991B1B;background:#FEF2F2}
+.tile-timeout.tile-on{border-color:#475569;background:#F8FAFC}
+.tl{font-size:12px;line-height:16px;font-weight:500;display:flex;align-items:center;gap:4px;white-space:nowrap}
+.c-pending{color:#92400E}.c-approved{color:#166534}.c-transit{color:#1E40AF}.c-delivered{color:#115E59}.c-rejected{color:#991B1B}.c-timeout{color:#475569}
+.sel{height:36px;border:1px solid #94A3B8;border-radius:8px;background:#FFFFFF;color:#0F2A5C;font-size:13px;padding:0 28px 0 10px;cursor:pointer;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 9px center}
+.sel-on{border-color:#1D4ED8;background-color:#EFF6FF;color:#1E40AF;font-weight:500}
+.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:13px;line-height:18px;min-width:1160px}
+.tbl th{position:sticky;top:0;z-index:2;background:#F1F5F9;text-align:left;font-weight:500;color:#475569;padding:0 10px;height:40px;border-bottom:1px solid #E2E8F0;white-space:nowrap;font-size:12.5px}
+.tbl td{padding:10px;border-bottom:1px solid #E2E8F0;color:#475569;vertical-align:middle;background:#FFFFFF}
+.tbl tbody tr:hover td{background:#F5F9FF}
+.tbl tr.r-mine td{background:#FFFBEB}
+.tbl tr.r-active td{background:#DBEAFE}
+.r{text-align:right}
+.rowbtn{border:0;background:none;padding:0;cursor:pointer;text-align:left;font:inherit;color:inherit}
+.timer{font-family:Inter,sans-serif;font-variant-numeric:tabular-nums;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+.timer-warn{color:#92400E}.timer-crit{color:#B91C1C}
+.seg{height:6px;border-radius:9999px;flex:1}
+.seg-done{background:#1D4ED8}.seg-cur{background:#93C5FD}.seg-todo{background:#E2E8F0}
+.pg{min-width:32px;height:32px;padding:0 8px;border-radius:8px;border:1px solid #E2E8F0;background:#FFFFFF;color:#475569;font-size:13px;cursor:pointer;font-family:Inter,sans-serif}
+.pg-on{background:#1D4ED8;border-color:#1D4ED8;color:#FFFFFF;font-weight:600}
+.dl{display:grid;grid-template-columns:120px minmax(0,1fr);gap:6px 12px;margin:0;font-size:13px;line-height:20px}
+.dl dt{color:#475569}.dl dd{margin:0;color:#0F2A5C}
+
+.t-amber{background:#FEF3C7;color:#92400E}.t-green{background:#DCFCE7;color:#166534}.t-blue{background:#DBEAFE;color:#1E40AF}.t-teal{background:#CCFBF1;color:#115E59}.t-red{background:#FEE2E2;color:#991B1B}.t-grey{background:#F1F5F9;color:#475569}.t-orange{background:#FFEDD5;color:#9A3412}
+.code{font-family:Inter,ui-monospace,monospace;font-size:11.5px;letter-spacing:.01em;color:#475569;font-variant-numeric:tabular-nums}
+.sec-h{margin:0;font-size:16px;line-height:26px;font-weight:600;color:#0F2A5C}
+.sub{font-size:12px;line-height:16px;color:#475569}
+.navgrp{padding:10px 10px 2px;font-size:11px;line-height:14px;font-weight:600;color:#475569;letter-spacing:.04em}
+.pill{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border-radius:6px;font-size:12px;font-weight:500;white-space:nowrap}
+.agentbox{background:#EFF6FF;border:1px solid #DBEAFE;border-radius:12px}
+.bar{position:relative;height:8px;border-radius:9999px;background:#E2E8F0;overflow:hidden}
+.bar>span{position:absolute;left:0;top:0;bottom:0;border-radius:9999px}
+.tabbtn{height:40px;padding:0 4px;margin-right:20px;border:0;border-bottom:2px solid transparent;background:none;cursor:pointer;font-size:14px;color:#475569;font-weight:500}
+.tabbtn:hover{color:#0F2A5C}
+.tab-on,.tab-on:hover{border-bottom-color:#1D4ED8;color:#1D4ED8;font-weight:600}
+.tabbtn:focus-visible,.chipbtn:focus-visible,.icbtn:focus-visible{outline:2px solid #1D4ED8;outline-offset:2px}
+.chipbtn{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border-radius:9999px;border:1px solid #94A3B8;background:#FFFFFF;color:#0F2A5C;font-size:13px;cursor:pointer;white-space:nowrap}
+.chipbtn:hover{background:#F1F5F9}
+.chip-on,.chip-on:hover{background:#1D4ED8;border-color:#1D4ED8;color:#FFFFFF}
+.chip-n{font-family:Inter,sans-serif;font-size:11.5px;font-weight:600;padding:0 6px;border-radius:9999px;background:#F1F5F9;color:#475569;line-height:18px}
+.chip-on .chip-n{background:rgba(255,255,255,.22);color:#FFFFFF}
+.tile2{display:flex;flex-direction:column;gap:4px;padding:14px 16px;border-radius:12px;border:1px solid #E2E8F0;background:#FFFFFF;text-decoration:none;color:#475569;min-width:0}
+.tile2:hover{border-color:#94A3B8}
+.tile2:focus-visible{outline:2px solid #1D4ED8;outline-offset:2px}
+.listrow{display:flex;align-items:center;gap:12px;padding:12px 16px;border-top:1px solid #E2E8F0}
+.btn-d{background:#B91C1C;color:#FFFFFF}.btn-d:hover{background:#991B1B;color:#FFFFFF}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.skel{border-radius:6px;background:linear-gradient(90deg,#EEF2F7 25%,#F8FAFC 50%,#EEF2F7 75%);background-size:200% 100%;animation:sk 1.4s ease-in-out infinite}
+@keyframes sk{0%{background-position:200% 0}100%{background-position:-200% 0}}
+@media (prefers-reduced-motion:reduce){.skel{animation:none}}
+.inp{height:36px;border:1px solid #94A3B8;border-radius:8px;padding:0 10px;font-size:13px;color:#0F2A5C;background:#FFFFFF}
+.inp:focus{outline:2px solid #1D4ED8;outline-offset:0;border-color:#1D4ED8}
+textarea.inp{height:auto;padding:8px 10px;line-height:20px;resize:vertical}
+.srt{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+.dash-grid{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:20px}
+.dash-half{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px}
+.tiles{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
+@media (max-width:1200px){.dash-grid,.dash-half{grid-template-columns:minmax(0,1fr)}.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.qt{width:100%;border-collapse:separate;border-spacing:0;font-size:13px;line-height:18px}
+.qt th{text-align:left;font-weight:500;color:#475569;font-size:12px;padding:8px 10px;background:#F8FAFC;border-bottom:1px solid #E2E8F0;white-space:nowrap}
+.qt td{padding:10px;border-bottom:1px solid #E2E8F0;vertical-align:middle}
+.qt tr:last-child td{border-bottom:0}
+
+</style>
+</helmet>
+
+<div style="position: relative; display: flex; flex-wrap: wrap; min-height: 100vh; background: #F5F8FC; font-family: 'Noto Sans Thai', 'IBM Plex Sans Thai', Inter, system-ui, sans-serif; color: #475569; font-size: 14px; line-height: 22px;">
+
+<!-- SIDEBAR · nav = UI catalogue (spec §15.1), filtered by role -->
+<aside class="side" aria-label="เมนูหลัก" style="flex: 1 1 248px; max-width: 100%; background: #FFFFFF; border-right: 1px solid #E2E8F0; padding: 16px 12px; display: flex; flex-direction: column; gap: 12px;">
+  <div style="display: flex; align-items: center; justify-content: space-between; padding: 4px 6px 4px 8px;">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <span style="width: 32px; height: 32px; border-radius: 8px; background: #1D4ED8; color: #FFFFFF; display: grid; place-items: center;"><svg class="ic" viewBox="0 0 24 24" style="stroke-width: 2.5" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></span>
+      <div><div style="font-size: 16px; line-height: 20px; font-weight: 600; color: #0F2A5C;">DooRare <span style="font-weight: 500; color: #475569;">ดูแร์</span></div><div class="en">เครือข่ายเขตสุขภาพที่ 6</div></div>
+    </div>
+    <button class="icbtn" aria-label="ย่อเมนู / Collapse sidebar"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h18v16H3zM9 4v16M15 10l-2 2 2 2"></path></svg></button>
+  </div>
+  <nav class="sidenav" style="display: flex; flex-direction: column; gap: 2px;">
+    <sc-for list="{{nav}}" as="n" hint-placeholder-count="10">
+      <sc-if value="{{n.isGroup}}" hint-placeholder-val="{{false}}"><div class="navgrp">{{n.th}}</div></sc-if>
+      <sc-if value="{{n.isLink}}" hint-placeholder-val="{{true}}">
+      <a href="{{n.href}}" class="navlink {{n.cls}}" aria-current="{{n.current}}" title="{{n.ui}}">
+        <svg class="ic ic20" viewBox="0 0 24 24" aria-hidden="true"><path d="{{n.icon}}"></path></svg>
+        <span><span>{{n.th}}</span><span class="en">{{n.en}}</span></span>
+        <sc-if value="{{n.hasBadge}}" hint-placeholder-val="{{false}}"><span class="navbadge" style="background: {{n.bBg}}; color: {{n.bFg}};">{{n.badge}}</span></sc-if>
+      </a>
+      </sc-if>
+    </sc-for>
+  </nav>
+  <div class="sidefoot" style="margin-top: auto; padding: 12px; border-radius: 8px; background: #F5F8FC; font-size: 12px; line-height: 18px;">
+    <div style="color: #0F2A5C; font-weight: 500;">ศูนย์ประสานยา เขตสุขภาพที่ 6</div>
+    <div>HIS นำเข้าล่าสุด <span class="num">06:10</span> น.</div>
+  </div>
+</aside>
+
+<div style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column;">
+  <!-- TOP BAR -->
+  <header style="min-height: 64px; background: #FFFFFF; border-bottom: 1px solid #E2E8F0; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 12px 32px;">
+    <label style="flex: 1 1 240px; max-width: 380px; height: 40px; border: 1px solid #94A3B8; border-radius: 8px; display: flex; align-items: center; gap: 8px; padding: 0 12px;">
+      <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 19a8 8 0 1 0 0-16a8 8 0 1 0 0 16zM21 21l-4.3-4.3"></path></svg>
+      <input type="search" placeholder="ค้นหายา รหัสยา เลขคำขอ BR-…" aria-label="ค้นหาทั้งระบบ" style="border: 0; outline: none; flex: 1; min-width: 0; font-size: 14px; color: #0F2A5C; background: transparent;">
+    </label>
+    <span style="flex: 1 1 0;"></span>
+    <span class="pill" title="SEC-002: ผู้ใช้เห็นเฉพาะสต็อกของโรงพยาบาลตัวเอง" style="background: #F1F5F9; color: #475569;"><svg class="ic ic14" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 11h12v10H6zM8 11V7a4 4 0 0 1 8 0v4"></path></svg>{{scopeLabel}}</span>
+    <span class="pill" style="background: {{agentPill.bg}}; color: {{agentPill.fg}};" title="{{agentPill.title}}"><svg class="ic ic14" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"></path></svg>{{agentPill.label}}</span>
+    <span role="group" aria-label="ภาษา" style="display: inline-flex; border: 1px solid #94A3B8; border-radius: 8px; overflow: hidden; height: 32px;"><button aria-pressed="true" style="border: 0; padding: 0 10px; background: #1D4ED8; color: #FFFFFF; font-size: 12px; font-weight: 600; cursor: pointer;">TH</button><button aria-pressed="false" style="border: 0; padding: 0 10px; background: #FFFFFF; color: #475569; font-size: 12px; cursor: pointer;">EN</button></span>
+    <button class="icbtn" aria-label="การแจ้งเตือน {{notif}} รายการ" style="width: 40px; height: 40px; position: relative;"><svg class="ic ic20" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.9 1.9 0 0 0 3.4 0"></path></svg><span class="num" style="position: absolute; top: 3px; right: 1px; min-width: 18px; height: 18px; border-radius: 9999px; background: #B91C1C; color: #FFFFFF; font-size: 11px; font-weight: 600; line-height: 18px; padding: 0 4px;">{{notif}}</span></button>
+    <button class="btn btn-g" style="height: 44px; padding: 0 8px 0 4px; gap: 10px;" aria-label="เมนูผู้ใช้"><span style="width: 36px; height: 36px; border-radius: 9999px; background: #DBEAFE; color: #1E40AF; display: grid; place-items: center; font-weight: 600;">{{user.initial}}</span><span style="display: flex; flex-direction: column; align-items: flex-start; gap: 2px;"><span style="font-size: 13px; line-height: 16px; color: #0F2A5C;">{{user.name}}</span><span class="code" style="font-size: 10.5px; line-height: 14px; padding: 0 6px; border-radius: 4px; border: 1px solid #94A3B8;">{{user.roleCode}}</span></span></button>
+  </header>
+
+  <main class="mainpad" style="padding: 20px 32px 32px; display: flex; flex-direction: column; gap: 20px; width: 100%; max-width: 1440px;">
+
+    <!-- PAGE HEADER -->
+    <section style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px;">
+      <div>
+        <div class="sub">UI-01 · ภาพรวม</div>
+        <h1 style="margin: 2px 0 0; font-size: 28px; line-height: 40px; font-weight: 600; color: #0F2A5C;">สวัสดี {{user.name}} <span style="font-size: 16px; font-weight: 400; color: #475569;">/ Dashboard</span></h1>
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; font-size: 13px;">
+          <span style="display: inline-flex; align-items: center; gap: 6px; color: #0F2A5C; font-weight: 500;"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 21V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v16M2 21h20M10 7h4M12 5v4M9 21v-4h6v4"></path></svg>รพ.สมุทรปราการ · {{user.roleTh}}</span>
+          <span>ข้อมูล ณ <span class="num">19:11</span> น. วันอังคาร 13 ต.ค. 2569 · สต็อกจาก HIS นำเข้า <span class="num">06:10</span> น.</span>
+        </div>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+        <button class="btn btn-s" onClick="{{openHist}}"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5M12 7v5l4 2"></path></svg>ประวัติ</button>
+        <sc-if value="{{canApprove}}" hint-placeholder-val="{{true}}"><a href="Requests.dc.html" class="btn btn-p"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>สร้างคำขอยืมเอง <span style="font-weight: 400; opacity: .85;">UI-10</span></a></sc-if>
+      </div>
+    </section>
+
+    <sc-if value="{{agentOff}}" hint-placeholder-val="{{false}}">
+      <div role="status" style="display: flex; align-items: flex-start; gap: 10px; padding: 12px 16px; border-radius: 10px; background: #FFFBEB; border: 1px solid #FDE68A; font-size: 13px; line-height: 20px; color: #0F2A5C;">
+        <svg class="ic ic20" viewBox="0 0 24 24" aria-hidden="true" style="color: #92400E; flex: none;"><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01"></path></svg>
+        <span><b style="font-weight: 600;">Agent ถูกปิดโดยผู้ดูแลระบบ (kill switch)</b> · สรุปและร่างข้อความจะใช้แม่แบบแทน (สถานะ FALLBACK) · การคำนวณ R, ลำดับผู้ให้ยืม และตัวจับเวลายังทำงานตามปกติ</span>
+      </div>
+    </sc-if>
+
+    <!-- TILES (UI-01: alerts by severity, pending approvals, near-expiry, open incidents, value saved) -->
+    <section class="tiles" aria-label="สรุปตัวเลขหลัก">
+      <a href="Stock.dc.html" class="tile2" style="border-left: 4px solid #B91C1C; padding-left: 13px;">
+        <span style="display: flex; align-items: center; gap: 6px; font-size: 13px; color: #0F2A5C; font-weight: 500;"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.9 1.9 0 0 0 3.4 0"></path></svg>แจ้งเตือนสต็อกที่เปิดอยู่</span>
+        <span class="num" style="font-size: 28px; line-height: 36px; font-weight: 600; color: #0F2A5C;">{{tiles.alerts}}</span>
+        <span style="display: flex; flex-wrap: wrap; gap: 4px;"><span class="badge ug-critical">เร่งด่วนมาก {{tiles.vu}}</span><span class="badge ug-urgent">เร่งด่วน {{tiles.u}}</span><span class="badge ug-normal">ปกติ {{tiles.n}}</span></span>
+      </a>
+      <a href="Requests.dc.html" class="tile2" style="border-left: 4px solid #D97706; padding-left: 13px;">
+        <span style="display: flex; align-items: center; gap: 6px; font-size: 13px; color: #0F2A5C; font-weight: 500;"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 22h14M5 2h14M17 22v-4.2a2 2 0 0 0-.6-1.4L12 12l-4.4 4.4a2 2 0 0 0-.6 1.4V22M7 2v4.2a2 2 0 0 0 .6 1.4L12 12l4.4-4.4a2 2 0 0 0 .6-1.4V2"></path></svg>รอการอนุมัติ</span>
+        <span class="num" style="font-size: 28px; line-height: 36px; font-weight: 600; color: #0F2A5C;">2</span>
+        <span class="sub">คำขอยืม 1 · แผนจัดสรรยาใกล้หมดอายุ 1</span>
+      </a>
+      <a href="#" class="tile2">
+        <span style="display: flex; align-items: center; gap: 6px; font-size: 13px; color: #0F2A5C; font-weight: 500;"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 2v4M16 2v4M3 6h18v15H3zM3 10h18M10 14l4 4M14 14l-4 4"></path></svg>ใกล้หมดอายุ (≤ 180 วัน)</span>
+        <span class="num" style="font-size: 28px; line-height: 36px; font-weight: 600; color: #0F2A5C;">3 <span style="font-size: 14px; font-weight: 500; color: #475569;">ล็อต</span></span>
+        <span class="sub">รอตรวจ · มูลค่า <span class="num">฿1,830</span> · กันไว้แล้ว 1 ล็อต</span>
+      </a>
+      <a href="#" class="tile2">
+        <span style="display: flex; align-items: center; gap: 6px; font-size: 13px; color: #0F2A5C; font-weight: 500;"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 18v-6a5 5 0 1 1 10 0v6M5 21h14v-3H5zM12 2v2M4.2 5.2l1.4 1.4M19.8 5.2l-1.4 1.4"></path></svg>เหตุฉุกเฉินที่เปิดอยู่</span>
+        <span class="num" style="font-size: 28px; line-height: 36px; font-weight: 600; color: #0F2A5C;">0</span>
+        <span class="sub">ล่าสุด INC-2026-000014 · ปิดแล้ว 12 ต.ค.</span>
+      </a>
+      <a href="#" class="tile2" title="F-31 value_saved = expiry_avoided + overstock_reduction − transport_cost">
+        <span style="display: flex; align-items: center; gap: 6px; font-size: 13px; color: #0F2A5C; font-weight: 500;"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v18h18M7 16v-4M12 16V8M17 16v-7"></path></svg>มูลค่าที่ประหยัดได้</span>
+        <span class="num" style="font-size: 28px; line-height: 36px; font-weight: 600; color: #166534;">฿8,800</span>
+        <span class="sub">12 เดือน · <span class="num">4,500 + 5,000 − 700</span></span>
+      </a>
+    </section>
+
+    <!-- ROW: ALERT QUEUE + AGENT DAILY SUMMARY -->
+    <div class="dash-grid">
+      <section class="card" aria-labelledby="hq">
+        <div style="padding: 14px 16px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px;">
+          <div><h2 id="hq" class="sec-h">แจ้งเตือนสต็อกที่ต้องดู <span class="en">Stock alert queue · UI-02</span></h2><div class="sub">5 รายการเร่งด่วนที่สุดจาก 8 · ยา D แจ้งเตือนอย่างเดียว ไม่เข้ากระบวนการยืม</div></div>
+          <a href="Stock.dc.html" class="link">ดูทั้งหมด 8 →</a>
+        </div>
+        <div style="overflow-x: auto;">
+        <table class="qt">
+          <thead><tr><th>ยา</th><th>แจ้งเตือน</th><th class="r">คงเหลือ · ใช้ได้อีก</th><th>สถานะ</th><th class="r"><span class="srt">การดำเนินการ</span></th></tr></thead>
+          <tbody>
+            <sc-for list="{{alerts}}" as="a" hint-placeholder-count="5">
+              <tr>
+                <td style="min-width: 200px;"><div style="display: flex; align-items: flex-start; gap: 6px;"><span class="ved ved-{{a.ved}}" style="margin-top: 1px;">{{a.ved}}</span><span style="font-weight: 600; color: #0F2A5C;">{{a.name}}</span></div><span class="code">{{a.code}} · ABC {{a.abc}}</span></td>
+                <td><span class="badge {{a.sev.cls}}"><svg class="ic ic14" viewBox="0 0 24 24" aria-hidden="true"><path d="{{a.sev.icon}}"></path></svg>{{a.sev.label}}</span><span style="display: block; font-size: 12px; margin-top: 2px;">{{a.typeTh}}</span></td>
+                <td class="r" style="white-space: nowrap;"><span class="num" style="font-weight: 600; color: #0F2A5C;">{{a.stock}}</span> <span style="font-size: 12px;">{{a.unit}}</span><span style="display: block; font-size: 12px;"><span class="num" style="font-weight: 600; color: {{a.daysColor}};">{{a.days}}</span> วัน</span></td>
+                <td><span class="badge {{a.st.cls}}" title="{{a.st.code}}"><svg class="ic ic14" viewBox="0 0 24 24" aria-hidden="true"><path d="{{a.st.icon}}"></path></svg>{{a.st.label}}</span><sc-if value="{{a.hasReq}}" hint-placeholder-val="{{false}}"><a href="Requests.dc.html" class="code" style="display: block; color: #1D4ED8; margin-top: 2px; white-space: nowrap;">{{a.req}}</a></sc-if></td>
+                <td class="r" style="white-space: nowrap; width: 1%;">
+                  <sc-if value="{{a.showCreate}}" hint-placeholder-val="{{false}}"><a href="Stock.dc.html" class="btn btn-p btn-sm">{{a.createLabel}}</a></sc-if>
+                  <sc-if value="{{a.showView}}" hint-placeholder-val="{{false}}"><a href="{{a.viewHref}}" class="btn btn-sm {{a.viewCls}}">{{a.viewLabel}}</a></sc-if>
+                  <span style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 4px;">
+                    <sc-if value="{{a.showAck}}" hint-placeholder-val="{{false}}"><button class="link" onClick="{{a.ack}}" style="font-size: 12.5px;">รับทราบ</button></sc-if>
+                    <sc-if value="{{a.showSnooze}}" hint-placeholder-val="{{false}}"><button class="link" onClick="{{a.snooze}}" title="เลื่อนการแจ้งเตือน 4 ชั่วโมง" style="font-size: 12.5px;">เลื่อน 4 ชม.</button></sc-if>
+                  </span>
+                </td>
+              </tr>
+            </sc-for>
+          </tbody>
+        </table>
+        </div>
+      </section>
+
+      <section class="agentbox" aria-labelledby="hag" style="padding: 16px 18px; display: flex; flex-direction: column; gap: 10px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+          <h2 id="hag" style="margin: 0; display: inline-flex; align-items: center; gap: 6px; color: #1D4ED8; font-size: 14px; font-weight: 600;"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"></path></svg>{{sum.title}}</h2>
+          <span class="badge {{sum.confCls}}">{{sum.conf}}</span>
+        </div>
+        <div class="sub">{{sum.meta}}</div>
+        <p style="margin: 0; font-size: 14px; line-height: 23px; color: #0F2A5C;">{{sum.text}}</p>
+        <div>
+          <div style="font-size: 12px; color: #475569; margin-bottom: 4px;">ยาที่เสี่ยง (at_risk)</div>
+          <div style="display: flex; flex-wrap: wrap; gap: 6px;"><sc-for list="{{sum.risk}}" as="r" hint-placeholder-count="3"><span class="badge" style="background: #FFFFFF; border: 1px solid #DBEAFE; color: #0F2A5C;">{{r}}</span></sc-for></div>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 6px;"><sc-for list="{{sum.flags}}" as="f" hint-placeholder-count="1"><span class="badge t-red code" style="color: #991B1B;">{{f}}</span></sc-for></div>
+        <div style="display: flex; align-items: flex-start; gap: 6px; font-size: 12px; line-height: 17px; color: #1E40AF; border-top: 1px solid #DBEAFE; padding-top: 10px;"><svg class="ic ic14" viewBox="0 0 24 24" aria-hidden="true" style="margin-top: 1px;"><path d="M6 11h12v10H6zM8 11V7a4 4 0 0 1 8 0v4"></path></svg><span>อ่านอย่างเดียว · Agent ไม่คำนวณตัวเลข ทุกตัวเลขคัดลอกจากผลของระบบและตรวจซ้ำแล้ว · <button class="link" style="font-size: 12px;">ดูข้อมูลที่ใช้</button></span></div>
+      </section>
+    </div>
+
+    <!-- ROW: MY REQUESTS + LENDER QUEUE (or transport for warehouse) -->
+    <sc-if value="{{notWarehouse}}" hint-placeholder-val="{{true}}">
+    <div class="dash-half">
+      <section class="card" aria-labelledby="hmr">
+        <div style="padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+          <div><h2 id="hmr" class="sec-h">คำขอยืมของเราที่ยังเปิดอยู่ <span class="en">My borrow requests · UI-05</span></h2><div class="sub">เราเป็นผู้ยืม · 3 รายการ</div></div>
+          <a href="Requests.dc.html" class="link">ดูทั้งหมด →</a>
+        </div>
+        <sc-for list="{{mine}}" as="m" hint-placeholder-count="3">
+          <div style="padding: 12px 16px; border-top: 1px solid #E2E8F0; display: flex; flex-direction: column; gap: 6px;">
+            <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px;">
+              <a href="Requests.dc.html" class="code" style="color: #1D4ED8; font-weight: 600; font-size: 12.5px;">{{m.id}}</a>
+              <span class="badge {{m.st.cls}}" title="{{m.st.code}}"><svg class="ic ic14" viewBox="0 0 24 24" aria-hidden="true"><path d="{{m.st.icon}}"></path></svg>{{m.st.label}}</span>
+              <span class="badge {{m.sev.cls}}">{{m.sev.label}}</span>
+              <span style="flex: 1;"></span>
+              <sc-if value="{{m.hasTimer}}" hint-placeholder-val="{{false}}"><span class="timer {{m.timerCls}}"><svg class="ic ic14" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20a10 10 0 1 0 0-20zM12 6v6l4 2"></path></svg>{{m.timer}}</span></sc-if>
+            </div>
+            <div style="font-size: 14px; color: #0F2A5C;"><b style="font-weight: 600;">{{m.drug}}</b> · <span class="num">{{m.qty}}</span> {{m.unit}}</div>
+            <div style="font-size: 12.5px; line-height: 18px;">{{m.line}}</div>
+            <sc-if value="{{m.hasStop}}" hint-placeholder-val="{{false}}">
+              <div style="display: flex; align-items: center; gap: 8px; font-size: 12px;"><span style="white-space: nowrap;">กฎหยุด</span><div class="bar" style="flex: 1;" role="img" aria-label="{{m.stopAria}}"><span style="width: {{m.stopW}}; background: #1D4ED8;"></span></div><span class="num" style="white-space: nowrap; color: #0F2A5C;">{{m.stopText}}</span></div>
+            </sc-if>
+            <sc-if value="{{m.hasBtn}}" hint-placeholder-val="{{false}}"><div><a href="{{m.href}}" class="btn btn-sm {{m.btnCls}}">{{m.btn}}</a></div></sc-if>
+          </div>
+        </sc-for>
+      </section>
+
+      <section class="card" aria-labelledby="hlq">
+        <div style="padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+          <div><h2 id="hlq" class="sec-h">รอเราตอบคำขอยืม <span class="en">Lender queue · UI-06</span></h2><div class="sub">โรงพยาบาลอื่นขอยืมจากเรา · ไม่ตอบภายในเวลา = ส่งต่อผู้ให้ยืมถัดไปอัตโนมัติ</div></div>
+          <a href="RequestsLender.dc.html" class="link">เปิดคิว →</a>
+        </div>
+        <sc-for list="{{lend}}" as="l" hint-placeholder-count="2">
+          <div style="padding: 12px 16px; border-top: 1px solid #E2E8F0; display: flex; flex-direction: column; gap: 6px;">
+            <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px;">
+              <span class="code" style="color: #0F2A5C; font-weight: 600; font-size: 12.5px;">{{l.id}}</span>
+              <span class="badge {{l.sev.cls}}">{{l.sev.label}}</span>
+              <span class="badge t-grey code" style="font-size: 10.5px;">{{l.ctx}}</span>
+              <span style="flex: 1;"></span>
+              <span class="timer {{l.timerCls}}" title="ครบกำหนด {{l.due}}"><svg class="ic ic14" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20a10 10 0 1 0 0-20zM12 6v6l4 2"></path></svg>เหลือ {{l.timer}}</span>
+            </div>
+            <div style="font-size: 14px; color: #0F2A5C;">{{l.from}} ขอ <b style="font-weight: 600;">{{l.drug}}</b> · <span class="num">{{l.qty}}</span> {{l.unit}}</div>
+            <div style="font-size: 12.5px; line-height: 18px;">{{l.line}}</div>
+            <sc-if value="{{canApprove}}" hint-placeholder-val="{{true}}"><div><a href="RequestsLender.dc.html" class="btn btn-p btn-sm">ตอบคำขอ</a></div></sc-if>
+          </div>
+        </sc-for>
+      </section>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{isWarehouse}}" hint-placeholder-val="{{false}}">
+      <section class="card" aria-labelledby="htr">
+        <div style="padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+          <div><h2 id="htr" class="sec-h">งานขนส่งที่ต้องทำวันนี้ <span class="en">Transport tasks · UI-14</span></h2><div class="sub">สต็อกตัดออกเมื่อขึ้นรถ (LOADED) และรับเข้าเมื่อปลายทางยืนยันรับ (RECEIVED)</div></div>
+          <a href="Shipments.dc.html" class="link">เปิดหน้าขนส่ง →</a>
+        </div>
+        <sc-for list="{{tasks}}" as="t" hint-placeholder-count="4">
+          <div class="listrow">
+            <span class="code" style="color: #0F2A5C; font-weight: 600; width: 128px;">{{t.id}}</span>
+            <span class="badge {{t.st.cls}}"><svg class="ic ic14" viewBox="0 0 24 24" aria-hidden="true"><path d="{{t.st.icon}}"></path></svg>{{t.st.label}}</span>
+            <span style="flex: 1; min-width: 0; font-size: 13px; color: #0F2A5C;">{{t.text}}</span>
+            <a href="Shipments.dc.html" class="btn btn-sm {{t.btnCls}}">{{t.btn}}</a>
+          </div>
+        </sc-for>
+      </section>
+    </sc-if>
+
+    <!-- ROW: RETURNS + NEAR-EXPIRY -->
+    <div class="dash-half">
+      <section class="card" aria-labelledby="hret">
+        <div style="padding: 14px 16px;">
+          <h2 id="hret" class="sec-h">ภาระคืนยา <span class="en">Return obligations</span></h2>
+          <div class="sub">คืนเป็นยาตัวเดิม จำนวนเท่าเดิมภายใน 30 วัน (คืนเป็นเงินไม่ได้) · เตือนก่อนครบ 7 วันและ 1 วัน</div>
+        </div>
+        <div style="padding: 0 16px 4px; font-size: 12px; font-weight: 600; color: #0F2A5C;">เราต้องคืน</div>
+        <sc-for list="{{owe}}" as="o" hint-placeholder-count="4">
+          <div class="listrow" style="padding: 10px 16px;">
+            <span style="flex: 1; min-width: 0;">
+              <span style="display: block; font-size: 13px; color: #0F2A5C;"><b style="font-weight: 600;">{{o.drug}}</b> <span class="num">{{o.qty}}</span> {{o.unit}} → {{o.to}}</span>
+              <span style="display: block; font-size: 12px;">{{o.ref}} · {{o.mode}} · ครบกำหนด {{o.due}}</span>
+            </span>
+            <span class="badge {{o.st.cls}}"><svg class="ic ic14" viewBox="0 0 24 24" aria-hidden="true"><path d="{{o.st.icon}}"></path></svg>{{o.st.label}}</span>
+          </div>
+        </sc-for>
+        <div style="padding: 10px 16px 4px; font-size: 12px; font-weight: 600; color: #0F2A5C; border-top: 1px solid #E2E8F0;">รอรับคืน</div>
+        <div class="listrow" style="padding: 10px 16px 14px; border-top: 0;">
+          <span style="flex: 1; min-width: 0;"><span style="display: block; font-size: 13px; color: #0F2A5C;"><b style="font-weight: 600;">AMLOdipine 5 mg tab</b> <span class="num">300</span> เม็ด ← รพ.บางเสาธง</span><span style="display: block; font-size: 12px;">BR-2026-000115 · คืนเป็นยาเดิม · ครบกำหนด 8 พ.ย.</span></span>
+          <span class="badge t-amber"><svg class="ic ic14" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7v6h6M21 17a9 9 0 0 0-15-6.7L3 13"></path></svg>รอคืน</span>
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="hne">
+        <div style="padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+          <div><h2 id="hne" class="sec-h">ยาใกล้หมดอายุรอตรวจ <span class="en">Near-expiry review · UI-07</span></h2><div class="sub">ล็อตที่เหลืออายุ ≤ 180 วัน · ระบบประเมินว่าใช้ทันหรือไม่จากอัตราใช้</div></div>
+          <a href="#" class="link">เปิด →</a>
+        </div>
+        <sc-for list="{{nearx}}" as="x" hint-placeholder-count="3">
+          <div class="listrow" style="align-items: flex-start;">
+            <span style="flex: 1; min-width: 0;">
+              <span style="display: block; font-size: 13px; color: #0F2A5C;"><b style="font-weight: 600;">{{x.drug}}</b> · ล็อต <span class="code">{{x.lot}}</span></span>
+              <span style="display: block; font-size: 12px;"><span class="num">{{x.qty}}</span> {{x.unit}} · หมดอายุ {{x.exp}} (<span class="num">{{x.days}}</span> วัน) · มูลค่า <span class="num">฿{{x.value}}</span></span>
+              <span style="display: block; font-size: 12px; color: {{x.fColor}}; font-weight: 500;">{{x.feas}}</span>
+            </span>
+            <sc-if value="{{canApprove}}" hint-placeholder-val="{{true}}"><button class="btn btn-sm {{x.btnCls}}">{{x.btn}}</button></sc-if>
+          </div>
+        </sc-for>
+        <div class="listrow" style="background: #F8FAFC; border-radius: 0 0 12px 12px;">
+          <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 11h12v10H6zM8 11V7a4 4 0 0 1 8 0v4"></path></svg>
+          <span style="flex: 1; font-size: 12.5px; line-height: 18px;">Omeprazole 40 mg ล็อต <span class="code">OMP-2403</span> <span class="num">180</span> vial <b style="font-weight: 600; color: #0F2A5C;">ถูกกันไว้</b> · อยู่ในแผน AP-2026-000045 (ไม่นับเป็นสต็อกใช้ได้/ให้ยืมได้)</span>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<!-- AUDIT HISTORY DRAWER (every screen, spec §15) -->
+<sc-if value="{{histOpen}}" hint-placeholder-val="{{false}}">
+<aside class="drawerwrap" aria-label="ประวัติการเปลี่ยนแปลง" style="position: absolute; top: 64px; right: 0; bottom: 0; width: 420px; z-index: 40; background: #FFFFFF; border-left: 1px solid #E2E8F0; box-shadow: -8px 0 24px rgba(15,42,92,0.10); overflow-y: auto;">
+  <div style="padding: 16px 20px; border-bottom: 1px solid #E2E8F0; display: flex; align-items: flex-start; justify-content: space-between; gap: 8px;">
+    <div><h2 class="sec-h">ประวัติการเปลี่ยนแปลง <span class="en">Audit history</span></h2><div class="sub">{{histScope}}</div></div>
+    <button class="icbtn" aria-label="ปิด / Close" onClick="{{closeHist}}" style="border-color: #E2E8F0;"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"></path></svg></button>
+  </div>
+  <div style="margin: 12px 20px 0; padding: 8px 10px; border-radius: 8px; background: #F8FAFC; border: 1px solid #E2E8F0; font-size: 12px; line-height: 18px; display: flex; gap: 8px;"><svg class="ic ic14" viewBox="0 0 24 24" aria-hidden="true" style="margin-top: 2px;"><path d="M6 11h12v10H6zM8 11V7a4 4 0 0 1 8 0v4"></path></svg><span>บันทึกแบบ hash-chain แก้ไขหรือลบไม่ได้ · บทบาทแสดงตามที่ผู้ใช้ถือในเวลานั้น</span></div>
+  <ol style="list-style: none; margin: 0; padding: 8px 20px 24px;">
+    <sc-for list="{{hist}}" as="h" hint-placeholder-count="6">
+      <li style="padding: 10px 0; border-bottom: 1px solid #E2E8F0; display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 10px;">
+        <span class="num" style="font-size: 12px; color: #0F2A5C;">{{h.t}}</span>
+        <span style="min-width: 0;">
+          <span style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px;"><span style="font-size: 13px; color: #0F2A5C; font-weight: 500;">{{h.who}}</span><span class="badge {{h.cls}}" style="height: 18px; font-size: 11px;">{{h.role}}</span></span>
+          <span style="display: block; font-size: 12.5px; line-height: 18px;">{{h.text}}</span>
+          <span class="code" style="font-size: 10.5px;">{{h.code}}</span>
+        </span>
+      </li>
+    </sc-for>
+  </ol>
+</aside>
+</sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"role": {"editor": "enum", "options": ["PHARMACIST", "PROCUREMENT_OFFICER", "WAREHOUSE_OFFICER", "HOSPITAL_ADMIN"], "default": "PHARMACIST"}, "agentOff": {"editor": "boolean", "default": false}, "$preview": {"width": 1440, "height": 1900}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { tick: 0, done: {}, hist: false };
+  }
+  componentDidMount() { this._t = setInterval(() => this.setState({ tick: this.state.tick + 1 }), 1000); }
+  componentWillUnmount() { clearInterval(this._t); }
+  fmt(s) { s = Math.max(0, s); const p = (n) => (n < 10 ? '0' : '') + n; return p(Math.floor(s / 3600)) + ':' + p(Math.floor((s % 3600) / 60)) + ':' + p(s % 60); }
+
+  lib(role, active, agentOff) {
+    const C = 'M12 2a10 10 0 1 0 0 20a10 10 0 1 0 0-20z';
+    const P = {
+      grid: 'M3 3h7v9H3zM14 3h7v5h-7zM14 12h7v9h-7zM3 16h7v5H3z',
+      box: 'M7.5 4.3l9 5.2M21 8a2 2 0 0 0-1-1.7l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.7l7 4a2 2 0 0 0 2 0l7-4a2 2 0 0 0 1-1.7zM3.3 7L12 12l8.7-5M12 22V12',
+      bell: 'M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.9 1.9 0 0 0 3.4 0',
+      inbox: 'M22 12h-6l-2 3h-4l-2-3H2M5.5 5.1L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.5-6.9A2 2 0 0 0 16.8 4H7.2a2 2 0 0 0-1.7 1.1z',
+      hand: 'M18 11V6a2 2 0 0 0-4 0v5M14 10V4a2 2 0 0 0-4 0v6M10 10.5V6a2 2 0 0 0-4 0v8M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.9-6-2.4l-3.6-3.6a2 2 0 0 1 2.8-2.8L7 15',
+      calx: 'M8 2v4M16 2v4M3 6h18v15H3zM3 10h18M10 14l4 4M14 14l-4 4',
+      layers: 'M12 2L2 7l10 5 10-5zM2 17l10 5 10-5M2 12l10 5 10-5',
+      siren: 'M7 18v-6a5 5 0 1 1 10 0v6M5 21h14v-3H5zM12 2v2M4.2 5.2l1.4 1.4M19.8 5.2l-1.4 1.4',
+      truck: 'M2 6h12v10H2zM14 9h4l4 4v3h-8M6 20a2 2 0 1 0 0-4a2 2 0 1 0 0 4zM18 20a2 2 0 1 0 0-4a2 2 0 1 0 0 4z',
+      file: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h5',
+      link: 'M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7',
+      gear: 'M12 15a3 3 0 1 0 0-6a3 3 0 1 0 0 6zM19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z',
+      shield: 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10zM9 12l2 2 4-4',
+      chart: 'M3 3v18h18M7 16v-4M12 16V8M17 16v-7',
+      hour: 'M5 22h14M5 2h14M17 22v-4.2a2 2 0 0 0-.6-1.4L12 12l-4.4 4.4a2 2 0 0 0-.6 1.4V22M7 2v4.2a2 2 0 0 0 .6 1.4L12 12l4.4-4.4a2 2 0 0 0 .6-1.4V2',
+      checkc: C + 'M8.5 12l2.5 2.5 4.5-5',
+      xc: C + 'M15 9l-6 6M9 9l6 6',
+      clock: C + 'M12 6v6l4 2',
+      alertc: C + 'M12 8v4M12 16h.01',
+      minusc: C + 'M8 12h8',
+      info: C + 'M12 16v-4M12 8h.01',
+      tri: 'M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01',
+      pkg: 'M16 16l2 2 4-4M21 10V8a2 2 0 0 0-1-1.7l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.7l7 4a2 2 0 0 0 2 0l2-1.1M3.3 7L12 12l8.7-5M12 22V12',
+      inArrow: 'M17 7L7 17M7 9v8h8',
+      outArrow: 'M7 17L17 7M9 7h8v8',
+      check: 'M5 12l5 5L20 7',
+      x: 'M18 6L6 18M6 6l12 12',
+      plus: 'M12 5v14M5 12h14',
+      minus: 'M5 12h14',
+      spark: 'M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z',
+      lock: 'M6 11h12v10H6zM8 11V7a4 4 0 0 1 8 0v4',
+      history: 'M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5M12 7v5l4 2',
+      camera: 'M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3zM12 17a4 4 0 1 0 0-8a4 4 0 1 0 0 8z',
+      wifiOff: 'M2 2l20 20M8.5 16.5a5 5 0 0 1 7 0M2 8.8a15 15 0 0 1 4.2-2.6M10.7 5.1A15 15 0 0 1 22 8.8M5 12.9a10 10 0 0 1 5.2-2.8M19 12.9a10 10 0 0 0-2.3-1.7M12 20h.01',
+      refresh: 'M21 12a9 9 0 0 1-15.5 6.3L3 16M3 12a9 9 0 0 1 15.5-6.3L21 8M21 3v5h-5M3 21v-5h5',
+      printer: 'M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z',
+      undo: 'M3 7v6h6M21 17a9 9 0 0 0-15-6.7L3 13',
+      moon: 'M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z',
+      eye: 'M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12zM12 15a3 3 0 1 0 0-6a3 3 0 1 0 0 6z',
+      edit: 'M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z',
+      chevR: 'M9 18l6-6-6-6',
+      chevD: 'M6 9l6 6 6-6',
+      ext: 'M15 3h6v6M10 14L21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6',
+      coin: C + 'M15 9.4a3 2.4 0 0 0-3-1.4c-1.7 0-3 .9-3 2s1.3 1.8 3 2 3 .9 3 2-1.3 2-3 2a3 2.4 0 0 1-3-1.4M12 6v2M12 16v2',
+      send: 'M22 2L11 13M22 2l-7 20-4-9-9-4z',
+      upload: 'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12',
+      dot: 'M12 12h.01',
+      blood: 'M12 2.7l5.7 5.6a8 8 0 1 1-11.3 0z',
+    };
+    const H = { HA: 'รพ.สมุทรปราการ', HB: 'รพ.บางพลี', HC: 'รพ.พระสมุทรเจดีย์ฯ', HD: 'รพ.บางบ่อ', HE: 'รพ.บางเสาธง' };
+    const TONE = { amber: 't-amber', green: 't-green', blue: 't-blue', teal: 't-teal', red: 't-red', grey: 't-grey', orange: 't-orange' };
+    const M = {
+      REQ: { DRAFT: ['ฉบับร่าง', 'grey', P.edit], PENDING_APPROVAL: ['รออนุมัติ', 'amber', P.hour], APPROVED: ['อนุมัติแล้ว', 'green', P.checkc], IN_PROGRESS: ['กำลังขอยืม', 'blue', P.send], PARTIALLY_FULFILLED: ['ได้บางส่วน', 'blue', P.pkg], FULFILLED: ['ได้ครบแล้ว', 'teal', P.pkg], ESCALATED: ['ส่งต่อผู้ดูแล', 'orange', P.tri], CLOSED_UNFULFILLED: ['ปิด · ไม่ได้ยา', 'red', P.xc], CANCELLED: ['ยกเลิก', 'grey', P.minusc] },
+      LEG: { PENDING: ['รอส่ง', 'grey', P.hour], SENT: ['รอตอบกลับ', 'amber', P.hour], ACCEPTED: ['ตอบรับ', 'green', P.checkc], PARTIAL: ['ให้บางส่วน', 'green', P.checkc], REJECTED: ['ปฏิเสธ', 'red', P.xc], TIMED_OUT: ['หมดเวลา', 'grey', P.clock], CANCELLED: ['ยกเลิก', 'grey', P.minusc], LOADED: ['ขึ้นรถแล้ว', 'blue', P.box], IN_TRANSIT: ['กำลังขนส่ง', 'blue', P.truck], RECEIVED: ['รับยาแล้ว', 'teal', P.pkg] },
+      TR: { WAITING_DISPATCH: ['รอขึ้นรถ', 'amber', P.hour], LOADED: ['ขึ้นรถแล้ว', 'blue', P.box], IN_TRANSIT: ['กำลังเดินทาง', 'blue', P.truck], ARRIVED: ['ถึงปลายทาง · รอรับ', 'green', P.checkc], RECEIVED: ['รับของแล้ว', 'teal', P.pkg], CANCELLED: ['ยกเลิก', 'grey', P.minusc] },
+      AL: { OPEN: ['เปิด', 'amber', P.bell], ACKNOWLEDGED: ['รับทราบแล้ว', 'blue', P.eye], LINKED_TO_REQUEST: ['ผูกคำขอแล้ว', 'green', P.link], SNOOZED: ['เลื่อนเตือน', 'grey', P.moon], RESOLVED: ['แก้ไขแล้ว', 'teal', P.checkc], AUTO_CLOSED: ['ปิดอัตโนมัติ', 'teal', P.checkc] },
+      ALT: { LOW_STOCK: 'สต็อกต่ำ', OVERSTOCK: 'สต็อกเกิน', DATA_STALE: 'ข้อมูลเก่า', LOW_CONFIDENCE: 'พยากรณ์ไม่มั่นใจ' },
+      RET: { OPEN: ['รอคืน', 'amber', P.undo], REMINDED: ['เตือนแล้ว', 'amber', P.bell], RETURNED: ['คืนครบแล้ว', 'teal', P.checkc], OVERDUE: ['เกินกำหนด', 'red', P.tri], WAIVED: ['ยกเว้นแล้ว', 'grey', P.minusc] },
+      CONF: { HIGH: ['มั่นใจสูง', 'green'], MEDIUM: ['มั่นใจปานกลาง', 'amber'], LOW: ['มั่นใจต่ำ', 'red'] },
+      MAP: { VERIFIED: ['VERIFIED', 'green', P.checkc], SUGGESTED: ['รอยืนยัน', 'amber', P.hour], UNMATCHED: ['ยังไม่จับคู่', 'grey', P.minusc], REJECTED: ['ปฏิเสธ', 'red', P.xc] },
+    };
+    const SEV = { VERY_URGENT: ['เร่งด่วนมาก', 'ug-critical', P.tri], URGENT: ['เร่งด่วน', 'ug-urgent', P.alertc], NORMAL: ['ปกติ', 'ug-normal', P.minusc] };
+    const bdg = (map, code) => { const d = M[map][code]; return { label: d[0], cls: TONE[d[1]], icon: d[2] || P.dot, code }; };
+    const sev = (code) => ({ label: SEV[code][0], cls: SEV[code][1], icon: SEV[code][2], code });
+    const ROLES = {
+      PHARMACIST: { th: 'เภสัชกร', name: 'ภก.ณัฐวุฒิ ศรีสุข', initial: 'ณ', nav: ['dash', 'alerts', 'req', 'lend', 'exp', 'pool', 'inc', 'tr', 'doc', 'rep'] },
+      PROCUREMENT_OFFICER: { th: 'เจ้าหน้าที่พัสดุ', name: 'คุณวรรณา ทองดี', initial: 'ว', nav: ['dash', 'alerts', 'req', 'doc', 'rep'] },
+      WAREHOUSE_OFFICER: { th: 'เจ้าหน้าที่คลัง', name: 'คุณประเสริฐ ใจงาม', initial: 'ป', nav: ['dash', 'tr', 'inc', 'doc'] },
+      DRIVER: { th: 'พนักงานขับรถ', name: 'คุณสมชาย แก้วกล้า', initial: 'ส', nav: ['tr'] },
+      HOSPITAL_ADMIN: { th: 'ผู้ดูแลโรงพยาบาล', name: 'ภญ.อรอุมา พรหมมา', initial: 'อ', nav: ['dash', 'alerts', 'req', 'lend', 'exp', 'pool', 'inc', 'tr', 'doc', 'rep', '|', 'cfg', 'aud'] },
+    };
+    const R = ROLES[role] || ROLES.PHARMACIST;
+    const NAV = {
+      dash: ['ภาพรวม', 'Dashboard', 'UI-01', P.grid, 'Main.dc.html', ''],
+      alerts: ['แจ้งเตือนสต็อก', 'Stock alerts · Forecast', 'UI-02 · UI-03', P.bell, 'Stock.dc.html', '8'],
+      req: ['คำขอยืมของเรา', 'Borrow requests', 'UI-04 · UI-05 · UI-10', P.inbox, 'Requests.dc.html', '1'],
+      lend: ['คิวตอบคำขอยืม', 'Lender queue', 'UI-06', P.hand, 'RequestsLender.dc.html', '2'],
+      exp: ['ยาใกล้หมดอายุ', 'Near-expiry review', 'UI-07', P.calx, '#', '3'],
+      pool: ['คลังกลาง · แผนจัดสรร', 'Pool & allocation', 'UI-08 · UI-09', P.layers, '#', '1'],
+      inc: ['เหตุฉุกเฉิน · ชุดยา', 'Incidents & kits', 'UI-11 – UI-13', P.siren, '#', ''],
+      tr: ['ติดตามการขนส่ง', 'Transport tracking', 'UI-14', P.truck, 'Shipments.dc.html', '3'],
+      doc: ['พิมพ์เอกสาร', 'Documents', 'UI-15', P.printer, '#', ''],
+      rep: ['รายงานมูลค่า', 'Reports · Value', 'UI-19', P.chart, '#', ''],
+      cfg: ['ตั้งค่า · Kill switch', 'Configuration', 'UI-17', P.gear, '#', ''],
+      aud: ['บันทึกตรวจสอบ', 'Audit log', 'UI-18', P.shield, '#', ''],
+    };
+    const red = { alerts: 1, lend: 1, req: 1 };
+    const nav = R.nav.map((k) => {
+      if (k === '|') return { isGroup: true, isLink: false, th: 'ผู้ดูแลระบบ' };
+      const d = NAV[k];
+      const on = k === active;
+      return { isGroup: false, isLink: true, th: d[0], en: d[1], ui: d[2], icon: d[3], href: d[4], cls: on ? 'nav-on' : '', current: on ? 'page' : 'false', hasBadge: d[5] !== '', badge: d[5], bBg: red[k] ? '#FEE2E2' : '#F1F5F9', bFg: red[k] ? '#B91C1C' : '#475569' };
+    });
+    const agentPill = agentOff
+      ? { label: 'Agent ปิดอยู่ · ใช้แม่แบบ', bg: '#FEF3C7', fg: '#92400E', title: 'Kill switch เปิด (UI-17): ระบบใช้ข้อความแม่แบบแทน Agent — สถานะ FALLBACK' }
+      : { label: 'Agent พร้อม', bg: '#EFF6FF', fg: '#1E40AF', title: 'Agent ทำหน้าที่สรุปและร่างข้อความเท่านั้น ตัวเลขทั้งหมดคำนวณโดยระบบ' };
+    return { C, P, H, M, bdg, sev, nav, agentPill, user: { name: R.name, initial: R.initial, roleCode: role, roleTh: R.th }, scopeLabel: 'เห็นเฉพาะข้อมูล รพ.สมุทรปราการ', roleNav: R.nav };
+  }
+
+  renderVals() {
+    const S = this.state;
+    const role = this.props.role ?? 'PHARMACIST';
+    const agentOff = !!this.props.agentOff;
+    const L = this.lib(role, 'dash', agentOff);
+    const canApprove = role === 'PHARMACIST' || role === 'HOSPITAL_ADMIN';
+    const isWarehouse = role === 'WAREHOUSE_OFFICER';
+    const D = [{"k": "adr", "code": "1000147", "name": "ADRENaline 1 mg/mL inj (HAD)", "type": "DRUG", "unit": "AMP", "price": 7.75, "ved": "V", "abc": "B", "stock": 15, "inc": 0, "u": 10, "L": 3, "sigma": 4, "method": "MA_ES", "pattern": "REGULAR", "conf": "OK", "hist": 1460, "p50": 70, "p90": 88, "p95": 96, "rop": 41.43, "map": "VERIFIED", "decision": "borrow", "alert": {"type": "LOW_STOCK", "sev": "VERY_URGENT", "status": "LINKED_TO_REQUEST", "since": "19:02", "req": "BR-2026-000125"}, "lots": [{"lot": "AD24L118", "qty": 9, "exp": "30 เม.ย. 2027", "days": 199, "held": false, "note": "", "lendable": true}, {"lot": "AD25A031", "qty": 6, "exp": "30 ก.ย. 2027", "days": 352, "held": false, "note": "", "lendable": true}], "past": [58, 64, 61, 66, 70, 63, 68, 72, 69, 74, 71, 70], "f50": [70, 71, 72, 72], "f90": [88, 89, 90, 90], "f95": [96, 97, 98, 98], "days": 1.5, "tt": 96, "central": "", "mn": null, "mx": null, "held": 0}, {"k": "alp", "code": "1002160", "name": "ALprostadil 500 mcg/mL inj (CASE)", "type": "DRUG", "unit": "AMP", "price": 6010, "ved": "V", "abc": "A", "stock": 3, "inc": 0, "u": 0.5, "L": 7, "sigma": null, "method": "QUANTILE_LGBM", "pattern": "INTERMITTENT", "conf": "OK", "hist": 1095, "p50": 4, "p90": 6, "p95": 7, "rop": 7, "map": "VERIFIED", "decision": "borrow", "alert": {"type": "LOW_STOCK", "sev": "URGENT", "status": "OPEN", "since": "14:15", "req": ""}, "lots": [{"lot": "PG24K07", "qty": 3, "exp": "31 ก.ค. 2027", "days": 291, "held": false, "note": "", "lendable": true}], "past": [2, 5, 0, 4, 3, 6, 1, 4, 5, 2, 4, 3], "f50": [4, 4, 4, 4], "f90": [6, 6, 6, 6], "f95": [7, 7, 7, 7], "days": 6.0, "tt": 7, "central": "", "mn": null, "mx": null, "held": 0}, {"k": "ten", "code": "1002875", "name": "Tenecteplase 50 mg inj", "type": "DRUG", "unit": "VIAL", "price": 18500, "ved": "V", "abc": "A", "stock": 4, "inc": 0, "u": 0.2, "L": 7, "sigma": null, "method": "COLD_START", "pattern": "INTERMITTENT", "conf": "LOW_CONFIDENCE", "hist": 41, "p50": 2, "p90": 3, "p95": 4, "rop": 3, "map": "VERIFIED", "decision": "none", "alert": {"type": "LOW_CONFIDENCE", "sev": "NORMAL", "status": "ACKNOWLEDGED", "since": "12 ต.ค.", "req": ""}, "lots": [{"lot": "TN25F02", "qty": 4, "exp": "30 มิ.ย. 2028", "days": 626, "held": false, "note": "", "lendable": true}], "past": [0, 0, 0, 0, 0, 0, 1, 2, 1, 1, 2, 1], "f50": [2, 2, 2, 2], "f90": [3, 3, 3, 3], "f95": [4, 4, 4, 4], "days": 20.0, "tt": 4, "central": "", "mn": null, "mx": null, "held": 0}, {"k": "nor", "code": "1000588", "name": "NORepinephrine 4 mg/4 mL inj", "type": "DRUG", "unit": "AMP", "price": 45, "ved": "V", "abc": "B", "stock": 48, "inc": 0, "u": 6, "L": 3, "sigma": 2.5, "method": "MA_ES", "pattern": "REGULAR", "conf": "OK", "hist": 1460, "p50": 42, "p90": 50, "p95": 55, "rop": 25.14, "map": "VERIFIED", "decision": "ahead", "alert": null, "lots": [{"lot": "NE25C11", "qty": 20, "exp": "31 มี.ค. 2028", "days": 535, "held": false, "note": "", "lendable": true}, {"lot": "NE25B02", "qty": 10, "exp": "28 ก.พ. 2028", "days": 503, "held": false, "note": "", "lendable": true}, {"lot": "NE25A19", "qty": 18, "exp": "31 ม.ค. 2028", "days": 475, "held": false, "note": "", "lendable": true}], "past": [38, 41, 44, 40, 39, 45, 43, 41, 44, 46, 42, 43], "f50": [42, 42, 43, 43], "f90": [50, 50, 51, 51], "f95": [55, 55, 56, 56], "days": 8.0, "tt": 55, "central": "", "mn": null, "mx": null, "held": 0}, {"k": "prc", "code": "BLD-PRC-O", "name": "PRC group O (packed red cells)", "type": "BLOOD", "unit": "UNIT", "price": 0, "ved": "V", "abc": "–", "stock": 12, "inc": 0, "u": 1.5, "L": null, "sigma": null, "method": "–", "pattern": "–", "conf": "OK", "hist": 0, "p50": null, "p90": null, "p95": null, "rop": null, "map": "VERIFIED", "decision": "blood", "alert": null, "lots": [{"lot": "O+ 6612", "qty": 8, "exp": "2 พ.ย. 2026", "days": 20, "held": false, "note": "", "lendable": false}, {"lot": "O+ 6630", "qty": 4, "exp": "9 พ.ย. 2026", "days": 27, "held": false, "note": "", "lendable": false}], "past": [], "f50": [], "f90": [], "f95": [], "days": 8.0, "tt": null, "central": "", "mn": null, "mx": null, "held": 0}, {"k": "fu120", "code": "1000017", "name": "5-FU 120 SYRINGE", "type": "DRUG", "unit": "SYRINGE", "price": 120, "ved": "E", "abc": "A", "stock": 10, "inc": 0, "u": 8, "L": 3, "sigma": 3, "method": "MA_ES", "pattern": "REGULAR", "conf": "OK", "hist": 1460, "p50": 56, "p90": 66, "p95": 71, "rop": 30.65, "map": "VERIFIED", "decision": "borrow", "alert": {"type": "LOW_STOCK", "sev": "URGENT", "status": "LINKED_TO_REQUEST", "since": "15:45", "req": "BR-2026-000124"}, "lots": [{"lot": "FU25D14", "qty": 10, "exp": "30 เม.ย. 2027", "days": 199, "held": false, "note": "", "lendable": true}], "past": [50, 54, 57, 52, 55, 58, 53, 56, 59, 55, 57, 56], "f50": [56, 57, 57, 58], "f90": [66, 67, 67, 68], "f95": [71, 72, 72, 73], "days": 1.25, "tt": 66, "central": "", "mn": null, "mx": null, "held": 0}, {"k": "cef", "code": "1000402", "name": "CefTRIAXone 1 g inj", "type": "DRUG", "unit": "VIAL", "price": 32, "ved": "E", "abc": "B", "stock": 8, "inc": 10, "u": 9, "L": 3, "sigma": 4, "method": "MA_ES", "pattern": "REGULAR", "conf": "OK", "hist": 1460, "p50": 63, "p90": 76, "p95": 82, "rop": 35.87, "map": "VERIFIED", "decision": "borrow", "alert": {"type": "LOW_STOCK", "sev": "URGENT", "status": "LINKED_TO_REQUEST", "since": "09:15", "req": "BR-2026-000109"}, "lots": [{"lot": "CF25E30", "qty": 8, "exp": "31 พ.ค. 2027", "days": 230, "held": false, "note": "", "lendable": true}], "past": [55, 60, 58, 62, 66, 61, 64, 67, 63, 65, 62, 64], "f50": [63, 64, 64, 65], "f90": [76, 77, 77, 78], "f95": [82, 83, 83, 84], "days": 0.89, "tt": 76, "central": "", "mn": null, "mx": null, "held": 0}, {"k": "amp", "code": "1000245", "name": "AMPIcillin 1 g inj", "type": "DRUG", "unit": "VIAL", "price": 17, "ved": "E", "abc": "B", "stock": 220, "inc": 0, "u": 12, "L": 3, "sigma": 3, "method": "MA_ES", "pattern": "REGULAR", "conf": "OK", "hist": 1460, "p50": 84, "p90": 102, "p95": 108, "rop": 42.65, "map": "VERIFIED", "decision": "none", "alert": null, "lots": [{"lot": "AMP-2405", "qty": 30, "exp": "20 ม.ค. 2027", "days": 99, "held": false, "note": "", "lendable": false}, {"lot": "AMP-2411", "qty": 190, "exp": "30 ก.ย. 2027", "days": 352, "held": false, "note": "", "lendable": true}], "past": [80, 86, 83, 79, 88, 85, 82, 84, 87, 81, 85, 84], "f50": [84, 84, 85, 85], "f90": [102, 102, 103, 103], "f95": [108, 108, 109, 109], "days": 18.33, "tt": 102, "central": "", "mn": null, "mx": null, "held": 0}, {"k": "omp", "code": "1000671", "name": "Omeprazole 40 mg inj", "type": "DRUG", "unit": "VIAL", "price": 25, "ved": "E", "abc": "C", "stock": 150, "inc": 0, "u": 1.5, "L": 3, "sigma": 1, "method": "MA_ES", "pattern": "REGULAR", "conf": "OK", "hist": 1460, "p50": 11, "p90": 14, "p95": 16, "rop": 6.72, "map": "VERIFIED", "decision": "none", "alert": null, "lots": [{"lot": "OMP-2403", "qty": 180, "exp": "20 ธ.ค. 2026", "days": 68, "held": true, "note": "ถูกกันไว้ · แผน AP-2026-000045", "lendable": false}, {"lot": "OMP-2508", "qty": 150, "exp": "30 พ.ย. 2027", "days": 413, "held": false, "note": "", "lendable": true}], "past": [10, 12, 11, 9, 12, 11, 10, 11, 12, 10, 11, 11], "f50": [11, 11, 11, 11], "f90": [14, 14, 14, 14], "f95": [16, 16, 16, 16], "days": 100.0, "tt": 14, "central": "", "mn": null, "mx": null, "held": 180}, {"k": "glv", "code": "1003011", "name": "ถุงมือไนไตรล์ M 100 ชิ้น/กล่อง", "type": "SUPPLY", "unit": "BOX", "price": 180, "ved": "E", "abc": "B", "stock": 24, "inc": 0, "u": 3, "L": 7, "sigma": 1.5, "method": "MA_ES", "pattern": "REGULAR", "conf": "OK", "hist": 730, "p50": 21, "p90": 27, "p95": 29, "rop": 26.08, "map": "VERIFIED", "decision": "ahead", "central": "SUP-0004", "alert": {"type": "LOW_STOCK", "sev": "NORMAL", "status": "OPEN", "since": "11:30", "req": ""}, "lots": [{"lot": "GL2509", "qty": 24, "exp": "31 ส.ค. 2029", "days": 1053, "held": false, "note": "", "lendable": true}], "past": [19, 22, 20, 21, 23, 20, 22, 21, 20, 22, 21, 21], "f50": [21, 21, 21, 22], "f90": [27, 27, 27, 28], "f95": [29, 29, 29, 30], "days": 8.0, "tt": 27, "mn": null, "mx": null, "held": 0}, {"k": "fu025", "code": "1000016", "name": "5-FU 0.25 DOSE", "type": "DRUG", "unit": "DOSE", "price": 100, "ved": "E", "abc": "C", "stock": 30, "inc": 0, "u": 1, "L": 3, "sigma": 1, "method": "MA_ES", "pattern": "REGULAR", "conf": "OK", "hist": 900, "p50": 7, "p90": 9, "p95": 10, "rop": 5.22, "map": "SUGGESTED", "decision": "none", "alert": null, "lots": [{"lot": "FQ25C01", "qty": 30, "exp": "31 พ.ค. 2027", "days": 230, "held": false, "note": "", "lendable": true}], "past": [6, 7, 8, 6, 7, 7, 8, 6, 7, 7, 6, 7], "f50": [7, 7, 7, 7], "f90": [9, 9, 9, 9], "f95": [10, 10, 10, 10], "days": 30.0, "tt": 9, "central": "", "mn": null, "mx": null, "held": 0}, {"k": "vk1", "code": "1000731", "name": "Phytomenadione (Vit K1) 10 mg/mL inj", "type": "DRUG", "unit": "AMP", "price": 12, "ved": "E", "abc": "C", "stock": 85, "inc": 0, "u": 0.3, "L": 3, "sigma": 0.6, "method": "QUANTILE_LGBM", "pattern": "INTERMITTENT", "conf": "OK", "hist": 1460, "p50": 2, "p90": 3, "p95": 4, "rop": 3, "map": "VERIFIED", "decision": "overstock", "alert": {"type": "OVERSTOCK", "sev": "NORMAL", "status": "OPEN", "since": "10 ต.ค.", "req": ""}, "lots": [{"lot": "VK24J02", "qty": 60, "exp": "15 ก.พ. 2027", "days": 125, "held": false, "note": "คาดใช้ทัน 37 · เหลือ 23", "lendable": false}, {"lot": "VK25D11", "qty": 25, "exp": "31 มี.ค. 2028", "days": 535, "held": false, "note": "", "lendable": true}], "past": [2, 3, 1, 2, 4, 2, 1, 3, 2, 2, 3, 2], "f50": [2, 2, 2, 2], "f90": [3, 3, 3, 3], "f95": [4, 4, 4, 4], "days": 283.33, "tt": 3, "central": "", "mn": null, "mx": null, "held": 0}, {"k": "aml", "code": "1000223", "name": "AMLOdipine 5 mg tab", "type": "DRUG", "unit": "เม็ด", "price": 1, "ved": "D", "abc": "C", "stock": 2400, "inc": 0, "u": 150, "L": 7, "sigma": null, "method": "MIN_MAX", "pattern": "REGULAR", "conf": "OK", "hist": 1460, "p50": 1050, "p90": null, "p95": null, "rop": 1050, "mn": 1050, "mx": 3150, "map": "VERIFIED", "decision": "minmax", "alert": null, "lots": [{"lot": "AML-2409", "qty": 600, "exp": "28 ก.พ. 2027", "days": 138, "held": false, "note": "", "lendable": false}, {"lot": "AML-2502", "qty": 1800, "exp": "31 ส.ค. 2027", "days": 322, "held": false, "note": "", "lendable": true}], "past": [], "f50": [], "f90": [], "f95": [], "days": 16.0, "tt": null, "central": "", "held": 0}, {"k": "ate", "code": "1000313", "name": "ATEnolol 50 mg tab", "type": "DRUG", "unit": "เม็ด", "price": 0.5, "ved": "D", "abc": "C", "stock": 6800, "inc": 0, "u": 60, "L": 7, "sigma": null, "method": "MIN_MAX", "pattern": "REGULAR", "conf": "OK", "hist": 1460, "p50": 420, "p90": null, "p95": null, "rop": 420, "mn": 420, "mx": 1260, "map": "VERIFIED", "decision": "overstock", "alert": {"type": "OVERSTOCK", "sev": "NORMAL", "status": "OPEN", "since": "12 ต.ค.", "req": ""}, "lots": [{"lot": "AT25B10", "qty": 6800, "exp": "31 ม.ค. 2028", "days": 475, "held": false, "note": "", "lendable": true}], "past": [], "f50": [], "f90": [], "f95": [], "days": 113.33, "tt": null, "central": "", "held": 0}];
+    const sevRank = { VERY_URGENT: 0, URGENT: 1, NORMAL: 2 };
+    const vedRank = { V: 0, E: 1, D: 2 };
+    const abcRank = { A: 0, B: 1, C: 2 };
+    const open = D.filter((d) => d.alert);
+    const tiles = { alerts: open.length, vu: open.filter((d) => d.alert.sev === 'VERY_URGENT').length, u: open.filter((d) => d.alert.sev === 'URGENT').length, n: open.filter((d) => d.alert.sev === 'NORMAL').length };
+    const fmtDays = (v) => (v >= 100 ? String(Math.round(v)) : String(v));
+    const alerts = open.slice().sort((a, b) => sevRank[a.alert.sev] - sevRank[b.alert.sev] || vedRank[a.ved] - vedRank[b.ved] || abcRank[a.abc] - abcRank[b.abc] || a.days - b.days).slice(0, 5).map((d) => {
+      const st = S.done[d.k] || d.alert.status;
+      const isD = d.ved === 'D';
+      const borrowable = d.alert.type === 'LOW_STOCK' && !isD && d.decision === 'borrow';
+      return {
+        name: d.name, code: d.code, ved: d.ved, abc: d.abc, unit: d.unit, stock: d.stock.toLocaleString('en-US'), days: fmtDays(d.days),
+        daysColor: d.days <= 2 ? '#B91C1C' : (d.days <= 7 ? '#9A3412' : '#0F2A5C'),
+        sev: L.sev(d.alert.sev), typeTh: L.M.ALT[d.alert.type] + ' · ' + d.alert.since,
+        st: L.bdg('AL', st), hasReq: !!d.alert.req, req: d.alert.req,
+        showAck: st === 'OPEN', ack: () => this.setState({ done: Object.assign({}, S.done, { [d.k]: 'ACKNOWLEDGED' }) }),
+        showSnooze: st === 'OPEN' || st === 'ACKNOWLEDGED', snooze: () => this.setState({ done: Object.assign({}, S.done, { [d.k]: 'SNOOZED' }) }),
+        showCreate: canApprove && borrowable && !d.alert.req && st !== 'SNOOZED', createLabel: 'สร้างคำขอยืม',
+        showView: !!d.alert.req, viewLabel: d.alert.req === 'BR-2026-000125' ? 'ตรวจและอนุมัติ' : 'ดูคำขอ', viewCls: d.alert.req === 'BR-2026-000125' ? 'btn-p' : 'btn-s', viewHref: d.alert.req === 'BR-2026-000125' ? 'BorrowApproval.dc.html' : 'Requests.dc.html',
+      };
+    });
+    const sum = agentOff
+      ? { title: 'สรุปประจำวัน (แม่แบบ)', conf: 'FALLBACK', confCls: 't-amber', meta: '07:30 น. · Agent ปิดอยู่ ระบบเติมแม่แบบจากข้อมูลจริง', text: 'คำขอยืมเปิดอยู่ 0 · ยาเสี่ยง 3 รายการ · ภาระคืนเกินกำหนด 1 รายการ', risk: ['CefTRIAXone 1 g · 1.3 วัน', '5-FU 120 SYRINGE · 1.8 วัน', 'ALprostadil · 6 วัน'], flags: ['RETURN_OVERDUE'] }
+      : { title: 'สรุปประจำวันจาก Agent', conf: 'มั่นใจสูง · HIGH', confCls: 't-green', meta: 'F1_T6 · สร้างอัตโนมัติ 07:30 น. วันนี้ · สถานะ OK', text: 'เช้านี้ยังไม่มีคำขอยืมเปิดอยู่ ยาที่ควรจับตาคือ CefTRIAXone 1 g (ใช้ได้อีก 1.3 วัน), 5-FU 120 SYRINGE (1.8 วัน) และ ALprostadil (6 วัน) ภาระคืน CefTRIAXone 20 vial ให้ รพ.บางพลี ครบกำหนดเมื่อวาน 12 ต.ค. และยังไม่ได้คืน', risk: ['CefTRIAXone 1 g · 1.3 วัน', '5-FU 120 SYRINGE · 1.8 วัน', 'ALprostadil · 6 วัน'], flags: ['RETURN_OVERDUE'] };
+    const t = S.tick;
+    const tcls = (s, warn) => (s < 3600 ? 'timer-crit' : (s < warn ? 'timer-warn' : ''));
+    const s124 = 2 * 3600 + 54 * 60 - t;
+    const mine = [
+      { id: 'BR-2026-000125', st: L.bdg('REQ', 'PENDING_APPROVAL'), sev: L.sev('VERY_URGENT'), drug: 'ADRENaline 1 mg/mL', qty: 27, unit: 'AMP', hasTimer: false, line: 'ระบบคำนวณ R = 41.43 → ยืม 27 · ลำดับผู้ให้ยืม 4 แห่ง (สูงสุด รพ.บางพลี Si 0.8590) · Agent ร่างข้อความแล้ว', hasStop: false, hasBtn: canApprove, btn: 'ตรวจและอนุมัติ', btnCls: 'btn-p', href: 'BorrowApproval.dc.html' },
+      { id: 'BR-2026-000124', st: L.bdg('REQ', 'IN_PROGRESS'), sev: L.sev('URGENT'), drug: '5-FU 120 SYRINGE', qty: 21, unit: 'SYRINGE', hasTimer: true, timer: this.fmt(s124), timerCls: tcls(s124, 7200), line: 'รอบที่ 1 · รอ รพ.บางพลี ตอบ (ส่ง 16:05 · เตือนแล้ว 19:05 · ครบ 22:05) · ส่งทีละแห่ง', hasStop: true, stopW: '0%', stopText: '0 / 14', stopAria: 'ได้รับยืนยัน 0 จากเกณฑ์หยุด 14', hasBtn: false },
+      { id: 'BR-2026-000109', st: L.bdg('REQ', 'ESCALATED'), sev: L.sev('URGENT'), drug: 'CefTRIAXone 1 g', qty: 24, unit: 'VIAL', hasTimer: false, line: 'ลำดับผู้ให้ยืมหมดแล้ว: รพ.บางเสาธง หมดเวลา · รพ.พระสมุทรเจดีย์ฯ ให้ 10 (กำลังขนส่ง) · ยังขาด 14', hasStop: true, stopW: '66.7%', stopText: '10 / 15', stopAria: 'ได้รับยืนยัน 10 จากเกณฑ์หยุด 15', hasBtn: canApprove, btn: 'เพิ่มผู้ให้ยืมเอง', btnCls: 'btn-s', href: 'Requests.dc.html' },
+    ];
+    const s131 = 4 * 3600 + 29 * 60 - t;
+    const s129 = 18 * 3600 + 54 * 60 - t;
+    const lend = [
+      { id: 'BR-2026-000131', sev: L.sev('URGENT'), ctx: 'STOCK_ALERT', from: 'รพ.บางบ่อ', drug: 'AMPIcillin 1 g', qty: 40, unit: 'VIAL', timer: this.fmt(s131), timerCls: tcls(s131, 7200), due: '23:40 น.', line: 'เราให้ยืมได้ 88 vial (ล็อตอายุ > 180 วัน 190 − Total Target 102) · ให้ครบได้' },
+      { id: 'BR-2026-000129', sev: L.sev('NORMAL'), ctx: 'MANUAL', from: 'รพ.บางเสาธง', drug: 'AMLOdipine 5 mg', qty: 600, unit: 'เม็ด', timer: this.fmt(s129), timerCls: tcls(s129, 7200), due: '14 ต.ค. 14:05 น.', line: 'เราให้ยืมได้ 750 เม็ด (ยา D ใช้ P50 แทน Total Target · มีธงเตือน) · ให้ครบได้' },
+    ];
+    const tasks = [
+      { id: 'TR-2026-000334', st: L.bdg('TR', 'ARRIVED'), text: 'AMLOdipine 5 mg 500 เม็ด จาก รพ.บางบ่อ (โอนยาใกล้หมดอายุ) · ถึง 18:58', btn: 'ยืนยันรับ', btnCls: 'btn-p' },
+      { id: 'TR-2026-000341', st: L.bdg('TR', 'LOADED'), text: 'AMPIcillin 1 g 20 vial → รพ.พระสมุทรเจดีย์ฯ · รูปรอซิงก์ 1', btn: 'ซิงก์ตอนนี้', btnCls: 'btn-s' },
+      { id: 'TR-2026-000338', st: L.bdg('TR', 'WAITING_DISPATCH'), text: 'Omeprazole 40 mg 100 vial → รพ.บางพลี', btn: 'ขึ้นรถ + ถ่ายรูป', btnCls: 'btn-s' },
+      { id: 'TR-2026-000339', st: L.bdg('TR', 'WAITING_DISPATCH'), text: 'Omeprazole 40 mg 80 vial → รพ.บางเสาธง · ปลายทางขอยกเลิก', btn: 'ดูคำขอยกเลิก', btnCls: 'btn-s' },
+    ];
+    const owe = [
+      { drug: 'CefTRIAXone 1 g', qty: 20, unit: 'VIAL', to: 'รพ.บางพลี', ref: 'BR-2026-000091', mode: 'คืนเป็นยาเดิม', due: '12 ต.ค. (เมื่อวาน)', st: L.bdg('RET', 'OVERDUE') },
+      { drug: 'NORepinephrine 4 mg', qty: 20, unit: 'AMP', to: 'รพ.บางพลี', ref: 'BR-2026-000117', mode: 'คืนเป็นยาเดิม', due: '10 พ.ย.', st: L.bdg('RET', 'OPEN') },
+      { drug: 'NORepinephrine 4 mg', qty: 10, unit: 'AMP', to: 'รพ.พระสมุทรเจดีย์ฯ', ref: 'BR-2026-000117', mode: 'คืนเป็นยาเดิม', due: '10 พ.ย.', st: L.bdg('RET', 'OPEN') },
+      { drug: 'PRC group O', qty: 4, unit: 'UNIT', to: 'รพ.บางพลี', ref: 'BR-2026-000120', mode: 'คืนผ่านธนาคารเลือด', due: '11 พ.ย.', st: L.bdg('RET', 'OPEN') },
+    ];
+    const nearx = [
+      { drug: 'Phytomenadione (Vit K1) 10 mg', lot: 'VK24J02', qty: 60, unit: 'AMP', exp: '15 ก.พ. 2027', days: 125, value: '720', feas: 'คาดใช้ทันเพียง 37 · เหลือ 23 ไม่ทันใช้', fColor: '#9A3412', btn: 'ปล่อยเข้าคลังกลาง', btnCls: 'btn-p' },
+      { drug: 'AMPIcillin 1 g', lot: 'AMP-2405', qty: 30, unit: 'VIAL', exp: '20 ม.ค. 2027', days: 99, value: '510', feas: 'คาดใช้หมดใน 3 วัน (FEFO)', fColor: '#166534', btn: 'เก็บไว้ใช้', btnCls: 'btn-s' },
+      { drug: 'AMLOdipine 5 mg', lot: 'AML-2409', qty: 600, unit: 'เม็ด', exp: '28 ก.พ. 2027', days: 138, value: '600', feas: 'คาดใช้หมดใน 4 วัน (FEFO)', fColor: '#166534', btn: 'เก็บไว้ใช้', btnCls: 'btn-s' },
+    ];
+    const hist = [
+      { t: '19:05', who: 'ระบบ', role: 'SYSTEM', cls: 't-grey', text: 'เตือน รพ.บางพลี ที่ 50% ของเวลา (BR-2026-000124)', code: 'LEG_REMINDER' },
+      { t: '19:04', who: 'ระบบ', role: 'SYSTEM', cls: 't-grey', text: 'สร้างคำขอ BR-2026-000125 จากแจ้งเตือน ADRENaline (ฉบับร่าง → รออนุมัติ)', code: 'REQ_SUBMITTED' },
+      { t: '19:02', who: 'ระบบ', role: 'SYSTEM', cls: 't-grey', text: 'แจ้งเตือนสต็อกต่ำ ADRENaline · เร่งด่วนมาก (V, ใช้ได้ 1.5 วัน)', code: 'ALERT_OPENED' },
+      { t: '16:20', who: 'ระบบ', role: 'SYSTEM', cls: 't-grey', text: 'BR-2026-000109 ลำดับผู้ให้ยืมหมด → ส่งต่อผู้ดูแล', code: 'REQ_ESCALATED' },
+      { t: '16:05', who: 'ภก.ณัฐวุฒิ ศรีสุข', role: 'PHARMACIST', cls: 't-blue', text: 'อนุมัติ BR-2026-000124 และส่งข้อความถึง รพ.บางพลี', code: 'REQ_APPROVED' },
+      { t: '07:30', who: 'Agent', role: 'AGENT · OK', cls: 't-blue', text: 'สรุปประจำวัน (F1_T6) · มั่นใจสูง', code: 'AGENT_RUN' },
+    ];
+    return {
+      nav: L.nav, user: L.user, scopeLabel: L.scopeLabel, agentPill: L.agentPill, notif: 6,
+      agentOff, canApprove, isWarehouse, notWarehouse: !isWarehouse,
+      tiles, alerts, sum, mine, lend, tasks, owe, nearx,
+      histOpen: S.hist, hist, histScope: 'ภาพรวม · รพ.สมุทรปราการ · วันนี้',
+      openHist: () => this.setState({ hist: true }), closeHist: () => this.setState({ hist: false }),
+    };
+  }
+}
+</script>
+</body>
+</html>

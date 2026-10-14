@@ -18,7 +18,6 @@
 
 /* shell bits used by the ops top bar */
 .topbar-scope-plain { background: #f1f5f9; color: #475569; }
-.navbadge-grey { background: #f1f5f9; color: #475569; }
 .lang-toggle { display: inline-flex; border: 1px solid #94a3b8; border-radius: 8px; overflow: hidden; height: 32px; flex: none; }
 .lang-toggle button { border: 0; padding: 0 10px; background: #ffffff; color: #475569; font-size: 12px; cursor: pointer; }
 .lang-toggle button.on { background: #1d4ed8; color: #ffffff; font-weight: 600; }

@@ -1,7 +1,5 @@
-import { NAV } from '../../data/navigation';
-import type { NavItem } from '../../data/navigation';
+import type { ShellNavEntry, ShellNavItem } from '../../data/navigation';
 import { Icon } from '../common/icons';
-import type { IconName } from '../common/icons';
 
 interface SidebarProps {
   /** Desktop rail state; on <1024px the drawer always shows full labels. */
@@ -9,69 +7,108 @@ interface SidebarProps {
   onToggle: () => void;
   /** Called when a nav link is used, so the mobile drawer can close itself. */
   onNavigate: () => void;
-  /** Role menu; defaults to the pharmacist menu. */
-  nav?: NavItem[];
-  /** Brand block; defaults to the dashboard branding. */
-  brand?: { name: React.ReactNode; sub: string };
-  /** Footer card; defaults to the dashboard help card. */
-  footer?: { title: string; text: React.ReactNode };
+  /** Resolved shell menu for the active role (see `getNavForRole`). */
+  items: ShellNavEntry[];
 }
 
-const DEFAULT_BRAND = { name: 'MedSupply Link', sub: 'เครือข่ายเขตสุขภาพที่ 6' };
-const DEFAULT_FOOTER = { title: 'ต้องการความช่วยเหลือ?', text: 'ศูนย์ประสานยา เขต 6 · โทร 1669 ต่อ 214' };
+/** Brand row — mockup sidebar header verbatim (`DooRare ดูแร์`). */
+function SidebarBrand({ collapsed, onToggle, onNavigate }: Pick<SidebarProps, 'collapsed' | 'onToggle' | 'onNavigate'>) {
+  return (
+    <div className="side-brand">
+      <div className="side-brand-main">
+        <span className="side-logo" aria-hidden="true">
+          <Icon name="plus" style={{ strokeWidth: 2.5 }} />
+        </span>
+        <div className="side-brand-text">
+          <div className="side-brand-name">
+            DooRare <span className="side-brand-name-th">ดูแร์</span>
+          </div>
+          <div className="en">เครือข่ายเขตสุขภาพที่ 6</div>
+        </div>
+      </div>
+      <button
+        className="icbtn side-collapse"
+        aria-label={collapsed ? 'ขยายเมนู / Expand sidebar' : 'ย่อเมนู / Collapse sidebar'}
+        aria-expanded={collapsed ? 'false' : 'true'}
+        onClick={onToggle}
+        style={{ border: 0 }}
+      >
+        <Icon name="collapse" />
+      </button>
+      <button className="icbtn side-close" aria-label="ปิดเมนู" onClick={onNavigate} style={{ border: 0 }}>
+        <Icon name="x" />
+      </button>
+    </div>
+  );
+}
 
-export function Sidebar({ collapsed, onToggle, onNavigate, nav = NAV, brand = DEFAULT_BRAND, footer = DEFAULT_FOOTER }: SidebarProps) {
+/** Single nav link — mockup `a.navlink` structure verbatim. */
+function SidebarNavItem({ item, onNavigate }: { item: ShellNavItem; onNavigate: () => void }) {
+  return (
+    <a
+      href={item.href}
+      className={`navlink ${item.active ? 'nav-on' : ''}`}
+      aria-current={item.active ? 'page' : 'false'}
+      title={item.ui}
+      onClick={(e) => {
+        if (item.href === '#') e.preventDefault();
+        onNavigate();
+      }}
+    >
+      <span className="nav-ic" aria-hidden="true">
+        <Icon name={item.icon} className="ic20" />
+      </span>
+      <span className="nav-text">
+        <span>{item.th}</span>
+        <span className="en">{item.en}</span>
+      </span>
+      {item.badge !== '' && (
+        <span
+          className={`navbadge ${item.badgeTone === 'neutral' ? 'navbadge-neutral' : ''}`}
+          aria-label={`${item.badge} รายการรอดำเนินการ`}
+        >
+          {item.badge}
+        </span>
+      )}
+    </a>
+  );
+}
+
+/** Nav list — mockup `nav.sidenav` (`sc-for` over role-filtered catalogue). */
+function SidebarNav({ items, onNavigate }: Pick<SidebarProps, 'items' | 'onNavigate'>) {
+  return (
+    <nav className="sidenav" aria-label="เมนูหลัก">
+      {items.map((n) =>
+        'kind' in n ? (
+          <div key={n.th} className="navgrp">
+            {n.th}
+          </div>
+        ) : (
+          <SidebarNavItem key={n.key} item={n} onNavigate={onNavigate} />
+        ),
+      )}
+    </nav>
+  );
+}
+
+/** Sidebar footer — mockup `div.sidefoot` verbatim. */
+function SidebarFooter() {
+  return (
+    <div className="sidefoot">
+      <div className="sidefoot-title">ศูนย์ประสานยา เขตสุขภาพที่ 6</div>
+      <div>
+        HIS นำเข้าล่าสุด <span className="num">06:10</span> น.
+      </div>
+    </div>
+  );
+}
+
+export function Sidebar({ collapsed, onToggle, onNavigate, items }: SidebarProps) {
   return (
     <aside className="side" id="app-sidebar" data-part="sidebar" aria-label="เมนูหลัก">
-      <div className="side-brand">
-        <div className="side-brand-main">
-          <span style={{ width: 32, height: 32, borderRadius: 8, background: '#1D4ED8', color: '#FFFFFF', display: 'grid', placeItems: 'center', flex: 'none' }}>
-            <Icon name="plus" style={{ strokeWidth: 2.5 }} />
-          </span>
-          <div className="side-brand-text">
-            <div className="side-brand-name">{brand.name}</div>
-            <div className="en">{brand.sub}</div>
-          </div>
-        </div>
-        <button
-          className="icbtn side-collapse"
-          aria-label={collapsed ? 'ขยายเมนู / Expand sidebar' : 'ย่อเมนู / Collapse sidebar'}
-          aria-expanded={collapsed ? 'false' : 'true'}
-          onClick={onToggle}
-          style={{ border: 0 }}
-        >
-          <Icon name="collapse" />
-        </button>
-        <button className="icbtn side-close" aria-label="ปิดเมนู" onClick={onNavigate} style={{ border: 0 }}>
-          <Icon name="x" />
-        </button>
-      </div>
-      <nav className="sidenav" aria-label="เมนูหลัก">
-        {nav.map((n) => (
-          <a
-            key={n.en}
-            href={n.href ?? '#'}
-            className={`navlink ${n.active ? 'nav-on' : ''}`}
-            aria-current={n.active ? 'page' : 'false'}
-            onClick={onNavigate}
-          >
-            <Icon name={n.icon as IconName} className="ic20" />
-            <span className="nav-text">
-              <span>{n.th}</span>
-              <span className="en">{n.en}</span>
-            </span>
-            {n.badge !== '' && (
-              <span className={`navbadge ${n.badgeTone === 'grey' ? 'navbadge-grey' : ''}`} aria-label={`${n.badge} รายการรอดำเนินการ`}>
-                {n.badge}
-              </span>
-            )}
-          </a>
-        ))}
-      </nav>
-      <div className="sidefoot">
-        <div className="sidefoot-title">{footer.title}</div>
-        <div>{footer.text}</div>
-      </div>
+      <SidebarBrand collapsed={collapsed} onToggle={onToggle} onNavigate={onNavigate} />
+      <SidebarNav items={items} onNavigate={onNavigate} />
+      <SidebarFooter />
     </aside>
   );
 }

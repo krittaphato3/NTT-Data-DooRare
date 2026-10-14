@@ -7,6 +7,7 @@
   "scripts": {
     "capture": "node scripts/capture-screenshots.mjs",
     "capture:dev": "node scripts/capture-screenshots.mjs --url http://127.0.0.1:5173",
+    "e2e:loadmore": "node scripts/e2e-loadmore.mjs",
     "ai:index": "node scripts/ai-index.mjs",
     "ai:session": "node scripts/ai-session.mjs"
   },

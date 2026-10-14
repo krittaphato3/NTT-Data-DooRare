@@ -320,6 +320,31 @@ button {
   padding: 0 6px;
   background: #fee2e2;
   color: #b91c1c;
+  flex: none;
+}
+.navbadge-neutral {
+  background: #f1f5f9;
+  color: #475569;
+}
+.navgrp {
+  padding: 10px 10px 2px;
+  font-size: 11px;
+  line-height: 14px;
+  font-weight: 600;
+  color: #475569;
+  letter-spacing: 0.04em;
+}
+/* Fixed icon box so every nav icon shares one optical center. */
+.nav-ic {
+  width: 20px;
+  height: 20px;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+}
+.nav-ic .ic {
+  width: 20px;
+  height: 20px;
 }
 .sev {
   width: 36px;
@@ -535,6 +560,112 @@ button {
 .cur-row td {
   background: #eff6ff;
 }
+/* Stock alert queue table — values verbatim from the mockup `table.qt` block. */
+.qt {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 13px;
+  line-height: 18px;
+  min-width: 640px;
+}
+.qt th {
+  text-align: left;
+  font-weight: 500;
+  color: #475569;
+  font-size: 12px;
+  padding: 8px 10px;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+  white-space: nowrap;
+}
+.qt td {
+  padding: 10px;
+  border-bottom: 1px solid #e2e8f0;
+  vertical-align: middle;
+}
+.qt tr:last-child td {
+  border-bottom: 0;
+}
+.r {
+  text-align: right;
+}
+.srt {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.code {
+  font-family: Inter, ui-monospace, monospace;
+  font-size: 11.5px;
+  letter-spacing: 0.01em;
+  color: #475569;
+  font-variant-numeric: tabular-nums;
+}
+.t-amber {
+  background: #fef3c7;
+  color: #92400e;
+}
+.t-green {
+  background: #dcfce7;
+  color: #166534;
+}
+.t-blue {
+  background: #dbeafe;
+  color: #1e40af;
+}
+.t-teal {
+  background: #ccfbf1;
+  color: #115e59;
+}
+.t-red {
+  background: #fee2e2;
+  color: #991b1b;
+}
+.t-grey {
+  background: #f1f5f9;
+  color: #475569;
+}
+.t-orange {
+  background: #ffedd5;
+  color: #9a3412;
+}
+.alert-req {
+  display: block;
+  margin-top: 2px;
+  white-space: nowrap;
+}
+.alert-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 4px;
+}
+/* Return-obligation rows — mockup `.listrow` verbatim. */
+.listrow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-top: 1px solid #e2e8f0;
+}
+/* Queue drug cell: severity glyph is icon-only (no 36px box); VED trails the name, small. */
+.qt .sev {
+  width: 20px;
+  height: 20px;
+  background: none;
+}
+.ved-sm {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 5px;
+  font-size: 10px;
+  flex: none;
+}
 .sw {
   width: 40px;
   height: 22px;
@@ -622,7 +753,7 @@ body.nav-open {
   padding: 16px 12px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
   position: sticky;
   top: 0;
   height: 100vh;
@@ -652,6 +783,20 @@ body.nav-open {
   line-height: 20px;
   font-weight: 600;
   color: var(--ink);
+}
+.side-brand-name-th {
+  font-weight: 500;
+  color: var(--body);
+}
+.side-logo {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: #1d4ed8;
+  color: #ffffff;
+  display: grid;
+  place-items: center;
+  flex: none;
 }
 .side-close {
   display: none;
@@ -696,6 +841,7 @@ body.nav-open {
   .side-brand-text,
   .nav-text,
   .navbadge,
+  .navgrp,
   .sidefoot {
     max-width: 240px;
     overflow: hidden;
@@ -717,6 +863,7 @@ body.nav-open {
   }
   .shell-collapsed .side-brand-main {
     gap: 0;
+    justify-content: center;
   }
   .shell-collapsed .side-collapse {
     position: relative;
@@ -725,14 +872,23 @@ body.nav-open {
   .shell-collapsed .side-brand-text,
   .shell-collapsed .nav-text,
   .shell-collapsed .navbadge,
+  .shell-collapsed .navgrp,
   .shell-collapsed .sidefoot {
     max-width: 0;
     opacity: 0;
   }
+  .shell-collapsed .sidenav {
+    align-items: center;
+  }
   .shell-collapsed .navlink {
     gap: 0;
     justify-content: center;
-    padding: 6px;
+    align-items: center;
+    width: 40px;
+    height: 40px;
+    min-height: 40px;
+    padding: 0;
+    margin: 0 auto;
   }
   .shell-collapsed .side-collapse .ic {
     transform: rotate(180deg);
@@ -744,6 +900,7 @@ body.nav-open {
   .side-brand-text,
   .nav-text,
   .navbadge,
+  .navgrp,
   .sidefoot {
     transition: none;
   }
@@ -931,6 +1088,70 @@ body.nav-open {
   padding: 16px 20px;
   margin-bottom: 8px;
 }
+/* Floating collapsible Agent summary — supplementary info, right edge. */
+.agent-float {
+  position: fixed;
+  right: 20px;
+  bottom: 24px;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+.agent-float-panel {
+  width: min(384px, calc(100vw - 32px));
+  max-height: min(70vh, 560px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: #eff6ff;
+  border: 1px solid #dbeafe;
+  border-radius: 12px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: 0 16px 40px rgba(15, 42, 92, 0.18);
+}
+.agent-float-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 9999px;
+  border: 1px solid #1d4ed8;
+  background: #1d4ed8;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(29, 78, 216, 0.35);
+}
+.agent-float-toggle:hover {
+  background: #1e40af;
+}
+.agent-float-toggle.is-open {
+  background: #ffffff;
+  color: #1d4ed8;
+}
+.agent-float-label {
+  white-space: nowrap;
+}
+.agent-float-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  background: #dc2626;
+  box-shadow: 0 0 6px rgba(220, 38, 38, 0.9);
+  flex: none;
+}
+.agent-float-chev {
+  transition: transform 0.15s ease;
+  flex: none;
+}
+.agent-float-toggle.is-open .agent-float-chev {
+  transform: rotate(180deg);
+}
 .pagehead {
   display: flex;
   flex-wrap: wrap;
@@ -990,6 +1211,45 @@ body.nav-open {
   overflow-x: auto;
   max-width: 100%;
 }
+/* Slim scroll indicator for card/scroll regions: always visible light-blue glowing line. */
+.equal-scroll,
+.card-scroll,
+.scroll-x,
+.side,
+.dialog,
+.agent-float-panel {
+  scrollbar-width: thin;
+  scrollbar-color: #93c5fd transparent;
+}
+.equal-scroll::-webkit-scrollbar,
+.card-scroll::-webkit-scrollbar,
+.scroll-x::-webkit-scrollbar,
+.side::-webkit-scrollbar,
+.dialog::-webkit-scrollbar,
+.agent-float-panel::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.equal-scroll::-webkit-scrollbar-track,
+.card-scroll::-webkit-scrollbar-track,
+.scroll-x::-webkit-scrollbar-track,
+.side::-webkit-scrollbar-track,
+.dialog::-webkit-scrollbar-track,
+.agent-float-panel::-webkit-scrollbar-track {
+  background: transparent;
+}
+.equal-scroll::-webkit-scrollbar-thumb,
+.card-scroll::-webkit-scrollbar-thumb,
+.scroll-x::-webkit-scrollbar-thumb,
+.side::-webkit-scrollbar-thumb,
+.dialog::-webkit-scrollbar-thumb,
+.agent-float-panel::-webkit-scrollbar-thumb {
+  background: #93c5fd;
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  box-shadow: 0 0 6px rgba(59, 130, 246, 0.9);
+}
 
 /* Alert rows reflow on phones (icon · content · time/action) */
 .alert-item {
@@ -1016,6 +1276,32 @@ body.nav-open {
   display: flex;
   flex-direction: column;
   min-height: 0;
+}
+/* Fixed-height cards with vertical-only scroll (MiddleRow panes).
+   Header stays put; only the body scrolls. */
+.card-fixed {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+.card-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: 620px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+/* Collapsed card body: fixed size, clipped, never scrolls until Load more. */
+.card-locked {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+@media (max-width: 639px) {
+  .card-scroll {
+    max-height: 480px;
+  }
 }
 .equal-scroll {
   flex: 1 1 auto;
@@ -1166,6 +1452,13 @@ body.nav-open {
   }
   .agent-card {
     padding: 14px 16px;
+  }
+  .agent-float {
+    right: 12px;
+    bottom: 16px;
+  }
+  .agent-float-label {
+    display: none;
   }
   .alert-side {
     flex-direction: row;
