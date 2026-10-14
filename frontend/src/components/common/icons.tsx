@@ -91,6 +91,7 @@ export const PATHS = {
   outArrow: 'M7 17L17 7M9 7h8v8',
   inArrow: 'M17 7L7 17M7 9v8h8',
   spark: 'M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z',
+  send: 'M22 2L11 13M22 2l-7 20-4-9-9-4z',
 } as const;
 
 export type IconName = keyof typeof PATHS;

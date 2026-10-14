@@ -4,21 +4,30 @@ import { Sidebar } from './components/layout/Sidebar';
 import { TopBar } from './components/layout/TopBar';
 import { getNavForRole } from './data/navigation';
 import type { ShellNavEntry } from './data/navigation';
+import { USER } from './data/session';
 import { ALERTS } from './roles/pharmacist/data/dashboard';
+import { BorrowRequestsPage } from './roles/pharmacist/pages/BorrowRequestsPage';
 import { DashboardPage } from './roles/pharmacist/pages/DashboardPage';
 import { WAREHOUSE_NOTIFICATIONS, WAREHOUSE_USER } from './roles/warehouse/data/session';
 import { TransportTrackingPage } from './roles/warehouse/pages/TransportTrackingPage';
 import type { TransportRole } from './roles/warehouse/pages/TransportTrackingPage';
 
+type Page = 'dashboard' | 'transport' | 'requests';
+
+/** Pharmacist on the ops-style top bar (UI-05 mockup: scope pill, agent pill, TH/EN). */
+const PHARMACIST_OPS_USER = { ...USER, scopeLabel: 'เห็นเฉพาะข้อมูล รพ.สมุทรปราการ' };
+
 /**
- * No router yet: `?page=transport` shows Transport tracking (UI-14).
- * `&role=pharmacist` = read-only pharmacist view, otherwise the warehouse officer view.
+ * No router yet: `?page=transport` shows Transport tracking (UI-14),
+ * `?page=requests` shows Borrow requests (UI-05).
+ * `&role=pharmacist` = read-only pharmacist transport view, otherwise the warehouse officer view.
  */
-function initialRoute(): { page: 'dashboard' | 'transport'; transportRole: TransportRole } {
+function initialRoute(): { page: Page; transportRole: TransportRole } {
   try {
     const q = new URLSearchParams(window.location.search);
+    const p = q.get('page');
     return {
-      page: q.get('page') === 'transport' ? 'transport' : 'dashboard',
+      page: p === 'transport' || p === 'requests' ? p : 'dashboard',
       transportRole: q.get('role')?.toLowerCase() === 'pharmacist' ? 'PHARMACIST' : 'WAREHOUSE_OFFICER',
     };
   } catch {
@@ -33,6 +42,7 @@ function withLinks(items: ShellNavEntry[], role: string): ShellNavEntry[] {
     if ('kind' in e) return e;
     if (e.key === 'tr') return { ...e, href: `?page=transport${suffix}` };
     if (e.key === 'dash' && role === 'PHARMACIST') return { ...e, href: '/' };
+    if (e.key === 'req' && role === 'PHARMACIST') return { ...e, href: '?page=requests' };
     return e;
   });
 }
@@ -57,10 +67,12 @@ export default function App() {
   const [isAdmin] = useState(initialRole);
   const [route] = useState(initialRoute);
   const onTransport = route.page === 'transport';
-  // The warehouse officer gets the ops top bar; the pharmacist keeps the standard shell.
-  const ops = onTransport && route.transportRole === 'WAREHOUSE_OFFICER';
-  const navRole = ops ? 'WAREHOUSE_OFFICER' : 'PHARMACIST';
-  const navItems = withLinks(getNavForRole(navRole, onTransport ? 'tr' : 'dash'), navRole);
+  const onRequests = route.page === 'requests';
+  const warehouse = onTransport && route.transportRole === 'WAREHOUSE_OFFICER';
+  // Warehouse transport and UI-05 use the ops top bar (no footer); the dashboard keeps the standard shell.
+  const ops = warehouse || onRequests;
+  const navRole = warehouse ? 'WAREHOUSE_OFFICER' : 'PHARMACIST';
+  const navItems = withLinks(getNavForRole(navRole, onTransport ? 'tr' : onRequests ? 'req' : 'dash'), navRole);
 
   // Mobile drawer: lock page scroll, close on Escape and when resizing to desktop.
   useEffect(() => {
@@ -100,12 +112,18 @@ export default function App() {
           isAdmin={isAdmin}
           navOpen={navOpen}
           onMenu={() => setNavOpen((v) => !v)}
-          notifications={ops ? WAREHOUSE_NOTIFICATIONS : ALERTS.map((a) => ({ drug: a.drug, time: a.time }))}
+          notifications={warehouse ? WAREHOUSE_NOTIFICATIONS : ALERTS.map((a) => ({ drug: a.drug, time: a.time }))}
           variant={ops ? 'ops' : 'pharmacist'}
-          user={ops ? WAREHOUSE_USER : undefined}
+          user={warehouse ? WAREHOUSE_USER : onRequests ? PHARMACIST_OPS_USER : undefined}
         />
         <main className="mainpad">
-          {onTransport ? <TransportTrackingPage role={route.transportRole} /> : <DashboardPage isAdmin={isAdmin} query={query} hospital={hospital} onHospital={setHospital} />}
+          {onTransport ? (
+            <TransportTrackingPage role={route.transportRole} />
+          ) : onRequests ? (
+            <BorrowRequestsPage />
+          ) : (
+            <DashboardPage isAdmin={isAdmin} query={query} hospital={hospital} onHospital={setHospital} />
+          )}
         </main>
         {!ops && <Footer isAdmin={isAdmin} />}
       </div>

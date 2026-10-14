@@ -1,0 +1,172 @@
+import { Icon } from '../../../components/common/icons';
+import type { IconName } from '../../../components/common/icons';
+import { fmtTime } from '../../../lib/time';
+import { groupMeta, groupOf, LEG_META } from '../data/borrow';
+import type { BorrowRequest, StatusGroup } from '../data/borrow';
+import { BorrowStatusBadge, ReturnBadge, UrgencyBadge } from './BorrowBadges';
+import { StopBar } from './BorrowTable';
+
+export type Decision = 'approve' | 'reject' | undefined;
+
+interface BorrowDrawerProps {
+  request: BorrowRequest;
+  tick: number;
+  decision: Decision;
+  onDecide: (d: 'approve' | 'reject') => void;
+  onClose: () => void;
+}
+
+/** Banner colours per SM-1 group: [background, border, icon colour]. */
+const BANNER: Record<StatusGroup, [string, string, string]> = {
+  pending: ['#FFFBEB', '#FDE68A', '#92400E'],
+  progress: ['#FFFBEB', '#FDE68A', '#92400E'],
+  escalated: ['#FEF2F2', '#FECACA', '#991B1B'],
+  fulfilled: ['#F0FDF4', '#BBF7D0', '#166534'],
+  closed: ['#F8FAFC', '#E2E8F0', '#475569'],
+};
+
+/** UI-05 request detail (we are the borrower). Actions are local state only. */
+export function BorrowDrawer({ request: r, tick, decision, onDecide, onClose }: BorrowDrawerProps) {
+  const group = groupOf(r.status);
+  const [bg, border, fg] = BANNER[group];
+  const bannerIcon: IconName = group === 'progress' ? 'clock' : groupMeta(group).icon;
+  const activeLeg = r.legs.findIndex((l) => l.state === 'WAITING');
+
+  return (
+    <aside className="tr-drawer" aria-label="รายละเอียดคำขอยืม">
+      <div className="tr-drawer-head">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+          <span className="sub">คำขอของเรา (เราเป็นผู้ยืม) · Request detail · UI-05</span>
+          <button className="icbtn" aria-label="ปิด / Close" onClick={onClose}>
+            <Icon name="x" />
+          </button>
+        </div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
+          <h2 className="code" style={{ margin: 0, fontSize: 19, lineHeight: '28px', fontWeight: 600, color: '#0F2A5C' }}>
+            {r.id}
+          </h2>
+          <BorrowStatusBadge status={r.status} />
+          <UrgencyBadge urgency={r.urgency} />
+          <span className="badge t-grey code">{r.context}</span>
+          {r.returnState && <ReturnBadge state={r.returnState} />}
+        </div>
+        <div className="br-drug" style={{ fontSize: 15, fontWeight: 600, color: '#0F2A5C' }}>
+          <span className={`ved ved-${r.ved} ved-sm`}>{r.ved}</span>
+          <span>
+            {r.drug} · {r.qty} {r.unit}
+          </span>
+        </div>
+        <div role="status" className="br-banner" style={{ background: bg, borderColor: border }}>
+          <Icon name={bannerIcon} className="ic20" style={{ color: fg }} />
+          <span style={{ flex: 1, minWidth: 0 }}>
+            <span className="br-banner-t">{r.banner.title}</span>
+            <span className="br-banner-s">{r.banner.text}</span>
+          </span>
+          {r.countdownSec !== undefined && <span className="num br-clock">{fmtTime(r.countdownSec - tick)}</span>}
+        </div>
+      </div>
+
+      <div className="tr-drawer-body">
+        <dl className="dlr">
+          <dt>บริบท</dt>
+          <dd>{r.contextLabel}</dd>
+          <dt>จำนวนรอบแรก</dt>
+          <dd>{r.firstRound}</dd>
+          <dt>วิธีส่ง</dt>
+          <dd>{r.sendMode}</dd>
+          <dt>สร้างโดย</dt>
+          <dd>{r.createdBy}</dd>
+          {r.approvedBy && (
+            <>
+              <dt>อนุมัติโดย</dt>
+              <dd>{r.approvedBy}</dd>
+            </>
+          )}
+        </dl>
+
+        {r.stop && (
+          <div className="tr-box" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
+              <h3 className="tr-h3" style={{ margin: 0 }}>
+                กฎหยุด <span className="en">F-20</span>
+              </h3>
+              <span style={{ fontSize: 13, fontWeight: 600, color: '#0F2A5C' }}>
+                ได้ยืนยัน <span className="num">{r.stop.got} / {r.stop.target}</span>
+              </span>
+            </div>
+            <StopBar got={r.stop.got} target={r.stop.target} />
+            {r.stop.formula && <div style={{ fontSize: 12.5, lineHeight: '18px', color: '#0F2A5C' }}>{r.stop.formula}</div>}
+            <div style={{ fontSize: 12.5, lineHeight: '18px' }}>{r.stop.remaining}</div>
+          </div>
+        )}
+
+        <div>
+          <h3 className="tr-h3">
+            ลำดับผู้ให้ยืมและรอบการขอ <span className="en">Legs · {r.sendMode}</span>
+          </h3>
+          {r.legs.length === 0 ? (
+            <div className="sub">ยังไม่ได้ส่งถึงผู้ให้ยืม</div>
+          ) : (
+            <ol className="br-legs">
+              {r.legs.map((l, i) => {
+                const m = LEG_META[l.state];
+                const on = i === activeLeg;
+                return (
+                  <li key={l.hospital}>
+                    <span className="br-leg-rail">
+                      <span className="num br-leg-dot" style={{ background: on ? '#1D4ED8' : '#F1F5F9', color: on ? '#FFFFFF' : '#475569' }}>
+                        {i + 1}
+                      </span>
+                      {i < r.legs.length - 1 && <span className="br-leg-line" />}
+                    </span>
+                    <span className="br-leg-body">
+                      <span style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6 }}>
+                        <b style={{ fontSize: 13, fontWeight: 600, color: '#0F2A5C' }}>{l.hospital}</b>
+                        <span className={`badge t-${m.tone}`} style={{ height: 20, fontSize: 11 }}>
+                          {m.label}
+                        </span>
+                        <span className="code" style={{ marginLeft: 'auto' }}>
+                          Si {l.si.toFixed(4)}
+                        </span>
+                      </span>
+                      <span className="sub" style={{ display: 'block' }}>
+                        {l.detail}
+                      </span>
+                    </span>
+                  </li>
+                );
+              })}
+            </ol>
+          )}
+          {r.agentNote && (
+            <div className="br-agent">
+              <b style={{ color: '#1D4ED8', fontWeight: 600 }}>Agent ({r.agentNote.code})</b> · {r.agentNote.text}
+            </div>
+          )}
+        </div>
+
+        {decision ? (
+          <div role="status" className="br-banner" style={{ background: '#F8FAFC', borderColor: '#E2E8F0', fontSize: 13, color: '#0F2A5C' }}>
+            {decision === 'approve' ? 'อนุมัติแล้ว 19:12 · ระบบส่งคำขอรอบแรกตามลำดับแล้ว' : 'ไม่อนุมัติแล้ว 19:12 · คำขอถูกยกเลิก (CANCELLED)'}
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {r.action === 'approve' && (
+              <>
+                <button className="btn btn-p" onClick={() => onDecide('approve')}>
+                  อนุมัติและส่ง
+                </button>
+                <button className="btn btn-g" onClick={() => onDecide('reject')}>
+                  ไม่อนุมัติ
+                </button>
+              </>
+            )}
+            {r.action === 'addLender' && <button className="btn btn-p">เพิ่มผู้ให้ยืม</button>}
+            {r.action === 'recordReturn' && <button className="btn btn-p">บันทึกการคืน</button>}
+            {group === 'progress' && <button className="btn btn-g">ยกเลิกคำขอ</button>}
+          </div>
+        )}
+      </div>
+    </aside>
+  );
+}

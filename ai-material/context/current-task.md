@@ -15,3 +15,9 @@ Relevant files: `frontend/src/App.tsx`, `frontend/src/roles/pharmacist/pages/Das
 
 - UI-14 Transport tracking (warehouse role) built UI-only; open `/?page=transport`. See `sessions/2026-10-14-transport-tracking-ui.md`.
 - Next: driver PWA states, IndexedDB queue, API wiring.
+
+## UI-05 Borrow requests (pharmacist)
+
+- Built UI-only at `/?page=requests`; see `sessions/2026-10-14-2039-claude-borrow-requests-ui05.md`.
+- Shared ops CSS (table/filters/drawer/tabs) now lives in `index.css`.
+- Next: UI-06 lender queue, UI-10 manual request, API wiring.

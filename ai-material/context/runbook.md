@@ -1,6 +1,6 @@
 # Runbook
 
-Install (frontend): `cd frontend && npm ci`
+Install (frontend): `cd frontend && npm ci` (stop `npm run dev` first — npm ci wipes node_modules; otherwise use `npm install`)
 Install (repo tooling, for capture): `npm install` (repo root — playwright-core only)
 
 Dev: `cd frontend && npm run dev` → http://localhost:5173
