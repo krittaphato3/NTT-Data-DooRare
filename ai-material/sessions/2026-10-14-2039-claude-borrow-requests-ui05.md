@@ -23,6 +23,7 @@ summary: UI-only Borrow requests page with detail drawer for pharmacist
 - Generic ops CSS (`.dirs/.dir*`, `.tbl*`, `.sel`, `.tr-search`, `.tr-filters`, `.tr-drawer*`, `.dlr`, `.tr-title`, `.sec-h`, `.sub`) moved verbatim from `warehouse/transport.css` into `index.css` because it is now shared by two roles. Class names are unchanged.
 - UI-05 uses the ops top bar (scope pill, Agent, TH/EN) with the pharmacist user and no footer, as in the capture.
 - The UI-06 tab is inert until that screen exists.
+- Detail drawer starts closed and opens only when a row is clicked (user request).
 - Detail data for rows other than 000124 is invented to match the table text.
 
 ## Files touched

@@ -25,9 +25,9 @@ function withDecision(r: BorrowRequest, d: Decision): BorrowRequest {
 export function BorrowRequestsPage() {
   const tick = useTick();
   const [group, setGroup] = useState<StatusGroup | null>(null);
-  const [selId, setSelId] = useState('BR-2026-000124');
-  // Detail drawer starts open on desktop only; on phones/tablets it would cover the list.
-  const [drawerOpen, setDrawerOpen] = useState(() => window.matchMedia('(min-width: 1024px)').matches);
+  const [selId, setSelId] = useState('');
+  // Detail drawer stays closed until a request is opened from the table.
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [decision, setDecision] = useState<Record<string, Decision>>({});
   const [q, setQ] = useState('');
   const [urgency, setUrgency] = useState<'all' | Urgency>('all');
