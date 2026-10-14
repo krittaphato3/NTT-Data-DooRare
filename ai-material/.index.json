@@ -1,8 +1,22 @@
 [
   {
+    "path": "GUIDELINES.md",
+    "title": "Guidelines",
+    "summary": "Guidelines",
+    "tags": "session",
+    "date": "2026-10-14"
+  },
+  {
     "path": "README.md",
     "title": "ai-material",
     "summary": "ai-material",
+    "tags": "session",
+    "date": "2026-10-14"
+  },
+  {
+    "path": "context\\architecture.md",
+    "title": "Architecture",
+    "summary": "Architecture",
     "tags": "session",
     "date": "2026-10-14"
   },
@@ -14,9 +28,23 @@
     "date": "2026-10-14"
   },
   {
+    "path": "context\\current-status.md",
+    "title": "Current Status",
+    "summary": "Current Status",
+    "tags": "session",
+    "date": "2026-10-14"
+  },
+  {
     "path": "context\\current-task.md",
     "title": "Current Task",
     "summary": "Current Task",
+    "tags": "session",
+    "date": "2026-10-14"
+  },
+  {
+    "path": "context\\quality-checklist.md",
+    "title": "Quality Checklist",
+    "summary": "Quality Checklist",
     "tags": "session",
     "date": "2026-10-14"
   },
@@ -35,10 +63,17 @@
     "date": "2026-10-14"
   },
   {
+<<<<<<< HEAD
     "path": "sessions\\2026-10-14-2039-claude-borrow-requests-ui05.md",
     "title": "Borrow requests UI-05",
     "summary": "UI-only Borrow requests page with detail drawer for pharmacist",
     "tags": "session, frontend, borrow-requests, pharmacist",
+=======
+    "path": "sessions\\2026-10-14-1955-antigravity-ui-spec-lender.md",
+    "title": "UI Spec Lender",
+    "summary": "Read all pharmacist dashboard source files; generated UI-01 spec; identified UI-06 Lender…",
+    "tags": "session, ui-spec, dashboard, pharmacist, lender",
+>>>>>>> 20de638137da630110e2e06d52d07a494beb9744
     "date": "2026-10-14"
   },
   {
@@ -56,6 +91,7 @@
     "date": "2026-10-14"
   },
   {
+<<<<<<< HEAD
     "path": "GUIDELINES.md",
     "title": "Guidelines",
     "summary": "Guidelines",
@@ -84,6 +120,8 @@
     "date": "2026-10-13"
   },
   {
+=======
+>>>>>>> 20de638137da630110e2e06d52d07a494beb9744
     "path": "decisions\\0001-shared-ai-context.md",
     "title": "Shared AI context system",
     "summary": "Use ai-material as shared AI memory.",
