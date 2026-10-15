@@ -53,6 +53,19 @@ summary: UI-only Stock alert queue page (pharmacist role) at ?page=alerts
 - Skipped (no such section on UI-02): agent-suggestion, alerts-panel→used `ui-02-alert-table`, near-expiry, nearby-hospitals, recent-activity, request-status-panel, work-history; `ui-02-sidebar` skipped at phone (off-canvas → `ui-02-drawer-open`).
 - Not done on purpose: `artifacts/manifest.json` + `index.html` not regenerated (would modify existing tracked files). Note: `npm run capture` does `rm -rf artifacts/screenshots`, so it would delete these unless the script is extended.
 
+## Visual-fix pass (design alignment) — 2026-10-14
+
+- **Goal:** align UI-02 with the design reference ("UI-02 Stock alert queue + UI-03 drawer") per the A–E fix list, then regenerate the screenshots.
+- **Removed first:** the 25 `ui-02-*.png` (committed in `f52e89c`) so the new capture was provably fresh; `artifact/` folder and report already gone. Pre-existing Dashboard/Transport screenshots untouched.
+- **Fixed (allowed files only):**
+  - A: stripped all on-screen English glosses (summary cards, tabs, h1, subtitle, modals); Thai title + uppercase code as two elements with 8px column-gap; Thai-only sub-labels; exact design subtitle; tab = Thai label + count pill; Tenecteplase note = `ไม่ต้องดำเนินการ`.
+  - B: verified rows 1–4 badges/actions/BR numbers; chip counts 8/1/3/4 and `แสดง 8 จาก 8` agree.
+  - C: left accent border (no icon tile), dark numbers; V/E badge left of the name, triangle removed; severity badges get leading icons; `รับทราบแล้ว` → light-blue (design) not green; red day values when low; two bar markers (blue Predict, green Total Target), red fill below Predict; plain ABC; active chip solid blue; `เรียงตาม` on the sort row, extra sort line removed, count moved under the table; switch-like underline tabs (scoped, shared `.tab` untouched); new `upload` icon for ส่งออก.
+  - D: topbar/sidebar differences left untouched (report-only).
+- **Verification:** `npm run build` exit 0 (tsc clean, no unused, `package.json` unchanged). Headless-Chrome DOM probe **46/46 pass**. Re-captured **25 `ui-02-*.png`** (fresh) — all valid, size-matched, non-blank. No page h-overflow at 1440/1280/1024/768/390/360.
+- **Errors/notes:** first capture used `minmax(220px,1fr)` on `.sa-cards` → 5 cards wrapped to 2 rows at 1440; reverted to `210px` (5 across, equal height 141). `.sa-bar` needed `overflow:visible` so the markers show.
+- **Limitation:** the attached design image was not delivered as image data, so I implemented the written A–E list (could not pixel-compare); a visual pass against the actual image is still worth doing.
+
 ## Next steps
 
 - Wire `GET /alerts` (API-F1a-005) + ack/snooze POSTs; "สร้างคำขอ" → API-F1b-001.

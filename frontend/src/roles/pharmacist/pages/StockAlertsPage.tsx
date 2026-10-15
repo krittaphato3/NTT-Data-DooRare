@@ -42,13 +42,10 @@ function Modal({ label, onClose, children }: { label: string; onClose: () => voi
   );
 }
 
-function Field({ label, en, children }: { label: string; en?: string; children: React.ReactNode }) {
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '150px 1fr', gap: 8, padding: '6px 0', borderTop: '1px solid #E2E8F0', fontSize: 13 }}>
-      <span style={{ color: '#475569' }}>
-        {label}
-        {en && <span className="en" style={{ display: 'block' }}>{en}</span>}
-      </span>
+      <span style={{ color: '#475569' }}>{label}</span>
       <span style={{ color: '#0F2A5C' }}>{children}</span>
     </div>
   );
@@ -133,21 +130,16 @@ export function StockAlertsPage() {
 
   return (
     <>
-      <section className="pagehead">
+      <section className="pagehead" data-part="page-header">
         <div>
           <nav aria-label="breadcrumb" style={{ fontSize: 12, lineHeight: '16px' }}>
             <a href="/" className="link" style={{ fontSize: 12, fontWeight: 400 }}>หน้าหลัก</a>{' '}
             <span aria-hidden="true">›</span> <span aria-current="page">แจ้งเตือนสต็อก</span>
           </nav>
           <h1 style={{ margin: '2px 0 0', fontSize: 28, lineHeight: '38px', fontWeight: 600, color: '#0F2A5C' }}>
-            แจ้งเตือนสต็อกและการพยากรณ์{' '}
-            <span style={{ fontSize: 16, fontWeight: 400, color: '#94A3B8' }}>/ Stock alert queue · UI-02</span>
+            แจ้งเตือนสต็อกและการพยากรณ์
           </h1>
-          <div style={{ fontSize: 13, lineHeight: '20px', marginTop: 2 }}>
-            {PHARMACY_CONTEXT.name} · ประเมินเมื่อ <span className="num">{PHARMACY_CONTEXT.evaluatedAt}</span> ·
-            แจ้งเตือนล่าสุด <span className="num">{PHARMACY_CONTEXT.latestAlertAt}</span> ·
-            HIS ซิงก์ล่าสุด <span className="num">{PHARMACY_CONTEXT.hisSyncedAt}</span>
-          </div>
+          <div style={{ fontSize: 13, lineHeight: '20px', marginTop: 2 }}>{PHARMACY_CONTEXT.subtitle}</div>
         </div>
         <div className="pagehead-actions">
           <button className="btn btn-s" onClick={() => setHistoryOpen(true)}>
@@ -155,7 +147,7 @@ export function StockAlertsPage() {
             ประวัติ
           </button>
           <button className="btn btn-s" onClick={exportCsv}>
-            <Icon name="outArrow" />
+            <Icon name="upload" />
             ส่งออก
           </button>
         </div>
@@ -163,7 +155,7 @@ export function StockAlertsPage() {
 
       <StockAlertSummary />
 
-      <section className="card" style={{ padding: '16px 20px 8px' }}>
+      <section className="card" data-part="stock-alert-toolbar" style={{ padding: '16px 20px 8px' }}>
         <StockAlertToolbar
           tab={tab}
           onTab={setTab}
@@ -178,17 +170,16 @@ export function StockAlertsPage() {
           sort={sort}
           onSort={setSort}
         />
-        <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, margin: '8px 0 4px', fontSize: 12 }}>
-          <span>เรียงตาม: ยา V ก่อน → มูลค่า ABC → วันคงเหลือ</span>
-          <span className="num">แสดง {rows.length} จาก {base.length} รายการ</span>
-        </div>
         <StockAlertTable rows={rows} acked={acked} snoozed={snoozed} created={created} onAction={handleAction} />
+        <div className="num" style={{ textAlign: 'right', fontSize: 12, color: '#475569', marginTop: 10 }}>
+          แสดง {rows.length} จาก {base.length} รายการ
+        </div>
       </section>
 
       {historyOpen && (
         <Modal label="ประวัติการแจ้งเตือน / Alert history" onClose={() => setHistoryOpen(false)}>
           <h2 style={{ margin: 0, fontSize: 18, lineHeight: '26px', fontWeight: 600, color: '#0F2A5C' }}>
-            ประวัติ <span className="en">Alert history · audit_log</span>
+            ประวัติ
           </h2>
           <ul style={{ listStyle: 'none', margin: '12px 0 0', padding: 0 }}>
             {ALERT_HISTORY.map((h) => (
@@ -221,10 +212,10 @@ export function StockAlertsPage() {
             </div>
           )}
 
-          <Field label="คงเหลือ" en="On hand">
+          <Field label="คงเหลือ">
             <span className="num">{fmt(selectedRow.onHand)}</span> {selectedRow.unit}
           </Field>
-          <Field label="ใช้ได้อีก" en="Days left">
+          <Field label="ใช้ได้อีก">
             <span className="num">{fmt(selectedRow.daysLeft)}</span> วัน · ใช้ {fmt(selectedRow.dailyUse)}/วัน
           </Field>
           <Field label="Predict · Total Target">
@@ -238,14 +229,14 @@ export function StockAlertsPage() {
               <span style={{ color: '#94A3B8' }}>—</span>
             )}
           </Field>
-          <Field label="วิธีพยากรณ์" en="Forecast method">
+          <Field label="วิธีพยากรณ์">
             <span className="code">{selectedRow.method ?? '—'}</span> · {selectedRow.methodNote}
           </Field>
           <Field label="เทียบกับเป้า">
             <span style={{ color: '#0F2A5C' }}>{selectedRow.note}</span>
           </Field>
           {selectedRow.alert && (
-            <Field label="แจ้งเตือน" en="Alert">
+            <Field label="แจ้งเตือน">
               {ALERT_TYPE_META[selectedRow.alert.type].th} · {SEVERITY_META[selectedRow.alert.severity].labelTh} ·{' '}
               {ALERT_STATUS_META[selectedRow.alert.status].labelTh} · <span className="num">{selectedRow.alert.time}</span>
               {selectedRow.alert.brNo && <> · <span className="code">{selectedRow.alert.brNo}</span></>}

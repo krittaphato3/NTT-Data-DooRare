@@ -35,7 +35,7 @@ export function StockAlertToolbar({
   onSort,
 }: StockAlertToolbarProps) {
   return (
-    <>
+    <div data-part="stock-alert-filters">
       <div className="sa-tabs" role="tablist" aria-label="มุมมองการแจ้งเตือน">
         {ALERT_TABS.map((t) => (
           <button
@@ -46,7 +46,6 @@ export function StockAlertToolbar({
             onClick={() => onTab(t.key)}
           >
             {t.labelTh} <span className="cnt">{tabCounts[t.key]}</span>
-            <span className="label-en" style={{ color: 'inherit', fontSize: 12 }}>· {t.labelEn}</span>
           </button>
         ))}
       </div>
@@ -96,7 +95,7 @@ export function StockAlertToolbar({
         <span style={{ flex: '1 1 0' }} />
 
         <label className="sa-sort-label">
-          <span className="srt">เรียงลำดับ</span>
+          <span className="srt">เรียงตาม</span>
           <select className="sa-sort" value={sort} onChange={(e) => onSort(e.target.value as SortMode)} aria-label="เรียงลำดับรายการ">
             {SORT_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>{o.label}</option>
@@ -104,6 +103,6 @@ export function StockAlertToolbar({
           </select>
         </label>
       </div>
-    </>
+    </div>
   );
 }

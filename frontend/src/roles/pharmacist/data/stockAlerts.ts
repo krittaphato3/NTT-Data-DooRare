@@ -23,21 +23,27 @@ export type SortMode = 'default' | 'days' | 'abc';
 
 export interface LabelMeta {
   labelTh: string;
+  /** Tooltip / a11y English only — never rendered as an on-screen gloss. */
   labelEn: string;
   cls: string;
+  /** Leading glyph shown inside the badge (design). */
+  icon?: IconName;
 }
 
 /** Severity badges (BR-F1b-008 / F-11): critical red · urgent orange · normal gray. */
 export const SEVERITY_META: Record<Severity, LabelMeta> = {
-  critical: { labelTh: 'เร่งด่วนมาก', labelEn: 'Critical', cls: 'ug-critical' },
-  urgent: { labelTh: 'เร่งด่วน', labelEn: 'Urgent', cls: 'ug-urgent' },
-  normal: { labelTh: 'ปกติ', labelEn: 'Normal', cls: 'ug-normal' },
+  critical: { labelTh: 'เร่งด่วนมาก', labelEn: 'Critical', cls: 'ug-critical', icon: 'tri' },
+  urgent: { labelTh: 'เร่งด่วน', labelEn: 'Urgent', cls: 'ug-urgent', icon: 'alertc' },
+  normal: { labelTh: 'ปกติ', labelEn: 'Normal', cls: 'ug-normal', icon: 'minusc' },
 };
 
-/** Alert status badges (SM-8): open light-yellow · acknowledged / linked light-green. */
+/**
+ * Alert status badges (SM-8): open light-yellow · linked light-green.
+ * Acknowledged is light-blue per the UI-02 design image (an earlier spec said green).
+ */
 export const ALERT_STATUS_META: Record<AlertStatus, LabelMeta> = {
   open: { labelTh: 'เปิด', labelEn: 'Open', cls: 't-amber' },
-  acknowledged: { labelTh: 'รับทราบแล้ว', labelEn: 'Acknowledged', cls: 't-green' },
+  acknowledged: { labelTh: 'รับทราบแล้ว', labelEn: 'Acknowledged', cls: 't-blue' },
   linked: { labelTh: 'ผูกคำขอแล้ว', labelEn: 'Linked to request', cls: 't-green' },
   snoozed: { labelTh: 'เลื่อนเตือน', labelEn: 'Snoozed', cls: 't-grey' },
 };
@@ -71,72 +77,70 @@ export type SummaryTone = 'crit' | 'warn' | 'blue' | 'grey' | 'teal';
 
 export interface SummaryCard {
   key: AlertType | 'NEAR_EXPIRY';
+  /** Bold Thai heading. */
   labelTh: string;
-  labelEn: string;
+  /** Small uppercase muted code next to the heading; omitted for near-expiry. */
+  code?: string;
   count: number;
+  /** Thai-only sub-label under the count. */
   subTh: string;
-  subEn: string;
-  icon: IconName;
   tone: SummaryTone;
   /** Near-expiry is a cross-reference into UI-07, not an alert of this queue. */
   href?: string;
 }
 
-export const SUMMARY_TONE: Record<SummaryTone, { bg: string; fg: string }> = {
-  crit: { bg: '#FEE2E2', fg: '#B91C1C' },
-  warn: { bg: '#FEF3C7', fg: '#92400E' },
-  blue: { bg: '#DBEAFE', fg: '#1E40AF' },
-  grey: { bg: '#F1F5F9', fg: '#475569' },
-  teal: { bg: '#CCFBF1', fg: '#115E59' },
+/**
+ * Left accent border per card (design image) — replaces the old icon tile.
+ * crit red · overstock/data-stale gray-blue · low-confidence orange · near-expiry teal.
+ */
+export const SUMMARY_ACCENT: Record<SummaryTone, string> = {
+  crit: '#DC2626',
+  blue: '#64748B',
+  warn: '#EA580C',
+  grey: '#64748B',
+  teal: '#0D9488',
 };
 
 export const ALERT_SUMMARY: SummaryCard[] = [
   {
-    key: 'LOW_STOCK', labelTh: 'สต็อกต่ำ', labelEn: 'Low stock', count: 5,
-    subTh: 'เร่งด่วนมาก 1 · เร่งด่วน 3 · ปกติ 1', subEn: 'Critical 1 · Urgent 3 · Normal 1',
-    icon: 'tri', tone: 'crit',
+    key: 'LOW_STOCK', labelTh: 'สต็อกต่ำ', code: 'LOW_STOCK', count: 5,
+    subTh: 'เร่งด่วนมาก 1 · เร่งด่วน 3 · ปกติ 1', tone: 'crit',
   },
   {
-    key: 'OVERSTOCK', labelTh: 'สต็อกเกิน', labelEn: 'Overstock', count: 2,
-    subTh: 'เกิน 2 เท่าของเป้า · ข้อมูลเท่านั้น', subEn: 'over 2x target · informational only',
-    icon: 'pkg', tone: 'blue',
+    key: 'OVERSTOCK', labelTh: 'สต็อกเกิน', code: 'OVERSTOCK', count: 2,
+    subTh: 'เกิน 2 เท่าของเป้า · ข้อมูลเท่านั้น', tone: 'blue',
   },
   {
-    key: 'LOW_CONFIDENCE', labelTh: 'พยากรณ์ไม่มั่นใจ', labelEn: 'Low-confidence forecast', count: 1,
-    subTh: 'ประวัติ < 90 วัน COLD_START', subEn: 'history < 90 days, COLD_START',
-    icon: 'alertc', tone: 'warn',
+    key: 'LOW_CONFIDENCE', labelTh: 'พยากรณ์ไม่มั่นใจ', code: 'LOW_CONFIDENCE', count: 1,
+    subTh: 'ประวัติ < 90 วัน (COLD_START)', tone: 'warn',
   },
   {
-    key: 'DATA_STALE', labelTh: 'ข้อมูลเก่า', labelEn: 'Stale data', count: 0,
-    subTh: 'นำเข้าล่าสุด 06:10 น. · เตือนเมื่อเกิน 7 วัน', subEn: 'last import 06:10 · alert after 7 days',
-    icon: 'clock', tone: 'grey',
+    key: 'DATA_STALE', labelTh: 'ข้อมูลเก่า', code: 'DATA_STALE', count: 0,
+    subTh: 'นำเข้าล่าสุด 06:10 น. · เตือนเมื่อเกิน 7 วัน', tone: 'grey',
   },
   {
-    key: 'NEAR_EXPIRY', labelTh: 'ใกล้หมดอายุ ≤ 180 วัน', labelEn: 'Near expiry ≤ 180 days', count: 3,
-    subTh: 'ลิสต์ตรวจสอบ · ไปหน้า UI-07', subEn: 'checklist · go to UI-07',
-    icon: 'calx', tone: 'teal', href: '#UI-07',
+    key: 'NEAR_EXPIRY', labelTh: 'ใกล้หมดอายุ\u00A0≤\u00A0180\u00A0วัน', count: 3,
+    subTh: 'ลิสต์ตรวจสอบ · ไปหน้า UI-07', tone: 'teal', href: '#UI-07',
   },
 ];
 
-/** Header context line: pharmacy, evaluation time, latest alert, last HIS sync. */
+/** Header context line (design image): pharmacy, forecast round, cadence, latest eval, HIS sync. */
 export const PHARMACY_CONTEXT = {
-  name: 'โรงพยาบาลสมุทรปราการ',
-  evaluatedAt: '13 ต.ค. 2569 19:11 น.',
-  latestAlertAt: '19:02 น.',
-  hisSyncedAt: '06:10 น.',
+  subtitle:
+    'รพ.สมุทรปราการ · พยากรณ์รอบ 01:00 น. · ประเมินแจ้งเตือนทุก 15 นาที (ล่าสุด 19:00 น.) · สต็อกจาก HIS นำเข้า 06:10 น.',
 };
 
 /* ------------------------------------------------------- tabs & filters */
 
 export interface AlertTab {
   key: 'queue' | 'all';
+  /** Tab label is Thai-only (design); the count renders in a pill from live row counts. */
   labelTh: string;
-  labelEn: string;
 }
 
 export const ALERT_TABS: AlertTab[] = [
-  { key: 'queue', labelTh: 'คิวแจ้งเตือน', labelEn: 'Alert queue' },
-  { key: 'all', labelTh: 'รายการยาทั้งหมด', labelEn: 'All drugs' },
+  { key: 'queue', labelTh: 'คิวแจ้งเตือน' },
+  { key: 'all', labelTh: 'รายการยาทั้งหมด' },
 ];
 
 export const SEVERITY_FILTERS: { key: 'all' | Severity; labelTh: string; labelEn: string }[] = [
@@ -229,7 +233,7 @@ export const ALERT_ROWS: StockAlertRow[] = [
   {
     id: 'ten', drug: 'Tenecteplase 50 mg inj', code: '1002875', ved: 'V', abc: 'A',
     onHand: 4, unit: 'VIAL', daysLeft: 20, dailyUse: 0.2, predict: 2, totalTarget: 4,
-    note: 'สต็อก ≥ เป้า → ไม่ต้องดำเนินการ', noteTone: 'ok',
+    note: 'ไม่ต้องดำเนินการ', noteTone: 'ok',
     method: 'COLD_START', methodNote: 'LOW_CONFIDENCE', lowConfidence: true,
     alert: { alertId: 'AL-2026-1002875', type: 'LOW_CONFIDENCE', severity: 'normal', status: 'acknowledged', time: '12 ต.ค.' },
   },
