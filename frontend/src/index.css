@@ -1524,12 +1524,13 @@ body.nav-open {
   display: grid;
   gap: 16px;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr));
+  align-items: stretch;
 }
 .sa-card {
-  padding: 14px 16px;
+  padding: 16px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  height: 100%;
   min-width: 0;
   color: inherit;
   text-decoration: none;
@@ -1537,32 +1538,64 @@ body.nav-open {
 a.sa-card:hover {
   border-color: var(--border-strong);
 }
-.sa-card-top {
+/* Thai title + code are separate elements — never one string, never a plain space. */
+.sa-card-head {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 8px;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 8px;
+  row-gap: 2px;
 }
 .sa-card-title {
-  font-size: 13px;
-  line-height: 18px;
+  font-size: 14px;
+  line-height: 1.5;
   color: var(--ink);
-  font-weight: 500;
+  font-weight: 600;
+}
+.sa-card-code {
+  font-weight: 400;
+  font-size: 11.5px;
+  line-height: 1.5;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  white-space: nowrap;
 }
 .sa-card-num {
   font-size: 28px;
   line-height: 34px;
   font-weight: 600;
+  color: var(--ink);
+  margin-top: 10px;
 }
 .sa-card-sub {
   font-size: 12px;
   line-height: 17px;
   color: var(--body);
+  margin-top: 6px;
 }
 .sa-tabs {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
+}
+/* Underline tabs (design) — scoped to UI-02; the shared `.tab` is untouched. */
+.sa-tabs .tab {
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  height: 34px;
+  padding: 0 12px;
+}
+.sa-tabs .tab:hover {
+  background: transparent;
+  color: var(--primary-dark);
+}
+.sa-tabs .tab-on,
+.sa-tabs .tab-on:hover {
+  background: transparent;
+  color: var(--primary-dark);
+  border-bottom-color: var(--primary);
 }
 .sa-toolbar {
   display: flex;
@@ -1625,9 +1658,13 @@ a.sa-card:hover {
 }
 .sa-chip-on,
 .sa-chip-on:hover {
-  background: var(--primary-soft);
-  border-color: var(--primary-border);
-  color: var(--primary-dark);
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #ffffff;
+}
+.sa-chip-on .cnt {
+  background: rgba(255, 255, 255, 0.22);
+  color: #ffffff;
 }
 .sa-ved-chip {
   width: 34px;
@@ -1645,7 +1682,8 @@ a.sa-card:hover {
   height: 36px;
   border: 1px solid var(--border-strong);
   border-radius: 8px;
-  padding: 0 10px;
+  /* Extra right padding keeps the native dropdown arrow clear of the edge. */
+  padding: 0 30px 0 10px;
   font: inherit;
   font-size: 13px;
   color: var(--ink);
@@ -1663,9 +1701,10 @@ a.sa-card:hover {
   height: 8px;
   border-radius: 9999px;
   background: #e2e8f0;
-  overflow: hidden;
+  /* visible so the two markers can stick out past the thin track */
+  overflow: visible;
   min-width: 76px;
-  margin: 5px 0 4px;
+  margin: 8px 0 6px;
 }
 .sa-bar span {
   position: absolute;
@@ -1680,7 +1719,15 @@ a.sa-card:hover {
   width: 2px;
   height: 14px;
   border-radius: 2px;
-  background: var(--ink);
+}
+/* blue tick = Predict · green tick = Total Target (design) */
+.sa-bar-predict {
+  background: var(--primary);
+}
+.sa-bar-target {
+  right: -1px;
+  left: auto;
+  background: #16a34a;
 }
 .sa-note {
   font-size: 11.5px;

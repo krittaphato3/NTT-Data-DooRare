@@ -1,4 +1,5 @@
 import { Icon } from '../../../components/common/icons';
+import type { IconName } from '../../../components/common/icons';
 import {
   ALERT_STATUS_META,
   ALERT_TYPE_META,
@@ -25,6 +26,20 @@ interface StockAlertTableProps {
 }
 
 const fmt = (n: number) => n.toLocaleString('en-US', { maximumFractionDigits: 2 });
+
+/** Badge with an optional leading glyph (`title` keeps the English gloss off-screen). */
+function Badge({ cls, label, en, icon }: { cls: string; label: string; en?: string; icon?: IconName }) {
+  return (
+    <span
+      className={`badge ${cls}`}
+      style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}
+      title={en ? `${label} / ${en}` : label}
+    >
+      {icon && <Icon name={icon} className="ic14" />}
+      {label}
+    </span>
+  );
+}
 
 /**
  * Row actions (spec §15.1 UI-02: ack / snooze / create borrow request).
@@ -101,27 +116,28 @@ export function StockAlertTable({ rows, acked, snoozed, created, onAction }: Sto
             const target = targetInfo(row);
             const pct = target ? Math.max(0, Math.min(1, row.onHand / target.target)) * 100 : 0;
             const markPct = target ? Math.max(0, Math.min(1, target.mark / target.target)) * 100 : 0;
+            /* Fill colour follows stock vs Predict (design): red below, green otherwise. */
+            const belowPredict = target ? row.onHand < target.mark : false;
+            const daysLow = row.noteTone === 'crit';
 
             return (
               <tr key={row.id}>
-                {/* ยา — name + HIS code (+ VED badge) */}
+                {/* ยา — V/E badge, then name + HIS code */}
                 <td style={{ minWidth: 220 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    {row.alert && (
-                      <span className={`sev ${sevMeta?.cls ?? 'sev-norm'}`} title={sevMeta?.labelTh ?? ''} aria-hidden="true">
-                        <Icon name={typeMeta?.icon ?? 'bell'} className="ic20" />
-                      </span>
-                    )}
-                    <span style={{ fontWeight: 600, color: '#0F2A5C' }}>{row.drug}</span>
-                    <span className={`ved ved-${row.ved} ved-sm`} title={row.ved === 'V' ? 'Vital' : row.ved === 'E' ? 'Essential' : 'Desirable'}>
+                    <span
+                      className={`ved ved-${row.ved} ved-sm`}
+                      title={row.ved === 'V' ? 'Vital' : row.ved === 'E' ? 'Essential' : 'Desirable'}
+                    >
                       {row.ved}
                     </span>
+                    <span style={{ fontWeight: 600, color: '#0F2A5C' }}>{row.drug}</span>
                   </div>
                   <span className="code">{row.code}</span>
                 </td>
 
                 {/* ABC */}
-                <td><span className="badge t-grey code">{row.abc}</span></td>
+                <td><span className="code">{row.abc}</span></td>
 
                 {/* คงเหลือ */}
                 <td className="r" style={{ whiteSpace: 'nowrap' }}>
@@ -129,9 +145,12 @@ export function StockAlertTable({ rows, acked, snoozed, created, onAction }: Sto
                   <span style={{ fontSize: 12 }}>{row.unit}</span>
                 </td>
 
-                {/* ใช้ได้อีก */}
+                {/* ใช้ได้อีก — red while stock is low */}
                 <td className="r" style={{ whiteSpace: 'nowrap' }}>
-                  <span className="num sa-cell-num">{fmt(row.daysLeft)}</span> <span style={{ fontSize: 12 }}>วัน</span>
+                  <span className="num sa-cell-num" style={daysLow ? { color: NOTE_TONE_COLOR.crit } : undefined}>
+                    {fmt(row.daysLeft)}
+                  </span>{' '}
+                  <span style={{ fontSize: 12 }}>วัน</span>
                   <span style={{ display: 'block', fontSize: 12 }}>ใช้ {fmt(row.dailyUse)}/วัน</span>
                 </td>
 
@@ -145,8 +164,10 @@ export function StockAlertTable({ rows, acked, snoozed, created, onAction }: Sto
                         role="img"
                         aria-label={`คงเหลือ ${fmt(row.onHand)} จากเป้า ${fmt(target.target)}`}
                       >
-                        <span style={{ width: `${pct}%`, background: NOTE_TONE_COLOR[row.noteTone] }} />
-                        <i className="sa-bar-mark" style={{ left: `${markPct}%` }} />
+                        <span style={{ width: `${pct}%`, background: belowPredict ? NOTE_TONE_COLOR.crit : '#16A34A' }} />
+                        {/* blue tick = Predict · green tick = Total Target */}
+                        <i className="sa-bar-mark sa-bar-predict" style={{ left: `${markPct}%` }} />
+                        <i className="sa-bar-mark sa-bar-target" />
                       </div>
                     </>
                   ) : (
@@ -166,12 +187,8 @@ export function StockAlertTable({ rows, acked, snoozed, created, onAction }: Sto
                   {row.alert && sevMeta && stMeta && typeMeta ? (
                     <>
                       <span style={{ display: 'inline-flex', flexWrap: 'wrap', gap: 4 }}>
-                        <span className={`badge ${sevMeta.cls}`} title={`${sevMeta.labelTh} / ${sevMeta.labelEn}`}>
-                          {sevMeta.labelTh}
-                        </span>
-                        <span className={`badge ${stMeta.cls}`} title={`${stMeta.labelTh} / ${stMeta.labelEn}`}>
-                          {stMeta.labelTh}
-                        </span>
+                        <Badge cls={sevMeta.cls} label={sevMeta.labelTh} en={sevMeta.labelEn} icon={sevMeta.icon} />
+                        <Badge cls={stMeta.cls} label={stMeta.labelTh} en={stMeta.labelEn} />
                       </span>
                       <span className="sa-alert-meta">
                         {typeMeta.th} · {row.alert.time}
