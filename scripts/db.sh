@@ -5,11 +5,13 @@
 #   reset  drop the DB volume, recreate the schema, load mock data
 #   psql   open psql   (host: 127.0.0.1:5442, user doorare, password doorare_dev, db doorare)
 set -euo pipefail
+export MSYS_NO_PATHCONV=1
 cd "$(dirname "$0")/.."
 DC="docker compose"
 PSQL="$DC exec -T db psql -U doorare -d doorare -v ON_ERROR_STOP=1"
 
 wait_ready() {
+  echo "waiting for database to become healthy..."
   for _ in $(seq 1 60); do
     [ "$($DC ps --format '{{.Health}}' db 2>/dev/null)" = "healthy" ] && return 0
     sleep 1
@@ -24,14 +26,37 @@ load() {
   fi
   echo "loading mock data (about 1.4M rows)..."
   $DC exec -T -w /mock/csv db psql -U doorare -d doorare -v ON_ERROR_STOP=1 -q -f /mock/load.sql
+  echo "creating views..."
   $PSQL -q -f /mock/views.sql
+  echo "done! verifying record counts:"
   $PSQL -c "select (select count(*) from hospital) hospitals, (select count(*) from usage_daily) usage_daily, (select count(*) from borrow_request) borrow_requests, (select count(*) from stock_lot) lots"
 }
 
 case "${1:-}" in
-  up)    $DC up -d db; wait_ready; echo "ready: postgresql://doorare:doorare_dev@127.0.0.1:5442/doorare" ;;
-  load)  wait_ready; load ;;
-  reset) $DC rm -sfv db >/dev/null; docker volume rm -f doorare_pgdata >/dev/null; $DC up -d db; wait_ready; load ;;
-  psql)  exec $DC exec db psql -U doorare -d doorare ;;
-  *)     echo "usage: $0 {up|load|reset|psql}" >&2; exit 1 ;;
+  up)
+    echo "starting db container..."
+    $DC up -d db
+    wait_ready
+    echo "ready: postgresql://doorare:doorare_dev@127.0.0.1:5442/doorare"
+    ;;
+  load)
+    wait_ready
+    load
+    ;;
+  reset)
+    echo "stopping db and removing old volume..."
+    $DC rm -sfv db >/dev/null
+    docker volume rm -f doorare_pgdata >/dev/null
+    echo "starting fresh db container..."
+    $DC up -d db
+    wait_ready
+    load
+    ;;
+  psql)
+    exec $DC exec db psql -U doorare -d doorare
+    ;;
+  *)
+    echo "usage: $0 {up|load|reset|psql}" >&2
+    exit 1
+    ;;
 esac
