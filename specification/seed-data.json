@@ -1,0 +1,364 @@
+{
+ "_note": "Seed for scenarios SC-1..SC-6. Values reproduce worked examples F-09, F-14..18, F-20, F-22, F-23, F-26, F-27. | rev 1.3: no 24-digit codes; item_type + central_list added; DRUG ids verified against TMT release 20261005.",
+ "region": {
+  "code": "R-DEMO",
+  "name_th": "เขตสุขภาพทดสอบ"
+ },
+ "hospitals": [
+  {
+   "code": "HA",
+   "name_en": "Hospital A (borrower)",
+   "lat": 13.7563,
+   "lon": 100.5018,
+   "is_urban": true,
+   "has_blood_bank": true
+  },
+  {
+   "code": "HB",
+   "name_en": "Hospital B",
+   "lat": 13.79,
+   "lon": 100.54,
+   "is_urban": true,
+   "has_blood_bank": true
+  },
+  {
+   "code": "HC",
+   "name_en": "Hospital C",
+   "lat": 13.7,
+   "lon": 100.45,
+   "is_urban": true,
+   "has_blood_bank": false
+  },
+  {
+   "code": "HD",
+   "name_en": "Hospital D",
+   "lat": 14.02,
+   "lon": 100.73,
+   "is_urban": false,
+   "has_blood_bank": false
+  },
+  {
+   "code": "HE",
+   "name_en": "Hospital E",
+   "lat": 13.85,
+   "lon": 100.6,
+   "is_urban": true,
+   "has_blood_bank": true
+  }
+ ],
+ "drugs": [
+  {
+   "local_code": "1000147",
+   "name": "ADRENalin e (HAD)",
+   "unit": "AMP",
+   "price_thb": 7.75,
+   "tmt_id": "537215",
+   "gp_id": "810845",
+   "ved": "V",
+   "item_type": "DRUG",
+   "gp_note": "TMT GP/TP ids verified against TMT release 20261005"
+  },
+  {
+   "local_code": "1000016",
+   "name": "5-FU 0.25 DOSE",
+   "unit": "DOSE",
+   "price_thb": 100,
+   "tmt_id": "965464",
+   "gp_id": "210051",
+   "ved": "E",
+   "note": "same TMT concept as 1000017 but different unit (Q-26)",
+   "item_type": "DRUG",
+   "gp_note": "TMT GP/TP ids verified against TMT release 20261005"
+  },
+  {
+   "local_code": "1000017",
+   "name": "5-FU 120 SYRINGE",
+   "unit": "SYRINGE",
+   "price_thb": 120,
+   "tmt_id": "965464",
+   "gp_id": "210051",
+   "ved": "E",
+   "item_type": "DRUG",
+   "gp_note": "TMT GP/TP ids verified against TMT release 20261005"
+  },
+  {
+   "local_code": "1000223",
+   "name": "AMLOdipine 1",
+   "unit": "เม็ด",
+   "price_thb": 1,
+   "ved": "D",
+   "item_type": "DRUG"
+  },
+  {
+   "local_code": "1000245",
+   "name": "AMPIcillin",
+   "unit": "VIAL",
+   "price_thb": 17,
+   "ved": "E",
+   "item_type": "DRUG"
+  },
+  {
+   "local_code": "1000313",
+   "name": "ATEnolol 0.5",
+   "unit": "เม็ด",
+   "price_thb": 0.5,
+   "ved": "D",
+   "item_type": "DRUG"
+  },
+  {
+   "local_code": "1002160",
+   "name": "ALprostadil (CASE)",
+   "unit": "AMP",
+   "price_thb": 6010,
+   "ved": "V",
+   "item_type": "DRUG"
+  },
+  {
+   "local_code": "1003011",
+   "name": "ถุงมือไนไตรล์ M 100 ชิ้น/กล่อง",
+   "unit": "BOX",
+   "price_thb": 180,
+   "ved": "E",
+   "item_type": "SUPPLY",
+   "central_item": "SUP-0004",
+   "note": "rev 1.3 ASM-48: non-drug supply, no TMT; mapped by selecting a central-list item"
+  },
+  {
+   "local_code": "BLD-PRC-O",
+   "name": "PRC group O (packed red cells)",
+   "unit": "UNIT",
+   "price_thb": 0,
+   "ved": "V",
+   "is_blood_product": true,
+   "note": "rev 1.2 ASM-47: F3 emergency borrow only; excluded from F1/F2; no TMT code (blood bank item); mapped from the central list (rev 1.3, ASM-48)",
+   "item_type": "BLOOD",
+   "central_item": "BLD-0001"
+  }
+ ],
+ "scenarios": {
+  "SC-1": {
+   "title": "Stock alert → borrow (F-09, F-14..F-18, F-20)",
+   "borrower": {
+    "hospital": "HA",
+    "drug": "1000147",
+    "stock": 15,
+    "incoming": 0,
+    "u": 10,
+    "L": 3,
+    "sigma": 4,
+    "ved": "V",
+    "expect": {
+     "R": 41.43,
+     "borrow": 27
+    }
+   },
+   "lenders_case_44": {
+    "need": 120,
+    "window_max_h": 36,
+    "HB": {
+     "ttransit_h": 4,
+     "lendable": 80,
+     "stock": 200,
+     "u": 10,
+     "approval": 0.9,
+     "timeout": 0.1,
+     "expect_Si": 0.7357
+    },
+    "HC": {
+     "ttransit_h": 5,
+     "lendable": 60,
+     "stock": 150,
+     "u": 12,
+     "history": null,
+     "expect_Si": 0.62
+    },
+    "HE": {
+     "ttransit_h": 8,
+     "lendable": 40,
+     "stock": 90,
+     "u": 8,
+     "approval": 0.7,
+     "timeout": 0.2,
+     "expect_Si": 0.5348
+    },
+    "HD": {
+     "ttransit_h": 30,
+     "lendable": 100,
+     "stock": 300,
+     "u": 15,
+     "approval": 0.8,
+     "timeout": 0.05,
+     "expect_Si": 0.4599
+    },
+    "expect_order": [
+     "HB",
+     "HC",
+     "HE",
+     "HD"
+    ],
+    "V_stop_at": 108,
+    "E_first_request": 21,
+    "E_stop_threshold": 14
+   },
+   "intermittent_variant": {
+    "drug_ved": "V",
+    "demand_pattern": "INTERMITTENT",
+    "L": 3,
+    "lead_time_quantile_p95": 38,
+    "stock": 15,
+    "incoming": 0,
+    "expect": {
+     "R": 38,
+     "borrow": 23
+    },
+    "note": "Z*sigma*sqrt(L) is not used (F-09 B)"
+   },
+   "return": {
+    "borrowed": 27,
+    "returns": [
+     10,
+     17
+    ],
+    "expect": "RETURNED after cumulative 27 of the same drug; payment option does not exist"
+   }
+  },
+  "SC-2": {
+   "title": "Lender silence → timeout → next lender (F-19)",
+   "severity": "VERY_URGENT",
+   "stock": 15,
+   "u": 10,
+   "expect": {
+    "T_eff_min": 120,
+    "reminder_min": 60
+   }
+  },
+  "SC-3": {
+   "title": "Near-expiry release, split, cost check (F-22, F-23)",
+   "pool_lot_qty": 180,
+   "expect_alloc_total": 180,
+   "transport": {
+    "cost_thb": 700,
+    "value_thb": 4500,
+    "ratio": 0.156,
+    "economical": true
+   },
+   "with_cold_chain": {
+    "cost_thb": 1200,
+    "ratio": 0.267,
+    "economical": false,
+    "options": [
+     "MERGE_SHIPMENTS",
+     "RAISE_VALUE",
+     "DONATE_OR_DISCARD",
+     "HOLD"
+    ]
+   }
+  },
+  "SC-4": {
+   "title": "Mass casualty (F-26, F-27)",
+   "eta_min": 25,
+   "intubation_set": {
+    "needed": 4,
+    "ready": 0,
+    "loose_packable": 3,
+    "expect": {
+     "pack": 3,
+     "borrow_whole_sets": 1
+    }
+   },
+   "eta": {
+    "reported_min": 25,
+    "eta_unsure": true,
+    "route_realtime_min": 26,
+    "expect_eta_min": 25,
+    "route_down_no_report": "ETA_UNAVAILABLE (radio notice, no speed table)"
+   }
+  },
+  "SC-5": {
+   "title": "Drug mapping with unit conflict (F-29, Q-26)",
+   "rows": [
+    "1000016",
+    "1000017"
+   ],
+   "expect": {
+    "confidence_example": 0.938,
+    "requires_unit_factor": true
+   },
+   "pack_example": {
+    "HA": {
+     "local_unit": "หลอด",
+     "unit_conversion_factor": 1,
+     "base_units_per_pack": 1
+    },
+    "HB": {
+     "local_unit": "กล่อง",
+     "unit_conversion_factor": 10,
+     "base_units_per_pack": 10
+    },
+    "lend_base": 30,
+    "expect": {
+     "HA_shows": "30 หลอด",
+     "HB_shows": "3 กล่อง"
+    }
+   }
+  },
+  "SC-6": {
+   "title": "Blood handling (ASM-47, BR-F3-031/032)",
+   "expect": {
+    "HA_borrow_PRC_O_from_HB": "allowed in EMERGENCY (both have_blood_bank)",
+    "HA_borrow_PRC_O_from_HC": "rejected (HC has no blood bank)",
+    "FFP_or_platelets": "reminder only, no plan line",
+    "MANUAL_or_STOCK_ALERT_context_PRC_O": "rejected by trigger",
+    "return_mode": "BLOOD_REPLACEMENT",
+    "F1_F2": "PRC_O skipped"
+   }
+  }
+ },
+ "central_list": [
+  {
+   "internal_code": "SUP-0001",
+   "item_type": "SUPPLY",
+   "name": "N95 respirator",
+   "base_unit": "ชิ้น"
+  },
+  {
+   "internal_code": "SUP-0002",
+   "item_type": "SUPPLY",
+   "name": "ชุด PPE",
+   "base_unit": "ชุด"
+  },
+  {
+   "internal_code": "SUP-0003",
+   "item_type": "SUPPLY",
+   "name": "ชุดตรวจ ATK",
+   "base_unit": "test"
+  },
+  {
+   "internal_code": "SUP-0004",
+   "item_type": "SUPPLY",
+   "name": "ถุงมือไนไตรล์",
+   "spec": "100 ชิ้น/กล่อง",
+   "base_unit": "กล่อง"
+  },
+  {
+   "internal_code": "SUP-0005",
+   "item_type": "SUPPLY",
+   "name": "IV catheter",
+   "spec": "18G",
+   "base_unit": "ชิ้น"
+  },
+  {
+   "internal_code": "SUP-0006",
+   "item_type": "SUPPLY",
+   "name": "ชุดทำแผล",
+   "base_unit": "ชุด"
+  },
+  {
+   "internal_code": "BLD-0001",
+   "item_type": "BLOOD",
+   "name": "PRC group O (packed red cells)",
+   "spec": "1 unit ~300 mL",
+   "base_unit": "ยูนิต"
+  }
+ ]
+}

@@ -4,21 +4,55 @@ import { Sidebar } from './components/layout/Sidebar';
 import { TopBar } from './components/layout/TopBar';
 import { getNavForRole } from './data/navigation';
 import type { ShellNavEntry } from './data/navigation';
+import { USER } from './data/session';
 import { ALERTS } from './roles/pharmacist/data/dashboard';
+import { BorrowRequestsPage } from './roles/pharmacist/pages/BorrowRequestsPage';
 import { DashboardPage } from './roles/pharmacist/pages/DashboardPage';
+import { DocumentsPage } from './roles/pharmacist/pages/DocumentsPage';
+import { IncidentConsolePage } from './roles/pharmacist/pages/IncidentConsolePage';
+import { LenderQueuePage } from './roles/pharmacist/pages/LenderQueuePage';
+import { NearExpiryPage } from './roles/pharmacist/pages/NearExpiryPage';
+import { PoolAllocationPage } from './roles/pharmacist/pages/PoolAllocationPage';
+import { ReportsPage } from './roles/pharmacist/pages/ReportsPage';
+import { StockAlertsPage } from './roles/pharmacist/pages/StockAlertsPage';
 import { WAREHOUSE_NOTIFICATIONS, WAREHOUSE_USER } from './roles/warehouse/data/session';
 import { TransportTrackingPage } from './roles/warehouse/pages/TransportTrackingPage';
 import type { TransportRole } from './roles/warehouse/pages/TransportTrackingPage';
 
+type Page = 'dashboard' | 'transport' | 'requests' | 'lend' | 'incident' | 'alerts' | 'report' | 'expiry' | 'pool' | 'docs';
+
+/** Pharmacist on the ops-style top bar (UI-05 mockup: scope pill, agent pill, TH/EN). */
+const PHARMACIST_OPS_USER = { ...USER, scopeLabel: 'เห็นเฉพาะข้อมูล รพ.สมุทรปราการ' };
+
 /**
- * No router yet: `?page=transport` shows Transport tracking (UI-14).
- * `&role=pharmacist` = read-only pharmacist view, otherwise the warehouse officer view.
+ * No router yet:
+ * `?page=transport` shows Transport tracking (UI-14),
+ * `?page=requests` shows Borrow requests (UI-05),
+ * `?page=lend` shows Lender queue (UI-06),
+ * `?page=incident` shows Incident console (UI-11 – UI-13),
+ * `?page=alerts` shows Stock alert queue (UI-02),
+ * `?page=report` shows Reports & Value (UI-19),
+ * `?page=expiry` shows Near-expiry review (UI-07),
+ * `?page=pool` shows Pool & allocation (UI-08 · UI-09),
+ * `?page=docs` shows Documents (UI-15).
+ * `&role=pharmacist` = read-only pharmacist transport view, otherwise the warehouse officer view.
  */
-function initialRoute(): { page: 'dashboard' | 'transport'; transportRole: TransportRole } {
+function initialRoute(): { page: Page; transportRole: TransportRole } {
   try {
     const q = new URLSearchParams(window.location.search);
+    const p = q.get('page');
+    let page: Page = 'dashboard';
+    if (p === 'transport') page = 'transport';
+    else if (p === 'requests' || p === 'borrow') page = 'requests';
+    else if (p === 'lend') page = 'lend';
+    else if (p === 'incident' || p === 'inc') page = 'incident';
+    else if (p === 'alerts') page = 'alerts';
+    else if (p === 'report' || p === 'rep') page = 'report';
+    else if (p === 'expiry' || p === 'exp') page = 'expiry';
+    else if (p === 'pool' || p === 'alloc') page = 'pool';
+    else if (p === 'docs' || p === 'doc') page = 'docs';
     return {
-      page: q.get('page') === 'transport' ? 'transport' : 'dashboard',
+      page,
       transportRole: q.get('role')?.toLowerCase() === 'pharmacist' ? 'PHARMACIST' : 'WAREHOUSE_OFFICER',
     };
   } catch {
@@ -32,7 +66,15 @@ function withLinks(items: ShellNavEntry[], role: string): ShellNavEntry[] {
   return items.map((e) => {
     if ('kind' in e) return e;
     if (e.key === 'tr') return { ...e, href: `?page=transport${suffix}` };
+    if (e.key === 'lend') return { ...e, href: '?page=lend' };
+    if (e.key === 'inc') return { ...e, href: '?page=incident' };
+    if (e.key === 'alerts') return { ...e, href: '?page=alerts' };
+    if (e.key === 'rep') return { ...e, href: `?page=report${suffix}` };
+    if (e.key === 'exp') return { ...e, href: '?page=expiry' };
+    if (e.key === 'pool') return { ...e, href: '?page=pool' };
+    if (e.key === 'doc') return { ...e, href: '?page=docs' };
     if (e.key === 'dash' && role === 'PHARMACIST') return { ...e, href: '/' };
+    if (e.key === 'req' && role === 'PHARMACIST') return { ...e, href: '?page=requests' };
     return e;
   });
 }
@@ -57,10 +99,22 @@ export default function App() {
   const [isAdmin] = useState(initialRole);
   const [route] = useState(initialRoute);
   const onTransport = route.page === 'transport';
-  // The warehouse officer gets the ops top bar; the pharmacist keeps the standard shell.
-  const ops = onTransport && route.transportRole === 'WAREHOUSE_OFFICER';
-  const navRole = ops ? 'WAREHOUSE_OFFICER' : 'PHARMACIST';
-  const navItems = withLinks(getNavForRole(navRole, onTransport ? 'tr' : 'dash'), navRole);
+  const onRequests = route.page === 'requests';
+  const onLend = route.page === 'lend';
+  const onIncident = route.page === 'incident';
+  const onAlerts = route.page === 'alerts';
+  const onReport = route.page === 'report';
+  const onExpiry = route.page === 'expiry';
+  const onPool = route.page === 'pool';
+  const onDocs = route.page === 'docs';
+  const warehouse = onTransport && route.transportRole === 'WAREHOUSE_OFFICER';
+  // Warehouse transport, UI-05, and UI-06 use the ops top bar (no footer); dashboard, alerts, report, and incident console keep standard shell.
+  const ops = warehouse || onRequests || onLend;
+  // UI-07/08/09/15 screenshots use the ops top bar but keep the standard footer.
+  const opsBar = ops || onExpiry || onPool || onDocs;
+  const navRole = warehouse ? 'WAREHOUSE_OFFICER' : 'PHARMACIST';
+  const activeKey = onTransport ? 'tr' : onRequests ? 'req' : onLend ? 'lend' : onIncident ? 'inc' : onAlerts ? 'alerts' : onReport ? 'rep' : onExpiry ? 'exp' : onPool ? 'pool' : onDocs ? 'doc' : 'dash';
+  const navItems = withLinks(getNavForRole(navRole, activeKey), navRole);
 
   // Mobile drawer: lock page scroll, close on Escape and when resizing to desktop.
   useEffect(() => {
@@ -100,12 +154,32 @@ export default function App() {
           isAdmin={isAdmin}
           navOpen={navOpen}
           onMenu={() => setNavOpen((v) => !v)}
-          notifications={ops ? WAREHOUSE_NOTIFICATIONS : ALERTS.map((a) => ({ drug: a.drug, time: a.time }))}
-          variant={ops ? 'ops' : 'pharmacist'}
-          user={ops ? WAREHOUSE_USER : undefined}
+          notifications={warehouse ? WAREHOUSE_NOTIFICATIONS : ALERTS.map((a) => ({ drug: a.drug, time: a.time }))}
+          variant={opsBar ? 'ops' : 'pharmacist'}
+          user={warehouse ? WAREHOUSE_USER : opsBar ? PHARMACIST_OPS_USER : undefined}
         />
         <main className="mainpad">
-          {onTransport ? <TransportTrackingPage role={route.transportRole} /> : <DashboardPage isAdmin={isAdmin} query={query} hospital={hospital} onHospital={setHospital} />}
+          {onTransport ? (
+            <TransportTrackingPage role={route.transportRole} />
+          ) : onRequests ? (
+            <BorrowRequestsPage />
+          ) : onLend ? (
+            <LenderQueuePage />
+          ) : onIncident ? (
+            <IncidentConsolePage />
+          ) : onAlerts ? (
+            <StockAlertsPage />
+          ) : onReport ? (
+            <ReportsPage />
+          ) : onExpiry ? (
+            <NearExpiryPage />
+          ) : onPool ? (
+            <PoolAllocationPage />
+          ) : onDocs ? (
+            <DocumentsPage />
+          ) : (
+            <DashboardPage isAdmin={isAdmin} query={query} hospital={hospital} onHospital={setHospital} />
+          )}
         </main>
         {!ops && <Footer isAdmin={isAdmin} />}
       </div>

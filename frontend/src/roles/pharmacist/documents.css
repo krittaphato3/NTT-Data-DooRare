@@ -1,0 +1,74 @@
+/* UI-15 Documents — mockup-faithful print sheet, VOID stamp and list styles.
+   Table, tabs, filters and drawer base styles are shared ops primitives (index.css). */
+
+.doc-tbl { min-width: 900px; }
+.doc-r-void td { background: #FFFBFB; }
+.doc-r-void td:first-child { box-shadow: inset 3px 0 0 #DC2626; }
+
+/* ── Printable sheet ─────────────────────────────────────────── */
+.doc-paper {
+  position: relative;
+  border: 1px solid #CBD5E1;
+  background: #FFFFFF;
+  border-radius: 6px;
+  padding: 18px 20px 14px;
+  font-size: 12.5px;
+  line-height: 18px;
+  color: #1E293B;
+  overflow: hidden;
+}
+
+.doc-head { display: flex; justify-content: space-between; gap: 14px; border-bottom: 2px solid #0F2A5C; padding-bottom: 8px; }
+.doc-title { font-size: 14.5px; font-weight: 700; color: #0F2A5C; }
+.doc-sub { font-size: 11px; color: #64748B; margin-top: 2px; }
+.doc-meta { text-align: right; font-size: 11.5px; line-height: 17px; color: #475569; white-space: nowrap; }
+
+.doc-parties { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+.doc-party { border: 1px solid #E2E8F0; border-radius: 6px; padding: 7px 10px; display: flex; flex-direction: column; gap: 1px; font-size: 11.5px; line-height: 16px; }
+.doc-party-label { font-size: 10.5px; color: #64748B; }
+.doc-party b { color: #0F2A5C; font-size: 12.5px; }
+
+.doc-lines { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 11.5px; }
+.doc-lines th { background: #F1F5F9; border: 1px solid #E2E8F0; padding: 5px 8px; text-align: left; font-weight: 600; color: #475569; }
+.doc-lines td { border: 1px solid #E2E8F0; padding: 6px 8px; color: #334155; }
+
+.doc-delivery { margin-top: 10px; padding: 7px 10px; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 6px; font-size: 11.5px; color: #334155; }
+
+.doc-terms { margin-top: 8px; border: 1px solid #DBEAFE; background: #EFF6FF; border-radius: 6px; padding: 8px 10px; font-size: 11.5px; color: #1E3A8A; }
+.doc-terms ul { margin: 5px 0 0; padding-left: 16px; display: flex; flex-direction: column; gap: 3px; }
+
+.doc-note { margin-top: 8px; font-size: 11.5px; color: #64748B; }
+
+.doc-sigs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-top: 16px; }
+.doc-sig { display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; }
+.doc-sig-line { display: block; width: 100%; border-bottom: 1px dotted #94A3B8; height: 22px; }
+.doc-sig-name { font-size: 11px; color: #334155; }
+.doc-sig-role { font-size: 9.5px; color: #94A3B8; }
+
+.doc-foot { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 14px; padding-top: 8px; border-top: 1px solid #E2E8F0; font-size: 10px; color: #94A3B8; }
+
+.doc-stamp {
+  position: absolute;
+  top: 44%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-16deg);
+  border: 3px solid #DC2626;
+  color: #DC2626;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  padding: 6px 18px;
+  border-radius: 6px;
+  opacity: 0.75;
+  pointer-events: none;
+  z-index: 2;
+}
+.doc-paper-void { background: #FFFAFA; }
+
+.doc-void-banner { display: flex; align-items: flex-start; gap: 10px; padding: 11px 13px; border-radius: 10px; background: #FEF2F2; border: 1px solid #FCA5A5; font-size: 12.5px; line-height: 18px; color: #7F1D1D; }
+.doc-void-link { display: block; margin-top: 4px; font-weight: 600; }
+
+@media (max-width: 480px) {
+  .doc-parties, .doc-sigs { grid-template-columns: 1fr; }
+  .doc-stamp { font-size: 17px; }
+}

@@ -41,9 +41,9 @@ export function TransportTrackingPage({ role = 'WAREHOUSE_OFFICER' }: { role?: T
   const online = useOnline();
   const [dir, setDir] = useState<Direction>('all');
   const [status, setStatus] = useState<TransportStatus | null>(null);
-  const [selId, setSelId] = useState<string>('TR-2026-000341');
-  // Detail drawer starts open on desktop only; on phones/tablets it would cover the list.
-  const [drawerOpen, setDrawerOpen] = useState(() => window.matchMedia('(min-width: 1024px)').matches);
+  // Nothing is selected on entry; the detail drawer opens only when a row is picked.
+  const [selId, setSelId] = useState<string | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [histOpen, setHistOpen] = useState(false);
   const [synced, setSynced] = useState(false);
   const [receipt, setReceipt] = useState<Record<string, ReceiptState>>({});
@@ -103,7 +103,7 @@ export function TransportTrackingPage({ role = 'WAREHOUSE_OFFICER' }: { role?: T
     open(r.shipment.id);
   };
 
-  const sel = all.find((r) => r.shipment.id === selId) ?? all[0];
+  const sel = selId ? all.find((r) => r.shipment.id === selId) : undefined;
   const countedFor = (s: Shipment) => counted[s.id] ?? String(s.qty);
 
   return (
@@ -185,10 +185,10 @@ export function TransportTrackingPage({ role = 'WAREHOUSE_OFFICER' }: { role?: T
           <span style={{ flex: '1 1 0' }} />
           <span style={{ fontSize: 12 }}>เรียง: ต้องทำก่อน → อัปเดตล่าสุด</span>
         </div>
-        <ShipmentTable rows={rows} activeId={drawerOpen ? sel.shipment.id : null} onOpen={open} onAction={onAction} canOperate={canOperate} />
+        <ShipmentTable rows={rows} activeId={drawerOpen && sel ? sel.shipment.id : null} onOpen={open} onAction={onAction} canOperate={canOperate} />
       </section>
 
-      {drawerOpen && (
+      {drawerOpen && sel && (
         <ShipmentDrawer
           key={sel.shipment.id}
           shipment={sel.shipment}

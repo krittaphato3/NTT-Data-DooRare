@@ -1,0 +1,43 @@
+/* UI-08 Central pool + UI-09 Allocation plan review — mockup-faithful values.
+   Table, tabs, drawer base styles are the shared ops primitives in index.css. */
+
+.pl-kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.pl-kpi { border: 1px solid #E2E8F0; border-left: 4px solid #2563EB; border-radius: 10px; padding: 12px 14px; background: #FFFFFF; }
+.pl-kpi-warn { border-left-color: #D97706; background: #FFFBEB; }
+.pl-kpi-label { font-size: 12.5px; font-weight: 600; color: #334155; }
+.pl-kpi-label .en { font-size: 10.5px; letter-spacing: 0.04em; color: #94A3B8; }
+.pl-kpi-val { font-size: 24px; line-height: 32px; font-weight: 700; color: #0F2A5C; margin-top: 2px; }
+.pl-kpi-sub { font-size: 12px; line-height: 17px; color: #64748B; margin-top: 2px; }
+
+.pl-tbl { min-width: 1000px; }
+
+.pl-ratio { display: flex; align-items: center; gap: 8px; }
+.pl-ratio-bar { position: relative; flex: 1; min-width: 70px; height: 6px; border-radius: 9999px; background: #E2E8F0; overflow: visible; }
+.pl-ratio-bar > span { display: block; height: 100%; border-radius: inherit; }
+.pl-ratio-bar > i { position: absolute; top: -3px; bottom: -3px; left: 50%; width: 2px; background: #0F2A5C; opacity: 0.55; }
+.pl-ratio-num { font-size: 12px; color: #475569; white-space: nowrap; }
+
+.pl-warn-line { margin-top: 4px; font-size: 12px; line-height: 17px; font-weight: 600; color: #B91C1C; }
+
+.pl-box-bad { border-color: #FCA5A5; background: #FEF2F2; }
+.pl-box-bad .tr-h3 { color: #B91C1C; }
+
+.pl-merge { display: flex; align-items: flex-start; gap: 8px; margin-top: 10px; padding: 8px 10px; border: 1px solid #BFDBFE; background: #EFF6FF; border-radius: 8px; font-size: 12.5px; line-height: 18px; color: #1E3A8A; cursor: pointer; }
+.pl-merge input { margin-top: 2px; }
+
+.pl-agent { border: 1px solid #DBEAFE; background: #EFF6FF; border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; }
+.pl-agent-head { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #0F2A5C; }
+
+.pl-appr { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.pl-appr li { display: flex; align-items: flex-start; gap: 10px; }
+.pl-appr-dot { width: 24px; height: 24px; border-radius: 9999px; display: grid; place-items: center; flex: none; }
+
+.pl-decide { border: 1px solid #FCA5A5; background: #FFF7F7; border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+.pl-opt { display: flex; align-items: flex-start; gap: 10px; padding: 9px 12px; border: 1px solid #E2E8F0; border-radius: 8px; background: #FFFFFF; cursor: pointer; }
+.pl-opt:hover { border-color: #94A3B8; }
+.pl-opt-on { border: 2px solid #1D4ED8; background: #EFF6FF; padding: 8px 11px; }
+.pl-opt input { margin-top: 3px; }
+
+.pl-done { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; border-radius: 10px; background: #F0FDF4; border: 1px solid #BBF7D0; font-size: 13px; line-height: 19px; color: #14532D; }
+
+@media (max-width: 900px) { .pl-kpis { grid-template-columns: 1fr; } }
