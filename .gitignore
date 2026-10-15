@@ -12,3 +12,6 @@ dist/
 
 # Scratch screenshot comparison output
 tmp-*/
+
+# Mock data CSV (133 MB, regenerate with db/mock/generate.py or copy from the mock zip)
+db/mock/csv/
