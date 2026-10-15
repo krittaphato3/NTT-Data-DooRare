@@ -19,6 +19,7 @@ Relevant files: `frontend/src/App.tsx`, `frontend/src/roles/pharmacist/pages/Das
 ## UI-02 Stock alert queue (branch feature/notification)
 
 - UI-02 built UI-only (pharmacist role); open `/?page=alerts`; sidebar "แจ้งเตือนสต็อก" links there. See `sessions/2026-10-14-stock-alert-queue-ui02.md`.
-- Files: `frontend/src/roles/pharmacist/{data/stockAlerts.ts,components/StockAlert*.tsx,pages/StockAlertsPage.tsx}`, `frontend/src/index.css` (`.sa-*`), `frontend/src/App.tsx`.
-- Verify: `cd frontend && npm run build`; page checks via `vite preview` + Playwright.
+- Files: `frontend/src/roles/pharmacist/{data/stockAlerts.ts,components/StockAlert*.tsx,pages/StockAlertsPage.tsx}`, `frontend/src/index.css` (`.sa-*`), `frontend/src/App.tsx`, `frontend/src/components/common/icons.tsx` (`upload`).
+- Visual-fix pass done: design alignment (no English glosses, accent borders, badge icons, two bar markers, underline tabs, etc.); build exit 0; DOM probe 46/46; 25 `ui-02-*.png` re-captured fresh.
+- Verify: `cd frontend && npm run build`; page checks via `vite` + Playwright (`?page=alerts`).
 - Next: wire `GET /alerts` (API-F1a-005) + ack/snooze POSTs, "สร้างคำขอ" → API-F1b-001; then UI-03 / UI-07.
