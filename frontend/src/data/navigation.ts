@@ -52,6 +52,8 @@ const CATALOGUE: Record<string, NavDef> = {
   rep: { th: 'รายงานมูลค่า', en: 'Reports · Value', ui: 'UI-19', icon: 'chart', href: '#', badge: '', red: false },
   cfg: { th: 'ตั้งค่า · Kill switch', en: 'Configuration', ui: 'UI-17', icon: 'gear', href: '#', badge: '', red: false },
   aud: { th: 'บันทึกตรวจสอบ', en: 'Audit log', ui: 'UI-18', icon: 'shield', href: '#', badge: '', red: false },
+  // Derived entry (no UI-nn code in spec §15.1): Hospital Admin user management, API-AD-006/007.
+  usr: { th: 'จัดการผู้ใช้', en: 'User management', ui: '—', icon: 'users', href: '#', badge: '', red: false },
 };
 
 /** Role → nav keys (`'|'` renders the admin group header) — mockup `ROLES` verbatim. */
@@ -60,7 +62,7 @@ export const ROLE_NAV: Record<string, string[]> = {
   PROCUREMENT_OFFICER: ['dash', 'alerts', 'req', 'doc', 'rep'],
   WAREHOUSE_OFFICER: ['dash', 'tr', 'inc', 'doc'],
   DRIVER: ['tr'],
-  HOSPITAL_ADMIN: ['dash', 'alerts', 'req', 'lend', 'exp', 'pool', 'inc', 'tr', 'doc', 'rep', '|', 'cfg', 'aud'],
+  HOSPITAL_ADMIN: ['dash', 'alerts', 'req', 'lend', 'exp', 'pool', 'inc', 'tr', 'doc', 'rep', '|', 'usr', 'cfg', 'aud'],
 };
 
 export const ADMIN_GROUP_LABEL = 'ผู้ดูแลระบบ';

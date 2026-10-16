@@ -1,0 +1,258 @@
+/* ==========================================================================
+   Hospital Admin (HOSPITAL_ADMIN) — User management + Audit log.
+   Page-scoped classes only. Tokens and primitives (.card, .btn, .badge, .tab,
+   .tbl, .tbl-foot, .t-*, .sa-*, .tr-drawer*, .dialog, .kpi-*, .code, .r, .srt)
+   come from src/index.css. Breakpoints match the shell:
+   >=1200 / >=1024 / <1024 / <768 / <640 / <360.
+   ========================================================================== */
+
+/* Two-column form grid inside the invite/edit dialog; stacks on phones. */
+.ha-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 16px;
+}
+.ha-form-wide {
+  grid-column: 1 / -1;
+}
+.ha-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.ha-label {
+  font-size: 12.5px;
+  line-height: 18px;
+  color: var(--body);
+  font-weight: 500;
+}
+.ha-input,
+.ha-select,
+.ha-textarea {
+  height: 40px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  padding: 0 12px;
+  font: inherit;
+  font-size: 13.5px;
+  color: var(--ink);
+  background: var(--surface);
+  min-width: 0;
+}
+.ha-textarea {
+  height: auto;
+  min-height: 76px;
+  padding: 8px 12px;
+  resize: vertical;
+  line-height: 20px;
+}
+.ha-input:focus-visible,
+.ha-select:focus-visible,
+.ha-textarea:focus-visible {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.15);
+}
+.ha-input[aria-invalid='true'],
+.ha-textarea[aria-invalid='true'] {
+  border-color: #dc2626;
+}
+.ha-error {
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--danger-fg);
+}
+.ha-hint {
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--muted);
+}
+
+/* Checkbox row (role picker / MFA toggle). */
+.ha-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+}
+.ha-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--ink);
+  cursor: pointer;
+}
+.ha-check input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--primary);
+  cursor: pointer;
+}
+.ha-check-wide {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 12px;
+  background: var(--primary-soft);
+}
+
+/* Role/status chips inside a table cell. */
+.ha-stack {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.ha-badge {
+  height: 20px;
+  font-size: 11px;
+}
+
+/* Right-aligned row actions. */
+.ha-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+/* Dialog footer + inline banners. */
+.ha-dialog-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+.ha-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 13px;
+  line-height: 20px;
+  margin-bottom: 12px;
+}
+.ha-banner-ok {
+  background: var(--success-bg);
+  color: var(--success-fg);
+}
+.ha-banner-err {
+  background: var(--danger-bg);
+  color: var(--danger-fg);
+}
+.ha-banner-info {
+  background: var(--primary-soft);
+  color: var(--primary-dark);
+}
+.ha-banner-warn {
+  background: var(--warn-bg);
+  color: var(--warn-fg);
+}
+
+/* Empty / denied states. */
+.ha-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
+  padding: 40px 24px;
+}
+.ha-state-title {
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.ha-state-text {
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--body);
+  max-width: 46ch;
+}
+
+/* KPI sub-line inside .kpi-card. */
+.ha-kpi-sub {
+  font-size: 12px;
+  line-height: 17px;
+  color: var(--body);
+  margin-top: 6px;
+}
+
+/* Audit detail drawer: JSON snapshots keep their own scroll, never the page. */
+.ha-json {
+  margin: 0;
+  padding: 12px 14px;
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-family: Inter, ui-monospace, monospace;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--ink);
+  overflow-x: auto;
+  max-width: 100%;
+  white-space: pre;
+}
+.ha-diff {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+}
+.ha-diff > div {
+  min-width: 0;
+}
+.ha-diff-h {
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 600;
+  color: var(--body);
+  margin-bottom: 4px;
+}
+
+/* Audit history list inside the drawer. */
+.ha-hist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.ha-hist li {
+  display: flex;
+  gap: 10px;
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+  font-size: 12.5px;
+  line-height: 18px;
+}
+
+/* Skeleton row placeholders (loading state). */
+.ha-skel-row {
+  height: 44px;
+  border-radius: 8px;
+  background: #eef2f7;
+  margin: 6px 0;
+  animation: ha-pulse 1.4s ease-in-out infinite;
+}
+@keyframes ha-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+
+@media (max-width: 767px) {
+  .ha-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ha-diff {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ha-actions {
+    justify-content: flex-start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ha-skel-row {
+    animation: none;
+  }
+}

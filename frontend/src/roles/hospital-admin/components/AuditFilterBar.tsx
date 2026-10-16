@@ -1,0 +1,144 @@
+import { Icon } from '../../../components/common/icons';
+import type { RoleCode } from '../../../lib/rbac';
+import { ROLE_LABEL } from '../../../lib/rbac';
+import { AUDIT_ACTION_OPTIONS, AUDIT_ENTRIES, ENTITY_TYPE_OPTIONS } from '../data/audit';
+import type { AuditAction, EntityType } from '../data/audit';
+
+export interface AuditFilters {
+  /** ISO `yyyy-mm-dd` (from `<input type="date">`); '' means unbounded. */
+  from: string;
+  to: string;
+  actor: string;
+  role: RoleCode | 'ALL';
+  action: AuditAction | 'ALL';
+  entityType: EntityType | 'ALL';
+  q: string;
+}
+
+export const EMPTY_AUDIT_FILTERS: AuditFilters = {
+  from: '',
+  to: '',
+  actor: '',
+  role: 'ALL',
+  action: 'ALL',
+  entityType: 'ALL',
+  q: '',
+};
+
+interface AuditFilterBarProps {
+  filters: AuditFilters;
+  onChange: (next: AuditFilters) => void;
+  /** Rows left after filtering, echoed in the hint line. */
+  resultCount: number;
+}
+
+/** Filter bar for UI-18 — filters stay client-side until API-AD-003 is wired. */
+export function AuditFilterBar({ filters, onChange, resultCount }: AuditFilterBarProps) {
+  // Only roles that actually appear in the hospital's own log — never a cross-hospital choice.
+  const roleOptions: (RoleCode | 'ALL')[] = ['ALL', ...Array.from(new Set(AUDIT_ENTRIES.map((e) => e.role)))];
+
+  return (
+    <div className="sa-toolbar" data-part="audit-filters">
+      <label className="sa-search">
+        <Icon name="search" className="ic14" />
+        <input
+          type="search"
+          value={filters.q}
+          onChange={(e) => onChange({ ...filters, q: e.target.value })}
+          placeholder="รหัสข้อมูล / เหตุผล / IP"
+          aria-label="ค้นหาในบันทึกตรวจสอบ"
+        />
+      </label>
+
+      <label className="ha-field">
+        <span className="ha-label">จากวันที่</span>
+        <input
+          className="ha-input"
+          type="date"
+          value={filters.from}
+          aria-label="จากวันที่"
+          onChange={(e) => onChange({ ...filters, from: e.target.value })}
+        />
+      </label>
+
+      <label className="ha-field">
+        <span className="ha-label">ถึงวันที่</span>
+        <input
+          className="ha-input"
+          type="date"
+          value={filters.to}
+          aria-label="ถึงวันที่"
+          onChange={(e) => onChange({ ...filters, to: e.target.value })}
+        />
+      </label>
+
+      <label className="ha-field">
+        <span className="ha-label">ผู้กระทำ</span>
+        <input
+          className="ha-input"
+          value={filters.actor}
+          aria-label="ผู้กระทำ"
+          placeholder="ชื่อผู้ใช้"
+          onChange={(e) => onChange({ ...filters, actor: e.target.value })}
+        />
+      </label>
+
+      <label className="ha-field">
+        <span className="ha-label">บทบาท</span>
+        <select
+          className="sel"
+          value={filters.role}
+          aria-label="บทบาท"
+          onChange={(e) => onChange({ ...filters, role: e.target.value as AuditFilters['role'] })}
+        >
+          {roleOptions.map((r) => (
+            <option key={r} value={r}>
+              {r === 'ALL' ? 'ทุกบทบาท' : ROLE_LABEL[r]}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <label className="ha-field">
+        <span className="ha-label">การกระทำ</span>
+        <select
+          className="sel"
+          value={filters.action}
+          aria-label="การกระทำ"
+          onChange={(e) => onChange({ ...filters, action: e.target.value as AuditFilters['action'] })}
+        >
+          {AUDIT_ACTION_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <label className="ha-field">
+        <span className="ha-label">ประเภทข้อมูล</span>
+        <select
+          className="sel"
+          value={filters.entityType}
+          aria-label="ประเภทข้อมูล"
+          onChange={(e) => onChange({ ...filters, entityType: e.target.value as AuditFilters['entityType'] })}
+        >
+          {ENTITY_TYPE_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <span style={{ flex: '1 1 0' }} />
+
+      <button className="btn btn-g btn-sm" onClick={() => onChange(EMPTY_AUDIT_FILTERS)}>
+        <Icon name="x" className="ic14" />
+        ล้างตัวกรอง
+      </button>
+
+      <span className="ha-hint">แสดง {resultCount} รายการ</span>
+    </div>
+  );
+}
