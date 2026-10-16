@@ -6,6 +6,10 @@ const BUILT: Partial<Record<WarehousePage, string>> = {
   inbox: '?role=warehouse&page=inbox',
   kit: '?role=warehouse&page=kit',
   docs: '?role=warehouse&page=docs',
+  stock: '?role=warehouse&page=stock',
+  requests: '?role=warehouse&page=requests',
+  expiry: '?role=warehouse&page=expiry',
+  drugs: '?role=warehouse&page=drugs',
   transport: '?role=warehouse&page=transport',
 };
 

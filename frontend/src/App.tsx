@@ -20,10 +20,14 @@ import { WAREHOUSE_NOTIFICATIONS, WAREHOUSE_USER } from './roles/warehouse/data/
 import { TransportTrackingPage } from './roles/warehouse/pages/TransportTrackingPage';
 import { InboxPage } from './roles/warehouse/pages/InboxPage';
 import { KitPage } from './roles/warehouse/pages/KitPage';
+import { WhBorrowPage } from './roles/warehouse/pages/WhBorrowPage';
+import { WhDrugsPage } from './roles/warehouse/pages/WhDrugsPage';
+import { WhExpiryPage } from './roles/warehouse/pages/WhExpiryPage';
+import { WhStockPage } from './roles/warehouse/pages/WhStockPage';
 import { WarehouseDashboardPage } from './roles/warehouse/pages/WarehouseDashboardPage';
 import type { TransportRole } from './roles/warehouse/pages/TransportTrackingPage';
 
-type Page = 'dashboard' | 'inbox' | 'kit' | 'transport' | 'requests' | 'lend' | 'incident' | 'alerts' | 'report' | 'expiry' | 'pool' | 'docs';
+type Page = 'dashboard' | 'inbox' | 'kit' | 'stock' | 'drugs' | 'transport' | 'requests' | 'lend' | 'incident' | 'alerts' | 'report' | 'expiry' | 'pool' | 'docs';
 
 /** Pharmacist on the ops-style top bar (UI-05 mockup: scope pill, agent pill, TH/EN). */
 const PHARMACIST_OPS_USER = { ...USER, scopeLabel: 'เห็นเฉพาะข้อมูล รพ.สมุทรปราการ' };
@@ -41,7 +45,7 @@ const PHARMACIST_OPS_USER = { ...USER, scopeLabel: 'เห็นเฉพาะ�
  * `?page=docs` shows Documents (UI-15).
  * `&role=pharmacist` = read-only pharmacist transport view, otherwise the warehouse officer view.
  * `?role=warehouse` switches the whole shell to the warehouse officer: `/?role=warehouse` is the WH
- * dashboard, `&page=inbox` work inbox (F1/F2/F3 out + in), `&page=kit` F3 emergency (urgent requests, kits, incidents), `&page=docs` documents (UI-15, shared with the pharmacist), `&page=transport` its transport tracking (other WH pages
+ * dashboard, `&page=inbox` work inbox (F1/F2/F3 out + in), `&page=kit` F3 emergency (urgent requests, kits, incidents), `&page=docs` documents (UI-15, shared with the pharmacist), `&page=stock|requests|expiry|drugs` read-only views, `&page=transport` its transport tracking (other WH pages
  * fall back to its dashboard).
  */
 function initialRoute(): { page: Page; transportRole: TransportRole; warehouse: boolean } {
@@ -52,6 +56,8 @@ function initialRoute(): { page: Page; transportRole: TransportRole; warehouse: 
     if (p === 'transport') page = 'transport';
     else if (p === 'inbox') page = 'inbox';
     else if (p === 'kit') page = 'kit';
+    else if (p === 'stock') page = 'stock';
+    else if (p === 'drugs') page = 'drugs';
     else if (p === 'requests' || p === 'borrow') page = 'requests';
     else if (p === 'lend') page = 'lend';
     else if (p === 'incident' || p === 'inc') page = 'incident';
@@ -113,6 +119,8 @@ export default function App() {
   const onTransport = route.page === 'transport';
   const onInbox = route.page === 'inbox';
   const onKit = route.page === 'kit';
+  const onStock = route.page === 'stock';
+  const onDrugs = route.page === 'drugs';
   const onRequests = route.page === 'requests';
   const onLend = route.page === 'lend';
   const onIncident = route.page === 'incident';
@@ -129,7 +137,7 @@ export default function App() {
   const navRole = 'PHARMACIST';
   const activeKey = onTransport ? 'tr' : onRequests ? 'req' : onLend ? 'lend' : onIncident ? 'inc' : onAlerts ? 'alerts' : onReport ? 'rep' : onExpiry ? 'exp' : onPool ? 'pool' : onDocs ? 'doc' : 'dash';
   // WH owns its sidebar (roles/warehouse/data/navigation.ts); other roles use the shared catalogue.
-  const navItems = warehouse ? getWarehouseNav(onTransport ? 'transport' : onInbox ? 'inbox' : onKit ? 'kit' : onDocs ? 'docs' : 'dashboard') : withLinks(getNavForRole(navRole, activeKey), navRole);
+  const navItems = warehouse ? getWarehouseNav(onTransport ? 'transport' : onInbox ? 'inbox' : onKit ? 'kit' : onDocs ? 'docs' : onStock || onAlerts ? 'stock' : onRequests ? 'requests' : onExpiry ? 'expiry' : onDrugs ? 'drugs' : 'dashboard') : withLinks(getNavForRole(navRole, activeKey), navRole);
 
   // Mobile drawer: lock page scroll, close on Escape and when resizing to desktop.
   useEffect(() => {
@@ -175,7 +183,7 @@ export default function App() {
         />
         <main className="mainpad">
           {warehouse ? (
-            onTransport ? <TransportTrackingPage role="WAREHOUSE_OFFICER" /> : onInbox ? <InboxPage /> : onKit ? <KitPage /> : onDocs ? <DocumentsPage /> : <WarehouseDashboardPage />
+            onTransport ? <TransportTrackingPage role="WAREHOUSE_OFFICER" /> : onInbox ? <InboxPage /> : onKit ? <KitPage /> : onDocs ? <DocumentsPage /> : onStock || onAlerts ? <WhStockPage /> : onRequests ? <WhBorrowPage /> : onExpiry ? <WhExpiryPage /> : onDrugs ? <WhDrugsPage /> : <WarehouseDashboardPage />
           ) : onTransport ? (
             <TransportTrackingPage role={route.transportRole} />
           ) : onRequests ? (
