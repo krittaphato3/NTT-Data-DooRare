@@ -51,6 +51,8 @@ export type RoleCode =
  *  - viewAudit                §5.2 "View Audit Log"; API-AD-003
  *  - waiveReturn              API-XC-005 (HOSPITAL_ADMIN only)
  *  - killSwitch               §5.2 "Override Agent / Kill Switch"; API-AD-004
+ *  - configureRestrictedRules §23 — changes to `borrow.score.*`, `ved.z.*` and `agent.*` require
+ *                             REGION_ADMIN or above, even at HOSPITAL scope
  */
 export type Action =
   | 'approveBorrow'
@@ -65,6 +67,7 @@ export type Action =
   | 'manageUsers'
   | 'viewAudit'
   | 'waiveReturn'
+  | 'configureRestrictedRules'
   | 'killSwitch';
 
 /**
@@ -81,51 +84,61 @@ export type Action =
  */
 const MATRIX: Record<RoleCode, Record<Action, boolean>> = {
   SYSTEM_ADMIN: {
+    configureRestrictedRules: true,
     approveBorrow: false, confirmLend: false, releaseNearExpiry: false, approveAllocation: false,
     approveIncidentPlan: false, verifyMapping: false, editMapping: true, updateInventory: false,
     configureRules: true, manageUsers: true, viewAudit: true, waiveReturn: false, killSwitch: true,
   },
   REGION_ADMIN: {
+    configureRestrictedRules: true,
     approveBorrow: false, confirmLend: false, releaseNearExpiry: false, approveAllocation: false,
     approveIncidentPlan: false, verifyMapping: false, editMapping: false, updateInventory: false,
     configureRules: true, manageUsers: false, viewAudit: true, waiveReturn: false, killSwitch: false,
   },
   HOSPITAL_ADMIN: {
+    configureRestrictedRules: false,
     approveBorrow: false, confirmLend: false, releaseNearExpiry: false, approveAllocation: false,
     approveIncidentPlan: false, verifyMapping: false, editMapping: true, updateInventory: false,
     configureRules: true, manageUsers: true, viewAudit: true, waiveReturn: true, killSwitch: false,
   },
   PHARMACIST: {
+    configureRestrictedRules: false,
     approveBorrow: true, confirmLend: true, releaseNearExpiry: true, approveAllocation: true,
     approveIncidentPlan: false, verifyMapping: true, editMapping: true, updateInventory: true,
     configureRules: true, manageUsers: false, viewAudit: true, waiveReturn: false, killSwitch: false,
   },
   PROCUREMENT_OFFICER: {
+    configureRestrictedRules: false,
     approveBorrow: false, confirmLend: false, releaseNearExpiry: false, approveAllocation: false,
     approveIncidentPlan: false, verifyMapping: false, editMapping: false, updateInventory: false,
     configureRules: false, manageUsers: false, viewAudit: false, waiveReturn: false, killSwitch: false,
   },
   WAREHOUSE_OFFICER: {
+    configureRestrictedRules: false,
     approveBorrow: false, confirmLend: false, releaseNearExpiry: false, approveAllocation: false,
     approveIncidentPlan: false, verifyMapping: false, editMapping: false, updateInventory: true,
     configureRules: false, manageUsers: false, viewAudit: false, waiveReturn: false, killSwitch: false,
   },
   ER_STAFF: {
+    configureRestrictedRules: false,
     approveBorrow: false, confirmLend: true, releaseNearExpiry: false, approveAllocation: false,
     approveIncidentPlan: true, verifyMapping: false, editMapping: false, updateInventory: true,
     configureRules: false, manageUsers: false, viewAudit: false, waiveReturn: false, killSwitch: false,
   },
   DRIVER: {
+    configureRestrictedRules: false,
     approveBorrow: false, confirmLend: false, releaseNearExpiry: false, approveAllocation: false,
     approveIncidentPlan: false, verifyMapping: false, editMapping: false, updateInventory: false,
     configureRules: false, manageUsers: false, viewAudit: false, waiveReturn: false, killSwitch: false,
   },
   DATA_ADMIN: {
+    configureRestrictedRules: false,
     approveBorrow: false, confirmLend: false, releaseNearExpiry: false, approveAllocation: false,
     approveIncidentPlan: false, verifyMapping: true, editMapping: true, updateInventory: false,
     configureRules: false, manageUsers: false, viewAudit: false, waiveReturn: false, killSwitch: false,
   },
   AUDITOR: {
+    configureRestrictedRules: false,
     approveBorrow: false, confirmLend: false, releaseNearExpiry: false, approveAllocation: false,
     approveIncidentPlan: false, verifyMapping: false, editMapping: false, updateInventory: false,
     configureRules: false, manageUsers: false, viewAudit: true, waiveReturn: false, killSwitch: false,
@@ -178,3 +191,14 @@ export const ASSIGNABLE_ROLES: RoleCode[] = [
   'DATA_ADMIN',
   'AUDITOR',
 ];
+
+/**
+ * §23: configuration keys whose change requires REGION_ADMIN or above. These are the only keys a
+ * HOSPITAL_ADMIN may not edit even at HOSPITAL scope.
+ */
+export const RESTRICTED_CONFIG_PREFIXES = ['borrow.score.', 'ved.z.', 'agent.'] as const;
+
+/** Whether a config key falls in one of the §23 restricted groups. */
+export function isRestrictedConfigKey(key: string): boolean {
+  return RESTRICTED_CONFIG_PREFIXES.some((prefix) => key.startsWith(prefix));
+}

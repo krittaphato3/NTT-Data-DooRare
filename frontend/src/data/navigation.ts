@@ -82,11 +82,11 @@ export const HOSPITAL_ADMIN_HOME_HREF = `?page=users&role=${HOSPITAL_ADMIN_ROLE_
 /**
  * Nav keys actually rendered per role. `ROLE_NAV.HOSPITAL_ADMIN` keeps the full catalogue list
  * verbatim from the mockup, but the shell only shows this role's own administration pages
- * (user management + audit log); the operational entries stay in the data and are reached through
- * the roles that own them. `cfg` is absent too — Configuration (UI-17) is not built yet.
+ * (configuration + user management + audit log); the operational entries stay in the data and are
+ * reached through the roles that own them.
  */
 const VISIBLE_KEYS: Record<string, string[]> = {
-  HOSPITAL_ADMIN: ['|', 'usr', 'aud'],
+  HOSPITAL_ADMIN: ['|', 'usr', 'cfg', 'aud'],
 };
 
 /**

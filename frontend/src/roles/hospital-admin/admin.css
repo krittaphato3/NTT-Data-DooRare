@@ -239,7 +239,63 @@
   50% { opacity: 0.55; }
 }
 
+/* Configuration (UI-17): one row per config key — label/description · control · scope+source · actions. */
+.ha-cfg-row {
+  display: grid;
+  grid-template-columns: minmax(240px, 1.6fr) minmax(150px, 0.8fr) minmax(170px, 1fr) auto;
+  gap: 10px 16px;
+  align-items: start;
+  padding: 14px 0;
+  border-top: 1px solid var(--border);
+}
+.ha-cfg-row:first-of-type {
+  border-top: 0;
+}
+.ha-cfg-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.ha-cfg-label {
+  font-size: 13.5px;
+  line-height: 19px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.ha-cfg-ctl {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-start;
+  min-width: 0;
+}
+.ha-cfg-ctl .ha-input {
+  width: 100%;
+  max-width: 220px;
+}
+.ha-cfg-ctl .ha-readonly {
+  font-size: 14px;
+  line-height: 22px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.ha-cfg-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+/* Read-only banner numbers stay visually distinct from editable controls. */
+.ha-cfg-locked {
+  border-left: 3px solid var(--border-strong);
+  padding-left: 10px;
+}
+
 @media (max-width: 767px) {
+  .ha-cfg-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
   .ha-form {
     grid-template-columns: minmax(0, 1fr);
   }

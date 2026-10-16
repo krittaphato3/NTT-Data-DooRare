@@ -22,9 +22,10 @@ import type { TransportRole } from './roles/warehouse/pages/TransportTrackingPag
 import { AccessDenied } from './roles/hospital-admin/components/AccessDenied';
 import { ADMIN_NOTIFICATIONS, HOSPITAL_ADMIN_USER } from './roles/hospital-admin/data/session';
 import { AuditLogPage } from './roles/hospital-admin/pages/AuditLogPage';
+import { ConfigurationPage } from './roles/hospital-admin/pages/ConfigurationPage';
 import { UserManagementPage } from './roles/hospital-admin/pages/UserManagementPage';
 
-type Page = 'dashboard' | 'transport' | 'requests' | 'lend' | 'incident' | 'alerts' | 'report' | 'expiry' | 'pool' | 'docs' | 'users' | 'audit';
+type Page = 'dashboard' | 'transport' | 'requests' | 'lend' | 'incident' | 'alerts' | 'report' | 'expiry' | 'pool' | 'docs' | 'users' | 'audit' | 'config';
 
 /** Pharmacist on the ops-style top bar (UI-05 mockup: scope pill, agent pill, TH/EN). */
 const PHARMACIST_OPS_USER = { ...USER, scopeLabel: 'เห็นเฉพาะข้อมูล รพ.สมุทรปราการ' };
@@ -58,6 +59,7 @@ function initialRoute(): { page: Page; transportRole: TransportRole } {
     else if (p === 'docs' || p === 'doc') page = 'docs';
     else if (p === 'users' || p === 'usr' || p === 'user') page = 'users';
     else if (p === 'audit' || p === 'aud') page = 'audit';
+    else if (p === 'config' || p === 'cfg') page = 'config';
     return {
       page,
       transportRole: q.get('role')?.toLowerCase() === 'pharmacist' ? 'PHARMACIST' : 'WAREHOUSE_OFFICER',
@@ -100,6 +102,7 @@ function withLinks(items: ShellNavEntry[], role: string): ShellNavEntry[] {
     if (e.key === 'pool') return { ...e, href: '?page=pool' };
     if (e.key === 'doc') return { ...e, href: '?page=docs' };
     if (e.key === 'usr') return { ...e, href: '?page=users' };
+    if (e.key === 'cfg') return { ...e, href: '?page=config' };
     if (e.key === 'aud') return { ...e, href: '?page=audit' };
     if (e.key === 'dash' && pharmacistLike) return { ...e, href: '/' };
     if (e.key === 'req' && pharmacistLike) return { ...e, href: '?page=requests' };
@@ -149,17 +152,22 @@ export default function App() {
   const onDocs = route.page === 'docs';
   const onUsers = route.page === 'users';
   const onAudit = route.page === 'audit';
+  const onConfig = route.page === 'config';
   const warehouse = onTransport && route.transportRole === 'WAREHOUSE_OFFICER';
   // Warehouse transport, UI-05, and UI-06 use the ops top bar (no footer); dashboard, alerts, report, and incident console keep standard shell.
   const ops = warehouse || onRequests || onLend;
   // UI-07/08/09/15 screenshots use the ops top bar but keep the standard footer.
   const opsBar = ops || onExpiry || onPool || onDocs;
   const navRole = warehouse ? 'WAREHOUSE_OFFICER' : hospitalAdmin ? 'HOSPITAL_ADMIN' : 'PHARMACIST';
-  const activeKey = onTransport ? 'tr' : onRequests ? 'req' : onLend ? 'lend' : onIncident ? 'inc' : onAlerts ? 'alerts' : onReport ? 'rep' : onExpiry ? 'exp' : onPool ? 'pool' : onDocs ? 'doc' : onUsers ? 'usr' : onAudit ? 'aud' : 'dash';
+  const activeKey = onTransport ? 'tr' : onRequests ? 'req' : onLend ? 'lend' : onIncident ? 'inc' : onAlerts ? 'alerts' : onReport ? 'rep' : onExpiry ? 'exp' : onPool ? 'pool' : onDocs ? 'doc' : onConfig ? 'cfg' : onUsers ? 'usr' : onAudit ? 'aud' : 'dash';
   const navItems = withLinks(getNavForRole(navRole, activeKey), navRole);
   // Page access for the Hospital Admin shell is decided by lib/rbac.ts, not by local role checks.
   const mayManageUsers = can(navRole, 'manageUsers');
   const mayViewAudit = can(navRole, 'viewAudit');
+  const mayConfigure = can(navRole, 'configureRules');
+  /** Pages the Hospital Admin shell may render today (2B/2C will extend this). */
+  const isHospitalAdminPageAllowed =
+    (onUsers && mayManageUsers) || (onAudit && mayViewAudit) || (onConfig && mayConfigure);
 
   // Mobile drawer: lock page scroll, close on Escape and when resizing to desktop.
   useEffect(() => {
@@ -210,10 +218,10 @@ export default function App() {
           user={warehouse ? WAREHOUSE_USER : hospitalAdmin ? HOSPITAL_ADMIN_USER : opsBar ? PHARMACIST_OPS_USER : undefined}
         />
         <main className="mainpad">
-          {hospitalAdmin && !((onUsers && mayManageUsers) || (onAudit && mayViewAudit)) ? (
-            /* Phase 1: only User management + Audit log are built for HOSPITAL_ADMIN. The spec's
-               read-only operational views (dashboard, alerts, requests, …) arrive in Phase 2; until
-               then a direct ?page= must not render a screen carrying pharmacist write actions. */
+          {hospitalAdmin && !isHospitalAdminPageAllowed ? (
+            /* Phase 2A: Configuration, User management and Audit log are built for HOSPITAL_ADMIN.
+               The read-only operational views (2B) and return obligations (2C) are still pending, so
+               a direct ?page= must not render a screen carrying pharmacist write actions. */
             <AccessDenied homeHref={HOSPITAL_ADMIN_HOME_HREF} />
           ) : onTransport ? (
             <TransportTrackingPage role={route.transportRole} />
@@ -233,6 +241,8 @@ export default function App() {
             <PoolAllocationPage />
           ) : onDocs ? (
             <DocumentsPage />
+          ) : onConfig ? (
+            <ConfigurationPage />
           ) : onUsers ? (
             <UserManagementPage />
           ) : onAudit ? (
