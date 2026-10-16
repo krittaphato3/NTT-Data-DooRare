@@ -98,7 +98,7 @@ export const URGENT_SECONDS = 160;
 
 export const OUTBOUND: OutboundItem[] = [
   {
-    id: 'IB-F3-0131', feature: 'F3', ref: 'BR-2026-000131 · เหตุ INC-2026-0007', drug: 'Adrenaline 1 mg/mL amp', qty: 30, unit: 'AMP',
+    id: 'IB-F3-0131', feature: 'F3', ref: 'BR-2026-000131 · เหตุ INC-2026-0008', drug: 'Adrenaline 1 mg/mL amp', qty: 30, unit: 'AMP',
     to: 'HB', requestedBy: 'ER รพ.บางพลี', due: 'ยืนยันภายใน 03:00 นาที', urgent: true, status: 'NEW',
     pick: [{ lot: 'ADR-2506', expiry: '28 ก.พ. 2027', daysLeft: 137, qty: 30, location: 'ตู้ฉุกเฉิน A1' }],
     note: 'คำขอยืมเร่งด่วน F3 · ยืนยันก่อนส่งของ (ฝั่งผู้ให้)',

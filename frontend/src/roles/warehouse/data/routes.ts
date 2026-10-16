@@ -4,6 +4,7 @@ export type WarehousePage = 'dashboard' | 'inbox' | 'transport' | 'kit' | 'docs'
 const BUILT: Partial<Record<WarehousePage, string>> = {
   dashboard: '?role=warehouse',
   inbox: '?role=warehouse&page=inbox',
+  kit: '?role=warehouse&page=kit',
   transport: '?role=warehouse&page=transport',
 };
 

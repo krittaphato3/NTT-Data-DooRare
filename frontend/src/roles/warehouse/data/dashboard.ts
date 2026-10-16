@@ -1,5 +1,6 @@
 /** Mock data for the warehouse Dashboard (UI-01, WH view). Transport numbers derive from SHIPMENTS. */
 import type { IconName } from '../../../components/common/icons';
+import { KIT_DEFS } from './f3';
 import { FEATURE_META, INBOX_STATUS_META, OUTBOUND, PACKS, URGENT_SECONDS as INBOX_URGENT_SECONDS, inboxStats } from './inbox';
 import { fmtQty, HOSPITALS, isOutbound, SHIPMENTS, STATUS_META } from './transport';
 import type { Tone, TransportStatus } from './transport';
@@ -16,13 +17,8 @@ export interface KitStock {
   target: number;
 }
 
-/** Ready-set stock per patient-set (F3). View-only on the dashboard. */
-export const KITS: KitStock[] = [
-  { key: 'trauma', th: 'ชุดบาดเจ็บ', en: 'Trauma', ready: 6, target: 10 },
-  { key: 'intubation', th: 'ชุดใส่ท่อช่วยหายใจ', en: 'Intubation', ready: 5, target: 6 },
-  { key: 'iv', th: 'ชุดให้สารน้ำ', en: 'IV', ready: 15, target: 20 },
-  { key: 'burn', th: 'ชุดแผลไฟไหม้', en: 'Burn', ready: 2, target: 6 },
-];
+/** Ready-set stock per patient-set (F3), same source as the kits page. View-only on the dashboard. */
+export const KITS: KitStock[] = KIT_DEFS.map(({ key, th, en, ready, target }) => ({ key, th, en, ready, target }));
 
 export type TodoGroup = 'inbox' | 'transport';
 
