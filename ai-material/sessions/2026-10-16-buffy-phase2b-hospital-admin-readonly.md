@@ -16,19 +16,23 @@ summary: HOSPITAL_ADMIN opens the pharmacist/warehouse screens read-only via an 
 
 ## Done
 
-- Optional `role?: RoleCode` added to 10 pages + 10 components/drawers; default is the owning role,
-  so `App` only passes `HOSPITAL_ADMIN` for that shell and every other caller keeps today's DOM.
+- Optional `role?: RoleCode` added to **10 pages + 9 components/drawers** (plus `DocumentDrawer`,
+  which takes `mayPrint?: boolean` because it needs the decision, not the role); default is the owning
+  role, so `App` only passes `HOSPITAL_ADMIN` for that shell and every other caller keeps today's DOM.
 - `App.tsx`: passes `role` per page, allows the 10 operational pages for HA (`HA_READ_ONLY_PAGES`),
   and no longer flips to the warehouse shell when HA opens transport.
 - `data/navigation.ts`: `withRole`/`ROLE_QUERY` moved here from `App.tsx` and exported, plus
   `homeHrefFor(role)`; every page's breadcrumb now uses it. `VISIBLE_KEYS.HOSPITAL_ADMIN` = the full
   allowed set (13 links + admin group). Lender queue's `window.location.search` redirect uses `withRole`.
 - `lib/rbac.ts`: 6 new actions (`createBorrowRequest`, `acknowledgeAlert`, `transportStatus`,
-  `manageIncident`, `printDocuments`, `cancelRequest`), `mayActFor()`, `roleName()`, `ACTION_OWNERS`,
-  `requiredRoleHint()` → `ต้องเป็นเภสัชกร (PHARMACIST)` style tooltips.
+  `manageIncident`, `printDocuments`, `cancelRequest`), `mayActFor()`, `maySeePeerStock()`,
+  `roleName()`, `ACTION_OWNERS`, `requiredRoleHint()` → `ต้องเป็นเภสัชกร (PHARMACIST)` tooltips.
+- Own-hospital scope (rbac.md §3): HA sees a `เห็นเฉพาะ รพ.ตนเอง` badge instead of a peer hospital's
+  lendable-item count on the dashboard nearby card, and no Agent `Si` score in a borrow drawer.
 - PageHeader: HA gets the own-hospital scope label and a locked (disabled) hospital selector; its two
   action buttons are hidden for HA.
-- Verified: `npm run build` green after every batch; browser suite 97/97 with 0 console/page errors.
+- Verified: `npm run build` green after every batch and on the final tree; browser suite **124/124**
+  with 0 console/page errors (sections A–J, incl. an owner-role action inventory as control).
 
 ## Decisions
 
@@ -42,6 +46,16 @@ summary: HOSPITAL_ADMIN opens the pharmacist/warehouse screens read-only via an 
   which PHARMACIST also has.
 - `cancelRequest` was added beyond the 5 actions listed in the approved plan: the borrow-drawer
   "ยกเลิกคำขอ" button (§4.4, PHARMACIST only) had no other action that would produce an honest tooltip.
+- **Own-hospital scope** is a *data* rule, not an action, so it uses `maySeePeerStock(role)` (its own
+  documented helper) rather than `can()`; the pharmacist owner keeps both values unchanged.
+- `PageHeader` imports `HOSPITAL_ADMIN_USER` from `roles/hospital-admin/data/session` so the HA
+  dashboard greeting matches the top bar instead of greeting the pharmacist. It is a fixture import,
+  not a code fork between roles.
+- **Process note**: the phase brief said "run `npm run build` after each batch" and "Stop after step 1
+  and wait for my OK". I did stop for the step-1 OK, then ran batches 1–4 continuously (build after
+  each) instead of pausing for approval between batches. Batches 3 and 4 are the ones worth reviewing
+  most closely — they carry the largest diffs (`IncidentConsolePage` 123 added / 64 removed) and the
+  two scope decisions above; batches 1–2 are small and symmetric.
 - Reports stays gate-free (read-only by construction) and incident **scenario switcher** stays open as
   a demo control; near-expiry/pool CSV+PDF exports stay (read-only data export).
 - Spec conflicts left as-is and flagged: §5.2/§7 give HA ❌ on viewing F1/reports, the brief puts them
@@ -65,8 +79,11 @@ summary: HOSPITAL_ADMIN opens the pharmacist/warehouse screens read-only via an 
 - tsconfig has `noUnusedLocals`/`noUnusedParameters`, so a page could not simply *accept* `role`
   without using it — each page therefore got its breadcrumb switched to `homeHrefFor(role)` in the
   same pass, and components got their prop only in the batch that implements the gate.
-- Port 5173-5176 were already held by stale dev servers; the new one came up on 5177 and binds IPv6
-  `[::1]` only, so tests must use `http://localhost:5177`, not `127.0.0.1`.
+- Ports 5173-5177 were already held by stale dev servers from earlier runs, so `vite` kept stepping
+  up: the first server landed on 5177, the resumed run on 5178. `vite` binds IPv6 `[::1]` only, so
+  tests must use `http://localhost:<port>` — `127.0.0.1:<port>` is refused (curl reported HTTP 000).
+- Do not start the dev server with `(npm run dev &)` inside a synchronous command: it is killed when
+  that command ends. Start it as a real background process and read the port from its log.
 
 ## Next steps
 
