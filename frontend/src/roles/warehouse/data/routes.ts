@@ -5,6 +5,7 @@ const BUILT: Partial<Record<WarehousePage, string>> = {
   dashboard: '?role=warehouse',
   inbox: '?role=warehouse&page=inbox',
   kit: '?role=warehouse&page=kit',
+  docs: '?role=warehouse&page=docs',
   transport: '?role=warehouse&page=transport',
 };
 

@@ -41,7 +41,7 @@ const PHARMACIST_OPS_USER = { ...USER, scopeLabel: 'เห็นเฉพาะ�
  * `?page=docs` shows Documents (UI-15).
  * `&role=pharmacist` = read-only pharmacist transport view, otherwise the warehouse officer view.
  * `?role=warehouse` switches the whole shell to the warehouse officer: `/?role=warehouse` is the WH
- * dashboard, `&page=inbox` work inbox (F1/F2/F3 out + in), `&page=kit` F3 emergency (urgent requests, kits, incidents), `&page=transport` its transport tracking (other WH pages
+ * dashboard, `&page=inbox` work inbox (F1/F2/F3 out + in), `&page=kit` F3 emergency (urgent requests, kits, incidents), `&page=docs` documents (UI-15, shared with the pharmacist), `&page=transport` its transport tracking (other WH pages
  * fall back to its dashboard).
  */
 function initialRoute(): { page: Page; transportRole: TransportRole; warehouse: boolean } {
@@ -129,7 +129,7 @@ export default function App() {
   const navRole = 'PHARMACIST';
   const activeKey = onTransport ? 'tr' : onRequests ? 'req' : onLend ? 'lend' : onIncident ? 'inc' : onAlerts ? 'alerts' : onReport ? 'rep' : onExpiry ? 'exp' : onPool ? 'pool' : onDocs ? 'doc' : 'dash';
   // WH owns its sidebar (roles/warehouse/data/navigation.ts); other roles use the shared catalogue.
-  const navItems = warehouse ? getWarehouseNav(onTransport ? 'transport' : onInbox ? 'inbox' : onKit ? 'kit' : 'dashboard') : withLinks(getNavForRole(navRole, activeKey), navRole);
+  const navItems = warehouse ? getWarehouseNav(onTransport ? 'transport' : onInbox ? 'inbox' : onKit ? 'kit' : onDocs ? 'docs' : 'dashboard') : withLinks(getNavForRole(navRole, activeKey), navRole);
 
   // Mobile drawer: lock page scroll, close on Escape and when resizing to desktop.
   useEffect(() => {
@@ -175,7 +175,7 @@ export default function App() {
         />
         <main className="mainpad">
           {warehouse ? (
-            onTransport ? <TransportTrackingPage role="WAREHOUSE_OFFICER" /> : onInbox ? <InboxPage /> : onKit ? <KitPage /> : <WarehouseDashboardPage />
+            onTransport ? <TransportTrackingPage role="WAREHOUSE_OFFICER" /> : onInbox ? <InboxPage /> : onKit ? <KitPage /> : onDocs ? <DocumentsPage /> : <WarehouseDashboardPage />
           ) : onTransport ? (
             <TransportTrackingPage role={route.transportRole} />
           ) : onRequests ? (
