@@ -22,8 +22,8 @@ export type RowAction = 'approve' | 'detail' | 'addLender' | 'recordReturn';
 
 export interface BorrowLeg {
   hospital: string;
-  /** Lender ranking score from the system order. */
-  si: number;
+  /** Lender ranking score from the system order; absent for a lender added outside the ladder. */
+  si?: number;
   state: LegState;
   detail: string;
 }

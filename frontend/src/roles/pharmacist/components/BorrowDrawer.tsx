@@ -16,6 +16,8 @@ interface BorrowDrawerProps {
   decision: Decision;
   onDecide: (d: 'approve' | 'reject') => void;
   onClose: () => void;
+  /** Opens the escalate-manual confirm dialog (API-F1b-012) for an ESCALATED request. */
+  onEscalate: (r: BorrowRequest) => void;
   /** Role viewing the drawer; every action is gated through `lib/rbac.ts`. */
   role?: RoleCode;
 }
@@ -30,7 +32,7 @@ const BANNER: Record<StatusGroup, [string, string, string]> = {
 };
 
 /** UI-05 request detail (we are the borrower). Actions are local state only. */
-export function BorrowDrawer({ request: r, tick, decision, onDecide, onClose, role = 'PHARMACIST' }: BorrowDrawerProps) {
+export function BorrowDrawer({ request: r, tick, decision, onDecide, onClose, onEscalate, role = 'PHARMACIST' }: BorrowDrawerProps) {
   const group = groupOf(r.status);
 
   /** Action each drawer button performs, so a role that may not act sees it disabled with a hint. */
@@ -39,7 +41,9 @@ export function BorrowDrawer({ request: r, tick, decision, onDecide, onClose, ro
     return { allowed, hint: allowed ? undefined : requiredRoleHint(action), action };
   };
   const approve = gate('approveBorrow');
-  const addLender = gate('approveBorrow');
+  /* Adding a lender outside the ladder is its own grant (API-F1b-012: PHARMACIST and
+     HOSPITAL_ADMIN) — it is no longer borrowed from the approval action. */
+  const addLender = gate('escalateManual');
   const recordReturn = gate('updateInventory');
   const cancelRequest = gate('cancelRequest');
   const [bg, border, fg] = BANNER[group];
@@ -141,7 +145,9 @@ export function BorrowDrawer({ request: r, tick, decision, onDecide, onClose, ro
                         </span>
                         {/* The Hospital Priority Score is Agent-internal (rbac.md §3): a role outside
                             the borrow flow sees the proposed lender and its own requested quantity only. */}
-                        {maySeePeerStock(role) && (
+                        {/* Si is the Agent's own score (rbac.md §3); a lender added manually outside
+                            the ladder has none, so the line is omitted rather than faked. */}
+                        {maySeePeerStock(role) && l.si !== undefined && (
                           <span className="code" style={{ marginLeft: 'auto' }}>
                             Si {l.si.toFixed(4)}
                           </span>
@@ -189,8 +195,16 @@ export function BorrowDrawer({ request: r, tick, decision, onDecide, onClose, ro
                 </button>
               </>
             )}
-            {r.action === 'addLender' && (
-              <button className="btn btn-p" disabled={!addLender.allowed} title={addLender.hint}>
+            {/* escalate-manual is reachable only once the request is ESCALATED (§4.1 escalation
+                step, FR-F1b-011) — the ladder has to be exhausted first. */}
+            {r.status === 'ESCALATED' && (
+              <button
+                className="btn btn-p"
+                data-part="escalate-manual"
+                disabled={!addLender.allowed}
+                title={addLender.hint}
+                onClick={() => onEscalate(r)}
+              >
                 เพิ่มผู้ให้ยืม
               </button>
             )}

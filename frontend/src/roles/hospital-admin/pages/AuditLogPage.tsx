@@ -6,7 +6,7 @@ import { AuditDrawer } from '../components/AuditDrawer';
 import { AuditFilterBar, EMPTY_AUDIT_FILTERS } from '../components/AuditFilterBar';
 import type { AuditFilters } from '../components/AuditFilterBar';
 import { AuditTable, summarizeChange } from '../components/AuditTable';
-import { AUDIT_ACTION_META, AUDIT_ENTRIES, CHAIN_VERIFY_OK } from '../data/audit';
+import { AUDIT_ACTION_META, AUDIT_ENTRIES, verifyAuditChain } from '../data/audit';
 import type { ChainVerifyResult } from '../data/audit';
 import '../admin.css';
 
@@ -79,7 +79,9 @@ export function AuditLogPage() {
     setLoading(true);
     setVerify(null);
     window.setTimeout(() => {
-      setVerify(CHAIN_VERIFY_OK);
+      // Walks the live chain (oldest → newest), so rows appended by a waive or an escalate-manual
+      // are covered too — not a canned "OK" (SEC-003).
+      setVerify(verifyAuditChain());
       setLoading(false);
     }, 700);
   };

@@ -62,6 +62,10 @@ export type RoleCode =
  *  - printDocuments           §4.1/§4.2 "พิมพ์เอกสารยืม-คืน" — PHARMACIST and WAREHOUSE_OFFICER
  *  - cancelRequest            §4.4 "กดยกเลิกกระบวนการ" — PHARMACIST only, and only while a task is
  *                             still waiting for dispatch (both parties must agree)
+ *  - escalateManual           API-F1b-012 `POST /borrow-requests/{id}/escalate-manual` — add a lender
+ *                             outside the ladder once the request is ESCALATED (§4.1 escalation step,
+ *                             FR-F1b-011); §5.2 lists no column for it, so the endpoint's role list
+ *                             (PHARMACIST, HOSPITAL_ADMIN) is the grant
  */
 export type Action =
   | 'approveBorrow'
@@ -83,7 +87,8 @@ export type Action =
   | 'transportStatus'
   | 'manageIncident'
   | 'printDocuments'
-  | 'cancelRequest';
+  | 'cancelRequest'
+  | 'escalateManual';
 
 /**
  * §5.2 permission matrix, one row per role. `true` means allowed within that role's scope
@@ -99,6 +104,7 @@ export type Action =
  */
 const MATRIX: Record<RoleCode, Record<Action, boolean>> = {
   SYSTEM_ADMIN: {
+    escalateManual: false,
     configureRestrictedRules: true,
     approveBorrow: false, confirmLend: false, releaseNearExpiry: false, approveAllocation: false,
     approveIncidentPlan: false, verifyMapping: false, editMapping: true, updateInventory: false,
@@ -107,6 +113,7 @@ const MATRIX: Record<RoleCode, Record<Action, boolean>> = {
     printDocuments: false, cancelRequest: false,
   },
   REGION_ADMIN: {
+    escalateManual: false,
     configureRestrictedRules: true,
     approveBorrow: false, confirmLend: false, releaseNearExpiry: false, approveAllocation: false,
     approveIncidentPlan: false, verifyMapping: false, editMapping: false, updateInventory: false,
@@ -115,6 +122,7 @@ const MATRIX: Record<RoleCode, Record<Action, boolean>> = {
     printDocuments: false, cancelRequest: false,
   },
   HOSPITAL_ADMIN: {
+    escalateManual: true,
     configureRestrictedRules: false,
     approveBorrow: false, confirmLend: false, releaseNearExpiry: false, approveAllocation: false,
     approveIncidentPlan: false, verifyMapping: false, editMapping: true, updateInventory: false,
@@ -123,6 +131,7 @@ const MATRIX: Record<RoleCode, Record<Action, boolean>> = {
     printDocuments: false, cancelRequest: false,
   },
   PHARMACIST: {
+    escalateManual: true,
     configureRestrictedRules: false,
     approveBorrow: true, confirmLend: true, releaseNearExpiry: true, approveAllocation: true,
     approveIncidentPlan: false, verifyMapping: true, editMapping: true, updateInventory: true,
@@ -131,6 +140,7 @@ const MATRIX: Record<RoleCode, Record<Action, boolean>> = {
     printDocuments: true, cancelRequest: true,
   },
   PROCUREMENT_OFFICER: {
+    escalateManual: false,
     configureRestrictedRules: false,
     approveBorrow: false, confirmLend: false, releaseNearExpiry: false, approveAllocation: false,
     approveIncidentPlan: false, verifyMapping: false, editMapping: false, updateInventory: false,
@@ -139,6 +149,7 @@ const MATRIX: Record<RoleCode, Record<Action, boolean>> = {
     printDocuments: false, cancelRequest: false,
   },
   WAREHOUSE_OFFICER: {
+    escalateManual: false,
     configureRestrictedRules: false,
     approveBorrow: false, confirmLend: false, releaseNearExpiry: false, approveAllocation: false,
     approveIncidentPlan: false, verifyMapping: false, editMapping: false, updateInventory: true,
@@ -147,6 +158,7 @@ const MATRIX: Record<RoleCode, Record<Action, boolean>> = {
     printDocuments: true, cancelRequest: false,
   },
   ER_STAFF: {
+    escalateManual: false,
     configureRestrictedRules: false,
     approveBorrow: false, confirmLend: true, releaseNearExpiry: false, approveAllocation: false,
     approveIncidentPlan: true, verifyMapping: false, editMapping: false, updateInventory: true,
@@ -155,6 +167,7 @@ const MATRIX: Record<RoleCode, Record<Action, boolean>> = {
     printDocuments: false, cancelRequest: false,
   },
   DRIVER: {
+    escalateManual: false,
     configureRestrictedRules: false,
     approveBorrow: false, confirmLend: false, releaseNearExpiry: false, approveAllocation: false,
     approveIncidentPlan: false, verifyMapping: false, editMapping: false, updateInventory: false,
@@ -163,6 +176,7 @@ const MATRIX: Record<RoleCode, Record<Action, boolean>> = {
     printDocuments: false, cancelRequest: false,
   },
   DATA_ADMIN: {
+    escalateManual: false,
     configureRestrictedRules: false,
     approveBorrow: false, confirmLend: false, releaseNearExpiry: false, approveAllocation: false,
     approveIncidentPlan: false, verifyMapping: true, editMapping: true, updateInventory: false,
@@ -171,6 +185,7 @@ const MATRIX: Record<RoleCode, Record<Action, boolean>> = {
     printDocuments: false, cancelRequest: false,
   },
   AUDITOR: {
+    escalateManual: false,
     configureRestrictedRules: false,
     approveBorrow: false, confirmLend: false, releaseNearExpiry: false, approveAllocation: false,
     approveIncidentPlan: false, verifyMapping: false, editMapping: false, updateInventory: false,
@@ -237,6 +252,7 @@ export const ACTION_OWNERS: Partial<Record<Action, RoleCode[]>> = {
   printDocuments: ['PHARMACIST', 'WAREHOUSE_OFFICER'],
   cancelRequest: ['PHARMACIST'],
   waiveReturn: ['HOSPITAL_ADMIN'],
+  escalateManual: ['PHARMACIST', 'HOSPITAL_ADMIN'],
 };
 
 /**

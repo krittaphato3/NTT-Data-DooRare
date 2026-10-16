@@ -63,7 +63,7 @@ export const AUDIT_ACTION_OPTIONS: { value: AuditAction | 'ALL'; label: string }
   })),
 ];
 
-export const ENTITY_TYPES = ['app_user', 'config_setting', 'return_obligation', 'session'] as const;
+export const ENTITY_TYPES = ['app_user', 'config_setting', 'return_obligation', 'borrow_request', 'session'] as const;
 export type EntityType = (typeof ENTITY_TYPES)[number];
 
 export const ENTITY_TYPE_OPTIONS: { value: EntityType | 'ALL'; label: string }[] = [
@@ -71,6 +71,7 @@ export const ENTITY_TYPE_OPTIONS: { value: EntityType | 'ALL'; label: string }[]
   { value: 'app_user', label: 'บัญชีผู้ใช้ · app_user' },
   { value: 'config_setting', label: 'ค่าตั้งต้นระบบ · config_setting' },
   { value: 'return_obligation', label: 'ภาระการคืน · return_obligation' },
+  { value: 'borrow_request', label: 'คำขอยืม · borrow_request' },
   { value: 'session', label: 'เซสชัน · session' },
 ];
 
@@ -148,10 +149,100 @@ export interface ChainVerifyResult {
   checkedAt: string;
 }
 
-/** Mock result of "ตรวจสอบ hash chain" — the whole own-hospital chain verifies clean. */
-export const CHAIN_VERIFY_OK: ChainVerifyResult = {
-  ok: true,
-  checked: AUDIT_ENTRIES.length,
-  brokenAt: null,
-  checkedAt: '13 ต.ค. 69 08:45',
-};
+const TH_MONTHS = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+
+/** Now as the dashboard writes it: Thai short Buddhist-era date + HH:MM, plus a Gregorian ISO form. */
+function nowStamp(): { at: string; atIso: string } {
+  const d = new Date();
+  const p = (n: number) => String(n).padStart(2, '0');
+  return {
+    at: `${d.getDate()} ${TH_MONTHS[d.getMonth()]} ${String(d.getFullYear() + 543).slice(2)} ${p(d.getHours())}:${p(d.getMinutes())}`,
+    atIso: `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`,
+  };
+}
+
+/**
+ * The row hash is really SHA-256 over the row (SEC-003, `audit_log_chain()` trigger).
+ * The mock only needs it to be deterministic and stable for a given row, in the fixtures' shape.
+ */
+function mockHash(seed: string): string {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < seed.length; i += 1) {
+    h ^= seed.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  const part = (rounds: number) => {
+    let v = h;
+    for (let i = 0; i < rounds; i += 1) v = Math.imul(v ^ (v >>> 13), 0x01000193) >>> 0;
+    return v.toString(16).padStart(8, '0').slice(0, 4);
+  };
+  return `${part(0)}…${part(1)}`;
+}
+
+const byOldestFirst = (a: AuditEntry, b: AuditEntry) => (a.atIso < b.atIso ? -1 : a.atIso > b.atIso ? 1 : 0);
+
+/** Newest entry — the current head the next `prev_hash` must point at. */
+function chainHead(): AuditEntry | undefined {
+  return [...AUDIT_ENTRIES].sort(byOldestFirst).pop();
+}
+
+export interface AuditAppendInput {
+  action: AuditAction;
+  entityType: EntityType;
+  entityId: string;
+  before?: Record<string, AuditValue>;
+  after?: Record<string, AuditValue>;
+  reason: string;
+  actor: string;
+  role: RoleCode;
+}
+
+/**
+ * Append one audited action to the log (SEC-003) — how the UI records a waive or an escalate-manual
+ * before the API exists. The new row continues the hash chain: `prev_hash` is the current head's
+ * `hash`, so "ตรวจสอบ hash chain" still verifies after the action.
+ *
+ * MOCK LIMITATION: the log is an in-memory array, so appended rows are lost on reload and no row is
+ * ever sent to the server. Nothing is persisted (no localStorage) — a reload restores the fixtures.
+ */
+export function appendAuditEntry(input: AuditAppendInput): AuditEntry {
+  const head = chainHead();
+  const seq = AUDIT_ENTRIES.reduce((max, e) => Math.max(max, Number(e.id.replace(/\D/g, '')) || 0), 0) + 1;
+  const id = `AUD-${String(seq).padStart(7, '0')}`;
+  const prevHash = head ? head.hash : '0000…0000';
+  const { at, atIso } = nowStamp();
+  const entry: AuditEntry = {
+    id,
+    at,
+    atIso,
+    actor: input.actor,
+    role: input.role,
+    action: input.action,
+    entityType: input.entityType,
+    entityId: input.entityId,
+    before: input.before ?? {},
+    after: input.after ?? {},
+    reason: input.reason,
+    ip: '10.24.6.18',
+    hash: mockHash(`${prevHash}|${id}|${input.reason}`),
+    prevHash,
+  };
+  AUDIT_ENTRIES.push(entry);
+  return entry;
+}
+
+/**
+ * Walk the chain oldest → newest and report the first row whose `prev_hash` does not match the
+ * previous row's `hash`. Runs over the live array, so it also covers rows appended at runtime.
+ */
+export function verifyAuditChain(): ChainVerifyResult {
+  const chain = [...AUDIT_ENTRIES].sort(byOldestFirst);
+  let brokenAt: string | null = null;
+  for (let i = 1; i < chain.length; i += 1) {
+    if (chain[i].prevHash !== chain[i - 1].hash) {
+      brokenAt = chain[i].id;
+      break;
+    }
+  }
+  return { ok: brokenAt === null, checked: chain.length, brokenAt, checkedAt: nowStamp().at };
+}
