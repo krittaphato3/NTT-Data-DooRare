@@ -27,7 +27,7 @@ const VIEW_ONLY: WhNavDef[] = [
   { page: 'stock', th: 'สต็อก · ผลทำนาย · Agent', en: 'Stock, forecast & Agent', ui: 'UI-02 · UI-03', icon: 'bell' },
   { page: 'requests', th: 'คำขอยืม', en: 'Borrow requests', ui: 'UI-05', icon: 'inbox' },
   { page: 'expiry', th: 'ยาใกล้หมดอายุ', en: 'Near-expiry (F2)', ui: 'UI-07 · UI-08 · UI-09', icon: 'calx' },
-  { page: 'drugs', th: 'ข้อมูลยา · รหัสยา', en: 'Drug master & mapping', ui: 'UI-16', icon: 'layers' },
+  { page: 'drugs', th: 'ข้อมูลยา', en: 'Drug master', ui: 'UI-16', icon: 'layers' },
 ];
 
 export const WH_NAV_GROUPS = { operate: 'ปฏิบัติงาน', view: 'ดูข้อมูล (อ่านอย่างเดียว)' } as const;
