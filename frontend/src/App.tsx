@@ -18,11 +18,12 @@ import { StockAlertsPage } from './roles/pharmacist/pages/StockAlertsPage';
 import { getWarehouseNav } from './roles/warehouse/data/navigation';
 import { WAREHOUSE_NOTIFICATIONS, WAREHOUSE_USER } from './roles/warehouse/data/session';
 import { TransportTrackingPage } from './roles/warehouse/pages/TransportTrackingPage';
+import { InboxPage } from './roles/warehouse/pages/InboxPage';
 import { KitPage } from './roles/warehouse/pages/KitPage';
 import { WarehouseDashboardPage } from './roles/warehouse/pages/WarehouseDashboardPage';
 import type { TransportRole } from './roles/warehouse/pages/TransportTrackingPage';
 
-type Page = 'dashboard' | 'kit' | 'transport' | 'requests' | 'lend' | 'incident' | 'alerts' | 'report' | 'expiry' | 'pool' | 'docs';
+type Page = 'dashboard' | 'inbox' | 'kit' | 'transport' | 'requests' | 'lend' | 'incident' | 'alerts' | 'report' | 'expiry' | 'pool' | 'docs';
 
 /** Pharmacist on the ops-style top bar (UI-05 mockup: scope pill, agent pill, TH/EN). */
 const PHARMACIST_OPS_USER = { ...USER, scopeLabel: 'เห็นเฉพาะข้อมูล รพ.สมุทรปราการ' };
@@ -40,7 +41,7 @@ const PHARMACIST_OPS_USER = { ...USER, scopeLabel: 'เห็นเฉพาะ�
  * `?page=docs` shows Documents (UI-15).
  * `&role=pharmacist` = read-only pharmacist transport view, otherwise the warehouse officer view.
  * `?role=warehouse` switches the whole shell to the warehouse officer: `/?role=warehouse` is the WH
- * dashboard, `&page=kit` F3 (urgent requests, kits, incidents), `&page=transport` its transport tracking (other WH pages
+ * dashboard, `&page=inbox` work inbox (F1/F2/F3 out + in), `&page=kit` F3 emergency (urgent requests, kits, incidents), `&page=transport` its transport tracking (other WH pages
  * fall back to its dashboard).
  */
 function initialRoute(): { page: Page; transportRole: TransportRole; warehouse: boolean } {
@@ -49,7 +50,8 @@ function initialRoute(): { page: Page; transportRole: TransportRole; warehouse: 
     const p = q.get('page');
     let page: Page = 'dashboard';
     if (p === 'transport') page = 'transport';
-    else if (p === 'kit' || p === 'inbox') page = 'kit';
+    else if (p === 'inbox') page = 'inbox';
+    else if (p === 'kit') page = 'kit';
     else if (p === 'requests' || p === 'borrow') page = 'requests';
     else if (p === 'lend') page = 'lend';
     else if (p === 'incident' || p === 'inc') page = 'incident';
@@ -109,6 +111,7 @@ export default function App() {
   const [isAdmin] = useState(initialRole);
   const [route] = useState(initialRoute);
   const onTransport = route.page === 'transport';
+  const onInbox = route.page === 'inbox';
   const onKit = route.page === 'kit';
   const onRequests = route.page === 'requests';
   const onLend = route.page === 'lend';
@@ -126,7 +129,7 @@ export default function App() {
   const navRole = 'PHARMACIST';
   const activeKey = onTransport ? 'tr' : onRequests ? 'req' : onLend ? 'lend' : onIncident ? 'inc' : onAlerts ? 'alerts' : onReport ? 'rep' : onExpiry ? 'exp' : onPool ? 'pool' : onDocs ? 'doc' : 'dash';
   // WH owns its sidebar (roles/warehouse/data/navigation.ts); other roles use the shared catalogue.
-  const navItems = warehouse ? getWarehouseNav(onTransport ? 'transport' : onKit ? 'kit' : 'dashboard') : withLinks(getNavForRole(navRole, activeKey), navRole);
+  const navItems = warehouse ? getWarehouseNav(onTransport ? 'transport' : onInbox ? 'inbox' : onKit ? 'kit' : 'dashboard') : withLinks(getNavForRole(navRole, activeKey), navRole);
 
   // Mobile drawer: lock page scroll, close on Escape and when resizing to desktop.
   useEffect(() => {
@@ -172,7 +175,7 @@ export default function App() {
         />
         <main className="mainpad">
           {warehouse ? (
-            onTransport ? <TransportTrackingPage role="WAREHOUSE_OFFICER" /> : onKit ? <KitPage /> : <WarehouseDashboardPage />
+            onTransport ? <TransportTrackingPage role="WAREHOUSE_OFFICER" /> : onInbox ? <InboxPage /> : onKit ? <KitPage /> : <WarehouseDashboardPage />
           ) : onTransport ? (
             <TransportTrackingPage role={route.transportRole} />
           ) : onRequests ? (

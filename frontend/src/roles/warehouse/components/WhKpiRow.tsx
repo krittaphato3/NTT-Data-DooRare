@@ -13,6 +13,20 @@ export function WhKpiRow({ urgentLeft }: { urgentLeft: string }) {
       <div className="card kpi-card">
         <div style={headStyle}>
           <span style={labelStyle}>
+            กล่องงานเข้า รอยืนยัน<span className="en" style={{ display: 'block' }}>Work inbox</span>
+          </span>
+          <span className="sev" style={{ width: 32, height: 32, background: '#FEF3C7', color: '#92400E' }}>
+            <Icon name="inbox" />
+          </span>
+        </div>
+        <div className="num kpi-num" style={{ color: '#0F2A5C' }}>{t.box.newTotal}</div>
+        <div style={subStyle}>
+          ยืนยันจะแพ็ก · F1 <span className="num">{t.box.f1}</span> · F2 <span className="num">{t.box.f2}</span> · F3 <span className="num">{t.box.f3}</span>
+        </div>
+      </div>
+      <div className="card kpi-card">
+        <div style={headStyle}>
+          <span style={labelStyle}>
             เตรียมของ<span className="en" style={{ display: 'block' }}>To prepare</span>
           </span>
           <span className="sev" style={{ width: 32, height: 32, background: '#FFEDD5', color: '#9A3412' }}>
@@ -47,18 +61,6 @@ export function WhKpiRow({ urgentLeft }: { urgentLeft: string }) {
         </div>
         <div className="num kpi-num" style={{ color: '#0F2A5C' }}>{t.toReceive}</div>
         <div style={subStyle}>ถึงปลายทางแล้ว · สต็อกเพิ่มเมื่อยืนยันรับ</div>
-      </div>
-      <div className="card kpi-card">
-        <div style={headStyle}>
-          <span style={labelStyle}>
-            งานแพ็กชุดยา F3<span className="en" style={{ display: 'block' }}>Pack tasks</span>
-          </span>
-          <span className="sev" style={{ width: 32, height: 32 , background: '#F1F5F9', color: '#475569' }}>
-            <Icon name="siren" />
-          </span>
-        </div>
-        <div className="num kpi-num" style={{ color: '#0F2A5C' }}>{t.packWaiting}</div>
-        <div style={subStyle}>เหตุของ รพ.เรา · แพ็กตามแผนที่ ER อนุมัติ</div>
       </div>
       <div className="card kpi-card wh-kpi-urgent">
         <div style={headStyle}>

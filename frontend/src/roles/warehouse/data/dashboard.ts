@@ -1,7 +1,7 @@
 /** Mock data for the warehouse Dashboard (UI-01, WH view). Numbers derive from the other WH pages' data. */
 import type { IconName } from '../../../components/common/icons';
 import { KIT_DEFS, PACK_TASKS } from './f3';
-import { FEATURE_META, REQUESTS, URGENT_SECONDS as INBOX_URGENT_SECONDS, inboxStats } from './inbox';
+import { FEATURE_META, OUTBOUND_TASKS, outboundStats, REQUESTS, URGENT_SECONDS as INBOX_URGENT_SECONDS, inboxStats } from './inbox';
 import { fmtQty, HOSPITALS, isOutbound, SHIPMENTS, STATUS_META } from './transport';
 import type { Tone, TransportStatus } from './transport';
 import type { WarehousePage } from './routes';
@@ -20,7 +20,7 @@ export interface KitStock {
 /** Ready-set stock per patient-set (F3), same source as the F3 page. View-only on the dashboard. */
 export const KITS: KitStock[] = KIT_DEFS.map(({ key, th, en, ready, target }) => ({ key, th, en, ready, target }));
 
-export type TodoGroup = 'transport' | 'f3';
+export type TodoGroup = 'inbox' | 'transport' | 'f3';
 
 export interface TodoItem {
   id: string;
@@ -36,6 +36,17 @@ export interface TodoItem {
 }
 
 const byId = (id: string) => SHIPMENTS.find((s) => s.id === id)!;
+
+/** 0) Work inbox: F1/F2/F3 tasks waiting for WH to confirm packing. */
+function inboxTodo(): TodoItem[] {
+  return OUTBOUND_TASKS.filter((r) => r.status === 'NEW').map((r) => ({
+    id: r.id, group: 'inbox' as const, icon: 'inbox' as IconName, sevCls: 'sev-urg',
+    title: `ยืนยันจะแพ็ก ${r.drug} × ${fmtQty(r.qty)} ${r.unit}`,
+    detail: `${FEATURE_META[r.feature].label} · ${r.ref} → ${HOSPITALS[r.to]} · ${r.due}`,
+    badge: { label: 'รอยืนยัน', tone: 'amber' as Tone },
+    cta: { label: 'ยืนยันจะแพ็ก', primary: true, page: 'inbox' as WarehousePage },
+  }));
+}
 
 /** 1) Urgent F3 requests from other hospitals the warehouse (as lender) still has to answer. */
 function requestTodo(): TodoItem[] {
@@ -108,10 +119,11 @@ function kitTodo(): TodoItem[] {
   });
 }
 
-export const TODOS: TodoItem[] = [...requestTodo().sort((a, b) => Number(!!b.urgent) - Number(!!a.urgent)), ...transportTodo(), ...kitTodo()];
+export const TODOS: TodoItem[] = [...requestTodo().sort((a, b) => Number(!!b.urgent) - Number(!!a.urgent)), ...inboxTodo(), ...transportTodo(), ...kitTodo()];
 
 export const TODO_TABS: { key: 'all' | TodoGroup; label: string }[] = [
   { key: 'all', label: 'ทั้งหมด' },
+  { key: 'inbox', label: 'กล่องงานเข้า' },
   { key: 'transport', label: 'ขนส่ง' },
   { key: 'f3', label: 'F3 ฉุกเฉิน' },
 ];
@@ -132,6 +144,7 @@ export function transportStats() {
     total: SHIPMENTS.length,
     byStatus,
     inbox: inboxStats(),
+    box: outboundStats(),
     packWaiting: PACK_TASKS.length,
   };
 }

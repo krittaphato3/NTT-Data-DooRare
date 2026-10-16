@@ -77,3 +77,77 @@ export function inboxStats() {
     confirmed: REQUESTS.filter((r) => r.status === 'CONFIRMED').length,
   };
 }
+
+/**
+ * Work inbox (WH): every task that needs the warehouse, across F1 / F2 / F3.
+ *  - Outbound: goods we pack and send to other hospitals. F1/F2 arrive after the pharmacist approves;
+ *    F3 urgent requests are answered on the Emergency page and then show up here too.
+ *  - Inbound: goods other hospitals are sending us (heads-up; WH confirms receipt on arrival).
+ * Confirming an outbound task hands it to Transport tracking (starting at "กำลังเตรียมของ").
+ */
+export const OUTBOUND_TASKS: RequestItem[] = [
+  {
+    id: 'IB-F1-0128', feature: 'F1', ref: 'BR-2026-000128 · รอบ 1', drug: 'NORepinephrine 4 mg/4 mL', qty: 15, unit: 'AMP',
+    to: 'HB', requestedBy: 'ภก. รพ.บางพลี · เภสัชกรเราตอบรับแล้ว', due: 'ส่งภายใน 2 ชม.', status: 'NEW',
+    pick: [{ lot: 'NE25D04', expiry: '31 ก.ค. 2027', daysLeft: 290, qty: 15, location: 'ตู้ยา B2' }],
+    note: 'F1 ยืม · ล็อตที่ให้ยืมต้องอายุ > 180 วัน (FEFO)',
+  },
+  {
+    id: 'IB-F2-0046', feature: 'F2', ref: 'AP-2026-000046 · บรรทัด 1', drug: 'Omeprazole 40 mg inj', qty: 120, unit: 'VIAL',
+    to: 'HC', requestedBy: 'แผนจัดสรร (เภสัชกรอนุมัติ 17:40)', due: 'ส่งภายในพรุ่งนี้', status: 'NEW',
+    pick: [{ lot: 'OMP-2403', expiry: '20 ธ.ค. 2026', daysLeft: 68, qty: 120, location: 'ชั้น C1 · ถูกกันไว้' }],
+    note: 'F2 โอนยาใกล้หมดอายุเข้าคลังกลาง · ล็อตถูกกันไว้จนขึ้นรถ',
+  },
+  {
+    id: 'IB-F1-0129', feature: 'F1', ref: 'BR-2026-000129 · รอบ 1', drug: 'CefTRIAXone 1 g inj', qty: 30, unit: 'VIAL',
+    to: 'HD', requestedBy: 'ภก. รพ.บางบ่อ', due: 'ส่งภายใน 4 ชม.', status: 'CONFIRMED', transportId: 'TR-2026-000342',
+    pick: [
+      { lot: 'CF2511', expiry: '30 พ.ย. 2027', daysLeft: 382, qty: 20, location: 'ชั้น C3' },
+      { lot: 'CF2512', expiry: '31 ธ.ค. 2027', daysLeft: 413, qty: 10, location: 'ชั้น C3' },
+    ],
+  },
+  {
+    id: 'IB-F3-0127', feature: 'F3', ref: 'BR-2026-000127 · เหตุ INC-2026-0006', drug: 'Atropine 1 mg/mL amp', qty: 20, unit: 'AMP',
+    to: 'HD', requestedBy: 'ER รพ.บางบ่อ · ยืนยันที่หน้า Emergency 15:42', due: 'ยืนยันแล้ว', status: 'CONFIRMED', transportId: 'TR-2026-000345',
+    pick: [{ lot: 'ATR-2504', expiry: '30 เม.ย. 2027', daysLeft: 198, qty: 20, location: 'ตู้ฉุกเฉิน A1' }],
+  },
+  {
+    id: 'IB-F2-0045', feature: 'F2', ref: 'AP-2026-000045 · บรรทัด 1', drug: 'Omeprazole 40 mg inj', qty: 100, unit: 'VIAL',
+    to: 'HB', requestedBy: 'แผนจัดสรร (อนุมัติ 13:20)', due: 'ส่งวันนี้', status: 'CONFIRMED', transportId: 'TR-2026-000338',
+    pick: [{ lot: 'OMP-2403', expiry: '20 ธ.ค. 2026', daysLeft: 68, qty: 100, location: 'ชั้น C1 · ถูกกันไว้' }],
+  },
+];
+
+export interface InboundTask {
+  id: string;
+  feature: InboxFeature;
+  ref: string;
+  drug: string;
+  qty: number;
+  unit: string;
+  from: HospitalCode;
+  stage: string;
+  eta: string;
+  /** Present once the goods are on a transport task (receipt is confirmed there). */
+  transportId?: string;
+}
+
+export const INBOUND_TASKS: InboundTask[] = [
+  { id: 'IN-F3-0132', feature: 'F3', ref: 'BR-2026-000132 · เหตุ INC-2026-0007', drug: 'NORepinephrine 4 mg/4 mL', qty: 20, unit: 'AMP', from: 'HB', stage: 'ผู้ให้ตอบรับแล้ว · ต้นทางกำลังเตรียมของ', eta: 'เร็วที่สุดภายใน 30 นาที' },
+  { id: 'IN-F1-0130', feature: 'F1', ref: 'BR-2026-000130 · รอบ 1', drug: 'Adrenaline 1 mg/mL amp', qty: 20, unit: 'AMP', from: 'HB', stage: 'ผู้ให้ตอบรับแล้ว · ต้นทางกำลังเตรียมของ', eta: 'ประมาณ 21:00', transportId: 'TR-2026-000343' },
+  { id: 'IN-F2-0047', feature: 'F2', ref: 'AP-2026-000047 · บรรทัด 2', drug: 'Metformin 500 mg tab', qty: 2000, unit: 'เม็ด', from: 'HD', stage: 'ต้นทางเตรียมเสร็จ · รอขึ้นรถ', eta: 'พรุ่งนี้เช้า', transportId: 'TR-2026-000344' },
+  { id: 'IN-F1-0109', feature: 'F1', ref: 'BR-2026-000109 · รอบ 2', drug: 'CefTRIAXone 1 g inj', qty: 10, unit: 'VIAL', from: 'HC', stage: 'อยู่ระหว่างเดินทาง', eta: 'ประมาณ 20:30', transportId: 'TR-2026-000336' },
+  { id: 'IN-F2-0041', feature: 'F2', ref: 'AP-2026-000041 · บรรทัด 2', drug: 'AMLOdipine 5 mg tab', qty: 500, unit: 'เม็ด', from: 'HD', stage: 'ถึงปลายทางแล้ว · รอยืนยันรับ', eta: 'ถึง 18:58 น.', transportId: 'TR-2026-000334' },
+];
+
+export function outboundStats() {
+  const open = OUTBOUND_TASKS.filter((r) => r.status === 'NEW');
+  return {
+    newTotal: open.length,
+    f1: open.filter((r) => r.feature === 'F1').length,
+    f2: open.filter((r) => r.feature === 'F2').length,
+    f3: open.filter((r) => r.feature === 'F3').length,
+    inbound: INBOUND_TASKS.length,
+    toReceive: INBOUND_TASKS.filter((i) => i.stage.startsWith('ถึงปลายทาง')).length,
+  };
+}

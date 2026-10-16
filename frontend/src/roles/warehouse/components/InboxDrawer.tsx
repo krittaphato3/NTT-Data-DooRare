@@ -13,12 +13,14 @@ interface InboxDrawerProps {
   onClose: () => void;
   onConfirm: () => void;
   onDecline: (reason: string) => void;
+  kicker?: string;
+  confirmLabel?: string;
 }
 
 const DECLINE_REASONS = ['สต็อกจริงไม่พอ', 'ล็อตมีปัญหา (เสียหาย/ถูกเรียกคืน)', 'ล็อตอายุไม่ถึงเกณฑ์ (< 180 วัน)', 'อื่นๆ'];
 
 /** Details of one request: what to send, which lots, and the answer. */
-export function InboxDrawer({ item: it, urgentLeft, startDeclining, onClose, onConfirm, onDecline }: InboxDrawerProps) {
+export function InboxDrawer({ item: it, urgentLeft, startDeclining, onClose, onConfirm, onDecline, kicker = 'คำขอเร่งด่วน F3 · ตอบแล้วงานจะไปที่ติดตามการขนส่ง', confirmLabel = 'ยืนยัน · เตรียมส่ง' }: InboxDrawerProps) {
   const [declining, setDeclining] = useState(startDeclining);
   const [reasonKind, setReasonKind] = useState(DECLINE_REASONS[0]);
   const [note, setNote] = useState('');
@@ -29,7 +31,7 @@ export function InboxDrawer({ item: it, urgentLeft, startDeclining, onClose, onC
     <aside className="tr-drawer" aria-label="รายละเอียดคำขอ">
       <div className="tr-drawer-head">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-          <span className="sub">คำขอเร่งด่วน F3 · ตอบแล้วงานจะไปที่ติดตามการขนส่ง</span>
+          <span className="sub">{kicker}</span>
           <button className="icbtn" aria-label="ปิด / Close" onClick={onClose}>
             <Icon name="x" />
           </button>
@@ -126,7 +128,7 @@ export function InboxDrawer({ item: it, urgentLeft, startDeclining, onClose, onC
           {open && (
             <button className="btn btn-p" onClick={onConfirm}>
               <Icon name="check" />
-              ยืนยัน · เตรียมส่ง
+              {confirmLabel}
             </button>
           )}
           {open && !declining && (
