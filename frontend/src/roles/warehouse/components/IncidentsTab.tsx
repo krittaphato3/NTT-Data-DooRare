@@ -146,7 +146,7 @@ export function IncidentDrawer({ incident: i, onClose }: IncidentDrawerProps) {
                 <li key={k.kit}>
                   <div style={{ flex: 1 }}>
                     <span style={{ fontWeight: 600, color: '#0F2A5C' }}>{k.kit}</span> × <span className="num">{k.qty}</span> ชุด
-                    {k.inboxId && <span className="code" style={{ display: 'block' }}>{k.inboxId}</span>}
+                    {k.packId && <span className="code" style={{ display: 'block' }}>{k.packId} · แพ็กที่แท็บ "แพ็กชุดยา"</span>}
                   </div>
                 </li>
               ))}
@@ -154,14 +154,14 @@ export function IncidentDrawer({ incident: i, onClose }: IncidentDrawerProps) {
           </div>
         )}
 
-        {i.requests.some((r) => r.inboxId) || i.kits.length > 0 ? (
+        {i.requests.some((r) => r.inboxId && r.status === 'NEED_CONFIRM') && (
           <div>
             <a className="btn btn-p" href={whHref('inbox')} style={{ textDecoration: 'none' }}>
               <Icon name="inbox" />
-              ไปทำรายการที่กล่องงานเข้า
+              ไปยืนยันที่คำขอรอยืนยัน
             </a>
           </div>
-        ) : null}
+        )}
       </div>
     </aside>
   );

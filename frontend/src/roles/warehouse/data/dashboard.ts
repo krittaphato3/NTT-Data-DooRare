@@ -1,12 +1,12 @@
-/** Mock data for the warehouse Dashboard (UI-01, WH view). Transport numbers derive from SHIPMENTS. */
+/** Mock data for the warehouse Dashboard (UI-01, WH view). Numbers derive from the other WH pages' data. */
 import type { IconName } from '../../../components/common/icons';
-import { KIT_DEFS } from './f3';
-import { FEATURE_META, INBOX_STATUS_META, OUTBOUND, PACKS, URGENT_SECONDS as INBOX_URGENT_SECONDS, inboxStats } from './inbox';
+import { KIT_DEFS, PACK_TASKS } from './f3';
+import { FEATURE_META, REQUESTS, URGENT_SECONDS as INBOX_URGENT_SECONDS, inboxStats } from './inbox';
 import { fmtQty, HOSPITALS, isOutbound, SHIPMENTS, STATUS_META } from './transport';
 import type { Tone, TransportStatus } from './transport';
 import type { WarehousePage } from './routes';
 
-/** Seconds left on the urgent lender request when the page loads (spec: confirm within 3–5 min). */
+/** Seconds left on the urgent F3 request when the page loads (spec: confirm within 3–5 min). */
 export const URGENT_SECONDS = INBOX_URGENT_SECONDS;
 
 export interface KitStock {
@@ -17,10 +17,10 @@ export interface KitStock {
   target: number;
 }
 
-/** Ready-set stock per patient-set (F3), same source as the kits page. View-only on the dashboard. */
+/** Ready-set stock per patient-set (F3), same source as the F3 page. View-only on the dashboard. */
 export const KITS: KitStock[] = KIT_DEFS.map(({ key, th, en, ready, target }) => ({ key, th, en, ready, target }));
 
-export type TodoGroup = 'inbox' | 'transport';
+export type TodoGroup = 'request' | 'transport' | 'kit';
 
 export interface TodoItem {
   id: string;
@@ -31,24 +31,37 @@ export interface TodoItem {
   detail: string;
   badge: { label: string; tone: Tone };
   cta: { label: string; primary: boolean; page: WarehousePage };
-  /** Marks the urgent lender request so the page can show its live countdown. */
+  /** Marks the urgent request so the page can show its live countdown. */
   urgent?: boolean;
 }
 
 const byId = (id: string) => SHIPMENTS.find((s) => s.id === id)!;
 
+/** 1) Requests the warehouse still has to answer. */
+function requestTodo(): TodoItem[] {
+  return REQUESTS.filter((r) => r.status === 'NEW').map((r) => ({
+    id: r.id, group: 'request', urgent: !!r.urgent, icon: r.urgent ? 'siren' : 'inbox', sevCls: r.urgent ? 'sev-crit' : 'sev-urg',
+    title: `ยืนยันคำขอ ${r.drug} × ${fmtQty(r.qty)} ${r.unit}`,
+    detail: `${FEATURE_META[r.feature].label} · ${r.ref} → ${HOSPITALS[r.to]} · ${r.urgent ? 'เร่งด่วน' : r.due}`,
+    badge: { label: r.urgent ? 'เร่งด่วนมาก' : 'รอยืนยัน', tone: r.urgent ? 'red' : 'amber' },
+    cta: { label: 'ยืนยัน', primary: true, page: 'inbox' },
+  }));
+}
+
+/** 2) Transport work: prepare → load → receive → sync. */
 function transportTodo(): TodoItem[] {
-  const arrived = byId('TR-2026-000334');
+  const preparing = byId('TR-2026-000342');
   const dispatch = byId('TR-2026-000338');
   const cancelReq = byId('TR-2026-000339');
+  const arrived = byId('TR-2026-000334');
   const pending = byId('TR-2026-000341');
   return [
     {
-      id: arrived.id, group: 'transport', icon: 'checkc', sevCls: 'sev-norm',
-      title: `ยืนยันรับของ ${arrived.id}`,
-      detail: `${arrived.drug} · ${fmtQty(arrived.qty)} ${arrived.unit} · จาก ${HOSPITALS[arrived.from]} · ถึง ${arrived.updatedAt} น.`,
-      badge: { label: 'ถึงปลายทาง · รอรับ', tone: 'green' },
-      cta: { label: 'ยืนยันรับของ', primary: true, page: 'transport' },
+      id: preparing.id, group: 'transport', icon: 'box', sevCls: 'sev-urg',
+      title: `เตรียมของ ${preparing.id}`,
+      detail: `${preparing.drug} · ${fmtQty(preparing.qty)} ${preparing.unit} → ${HOSPITALS[preparing.to]} · หยิบตามล็อต FEFO แล้วกด “เตรียมเสร็จ”`,
+      badge: { label: 'กำลังเตรียมของ', tone: 'orange' },
+      cta: { label: 'เตรียมของ', primary: true, page: 'transport' },
     },
     {
       id: dispatch.id, group: 'transport', icon: 'hourglass', sevCls: 'sev-urg',
@@ -65,6 +78,13 @@ function transportTodo(): TodoItem[] {
       cta: { label: 'ดูรายละเอียด', primary: false, page: 'transport' },
     },
     {
+      id: arrived.id, group: 'transport', icon: 'checkc', sevCls: 'sev-norm',
+      title: `ยืนยันรับของ ${arrived.id}`,
+      detail: `${arrived.drug} · ${fmtQty(arrived.qty)} ${arrived.unit} · จาก ${HOSPITALS[arrived.from]} · ถึง ${arrived.updatedAt} น.`,
+      badge: { label: 'ถึงปลายทาง · รอรับ', tone: 'green' },
+      cta: { label: 'ยืนยันรับของ', primary: true, page: 'transport' },
+    },
+    {
       id: pending.id, group: 'transport', icon: 'sync', sevCls: 'sev-norm',
       title: `ซิงก์รูปขึ้นรถ ${pending.id}`,
       detail: `${pending.drug} · ${fmtQty(pending.qty)} ${pending.unit} → ${HOSPITALS[pending.to]} · รูปที่ถ่ายตอนไม่มีสัญญาณยังไม่ถูกส่งขึ้นระบบ`,
@@ -74,40 +94,27 @@ function transportTodo(): TodoItem[] {
   ];
 }
 
-/** Inbox tasks that still need the warehouse (confirm to prepare / mark ready). */
-function inboxTodo(): TodoItem[] {
-  const items: TodoItem[] = [];
-  for (const o of OUTBOUND) {
-    if (o.status !== 'NEW' && o.status !== 'PREPARING') continue;
-    const prep = o.status === 'PREPARING';
-    items.push({
-      id: o.id, group: 'inbox', urgent: !!o.urgent && o.status === 'NEW',
-      icon: o.urgent ? 'siren' : prep ? 'box' : 'inbox', sevCls: o.urgent ? 'sev-crit' : 'sev-urg',
-      title: `${prep ? 'เตรียมให้เสร็จ' : 'ยืนยันจะเตรียม'} ${o.drug} × ${fmtQty(o.qty)} ${o.unit}`,
-      detail: `${FEATURE_META[o.feature].label} · ${o.ref} → ${HOSPITALS[o.to]} · ${o.urgent ? 'เร่งด่วน' : o.due}`,
-      badge: { label: INBOX_STATUS_META[o.status].label, tone: o.urgent ? 'red' : INBOX_STATUS_META[o.status].tone },
-      cta: { label: prep ? 'เตรียมเสร็จ' : 'ยืนยัน', primary: true, page: 'inbox' },
-    });
-  }
-  for (const p of PACKS) {
-    if (p.status !== 'NEW' && p.status !== 'PREPARING') continue;
-    items.push({
-      id: p.id, group: 'inbox', icon: 'box', sevCls: 'sev-urg',
-      title: `แพ็ก${p.kit} × ${p.qty} ชุด`,
+/** 3) Packing sets for our own incidents (F3). */
+function kitTodo(): TodoItem[] {
+  return PACK_TASKS.map((p) => {
+    const k = KIT_DEFS.find((x) => x.key === p.kitKey)!;
+    return {
+      id: p.id, group: 'kit' as const, icon: 'box' as IconName, sevCls: 'sev-urg',
+      title: `แพ็ก${k.th} × ${p.qty} ชุด`,
       detail: `${FEATURE_META.F3.label} · เหตุ ${p.incident} · ตัดสต็อกตามสูตรเซ็ตเมื่อยืนยันแพ็กเสร็จ`,
-      badge: { label: INBOX_STATUS_META[p.status].label, tone: INBOX_STATUS_META[p.status].tone },
-      cta: { label: p.status === 'NEW' ? 'ยืนยัน' : 'แพ็กเสร็จ', primary: true, page: 'inbox' },
-    });
-  }
-  return items.sort((a, b) => Number(!!b.urgent) - Number(!!a.urgent));
+      badge: { label: 'รอแพ็ก', tone: 'amber' as Tone },
+      cta: { label: 'แพ็ก', primary: true, page: 'kit' as WarehousePage },
+    };
+  });
 }
 
-export const TODOS: TodoItem[] = [...inboxTodo(), ...transportTodo()];
+export const TODOS: TodoItem[] = [...requestTodo().sort((a, b) => Number(!!b.urgent) - Number(!!a.urgent)), ...transportTodo(), ...kitTodo()];
 
 export const TODO_TABS: { key: 'all' | TodoGroup; label: string }[] = [
   { key: 'all', label: 'ทั้งหมด' },
-  { key: 'inbox', label: 'กล่องงานเข้า' },
+  { key: 'request', label: 'คำขอรอยืนยัน' },
   { key: 'transport', label: 'ขนส่ง' },
+  { key: 'kit', label: 'ชุดยา F3' },
 ];
 
 /** Transport counts for the KPI cards and the status panel (own hospital only). */
@@ -115,6 +122,7 @@ export function transportStats() {
   const count = (pred: (s: (typeof SHIPMENTS)[number]) => boolean) => SHIPMENTS.filter(pred).length;
   const byStatus = (st: TransportStatus) => count((s) => s.status === st);
   return {
+    preparing: count((s) => s.status === 'PREPARING' && isOutbound(s)),
     waiting: count((s) => s.status === 'WAITING_DISPATCH' && isOutbound(s)),
     cancelRequested: count((s) => s.status === 'WAITING_DISPATCH' && !!s.cancelRequest),
     toReceive: count((s) => s.status === 'ARRIVED' && !isOutbound(s)),
@@ -122,12 +130,13 @@ export function transportStats() {
     inTransit: byStatus('IN_TRANSIT'),
     onTheWay: byStatus('LOADED') + byStatus('IN_TRANSIT'),
     pendingSync: count((s) => !!s.pending),
-    inbox: inboxStats(),
     total: SHIPMENTS.length,
     byStatus,
+    inbox: inboxStats(),
+    packWaiting: PACK_TASKS.length,
   };
 }
 
 export const STATUS_ROWS: { code: TransportStatus; label: string; tone: Tone; icon: IconName }[] = (
-  ['WAITING_DISPATCH', 'LOADED', 'IN_TRANSIT', 'ARRIVED', 'RECEIVED', 'CANCELLED'] as TransportStatus[]
+  ['PREPARING', 'WAITING_DISPATCH', 'LOADED', 'IN_TRANSIT', 'ARRIVED', 'RECEIVED', 'CANCELLED'] as TransportStatus[]
 ).map((code) => ({ code, label: STATUS_META[code].label, tone: STATUS_META[code].tone, icon: STATUS_META[code].icon }));

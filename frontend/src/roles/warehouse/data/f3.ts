@@ -115,7 +115,7 @@ export interface Incident {
   reportedAt: string;
   eta: string;
   status: 'OPEN' | 'CLOSED';
-  kits: { kit: string; qty: number; inboxId?: string }[];
+  kits: { kit: string; qty: number; packId?: string }[];
   requests: UrgentRequest[];
 }
 
@@ -124,8 +124,8 @@ export const INCIDENTS: Incident[] = [
     id: 'INC-2026-0007', own: true, hospital: 'HA', title: 'รถบัสพลิกคว่ำ', place: 'ถ.สุขุมวิท กม.34', triage: { red: 3, yellow: 6, green: 9 },
     reportedAt: '18:52', eta: 'รถพยาบาลชุดแรก 19:40', status: 'OPEN',
     kits: [
-      { kit: 'ชุดบาดเจ็บ', qty: 4, inboxId: 'PK-2026-0012' },
-      { kit: 'ชุดใส่ท่อช่วยหายใจ', qty: 2, inboxId: 'PK-2026-0013' },
+      { kit: 'ชุดบาดเจ็บ', qty: 4, packId: 'PK-2026-0012' },
+      { kit: 'ชุดใส่ท่อช่วยหายใจ', qty: 2, packId: 'PK-2026-0013' },
     ],
     requests: [
       { id: 'BR-2026-000132', side: 'borrower', drug: 'NORepinephrine 4 mg/4 mL', qty: 20, unit: 'AMP', counterpart: 'HB', status: 'ACCEPTED' },
@@ -181,4 +181,17 @@ export const RETURNS: ReturnItem[] = [
   { id: 'RT-2026-0022', kind: 'we_return', incident: 'INC-2026-0005', drug: 'PRC group O', qty: 2, unit: 'UNIT', counterpart: 'HB', due: '23 ต.ค. 2569', status: 'REMINDED', note: 'ส่วนประกอบโลหิต: คืนผ่านธนาคารเลือด (BLOOD_REPLACEMENT)' },
   { id: 'RT-2026-0023', kind: 'they_return', incident: 'INC-2026-0005', drug: 'Tranexamic acid 500 mg inj', qty: 10, unit: 'AMP', counterpart: 'HB', due: '8 ต.ค. 2569', status: 'OVERDUE', note: 'รพ.บางพลียืมไว้ตอนเหตุ · เลยกำหนด' },
   { id: 'RT-2026-0024', kind: 'to_stock', incident: 'INC-2026-0005', drug: 'ชุดบาดเจ็บที่ไม่ได้ใช้', qty: 2, unit: 'ชุด', due: '—', status: 'OPEN', note: 'ตรวจสภาพและวันหมดอายุ แล้วเพิ่มเข้าเซ็ตพร้อมใช้' },
+];
+
+/** F3 pack task: patient sets to assemble for one of OUR incidents (from the ER-approved plan). */
+export interface PackTask {
+  id: string;
+  incident: string;
+  kitKey: string;
+  qty: number;
+}
+
+export const PACK_TASKS: PackTask[] = [
+  { id: 'PK-2026-0012', incident: 'INC-2026-0007', kitKey: 'trauma', qty: 4 },
+  { id: 'PK-2026-0013', incident: 'INC-2026-0007', kitKey: 'intubation', qty: 2 },
 ];

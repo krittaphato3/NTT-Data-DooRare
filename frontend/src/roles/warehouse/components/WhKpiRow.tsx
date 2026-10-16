@@ -13,7 +13,7 @@ export function WhKpiRow({ urgentLeft }: { urgentLeft: string }) {
       <div className="card kpi-card">
         <div style={headStyle}>
           <span style={labelStyle}>
-            กล่องงานเข้า รอยืนยัน<span className="en" style={{ display: 'block' }}>New in inbox</span>
+            คำขอรอยืนยัน<span className="en" style={{ display: 'block' }}>Requests to confirm</span>
           </span>
           <span className="sev" style={{ width: 32, height: 32 , background: '#FEF3C7', color: '#92400E' }}>
             <Icon name="inbox" />
@@ -27,15 +27,15 @@ export function WhKpiRow({ urgentLeft }: { urgentLeft: string }) {
       <div className="card kpi-card">
         <div style={headStyle}>
           <span style={labelStyle}>
-            กำลังเตรียม<span className="en" style={{ display: 'block' }}>Preparing</span>
+            กำลังเตรียมของ<span className="en" style={{ display: 'block' }}>Preparing</span>
           </span>
           <span className="sev" style={{ width: 32, height: 32, background: '#DBEAFE', color: '#1E40AF' }}>
             <Icon name="box" />
           </span>
         </div>
-        <div className="num kpi-num" style={{ color: '#0F2A5C' }}>{t.inbox.preparing}</div>
+        <div className="num kpi-num" style={{ color: '#0F2A5C' }}>{t.preparing}</div>
         <div style={subStyle}>
-          เตรียมเสร็จ <span className="num">{t.inbox.ready}</span> · สร้างงานขนส่งแล้ว
+          หยิบตามล็อต FEFO แล้วกดเตรียมเสร็จ ที่ติดตามการขนส่ง
         </div>
       </div>
       <div className="card kpi-card">

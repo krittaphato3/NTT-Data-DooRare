@@ -26,6 +26,7 @@ function actionFor(r: ShipmentRowState, canOperate: boolean, canCancel: boolean)
   // Only the pharmacist answers a cancel request (RBAC §4.4).
   if (canCancel && r.status === 'WAITING_DISPATCH' && out && r.cancelRequested) return ['ตอบคำขอยกเลิก', 'btn-p'];
   if (!canOperate) return ['ดูรายละเอียด', 'btn-s'];
+  if (r.status === 'PREPARING' && out) return ['เตรียมของ', 'btn-p'];
   if (r.status === 'ARRIVED' && !out) return ['ยืนยันรับของ', 'btn-p'];
   if (r.status === 'WAITING_DISPATCH' && out) return r.cancelRequested ? ['ดูรายละเอียด', 'btn-s'] : ['ขึ้นรถ + ถ่ายรูป', 'btn-p'];
   if (r.status === 'LOADED' && r.pending) return ['ซิงก์ตอนนี้', 'btn-s'];
@@ -111,13 +112,13 @@ export function ShipmentTable({ rows, activeId, onOpen, onAction, canOperate, ca
                     )}
                   </td>
                   <td>
-                    <span className="mst" role="img" aria-label={r.status === 'CANCELLED' ? 'ยกเลิก' : `ขั้นที่ ${idx + 1} จาก 5`}>
+                    <span className="mst" role="img" aria-label={r.status === 'CANCELLED' ? 'ยกเลิก' : `ขั้นที่ ${idx + 1} จาก ${STEP_ORDER.length}`}>
                       {STEP_ORDER.map((o, i) => (
                         <span key={o} style={{ background: r.status === 'CANCELLED' ? '#E2E8F0' : i < idx ? '#1D4ED8' : i === idx ? '#93C5FD' : '#E2E8F0' }} />
                       ))}
                     </span>
                     <span style={{ display: 'block', fontSize: 11.5, lineHeight: '16px', marginTop: 3 }}>
-                      {r.status === 'CANCELLED' ? 'ยกเลิกโดยความยินยอม' : `${idx + 1}/5 · ${STEPS[idx].label.split(' · ')[0]}`}
+                      {r.status === 'CANCELLED' ? 'ยกเลิกโดยความยินยอม' : `${idx + 1}/${STEP_ORDER.length} · ${STEPS[idx].label.split(' · ')[0]}`}
                     </span>
                   </td>
                   <td>

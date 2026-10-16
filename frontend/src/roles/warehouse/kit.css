@@ -8,3 +8,8 @@
 .kt-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 .kt-list li { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid #e2e8f0; border-radius: 8px; }
 .kt-confirm { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+.kt-kits { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; padding: 14px 16px 4px; }
+.kt-kit { border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 14px; background: #ffffff; }
+.kt-subhead { padding: 10px 16px 4px; }
+@media (max-width: 1023px) { .kt-kits { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 479px) { .kt-kits { grid-template-columns: minmax(0, 1fr); } }

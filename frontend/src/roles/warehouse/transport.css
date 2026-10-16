@@ -27,7 +27,7 @@
 
 /* status tiles (direction tabs, card head, filters live in index.css) */
 .ph-add:focus-visible { outline: 2px solid #1d4ed8; outline-offset: 2px; }
-.tiles6 { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
+.tiles6 { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; }
 
 /* form inputs */
 .inp { height: 36px; border: 1px solid #94a3b8; border-radius: 8px; padding: 0 10px; font: inherit; font-size: 13px; color: #0f2a5c; background: #ffffff; }
@@ -81,3 +81,6 @@ textarea.inp { height: auto; padding: 8px 10px; line-height: 20px; resize: verti
 /* WH acts on behalf of the driver (RBAC §4.4 ◐) */
 .proxy-box { border: 1px dashed #d97706; background: #fffbeb; border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
 .proxy-done { background: #fef3c7; color: #92400e; border-radius: 8px; padding: 8px 10px; font-size: 12.5px; line-height: 18px; }
+
+/* Pick-while-preparing box in the transport drawer */
+.prep-box { border: 2px solid #1d4ed8; border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; }

@@ -4,6 +4,7 @@ import type { TransportStatus } from '../data/transport';
 
 const TILE_TONE: Record<string, [string, string]> = {
   amber: ['#92400E', '#FFFBEB'],
+  orange: ['#9A3412', '#FFF7ED'],
   blue: ['#1E40AF', '#EFF6FF'],
   teal: ['#115E59', '#F0FDFA'],
   grey: ['#475569', '#F8FAFC'],
