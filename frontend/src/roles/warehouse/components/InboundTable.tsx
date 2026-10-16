@@ -5,7 +5,14 @@ import { fmtQty, HOSPITALS } from '../data/transport';
 import { FeatureBadge } from './InboxBadges';
 
 /** Goods other hospitals are sending us (heads-up). WH confirms receipt on Transport tracking when they arrive. */
-export function InboundTable({ rows }: { rows: InboundTask[] }) {
+interface InboundTableProps {
+  rows: InboundTask[];
+  /** Ids acknowledged in this session. */
+  acked: ReadonlySet<string>;
+  onAck: (id: string) => void;
+}
+
+export function InboundTable({ rows, acked, onAck }: InboundTableProps) {
   return (
     <div className="scroll-x">
       <table className="tbl ib-tbl" aria-label="ของที่จะรับเข้า">
@@ -24,6 +31,8 @@ export function InboundTable({ rows }: { rows: InboundTask[] }) {
         <tbody>
           {rows.map((r) => {
             const arrived = r.stage.startsWith('ถึงปลายทาง');
+            const isNew = r.status === 'NEW' && !acked.has(r.id);
+            const justAcked = r.status === 'NEW' && acked.has(r.id);
             return (
               <tr key={r.id}>
                 <td>
@@ -43,11 +52,15 @@ export function InboundTable({ rows }: { rows: InboundTask[] }) {
                   <Icon name="inArrow" className="ic14" style={{ verticalAlign: '-2px', color: '#1D4ED8' }} /> {HOSPITALS[r.from]}
                 </td>
                 <td style={{ fontSize: 12.5 }}>
-                  <span className={`badge ${arrived ? 't-green' : 't-grey'}`}>{r.stage}</span>
+                  <span className={`badge ${arrived ? 't-green' : isNew ? 't-blue' : 't-grey'}`}>{justAcked ? 'รับทราบแล้ว · ไปอยู่ที่ติดตามการขนส่ง (รับเข้า)' : r.stage}</span>
                 </td>
                 <td className="num" style={{ fontSize: 12.5 }}>{r.eta}</td>
                 <td className="r">
-                  {arrived ? (
+                  {isNew ? (
+                    <button className="btn btn-sm btn-p" onClick={() => onAck(r.id)}>รับทราบ</button>
+                  ) : justAcked ? (
+                    <a className="btn btn-sm btn-s" href={whHref('transport')} style={{ textDecoration: 'none' }}>ดูที่ติดตามการขนส่ง</a>
+                  ) : arrived ? (
                     <a className="btn btn-sm btn-p" href={whHref('transport')} style={{ textDecoration: 'none' }}>ยืนยันรับของ</a>
                   ) : r.transportId ? (
                     <a className="btn btn-sm btn-s" href={whHref('transport')} style={{ textDecoration: 'none' }}>ดูที่ติดตามการขนส่ง</a>

@@ -118,6 +118,8 @@ export const OUTBOUND_TASKS: RequestItem[] = [
   },
 ];
 
+export type InboundStatus = 'NEW' | 'ACKED';
+
 export interface InboundTask {
   id: string;
   feature: InboxFeature;
@@ -126,18 +128,22 @@ export interface InboundTask {
   qty: number;
   unit: string;
   from: HospitalCode;
+  /** NEW = the other hospital accepted our request and will send goods; WH presses "รับทราบ" to put it on Transport tracking (รับเข้า). */
+  status: InboundStatus;
   stage: string;
   eta: string;
-  /** Present once the goods are on a transport task (receipt is confirmed there). */
+  /** Present once acknowledged: the goods are followed (and receipt confirmed) on Transport tracking. */
   transportId?: string;
 }
 
 export const INBOUND_TASKS: InboundTask[] = [
-  { id: 'IN-F3-0132', feature: 'F3', ref: 'BR-2026-000132 · เหตุ INC-2026-0007', drug: 'NORepinephrine 4 mg/4 mL', qty: 20, unit: 'AMP', from: 'HB', stage: 'ผู้ให้ตอบรับแล้ว · ต้นทางกำลังเตรียมของ', eta: 'เร็วที่สุดภายใน 30 นาที' },
-  { id: 'IN-F1-0130', feature: 'F1', ref: 'BR-2026-000130 · รอบ 1', drug: 'Adrenaline 1 mg/mL amp', qty: 20, unit: 'AMP', from: 'HB', stage: 'ผู้ให้ตอบรับแล้ว · ต้นทางกำลังเตรียมของ', eta: 'ประมาณ 21:00', transportId: 'TR-2026-000343' },
-  { id: 'IN-F2-0047', feature: 'F2', ref: 'AP-2026-000047 · บรรทัด 2', drug: 'Metformin 500 mg tab', qty: 2000, unit: 'เม็ด', from: 'HD', stage: 'ต้นทางเตรียมเสร็จ · รอขึ้นรถ', eta: 'พรุ่งนี้เช้า', transportId: 'TR-2026-000344' },
-  { id: 'IN-F1-0109', feature: 'F1', ref: 'BR-2026-000109 · รอบ 2', drug: 'CefTRIAXone 1 g inj', qty: 10, unit: 'VIAL', from: 'HC', stage: 'อยู่ระหว่างเดินทาง', eta: 'ประมาณ 20:30', transportId: 'TR-2026-000336' },
-  { id: 'IN-F2-0041', feature: 'F2', ref: 'AP-2026-000041 · บรรทัด 2', drug: 'AMLOdipine 5 mg tab', qty: 500, unit: 'เม็ด', from: 'HD', stage: 'ถึงปลายทางแล้ว · รอยืนยันรับ', eta: 'ถึง 18:58 น.', transportId: 'TR-2026-000334' },
+  { id: 'IN-F3-0132', feature: 'F3', ref: 'BR-2026-000132 · เหตุ INC-2026-0007', drug: 'NORepinephrine 4 mg/4 mL', qty: 20, unit: 'AMP', from: 'HB', status: 'NEW', stage: 'รพ.บางพลีตอบรับแล้ว · จะส่งของมาให้', eta: 'เร็วที่สุดภายใน 30 นาที' },
+  { id: 'IN-F1-0136', feature: 'F1', ref: 'BR-2026-000136 · รอบ 1', drug: 'Furosemide 20 mg/2 mL inj', qty: 30, unit: 'AMP', from: 'HC', status: 'NEW', stage: 'รพ.พระสมุทรเจดีย์ฯตอบรับแล้ว · จะส่งของมาให้', eta: 'วันนี้ช่วงค่ำ' },
+  { id: 'IN-F2-0048', feature: 'F2', ref: 'AP-2026-000048 · บรรทัด 1', drug: 'Amoxicillin 500 mg cap', qty: 1000, unit: 'CAP', from: 'HE', status: 'NEW', stage: 'แผนจัดสรรอนุมัติแล้ว · จะโอนมาให้เรา', eta: 'พรุ่งนี้เช้า' },
+  { id: 'IN-F1-0130', feature: 'F1', ref: 'BR-2026-000130 · รอบ 1', drug: 'Adrenaline 1 mg/mL amp', qty: 20, unit: 'AMP', from: 'HB', status: 'ACKED', stage: 'รับทราบแล้ว · ต้นทางกำลังเตรียมของ', eta: 'ประมาณ 21:00', transportId: 'TR-2026-000343' },
+  { id: 'IN-F2-0047', feature: 'F2', ref: 'AP-2026-000047 · บรรทัด 2', drug: 'Metformin 500 mg tab', qty: 2000, unit: 'เม็ด', from: 'HD', status: 'ACKED', stage: 'ต้นทางเตรียมเสร็จ · รอขึ้นรถ', eta: 'พรุ่งนี้เช้า', transportId: 'TR-2026-000344' },
+  { id: 'IN-F1-0109', feature: 'F1', ref: 'BR-2026-000109 · รอบ 2', drug: 'CefTRIAXone 1 g inj', qty: 10, unit: 'VIAL', from: 'HC', status: 'ACKED', stage: 'อยู่ระหว่างเดินทาง', eta: 'ประมาณ 20:30', transportId: 'TR-2026-000336' },
+  { id: 'IN-F2-0041', feature: 'F2', ref: 'AP-2026-000041 · บรรทัด 2', drug: 'AMLOdipine 5 mg tab', qty: 500, unit: 'เม็ด', from: 'HD', status: 'ACKED', stage: 'ถึงปลายทางแล้ว · รอยืนยันรับ', eta: 'ถึง 18:58 น.', transportId: 'TR-2026-000334' },
 ];
 
 export function outboundStats() {
@@ -148,6 +154,7 @@ export function outboundStats() {
     f2: open.filter((r) => r.feature === 'F2').length,
     f3: open.filter((r) => r.feature === 'F3').length,
     inbound: INBOUND_TASKS.length,
+    inboundNew: INBOUND_TASKS.filter((i) => i.status === 'NEW').length,
     toReceive: INBOUND_TASKS.filter((i) => i.stage.startsWith('ถึงปลายทาง')).length,
   };
 }

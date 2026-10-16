@@ -27,6 +27,7 @@ export function InboxPage() {
   const [feature, setFeature] = useState<'all' | InboxFeature>('all');
   const [q, setQ] = useState('');
   const [created, setCreated] = useState(0);
+  const [acked, setAcked] = useState<ReadonlySet<string>>(new Set());
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -44,6 +45,7 @@ export function InboxPage() {
     .sort((a, b) => Number(b.status === 'NEW') - Number(a.status === 'NEW'));
   const inRows = INBOUND_TASKS.filter((i) => (feature === 'all' || i.feature === feature) && hit(i.id, i.ref, i.drug));
   const toReceive = INBOUND_TASKS.filter((i) => i.stage.startsWith('ถึงปลายทาง')).length;
+  const toAck = INBOUND_TASKS.filter((i) => i.status === 'NEW' && !acked.has(i.id)).length;
   const sel = items.find((r) => r.id === selId) ?? null;
 
   const patch = (id: string, change: Partial<RequestItem>) => setItems((l) => l.map((x) => (x.id === id ? { ...x, ...change } : x)));
@@ -100,7 +102,7 @@ export function InboxPage() {
         <div className="ib-kpi">
           <div className="ib-kpi-label">ของที่จะรับเข้า <span className="en">INCOMING</span></div>
           <div className="ib-kpi-val num">{INBOUND_TASKS.length} รายการ</div>
-          <div className="ib-kpi-sub">ถึงแล้วรอยืนยันรับ {toReceive}</div>
+          <div className="ib-kpi-sub">รอรับทราบ {toAck} · ถึงแล้วรอยืนยันรับ {toReceive}</div>
         </div>
         <div className="ib-kpi">
           <div className="ib-kpi-label">ส่งกลับเภสัชกร <span className="en">DECLINED</span></div>
@@ -118,10 +120,11 @@ export function InboxPage() {
             </button>
             <button type="button" role="tab" aria-selected={tab === 'in' ? 'true' : 'false'} className={`tab ${tab === 'in' ? 'tab-on' : ''}`} onClick={() => setTab('in')}>
               รับเข้า (จาก รพ.อื่น) <span className="cnt">{INBOUND_TASKS.length}</span>
-              {toReceive > 0 && <span className="badge t-green" style={{ fontWeight: 600, height: 20, fontSize: 11 }}>รอรับ {toReceive}</span>}
+              {toAck > 0 && <span className="badge t-blue" style={{ fontWeight: 600, height: 20, fontSize: 11 }}>รอรับทราบ {toAck}</span>}
+              {toReceive > 0 && <span className="badge t-green" style={{ fontWeight: 600, height: 20, fontSize: 11 }}>ถึงแล้ว {toReceive}</span>}
             </button>
             <span className="sub" style={{ marginLeft: 6 }}>
-              {tab === 'out' ? 'กด “ยืนยันจะแพ็ก” แล้วไปเตรียมของ/ขึ้นรถที่ติดตามการขนส่ง · F3 เร่งด่วนจาก รพ.อื่นตอบที่หน้า Emergency' : 'รับรู้ล่วงหน้า · ยืนยันรับของเมื่อถึงที่ติดตามการขนส่ง'}
+              {tab === 'out' ? 'กด “ยืนยันจะแพ็ก” แล้วไปเตรียมของ/ขึ้นรถที่ติดตามการขนส่ง · F3 เร่งด่วนจาก รพ.อื่นตอบที่หน้า Emergency' : 'กด “รับทราบ” แล้วงานจะไปอยู่ที่ติดตามการขนส่ง (รับเข้า) · ยืนยันรับของเมื่อของถึง'}
             </span>
           </div>
         </div>
@@ -152,7 +155,7 @@ export function InboxPage() {
             onDecline={(id) => open(id, true)}
           />
         ) : (
-          <InboundTable rows={inRows} />
+          <InboundTable rows={inRows} acked={acked} onAck={(id) => setAcked((s) => new Set(s).add(id))} />
         )}
         <div className="tbl-foot">
           <span>แสดง <span className="num">{tab === 'out' ? outRows.length : inRows.length}</span> รายการ</span>

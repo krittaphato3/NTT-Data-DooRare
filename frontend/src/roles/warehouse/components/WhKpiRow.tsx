@@ -19,9 +19,9 @@ export function WhKpiRow({ urgentLeft }: { urgentLeft: string }) {
             <Icon name="inbox" />
           </span>
         </div>
-        <div className="num kpi-num" style={{ color: '#0F2A5C' }}>{t.box.newTotal}</div>
+        <div className="num kpi-num" style={{ color: '#0F2A5C' }}>{t.box.newTotal + t.box.inboundNew}</div>
         <div style={subStyle}>
-          ยืนยันจะแพ็ก · F1 <span className="num">{t.box.f1}</span> · F2 <span className="num">{t.box.f2}</span> · F3 <span className="num">{t.box.f3}</span>
+          ยืนยันจะแพ็ก <span className="num">{t.box.newTotal}</span> · รับทราบของเข้า <span className="num">{t.box.inboundNew}</span>
         </div>
       </div>
       <div className="card kpi-card">
