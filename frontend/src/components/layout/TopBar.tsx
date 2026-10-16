@@ -86,6 +86,11 @@ export function TopBar({ query, onQuery, isAdmin, navOpen, onMenu, notifications
           </span>
           <LangToggle />
         </>
+      ) : isAdmin ? (
+        <span className="topbar-scope" style={{ background: '#EFF6FF', borderColor: '#BFDBFE', color: '#1D4ED8', fontWeight: 600 }}>
+          <Icon name="shield" className="ic14" />
+          ผู้ดูแลระบบกลาง · เขตสุขภาพที่ 6 (ทุกโรงพยาบาล)
+        </span>
       ) : (
         <>
           <span className="topbar-scope">

@@ -50,6 +50,9 @@ const CATALOGUE: Record<string, NavDef> = {
   tr: { th: 'ติดตามการขนส่ง', en: 'Transport tracking', ui: 'UI-14', icon: 'truck', href: 'Shipments.dc.html', badge: '3', red: false },
   doc: { th: 'พิมพ์เอกสาร', en: 'Documents', ui: 'UI-15', icon: 'printer', href: '#', badge: '', red: false },
   rep: { th: 'รายงานมูลค่า', en: 'Reports · Value', ui: 'UI-19', icon: 'chart', href: '#', badge: '', red: false },
+  adm: { th: 'ภาพรวมระบบ', en: 'Admin Dashboard', ui: 'ADM-01', icon: 'grid', href: '?page=admin', badge: '', red: false },
+  hosp: { th: 'โรงพยาบาลในเครือข่าย', en: 'Hospitals & Deliveries', ui: 'ADM-02', icon: 'hosp', href: '?page=admin&tab=hospitals', badge: '12', red: false },
+  acct: { th: 'จัดการบัญชีผู้ใช้', en: 'Account Management', ui: 'ADM-03', icon: 'users', href: '?page=admin&tab=accounts', badge: '', red: false },
   cfg: { th: 'ตั้งค่า · Kill switch', en: 'Configuration', ui: 'UI-17', icon: 'gear', href: '#', badge: '', red: false },
   aud: { th: 'บันทึกตรวจสอบ', en: 'Audit log', ui: 'UI-18', icon: 'shield', href: '#', badge: '', red: false },
 };
@@ -60,7 +63,9 @@ export const ROLE_NAV: Record<string, string[]> = {
   PROCUREMENT_OFFICER: ['dash', 'alerts', 'req', 'doc', 'rep'],
   WAREHOUSE_OFFICER: ['dash', 'tr', 'inc', 'doc'],
   DRIVER: ['tr'],
-  HOSPITAL_ADMIN: ['dash', 'alerts', 'req', 'lend', 'exp', 'pool', 'inc', 'tr', 'doc', 'rep', '|', 'cfg', 'aud'],
+  HOSPITAL_ADMIN: ['adm', 'hosp', 'acct', '|', 'cfg', 'aud'],
+  SYSTEM_ADMIN: ['adm', 'hosp', 'acct', '|', 'cfg', 'aud'],
+  ADMIN: ['adm', 'hosp', 'acct', '|', 'cfg', 'aud'],
 };
 
 export const ADMIN_GROUP_LABEL = 'ผู้ดูแลระบบ';

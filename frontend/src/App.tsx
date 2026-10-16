@@ -15,17 +15,29 @@ import { NearExpiryPage } from './roles/pharmacist/pages/NearExpiryPage';
 import { PoolAllocationPage } from './roles/pharmacist/pages/PoolAllocationPage';
 import { ReportsPage } from './roles/pharmacist/pages/ReportsPage';
 import { StockAlertsPage } from './roles/pharmacist/pages/StockAlertsPage';
+import { AdminPage } from './roles/admin/pages/AdminPage';
 import { WAREHOUSE_NOTIFICATIONS, WAREHOUSE_USER } from './roles/warehouse/data/session';
 import { TransportTrackingPage } from './roles/warehouse/pages/TransportTrackingPage';
 import type { TransportRole } from './roles/warehouse/pages/TransportTrackingPage';
 
-type Page = 'dashboard' | 'transport' | 'requests' | 'lend' | 'incident' | 'alerts' | 'report' | 'expiry' | 'pool' | 'docs';
+type Page = 'dashboard' | 'transport' | 'requests' | 'lend' | 'incident' | 'alerts' | 'report' | 'expiry' | 'pool' | 'docs' | 'admin';
 
 /** Pharmacist on the ops-style top bar (UI-05 mockup: scope pill, agent pill, TH/EN). */
 const PHARMACIST_OPS_USER = { ...USER, scopeLabel: 'เห็นเฉพาะข้อมูล รพ.สมุทรปราการ' };
 
+/** System Admin user profile (ADM-01). */
+const ADMIN_USER = {
+  name: 'ดร.สมเกียรติ วิจิตรพงศ์',
+  role: 'SYSTEM_ADMIN',
+  roleTh: 'ผู้ดูแลระบบสูงสุด (System Admin)',
+  scopeLabel: 'Viewing as: Admin – All hospitals (เขตสุขภาพที่ 6)',
+  hospitalLabel: 'ทุกโรงพยาบาล (12)',
+  initial: 'ส',
+};
+
 /**
  * No router yet:
+ * `?page=admin` shows Admin Console (ADM-01),
  * `?page=transport` shows Transport tracking (UI-14),
  * `?page=requests` shows Borrow requests (UI-05),
  * `?page=lend` shows Lender queue (UI-06),
@@ -41,8 +53,10 @@ function initialRoute(): { page: Page; transportRole: TransportRole } {
   try {
     const q = new URLSearchParams(window.location.search);
     const p = q.get('page');
+    const r = q.get('role')?.toLowerCase();
     let page: Page = 'dashboard';
-    if (p === 'transport') page = 'transport';
+    if (p === 'admin' || p === 'adm' || r === 'admin' || p === 'config' || p === 'cfg' || p === 'audit' || p === 'aud') page = 'admin';
+    else if (p === 'transport') page = 'transport';
     else if (p === 'requests' || p === 'borrow') page = 'requests';
     else if (p === 'lend') page = 'lend';
     else if (p === 'incident' || p === 'inc') page = 'incident';
@@ -60,11 +74,22 @@ function initialRoute(): { page: Page; transportRole: TransportRole } {
   }
 }
 
+const ADMIN_NOTIFICATIONS = [
+  { drug: 'ระบบความปลอดภัย: ตรวจพบและบล็อก IP ผิดปกติ 185.220.101.4', time: '21:58 น.' },
+  { drug: 'สิทธิ์ผู้ใช้: เพิ่มบัญชีเจ้าหน้าที่ใหม่ รพ.บางพลี', time: '20:10 น.' },
+  { drug: 'รายงานอัตโนมัติ: สรุปยอดคำขอประจำวันสำเร็จ (JOB-11)', time: '02:30 น.' },
+];
+
 /** Point the catalogue's mockup hrefs (`*.dc.html`) at the screens that exist in this app. */
 function withLinks(items: ShellNavEntry[], role: string): ShellNavEntry[] {
   const suffix = role === 'PHARMACIST' ? '&role=pharmacist' : '';
   return items.map((e) => {
     if ('kind' in e) return e;
+    if (e.key === 'adm') return { ...e, href: '?page=admin' };
+    if (e.key === 'hosp') return { ...e, href: '?page=admin&tab=hospitals' };
+    if (e.key === 'acct') return { ...e, href: '?page=admin&tab=accounts' };
+    if (e.key === 'cfg') return { ...e, href: '?page=admin&tab=config' };
+    if (e.key === 'aud') return { ...e, href: '?page=admin&tab=audit' };
     if (e.key === 'tr') return { ...e, href: `?page=transport${suffix}` };
     if (e.key === 'lend') return { ...e, href: '?page=lend' };
     if (e.key === 'inc') return { ...e, href: '?page=incident' };
@@ -81,7 +106,10 @@ function withLinks(items: ShellNavEntry[], role: string): ShellNavEntry[] {
 
 function initialRole(): boolean {
   try {
-    return new URLSearchParams(window.location.search).get('role') === 'Admin';
+    const q = new URLSearchParams(window.location.search);
+    const r = q.get('role')?.toLowerCase();
+    const p = q.get('page')?.toLowerCase();
+    return r === 'admin' || p === 'admin' || p === 'adm' || p === 'config' || p === 'cfg' || p === 'audit' || p === 'aud';
   } catch {
     return false;
   }
@@ -98,6 +126,7 @@ export default function App() {
   const [hospital, setHospital] = useState('ทุกโรงพยาบาล (12)');
   const [isAdmin] = useState(initialRole);
   const [route] = useState(initialRoute);
+  const onAdmin = route.page === 'admin';
   const onTransport = route.page === 'transport';
   const onRequests = route.page === 'requests';
   const onLend = route.page === 'lend';
@@ -112,8 +141,37 @@ export default function App() {
   const ops = warehouse || onRequests || onLend;
   // UI-07/08/09/15 screenshots use the ops top bar but keep the standard footer.
   const opsBar = ops || onExpiry || onPool || onDocs;
-  const navRole = warehouse ? 'WAREHOUSE_OFFICER' : 'PHARMACIST';
-  const activeKey = onTransport ? 'tr' : onRequests ? 'req' : onLend ? 'lend' : onIncident ? 'inc' : onAlerts ? 'alerts' : onReport ? 'rep' : onExpiry ? 'exp' : onPool ? 'pool' : onDocs ? 'doc' : 'dash';
+  const navRole = onAdmin || isAdmin ? 'SYSTEM_ADMIN' : warehouse ? 'WAREHOUSE_OFFICER' : 'PHARMACIST';
+  const adminTab = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('tab') : null;
+  const activeKey = onAdmin
+    ? adminTab === 'hospitals'
+      ? 'hosp'
+      : adminTab === 'accounts'
+      ? 'acct'
+      : adminTab === 'config' || adminTab === 'cfg'
+      ? 'cfg'
+      : adminTab === 'audit' || adminTab === 'aud'
+      ? 'aud'
+      : 'adm'
+    : onTransport
+    ? 'tr'
+    : onRequests
+    ? 'req'
+    : onLend
+    ? 'lend'
+    : onIncident
+    ? 'inc'
+    : onAlerts
+    ? 'alerts'
+    : onReport
+    ? 'rep'
+    : onExpiry
+    ? 'exp'
+    : onPool
+    ? 'pool'
+    : onDocs
+    ? 'doc'
+    : 'dash';
   const navItems = withLinks(getNavForRole(navRole, activeKey), navRole);
 
   // Mobile drawer: lock page scroll, close on Escape and when resizing to desktop.
@@ -154,12 +212,14 @@ export default function App() {
           isAdmin={isAdmin}
           navOpen={navOpen}
           onMenu={() => setNavOpen((v) => !v)}
-          notifications={warehouse ? WAREHOUSE_NOTIFICATIONS : ALERTS.map((a) => ({ drug: a.drug, time: a.time }))}
+          notifications={onAdmin || isAdmin ? ADMIN_NOTIFICATIONS : warehouse ? WAREHOUSE_NOTIFICATIONS : ALERTS.map((a) => ({ drug: a.drug, time: a.time }))}
           variant={opsBar ? 'ops' : 'pharmacist'}
-          user={warehouse ? WAREHOUSE_USER : opsBar ? PHARMACIST_OPS_USER : undefined}
+          user={onAdmin || isAdmin ? ADMIN_USER : warehouse ? WAREHOUSE_USER : opsBar ? PHARMACIST_OPS_USER : undefined}
         />
         <main className="mainpad">
-          {onTransport ? (
+          {onAdmin ? (
+            <AdminPage query={query} onQuery={setQuery} />
+          ) : onTransport ? (
             <TransportTrackingPage role={route.transportRole} />
           ) : onRequests ? (
             <BorrowRequestsPage />

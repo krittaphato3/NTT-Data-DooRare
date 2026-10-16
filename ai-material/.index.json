@@ -4,129 +4,136 @@
     "title": "ai-material",
     "summary": "ai-material",
     "tags": "session",
-    "date": "2026-10-15"
+    "date": "2026-10-16"
   },
   {
-    "path": "context/conventions.md",
+    "path": "context\\conventions.md",
     "title": "Conventions",
     "summary": "Conventions",
     "tags": "session",
-    "date": "2026-10-15"
+    "date": "2026-10-16"
   },
   {
-    "path": "context/current-task.md",
+    "path": "context\\current-task.md",
     "title": "Current Task",
     "summary": "Current Task",
     "tags": "session",
-    "date": "2026-10-15"
+    "date": "2026-10-16"
   },
   {
-    "path": "context/runbook.md",
+    "path": "context\\runbook.md",
     "title": "Runbook",
     "summary": "Runbook",
     "tags": "session",
-    "date": "2026-10-15"
+    "date": "2026-10-16"
   },
   {
-    "path": "decisions/0002-role-based-frontend-structure.md",
-    "title": "Role-based frontend structure",
-    "summary": "Organize frontend by role with shared layout; responsive via CSS breakpoints.",
-    "tags": "decision, frontend, structure, responsive",
-    "date": "2026-10-14"
-  },
-  {
-    "path": "sessions/2026-10-14-1953-claude-db-schema-v14.md",
-    "title": "DB schema v1.4 (spec gaps fixed)",
-    "summary": "Spec schema.sql patched to v1.4 in db/, tested on PG16 with mock…",
-    "tags": "session, database, schema, postgres",
-    "date": "2026-10-14"
-  },
-  {
-    "path": "sessions/2026-10-14-2039-claude-borrow-requests-ui05.md",
-    "title": "Borrow requests UI-05",
-    "summary": "UI-only Borrow requests page with detail drawer for pharmacist",
-    "tags": "session, frontend, borrow-requests, pharmacist",
-    "date": "2026-10-14"
-  },
-  {
-    "path": "sessions/2026-10-14-2141-zcode-resolve-merge-conflicts.md",
-    "title": "Resolve Merge Conflicts",
-    "summary": "Resolve merge conflict markers in App.tsx and regenerate ai-material index.",
-    "tags": "session, git, merge-conflict, frontend",
-    "date": "2026-10-14"
-  },
-  {
-    "path": "sessions/2026-10-14-incident-console-ui.md",
-    "title": "Incident console UI-11 - UI-13",
-    "summary": "Built UI-11 to UI-13 Incident Console matching 4 mockup screens with 4…",
-    "tags": "session, frontend, incident, kits, mockup",
-    "date": "2026-10-14"
-  },
-  {
-    "path": "sessions/2026-10-14-reports-value-ui.md",
-    "title": "Reports and Value UI (UI-19, RPT-01 to RPT-08)",
-    "summary": "Built Reports and Value UI (UI-19) matching 4 mockup screenshots across all…",
-    "tags": "session, frontend, reports, value, pharmacist",
-    "date": "2026-10-14"
-  },
-  {
-    "path": "sessions/2026-10-14-stock-alert-queue-ui02.md",
-    "title": "Stock alert queue UI (UI-02)",
-    "summary": "UI-only Stock alert queue page (pharmacist role) at ?page=alerts",
-    "tags": "session, frontend, alerts, forecast, pharmacist",
-    "date": "2026-10-14"
-  },
-  {
-    "path": "sessions/2026-10-14-transport-tracking-ui.md",
-    "title": "Transport tracking UI (UI-14)",
-    "summary": "UI-only Transport tracking page (warehouse role) on feature/dashboard-transport-tracking",
-    "tags": "session, frontend, transport, warehouse",
-    "date": "2026-10-14"
-  },
-  {
-    "path": "skills/README.md",
-    "title": "Curated agent skills",
-    "summary": "Which agent skills this repo keeps, why, and how to add more.",
-    "tags": "skill, workflow, context",
-    "date": "2026-10-14"
+    "path": "sessions\\2026-10-16-2350-gemini-admin-console-crud-hospitals.md",
+    "title": "System Admin Console (ADM-01) with Hospital Details and Account CRUD",
+    "summary": "Built Admin Console with Dashboard KPIs, Hospital breakdown, and Account CRUD.",
+    "tags": "session, admin, dashboard, hospitals, account-crud, docker",
+    "date": "2026-10-16"
   },
   {
     "path": "GUIDELINES.md",
     "title": "Guidelines",
     "summary": "Guidelines",
     "tags": "session",
-    "date": "2026-10-13"
+    "date": "2026-10-14"
   },
   {
-    "path": "context/architecture.md",
+    "path": "context\\architecture.md",
     "title": "Architecture",
     "summary": "Architecture",
     "tags": "session",
-    "date": "2026-10-13"
+    "date": "2026-10-14"
   },
   {
-    "path": "context/current-status.md",
+    "path": "context\\current-status.md",
     "title": "Current Status",
     "summary": "Current Status",
     "tags": "session",
-    "date": "2026-10-13"
+    "date": "2026-10-14"
   },
   {
-    "path": "context/quality-checklist.md",
+    "path": "context\\quality-checklist.md",
     "title": "Quality Checklist",
     "summary": "Quality Checklist",
     "tags": "session",
-    "date": "2026-10-13"
+    "date": "2026-10-14"
   },
   {
-    "path": "decisions/0001-shared-ai-context.md",
+    "path": "decisions\\0002-role-based-frontend-structure.md",
+    "title": "Role-based frontend structure",
+    "summary": "Organize frontend by role with shared layout; responsive via CSS breakpoints.",
+    "tags": "decision, frontend, structure, responsive",
+    "date": "2026-10-14"
+  },
+  {
+    "path": "sessions\\2026-10-14-1953-claude-db-schema-v14.md",
+    "title": "DB schema v1.4 (spec gaps fixed)",
+    "summary": "Spec schema.sql patched to v1.4 in db/, tested on PG16 with mock…",
+    "tags": "session, database, schema, postgres",
+    "date": "2026-10-14"
+  },
+  {
+    "path": "sessions\\2026-10-14-2039-claude-borrow-requests-ui05.md",
+    "title": "Borrow requests UI-05",
+    "summary": "UI-only Borrow requests page with detail drawer for pharmacist",
+    "tags": "session, frontend, borrow-requests, pharmacist",
+    "date": "2026-10-14"
+  },
+  {
+    "path": "sessions\\2026-10-14-2141-zcode-resolve-merge-conflicts.md",
+    "title": "Resolve Merge Conflicts",
+    "summary": "Resolve merge conflict markers in App.tsx and regenerate ai-material index.",
+    "tags": "session, git, merge-conflict, frontend",
+    "date": "2026-10-14"
+  },
+  {
+    "path": "sessions\\2026-10-14-incident-console-ui.md",
+    "title": "Incident console UI-11 - UI-13",
+    "summary": "Built UI-11 to UI-13 Incident Console matching 4 mockup screens with 4…",
+    "tags": "session, frontend, incident, kits, mockup",
+    "date": "2026-10-14"
+  },
+  {
+    "path": "sessions\\2026-10-14-reports-value-ui.md",
+    "title": "Reports and Value UI (UI-19, RPT-01 to RPT-08)",
+    "summary": "Built Reports and Value UI (UI-19) matching 4 mockup screenshots across all…",
+    "tags": "session, frontend, reports, value, pharmacist",
+    "date": "2026-10-14"
+  },
+  {
+    "path": "sessions\\2026-10-14-stock-alert-queue-ui02.md",
+    "title": "Stock alert queue UI (UI-02)",
+    "summary": "UI-only Stock alert queue page (pharmacist role) at ?page=alerts",
+    "tags": "session, frontend, alerts, forecast, pharmacist",
+    "date": "2026-10-14"
+  },
+  {
+    "path": "sessions\\2026-10-14-transport-tracking-ui.md",
+    "title": "Transport tracking UI (UI-14)",
+    "summary": "UI-only Transport tracking page (warehouse role) on feature/dashboard-transport-tracking",
+    "tags": "session, frontend, transport, warehouse",
+    "date": "2026-10-14"
+  },
+  {
+    "path": "skills\\README.md",
+    "title": "Curated agent skills",
+    "summary": "Which agent skills this repo keeps, why, and how to add more.",
+    "tags": "skill, workflow, context",
+    "date": "2026-10-14"
+  },
+  {
+    "path": "decisions\\0001-shared-ai-context.md",
     "title": "Shared AI context system",
     "summary": "Use ai-material as shared AI memory.",
     "tags": "decision, context, workflow",
     "date": "2026-10-09"
   },
   {
-    "path": "prompts/bootstrap.md",
+    "path": "prompts\\bootstrap.md",
     "title": "bootstrap setup",
     "summary": "Reusable setup prompt starter.",
     "tags": "session, setup",
