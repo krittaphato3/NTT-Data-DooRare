@@ -41,7 +41,7 @@ export function TransportTrackingPage({ role = 'WAREHOUSE_OFFICER' }: { role?: T
   const canOperate = role === 'WAREHOUSE_OFFICER';
   const canCancel = role === 'PHARMACIST';
   const online = useOnline();
-  const [dir, setDir] = useState<Direction>('all');
+  const [dir, setDir] = useState<Direction>('out');
   const [status, setStatus] = useState<TransportStatus | null>(null);
   // Nothing is selected on entry; the detail drawer opens only when a row is picked.
   const [selId, setSelId] = useState<string | null>(null);
@@ -78,7 +78,7 @@ export function TransportTrackingPage({ role = 'WAREHOUSE_OFFICER' }: { role?: T
   const all = useMemo(() => SHIPMENTS.map(effective), [receipt, cancel, synced, proxy]); // eslint-disable-line react-hooks/exhaustive-deps
   const queued = all.filter((r) => r.pending).length;
 
-  const byDir = all.filter((r) => dir === 'all' || (dir === 'out' ? isOutbound(r.shipment) : !isOutbound(r.shipment)));
+  const byDir = all.filter((r) => (dir === 'out' ? isOutbound(r.shipment) : !isOutbound(r.shipment)));
   const counts = Object.fromEntries(TILE_ORDER.map((c) => [c, byDir.filter((r) => r.status === c).length])) as Record<TransportStatus, number>;
 
   const needle = q.trim().toLowerCase();
@@ -93,9 +93,20 @@ export function TransportTrackingPage({ role = 'WAREHOUSE_OFFICER' }: { role?: T
   const waiting = outAll.filter((r) => r.status === 'WAITING_DISPATCH').length;
   const toReceive = inAll.filter((r) => r.status === 'ARRIVED').length;
   const options: DirectionOption[] = [
-    { id: 'all', th: 'ทั้งหมด', en: '7 วันล่าสุด', icon: 'truck', count: all.length, todo: '', iconBg: '#F1F5F9', iconFg: '#475569' },
-    { id: 'out', th: 'ส่งออกจากเรา', en: 'ต้นทาง รพ.สมุทรปราการ', icon: 'outArrow', count: outAll.length, todo: canOperate && waiting ? `รอขึ้นรถ ${waiting}` : '', iconBg: '#FFF7ED', iconFg: '#9A3412' },
-    { id: 'in', th: 'รับเข้าเรา', en: 'ปลายทาง รพ.สมุทรปราการ', icon: 'inArrow', count: inAll.length, todo: canOperate && toReceive ? `รอรับ ${toReceive}` : '', iconBg: '#EFF6FF', iconFg: '#1D4ED8' },
+    {
+      id: 'out',
+      label: 'ส่งออกจากเรา',
+      count: outAll.length,
+      todo: canOperate && waiting ? `รอขึ้นรถ ${waiting}` : '',
+      hint: canOperate ? 'เฉพาะงานที่เตรียมเสร็จแล้วจากกล่องงานเข้า · ขึ้นรถ + ถ่ายรูปที่นี่' : 'งานที่ รพ.เราส่งไปให้ รพ.อื่น',
+    },
+    {
+      id: 'in',
+      label: 'รับเข้าเรา',
+      count: inAll.length,
+      todo: canOperate && toReceive ? `รอรับ ${toReceive}` : '',
+      hint: canOperate ? 'ของที่ รพ.อื่นส่งมาให้เรา · ยืนยันรับเมื่อของถึง' : 'ของที่ รพ.อื่นส่งมาให้ รพ.เรา',
+    },
   ];
 
   const open = (id: string) => {
@@ -122,6 +133,12 @@ export function TransportTrackingPage({ role = 'WAREHOUSE_OFFICER' }: { role?: T
             ติดตามการขนส่ง <span>/ Transport tracking · UI-14</span>
           </h1>
           <div style={{ fontSize: 13 }}>รพ.สมุทรปราการ · สต็อกต้นทางตัดเมื่อขึ้นรถ (LOADED) ปลายทางรับเข้าเมื่อยืนยันรับ (RECEIVED) · ขั้นตอนขนส่งไม่มี Agent</div>
+          {canOperate && (
+            <div style={{ fontSize: 12.5, marginTop: 2 }}>
+              งานส่งออกจะปรากฏที่นี่หลังกด “เตรียมเสร็จ” ในกล่องงานเข้า{' '}
+              <a className="link" href="?role=warehouse&page=inbox" style={{ fontSize: 12.5 }}>ไปที่กล่องงานเข้า</a>
+            </div>
+          )}
         </div>
         <div className="pagehead-actions">
           <button className="btn btn-s" onClick={() => setHistOpen(true)}>
@@ -148,17 +165,16 @@ export function TransportTrackingPage({ role = 'WAREHOUSE_OFFICER' }: { role?: T
         </section>
       )}
 
-      <DirectionTabs
-        options={options}
-        value={dir}
-        onChange={(d) => {
-          setDir(d);
-          setStatus(null);
-        }}
-      />
-
       <section className="card" style={{ padding: 0 }}>
         <div className="tr-card-head">
+          <DirectionTabs
+            options={options}
+            value={dir}
+            onChange={(d) => {
+              setDir(d);
+              setStatus(null);
+            }}
+          />
           <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
             <h2 className="sec-h">
               สถานะงานขนส่ง <span className="en">SM-6 · 7 วันล่าสุด</span>

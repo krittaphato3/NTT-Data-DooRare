@@ -1,11 +1,12 @@
 /** Mock data for the warehouse Dashboard (UI-01, WH view). Transport numbers derive from SHIPMENTS. */
 import type { IconName } from '../../../components/common/icons';
+import { FEATURE_META, INBOX_STATUS_META, OUTBOUND, PACKS, URGENT_SECONDS as INBOX_URGENT_SECONDS, inboxStats } from './inbox';
 import { fmtQty, HOSPITALS, isOutbound, SHIPMENTS, STATUS_META } from './transport';
 import type { Tone, TransportStatus } from './transport';
 import type { WarehousePage } from './routes';
 
 /** Seconds left on the urgent lender request when the page loads (spec: confirm within 3–5 min). */
-export const URGENT_SECONDS = 160;
+export const URGENT_SECONDS = INBOX_URGENT_SECONDS;
 
 export interface KitStock {
   key: string;
@@ -23,7 +24,7 @@ export const KITS: KitStock[] = [
   { key: 'burn', th: 'ชุดแผลไฟไหม้', en: 'Burn', ready: 2, target: 6 },
 ];
 
-export type TodoGroup = 'transport' | 'f3';
+export type TodoGroup = 'inbox' | 'transport';
 
 export interface TodoItem {
   id: string;
@@ -77,36 +78,40 @@ function transportTodo(): TodoItem[] {
   ];
 }
 
-const F3_TODO: TodoItem[] = [
-  {
-    id: 'BR-2026-000131', group: 'f3', icon: 'siren', sevCls: 'sev-crit', urgent: true,
-    title: 'ยืนยันคำขอยืมเร่งด่วน BR-2026-000131',
-    detail: 'ผู้ขอ รพ.บางพลี · Adrenaline 1 mg/mL · 30 AMP · เหตุ INC-2026-0007',
-    badge: { label: 'เร่งด่วนมาก', tone: 'red' },
-    cta: { label: 'ยืนยัน', primary: true, page: 'kit' },
-  },
-  {
-    id: 'PK-2026-0012', group: 'f3', icon: 'box', sevCls: 'sev-urg',
-    title: 'แพ็กชุดบาดเจ็บ × 4',
-    detail: 'เหตุ INC-2026-0007 · ตัดสต็อกตามสูตรเซ็ตเมื่อยืนยันแพ็กเสร็จ',
-    badge: { label: 'รอแพ็ก', tone: 'amber' },
-    cta: { label: 'แพ็ก', primary: true, page: 'kit' },
-  },
-  {
-    id: 'PK-2026-0013', group: 'f3', icon: 'box', sevCls: 'sev-urg',
-    title: 'แพ็กชุดใส่ท่อช่วยหายใจ × 2',
-    detail: 'เหตุ INC-2026-0007 · สต็อกเซ็ตพร้อมใช้ 5 ชุด',
-    badge: { label: 'รอแพ็ก', tone: 'amber' },
-    cta: { label: 'แพ็ก', primary: true, page: 'kit' },
-  },
-];
+/** Inbox tasks that still need the warehouse (confirm to prepare / mark ready). */
+function inboxTodo(): TodoItem[] {
+  const items: TodoItem[] = [];
+  for (const o of OUTBOUND) {
+    if (o.status !== 'NEW' && o.status !== 'PREPARING') continue;
+    const prep = o.status === 'PREPARING';
+    items.push({
+      id: o.id, group: 'inbox', urgent: !!o.urgent && o.status === 'NEW',
+      icon: o.urgent ? 'siren' : prep ? 'box' : 'inbox', sevCls: o.urgent ? 'sev-crit' : 'sev-urg',
+      title: `${prep ? 'เตรียมให้เสร็จ' : 'ยืนยันจะเตรียม'} ${o.drug} × ${fmtQty(o.qty)} ${o.unit}`,
+      detail: `${FEATURE_META[o.feature].label} · ${o.ref} → ${HOSPITALS[o.to]} · ${o.urgent ? 'เร่งด่วน' : o.due}`,
+      badge: { label: INBOX_STATUS_META[o.status].label, tone: o.urgent ? 'red' : INBOX_STATUS_META[o.status].tone },
+      cta: { label: prep ? 'เตรียมเสร็จ' : 'ยืนยัน', primary: true, page: 'inbox' },
+    });
+  }
+  for (const p of PACKS) {
+    if (p.status !== 'NEW' && p.status !== 'PREPARING') continue;
+    items.push({
+      id: p.id, group: 'inbox', icon: 'box', sevCls: 'sev-urg',
+      title: `แพ็ก${p.kit} × ${p.qty} ชุด`,
+      detail: `${FEATURE_META.F3.label} · เหตุ ${p.incident} · ตัดสต็อกตามสูตรเซ็ตเมื่อยืนยันแพ็กเสร็จ`,
+      badge: { label: INBOX_STATUS_META[p.status].label, tone: INBOX_STATUS_META[p.status].tone },
+      cta: { label: p.status === 'NEW' ? 'ยืนยัน' : 'แพ็กเสร็จ', primary: true, page: 'inbox' },
+    });
+  }
+  return items.sort((a, b) => Number(!!b.urgent) - Number(!!a.urgent));
+}
 
-export const TODOS: TodoItem[] = [F3_TODO[0], ...transportTodo(), F3_TODO[1], F3_TODO[2]];
+export const TODOS: TodoItem[] = [...inboxTodo(), ...transportTodo()];
 
 export const TODO_TABS: { key: 'all' | TodoGroup; label: string }[] = [
   { key: 'all', label: 'ทั้งหมด' },
+  { key: 'inbox', label: 'กล่องงานเข้า' },
   { key: 'transport', label: 'ขนส่ง' },
-  { key: 'f3', label: 'เตรียมชุดยา F3' },
 ];
 
 /** Transport counts for the KPI cards and the status panel (own hospital only). */
@@ -121,6 +126,7 @@ export function transportStats() {
     inTransit: byStatus('IN_TRANSIT'),
     onTheWay: byStatus('LOADED') + byStatus('IN_TRANSIT'),
     pendingSync: count((s) => !!s.pending),
+    inbox: inboxStats(),
     total: SHIPMENTS.length,
     byStatus,
   };

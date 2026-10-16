@@ -13,6 +13,34 @@ export function WhKpiRow({ urgentLeft }: { urgentLeft: string }) {
       <div className="card kpi-card">
         <div style={headStyle}>
           <span style={labelStyle}>
+            กล่องงานเข้า รอยืนยัน<span className="en" style={{ display: 'block' }}>New in inbox</span>
+          </span>
+          <span className="sev" style={{ width: 32, height: 32 , background: '#FEF3C7', color: '#92400E' }}>
+            <Icon name="inbox" />
+          </span>
+        </div>
+        <div className="num kpi-num" style={{ color: '#0F2A5C' }}>{t.inbox.newTotal}</div>
+        <div style={subStyle}>
+          F1 <span className="num">{t.inbox.f1}</span> · F2 <span className="num">{t.inbox.f2}</span> · F3 <span className="num">{t.inbox.f3}</span>
+        </div>
+      </div>
+      <div className="card kpi-card">
+        <div style={headStyle}>
+          <span style={labelStyle}>
+            กำลังเตรียม<span className="en" style={{ display: 'block' }}>Preparing</span>
+          </span>
+          <span className="sev" style={{ width: 32, height: 32, background: '#DBEAFE', color: '#1E40AF' }}>
+            <Icon name="box" />
+          </span>
+        </div>
+        <div className="num kpi-num" style={{ color: '#0F2A5C' }}>{t.inbox.preparing}</div>
+        <div style={subStyle}>
+          เตรียมเสร็จ <span className="num">{t.inbox.ready}</span> · สร้างงานขนส่งแล้ว
+        </div>
+      </div>
+      <div className="card kpi-card">
+        <div style={headStyle}>
+          <span style={labelStyle}>
             รอขึ้นรถ<span className="en" style={{ display: 'block' }}>Waiting dispatch</span>
           </span>
           <span className="sev" style={{ width: 32, height: 32, background: '#FEF3C7', color: '#92400E' }}>
@@ -36,34 +64,6 @@ export function WhKpiRow({ urgentLeft }: { urgentLeft: string }) {
         <div className="num kpi-num" style={{ color: '#0F2A5C' }}>{t.toReceive}</div>
         <div style={subStyle}>ถึงปลายทางแล้ว · สต็อกเพิ่มเมื่อยืนยันรับ</div>
       </div>
-      <div className="card kpi-card">
-        <div style={headStyle}>
-          <span style={labelStyle}>
-            อยู่ระหว่างจัดส่ง<span className="en" style={{ display: 'block' }}>On the way</span>
-          </span>
-          <span className="sev" style={{ width: 32, height: 32, background: '#DBEAFE', color: '#1E40AF' }}>
-            <Icon name="truck" />
-          </span>
-        </div>
-        <div className="num kpi-num" style={{ color: '#0F2A5C' }}>{t.onTheWay}</div>
-        <div style={subStyle}>
-          ขึ้นรถแล้ว <span className="num">{t.loaded}</span> · กำลังเดินทาง <span className="num">{t.inTransit}</span>
-        </div>
-      </div>
-      <div className="card kpi-card">
-        <div style={headStyle}>
-          <span style={labelStyle}>
-            งานแพ็กเซ็ต F3<span className="en" style={{ display: 'block' }}>Pack tasks</span>
-          </span>
-          <span className="sev sev-norm" style={{ width: 32, height: 32 }}>
-            <Icon name="box" />
-          </span>
-        </div>
-        <div className="num kpi-num" style={{ color: '#0F2A5C' }}>2</div>
-        <div style={subStyle}>
-          ชุดบาดเจ็บ <span className="num">4</span> · ใส่ท่อช่วยหายใจ <span className="num">2</span>
-        </div>
-      </div>
       <div className="card kpi-card wh-kpi-urgent">
         <div style={headStyle}>
           <span style={labelStyle}>
@@ -73,7 +73,7 @@ export function WhKpiRow({ urgentLeft }: { urgentLeft: string }) {
             <Icon name="siren" />
           </span>
         </div>
-        <div className="num kpi-num" style={{ color: '#B91C1C' }}>1</div>
+        <div className="num kpi-num" style={{ color: '#B91C1C' }}>{t.inbox.urgent}</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, lineHeight: '16px', color: '#B91C1C' }}>
           <Icon name="clock" className="ic14" />
           เหลือ <span className="wh-timer">{urgentLeft}</span> · ฝั่งผู้ให้
