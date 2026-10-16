@@ -3,6 +3,7 @@ import { Icon } from '../../../components/common/icons';
 import { AuditHistoryDrawer } from '../components/AuditHistoryDrawer';
 import { DirectionTabs } from '../components/DirectionTabs';
 import type { Direction, DirectionOption } from '../components/DirectionTabs';
+import type { ProxyEntry } from '../components/ProxyStatusPanel';
 import { ShipmentDrawer } from '../components/ShipmentDrawer';
 import type { CancelDecision, ReceiptState } from '../components/ShipmentDrawer';
 import { ShipmentTable } from '../components/ShipmentTable';
@@ -38,6 +39,7 @@ export type TransportRole = 'WAREHOUSE_OFFICER' | 'PHARMACIST';
  */
 export function TransportTrackingPage({ role = 'WAREHOUSE_OFFICER' }: { role?: TransportRole }) {
   const canOperate = role === 'WAREHOUSE_OFFICER';
+  const canCancel = role === 'PHARMACIST';
   const online = useOnline();
   const [dir, setDir] = useState<Direction>('all');
   const [status, setStatus] = useState<TransportStatus | null>(null);
@@ -49,6 +51,7 @@ export function TransportTrackingPage({ role = 'WAREHOUSE_OFFICER' }: { role?: T
   const [receipt, setReceipt] = useState<Record<string, ReceiptState>>({});
   const [counted, setCounted] = useState<Record<string, string>>({});
   const [cancel, setCancel] = useState<Record<string, CancelDecision>>({});
+  const [proxy, setProxy] = useState<Record<string, ProxyEntry[]>>({});
   const [q, setQ] = useState('');
   const [kind, setKind] = useState<'all' | ShipmentKind>('all');
   const [driver, setDriver] = useState('all');
@@ -65,12 +68,14 @@ export function TransportTrackingPage({ role = 'WAREHOUSE_OFFICER' }: { role?: T
 
   const effective = (s: Shipment): ShipmentRowState => {
     let st = s.status;
+    const px = proxy[s.id];
+    if (px?.length) st = px[px.length - 1].to;
     if (receipt[s.id] === 'done') st = 'RECEIVED';
     if (cancel[s.id] === 'yes') st = 'CANCELLED';
     return { shipment: s, status: st, pending: canOperate && !!s.pending && !synced, cancelRequested: !!s.cancelRequest && st === 'WAITING_DISPATCH' && cancel[s.id] !== 'no' };
   };
 
-  const all = useMemo(() => SHIPMENTS.map(effective), [receipt, cancel, synced]); // eslint-disable-line react-hooks/exhaustive-deps
+  const all = useMemo(() => SHIPMENTS.map(effective), [receipt, cancel, synced, proxy]); // eslint-disable-line react-hooks/exhaustive-deps
   const queued = all.filter((r) => r.pending).length;
 
   const byDir = all.filter((r) => dir === 'all' || (dir === 'out' ? isOutbound(r.shipment) : !isOutbound(r.shipment)));
@@ -185,7 +190,7 @@ export function TransportTrackingPage({ role = 'WAREHOUSE_OFFICER' }: { role?: T
           <span style={{ flex: '1 1 0' }} />
           <span style={{ fontSize: 12 }}>เรียง: ต้องทำก่อน → อัปเดตล่าสุด</span>
         </div>
-        <ShipmentTable rows={rows} activeId={drawerOpen && sel ? sel.shipment.id : null} onOpen={open} onAction={onAction} canOperate={canOperate} />
+        <ShipmentTable rows={rows} activeId={drawerOpen && sel ? sel.shipment.id : null} onOpen={open} onAction={onAction} canOperate={canOperate} canCancel={canCancel} />
       </section>
 
       {drawerOpen && sel && (
@@ -205,6 +210,9 @@ export function TransportTrackingPage({ role = 'WAREHOUSE_OFFICER' }: { role?: T
           onUndoReceipt={() => setReceipt((m) => ({ ...m, [sel.shipment.id]: 'open' }))}
           onCancelDecision={(d) => setCancel((m) => ({ ...m, [sel.shipment.id]: d }))}
           canOperate={canOperate}
+          canCancel={canCancel}
+          proxies={proxy[sel.shipment.id] ?? []}
+          onProxy={(to, reason) => setProxy((m) => ({ ...m, [sel.shipment.id]: [...(m[sel.shipment.id] ?? []), { to, reason }] }))}
         />
       )}
       {histOpen && <AuditHistoryDrawer onClose={() => setHistOpen(false)} />}

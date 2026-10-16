@@ -15,6 +15,7 @@ import { NearExpiryPage } from './roles/pharmacist/pages/NearExpiryPage';
 import { PoolAllocationPage } from './roles/pharmacist/pages/PoolAllocationPage';
 import { ReportsPage } from './roles/pharmacist/pages/ReportsPage';
 import { StockAlertsPage } from './roles/pharmacist/pages/StockAlertsPage';
+import { getWarehouseNav } from './roles/warehouse/data/navigation';
 import { WAREHOUSE_NOTIFICATIONS, WAREHOUSE_USER } from './roles/warehouse/data/session';
 import { TransportTrackingPage } from './roles/warehouse/pages/TransportTrackingPage';
 import { WarehouseDashboardPage } from './roles/warehouse/pages/WarehouseDashboardPage';
@@ -69,15 +70,6 @@ function initialRoute(): { page: Page; transportRole: TransportRole; warehouse: 
 /** Point the catalogue's mockup hrefs (`*.dc.html`) at the screens that exist in this app. */
 function withLinks(items: ShellNavEntry[], role: string): ShellNavEntry[] {
   const suffix = role === 'PHARMACIST' ? '&role=pharmacist' : '';
-  if (role === 'WAREHOUSE_OFFICER') {
-    // WH pages live under `?role=warehouse`; entries without a WH page yet stay inert.
-    return items.map((e) => {
-      if ('kind' in e) return e;
-      if (e.key === 'dash') return { ...e, href: '?role=warehouse' };
-      if (e.key === 'tr') return { ...e, href: '?role=warehouse&page=transport' };
-      return { ...e, href: '#' };
-    });
-  }
   return items.map((e) => {
     if ('kind' in e) return e;
     if (e.key === 'tr') return { ...e, href: `?page=transport${suffix}` };
@@ -127,9 +119,10 @@ export default function App() {
   const ops = warehouse || onRequests || onLend;
   // UI-07/08/09/15 screenshots use the ops top bar but keep the standard footer.
   const opsBar = ops || onExpiry || onPool || onDocs;
-  const navRole = warehouse ? 'WAREHOUSE_OFFICER' : 'PHARMACIST';
-  const activeKey = warehouse ? (onTransport ? 'tr' : 'dash') : onTransport ? 'tr' : onRequests ? 'req' : onLend ? 'lend' : onIncident ? 'inc' : onAlerts ? 'alerts' : onReport ? 'rep' : onExpiry ? 'exp' : onPool ? 'pool' : onDocs ? 'doc' : 'dash';
-  const navItems = withLinks(getNavForRole(navRole, activeKey), navRole);
+  const navRole = 'PHARMACIST';
+  const activeKey = onTransport ? 'tr' : onRequests ? 'req' : onLend ? 'lend' : onIncident ? 'inc' : onAlerts ? 'alerts' : onReport ? 'rep' : onExpiry ? 'exp' : onPool ? 'pool' : onDocs ? 'doc' : 'dash';
+  // WH owns its sidebar (roles/warehouse/data/navigation.ts); other roles use the shared catalogue.
+  const navItems = warehouse ? getWarehouseNav(onTransport ? 'transport' : 'dashboard') : withLinks(getNavForRole(navRole, activeKey), navRole);
 
   // Mobile drawer: lock page scroll, close on Escape and when resizing to desktop.
   useEffect(() => {

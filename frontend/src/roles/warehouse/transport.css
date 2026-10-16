@@ -77,3 +77,7 @@ textarea.inp { height: auto; padding: 8px 10px; line-height: 20px; resize: verti
 @media (max-width: 767px) { .tiles6 { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 479px) { .tiles6 { grid-template-columns: repeat(2, minmax(0, 1fr)); } .receipt-grid { grid-template-columns: minmax(0, 1fr) 72px 96px; } .receipt-grid input { width: 96px !important; } }
 @media (prefers-reduced-motion: reduce) { .skel { animation: none; } }
+
+/* WH acts on behalf of the driver (RBAC §4.4 ◐) */
+.proxy-box { border: 1px dashed #d97706; background: #fffbeb; border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+.proxy-done { background: #fef3c7; color: #92400e; border-radius: 8px; padding: 8px 10px; font-size: 12.5px; line-height: 18px; }

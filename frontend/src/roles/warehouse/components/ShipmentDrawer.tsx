@@ -1,6 +1,8 @@
 import { Icon } from '../../../components/common/icons';
 import { fmtQty, HOSPITALS, isOutbound, STEP_ORDER, STEPS } from '../data/transport';
 import type { Shipment, TransportStatus } from '../data/transport';
+import { ProxyStatusPanel } from './ProxyStatusPanel';
+import type { ProxyEntry } from './ProxyStatusPanel';
 import { ReceiptForm } from './ReceiptForm';
 import { StatusBadge } from './StatusBadge';
 
@@ -22,8 +24,13 @@ interface ShipmentDrawerProps {
   onConfirmReceipt: () => void;
   onUndoReceipt: () => void;
   onCancelDecision: (d: 'yes' | 'no') => void;
-  /** false = read-only role (pharmacist): no photo upload, status, receipt or cancel controls. */
+  /** false = read-only role (pharmacist): no photo upload, status or receipt controls. */
   canOperate: boolean;
+  /** Only the pharmacist decides on / requests cancellation (RBAC §4.4). */
+  canCancel: boolean;
+  /** Statuses set by the warehouse on behalf of the driver, with the audit reason. */
+  proxies: ProxyEntry[];
+  onProxy: (to: ProxyEntry['to'], reason: string) => void;
 }
 
 function returnNote(s: Shipment): string {
@@ -50,7 +57,8 @@ export function ShipmentDrawer(p: ShipmentDrawerProps) {
       : status === 'ARRIVED' && !out && !showReceipt
         ? { label: 'ยืนยันรับของ', onClick: p.onOpenReceipt }
         : null;
-  const canCancel = op && status === 'WAITING_DISPATCH' && out && !cancelReq;
+  const canRequestCancel = p.canCancel && status === 'WAITING_DISPATCH' && out && !cancelReq;
+  const canProxy = op && out && (status === 'LOADED' || status === 'IN_TRANSIT');
 
   return (
     <aside className="tr-drawer" aria-label="รายละเอียดงานขนส่ง">
@@ -84,9 +92,9 @@ export function ShipmentDrawer(p: ShipmentDrawerProps) {
               <br />
               เหตุผล: “{cancelReq.reason}” · ยกเลิกได้เพราะยังไม่ขึ้นรถ ต้องได้ความยินยอมจากเรา (ผู้ส่ง)
             </div>
-            {!op ? (
+            {!p.canCancel ? (
               <div role="status" style={{ fontSize: 13, color: '#0F2A5C', background: '#FFFFFF', borderRadius: 8, padding: '8px 10px' }}>
-                รอเจ้าหน้าที่คลังตอบคำขอยกเลิก
+                {p.cancel === 'yes' ? 'เภสัชกรยินยอมแล้ว · งานถูกยกเลิก (CANCELLED)' : p.cancel === 'no' ? 'เภสัชกรไม่ยินยอม · งานยังรอขึ้นรถตามแผน' : 'รอเภสัชกรตอบคำขอยกเลิก · การยกเลิกเป็นสิทธิ์ของเภสัชกร'}
               </div>
             ) : !p.cancel ? (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
@@ -115,7 +123,8 @@ export function ShipmentDrawer(p: ShipmentDrawerProps) {
             {STEPS.map((st, i) => {
               const done = i < idx || status === 'RECEIVED';
               const cur = i === idx && status !== 'RECEIVED';
-              const sub = s.times[i] || (cur ? 'ขั้นปัจจุบัน' : status === 'CANCELLED' ? '—' : 'ยังไม่ถึง');
+              const proxied = p.proxies.some((x) => x.to === st.code);
+              const sub = proxied ? '19:12 · บันทึกแทนคนขับ โดย คุณประเสริฐ' : s.times[i] || (cur ? 'ขั้นปัจจุบัน' : status === 'CANCELLED' ? '—' : 'ยังไม่ถึง');
               return (
                 <li key={st.code}>
                   <span className="step-rail">
@@ -147,11 +156,24 @@ export function ShipmentDrawer(p: ShipmentDrawerProps) {
             </dd>
             <dt>ล็อต</dt>
             <dd>{s.lot}</dd>
+            {s.coldChain && (
+              <>
+                <dt>Cold chain</dt>
+                <dd>ใช่ · ต้องควบคุมอุณหภูมิระหว่างขนส่ง</dd>
+              </>
+            )}
             <dt>อ้างอิง</dt>
             <dd>{s.ref}</dd>
           </dl>
           <div className="return-note">{returnNote(s)}</div>
         </div>
+
+        {canProxy && <ProxyStatusPanel key={status} status={status} onSubmit={p.onProxy} />}
+        {p.proxies.map((x, i) => (
+          <div key={i} role="status" className="proxy-done">
+            บันทึกแทนคนขับ → {x.to} · เหตุผล: “{x.reason}” · บันทึกใน audit log
+          </div>
+        ))}
 
         {showReceipt && <ReceiptForm shipment={s} counted={p.counted} onCounted={p.onCounted} onConfirm={p.onConfirmReceipt} />}
         {op && !out && p.receipt === 'done' && (
@@ -220,7 +242,7 @@ export function ShipmentDrawer(p: ShipmentDrawerProps) {
             <Icon name="printer" />
             {s.kind === 'F1' ? 'ใบยืม BORROW_SLIP' : 'ใบโอน TRANSFER_SLIP'}
           </button>
-          {canCancel && <button className="btn btn-g">ขอยกเลิก (ต้องได้ความยินยอม)</button>}
+          {canRequestCancel && <button className="btn btn-g">ขอยกเลิก (ต้องได้ความยินยอม)</button>}
         </div>
       </div>
     </aside>
