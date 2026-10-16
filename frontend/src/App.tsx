@@ -17,6 +17,7 @@ import { ReportsPage } from './roles/pharmacist/pages/ReportsPage';
 import { StockAlertsPage } from './roles/pharmacist/pages/StockAlertsPage';
 import { WAREHOUSE_NOTIFICATIONS, WAREHOUSE_USER } from './roles/warehouse/data/session';
 import { TransportTrackingPage } from './roles/warehouse/pages/TransportTrackingPage';
+import { WarehouseDashboardPage } from './roles/warehouse/pages/WarehouseDashboardPage';
 import type { TransportRole } from './roles/warehouse/pages/TransportTrackingPage';
 
 type Page = 'dashboard' | 'transport' | 'requests' | 'lend' | 'incident' | 'alerts' | 'report' | 'expiry' | 'pool' | 'docs';
@@ -36,8 +37,10 @@ const PHARMACIST_OPS_USER = { ...USER, scopeLabel: 'เห็นเฉพาะ�
  * `?page=pool` shows Pool & allocation (UI-08 · UI-09),
  * `?page=docs` shows Documents (UI-15).
  * `&role=pharmacist` = read-only pharmacist transport view, otherwise the warehouse officer view.
+ * `?role=warehouse` switches the whole shell to the warehouse officer: `/?role=warehouse` is the WH
+ * dashboard, `&page=transport` its transport tracking (other WH pages fall back to its dashboard).
  */
-function initialRoute(): { page: Page; transportRole: TransportRole } {
+function initialRoute(): { page: Page; transportRole: TransportRole; warehouse: boolean } {
   try {
     const q = new URLSearchParams(window.location.search);
     const p = q.get('page');
@@ -51,18 +54,30 @@ function initialRoute(): { page: Page; transportRole: TransportRole } {
     else if (p === 'expiry' || p === 'exp') page = 'expiry';
     else if (p === 'pool' || p === 'alloc') page = 'pool';
     else if (p === 'docs' || p === 'doc') page = 'docs';
+    const r = q.get('role')?.toLowerCase();
     return {
       page,
-      transportRole: q.get('role')?.toLowerCase() === 'pharmacist' ? 'PHARMACIST' : 'WAREHOUSE_OFFICER',
+      transportRole: r === 'pharmacist' ? 'PHARMACIST' : 'WAREHOUSE_OFFICER',
+      // `page=transport` without a role keeps meaning the warehouse view (back-compat).
+      warehouse: r === 'warehouse' || (page === 'transport' && r !== 'pharmacist'),
     };
   } catch {
-    return { page: 'dashboard', transportRole: 'WAREHOUSE_OFFICER' };
+    return { page: 'dashboard', transportRole: 'WAREHOUSE_OFFICER', warehouse: false };
   }
 }
 
 /** Point the catalogue's mockup hrefs (`*.dc.html`) at the screens that exist in this app. */
 function withLinks(items: ShellNavEntry[], role: string): ShellNavEntry[] {
   const suffix = role === 'PHARMACIST' ? '&role=pharmacist' : '';
+  if (role === 'WAREHOUSE_OFFICER') {
+    // WH pages live under `?role=warehouse`; entries without a WH page yet stay inert.
+    return items.map((e) => {
+      if ('kind' in e) return e;
+      if (e.key === 'dash') return { ...e, href: '?role=warehouse' };
+      if (e.key === 'tr') return { ...e, href: '?role=warehouse&page=transport' };
+      return { ...e, href: '#' };
+    });
+  }
   return items.map((e) => {
     if ('kind' in e) return e;
     if (e.key === 'tr') return { ...e, href: `?page=transport${suffix}` };
@@ -107,13 +122,13 @@ export default function App() {
   const onExpiry = route.page === 'expiry';
   const onPool = route.page === 'pool';
   const onDocs = route.page === 'docs';
-  const warehouse = onTransport && route.transportRole === 'WAREHOUSE_OFFICER';
+  const warehouse = route.warehouse;
   // Warehouse transport, UI-05, and UI-06 use the ops top bar (no footer); dashboard, alerts, report, and incident console keep standard shell.
   const ops = warehouse || onRequests || onLend;
   // UI-07/08/09/15 screenshots use the ops top bar but keep the standard footer.
   const opsBar = ops || onExpiry || onPool || onDocs;
   const navRole = warehouse ? 'WAREHOUSE_OFFICER' : 'PHARMACIST';
-  const activeKey = onTransport ? 'tr' : onRequests ? 'req' : onLend ? 'lend' : onIncident ? 'inc' : onAlerts ? 'alerts' : onReport ? 'rep' : onExpiry ? 'exp' : onPool ? 'pool' : onDocs ? 'doc' : 'dash';
+  const activeKey = warehouse ? (onTransport ? 'tr' : 'dash') : onTransport ? 'tr' : onRequests ? 'req' : onLend ? 'lend' : onIncident ? 'inc' : onAlerts ? 'alerts' : onReport ? 'rep' : onExpiry ? 'exp' : onPool ? 'pool' : onDocs ? 'doc' : 'dash';
   const navItems = withLinks(getNavForRole(navRole, activeKey), navRole);
 
   // Mobile drawer: lock page scroll, close on Escape and when resizing to desktop.
@@ -159,7 +174,9 @@ export default function App() {
           user={warehouse ? WAREHOUSE_USER : opsBar ? PHARMACIST_OPS_USER : undefined}
         />
         <main className="mainpad">
-          {onTransport ? (
+          {warehouse ? (
+            onTransport ? <TransportTrackingPage role="WAREHOUSE_OFFICER" /> : <WarehouseDashboardPage />
+          ) : onTransport ? (
             <TransportTrackingPage role={route.transportRole} />
           ) : onRequests ? (
             <BorrowRequestsPage />
