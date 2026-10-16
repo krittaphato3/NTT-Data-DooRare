@@ -20,7 +20,7 @@ export interface KitStock {
 /** Ready-set stock per patient-set (F3), same source as the F3 page. View-only on the dashboard. */
 export const KITS: KitStock[] = KIT_DEFS.map(({ key, th, en, ready, target }) => ({ key, th, en, ready, target }));
 
-export type TodoGroup = 'request' | 'transport' | 'kit';
+export type TodoGroup = 'transport' | 'f3';
 
 export interface TodoItem {
   id: string;
@@ -37,18 +37,18 @@ export interface TodoItem {
 
 const byId = (id: string) => SHIPMENTS.find((s) => s.id === id)!;
 
-/** 1) Requests the warehouse still has to answer. */
+/** 1) Urgent F3 requests from other hospitals the warehouse (as lender) still has to answer. */
 function requestTodo(): TodoItem[] {
   return REQUESTS.filter((r) => r.status === 'NEW').map((r) => ({
-    id: r.id, group: 'request', urgent: !!r.urgent, icon: r.urgent ? 'siren' : 'inbox', sevCls: r.urgent ? 'sev-crit' : 'sev-urg',
-    title: `ยืนยันคำขอ ${r.drug} × ${fmtQty(r.qty)} ${r.unit}`,
+    id: r.id, group: 'f3', urgent: !!r.urgent, icon: r.urgent ? 'siren' : 'inbox', sevCls: r.urgent ? 'sev-crit' : 'sev-urg',
+    title: `ยืนยันคำขอเร่งด่วน ${r.drug} × ${fmtQty(r.qty)} ${r.unit}`,
     detail: `${FEATURE_META[r.feature].label} · ${r.ref} → ${HOSPITALS[r.to]} · ${r.urgent ? 'เร่งด่วน' : r.due}`,
     badge: { label: r.urgent ? 'เร่งด่วนมาก' : 'รอยืนยัน', tone: r.urgent ? 'red' : 'amber' },
-    cta: { label: 'ยืนยัน', primary: true, page: 'inbox' },
+    cta: { label: 'ยืนยัน', primary: true, page: 'kit' },
   }));
 }
 
-/** 2) Transport work: prepare → load → receive → sync. */
+/** 2) Transport work: prepare (F1/F2 land here after the pharmacist approves) → load → receive → sync. */
 function transportTodo(): TodoItem[] {
   const preparing = byId('TR-2026-000342');
   const dispatch = byId('TR-2026-000338');
@@ -99,7 +99,7 @@ function kitTodo(): TodoItem[] {
   return PACK_TASKS.map((p) => {
     const k = KIT_DEFS.find((x) => x.key === p.kitKey)!;
     return {
-      id: p.id, group: 'kit' as const, icon: 'box' as IconName, sevCls: 'sev-urg',
+      id: p.id, group: 'f3' as const, icon: 'box' as IconName, sevCls: 'sev-urg',
       title: `แพ็ก${k.th} × ${p.qty} ชุด`,
       detail: `${FEATURE_META.F3.label} · เหตุ ${p.incident} · ตัดสต็อกตามสูตรเซ็ตเมื่อยืนยันแพ็กเสร็จ`,
       badge: { label: 'รอแพ็ก', tone: 'amber' as Tone },
@@ -112,9 +112,8 @@ export const TODOS: TodoItem[] = [...requestTodo().sort((a, b) => Number(!!b.urg
 
 export const TODO_TABS: { key: 'all' | TodoGroup; label: string }[] = [
   { key: 'all', label: 'ทั้งหมด' },
-  { key: 'request', label: 'คำขอรอยืนยัน' },
   { key: 'transport', label: 'ขนส่ง' },
-  { key: 'kit', label: 'ชุดยา F3' },
+  { key: 'f3', label: 'F3 ฉุกเฉิน' },
 ];
 
 /** Transport counts for the KPI cards and the status panel (own hospital only). */

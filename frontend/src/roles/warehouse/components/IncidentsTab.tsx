@@ -156,9 +156,9 @@ export function IncidentDrawer({ incident: i, onClose }: IncidentDrawerProps) {
 
         {i.requests.some((r) => r.inboxId && r.status === 'NEED_CONFIRM') && (
           <div>
-            <a className="btn btn-p" href={whHref('inbox')} style={{ textDecoration: 'none' }}>
+            <a className="btn btn-p" href={whHref('kit')} style={{ textDecoration: 'none' }}>
               <Icon name="inbox" />
-              ไปยืนยันที่คำขอรอยืนยัน
+              ไปยืนยันที่แท็บ “คำขอเร่งด่วนจาก รพ.อื่น”
             </a>
           </div>
         )}

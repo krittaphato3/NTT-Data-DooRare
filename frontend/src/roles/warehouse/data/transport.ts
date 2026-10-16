@@ -85,6 +85,11 @@ const NEW_ROWS: Shipment[] = [
     ],
   },
   {
+    id: 'TR-2026-000345', kind: 'F1', ref: 'BR-2026-000127 · EMERGENCY', drug: 'Atropine 1 mg/mL amp', qty: 20, unit: 'AMP', from: 'HA', to: 'HD', status: 'IN_TRANSIT',
+    updatedAt: '16:05', updatedBy: 'คุณสมชาย (คนขับ)', driver: 'คุณสมชาย แก้วกล้า', photos: [{ stage: 'LOADED', time: '15:55' }, { stage: 'LOADED', time: '15:56' }],
+    times: ['15:42 · WH ยืนยันคำขอเร่งด่วน (F3)', '15:50 · เตรียมเสร็จ', '15:56 · คุณประเสริฐ + รูป 2', '16:05 · คุณสมชาย ออกเดินทาง', '', ''], lot: 'ATR-2504 · หมดอายุ 30 เม.ย. 2027 (198 วัน)', lotCode: 'ATR-2504', expiry: 'หมดอายุ 30 เม.ย. 2027',
+  },
+  {
     id: 'TR-2026-000343', kind: 'F1', ref: 'BR-2026-000130 · รอบ 1', drug: 'Adrenaline 1 mg/mL amp', qty: 20, unit: 'AMP', from: 'HB', to: 'HA', status: 'PREPARING',
     updatedAt: '18:20', updatedBy: 'รพ.บางพลี (ต้นทาง)', photos: [], times: ['18:20 · ต้นทางกำลังเตรียมของ', '', '', '', '', ''], lot: 'ต้นทางเลือกล็อต (FEFO)', lotCode: 'ADR-HB2501',
   },

@@ -18,10 +18,10 @@ interface RequestsTableProps {
 export function RequestsTable({ rows, activeId, urgentLeft, onOpen, onConfirm, onDecline }: RequestsTableProps) {
   return (
     <div className="scroll-x">
-      <table className="tbl ib-tbl" aria-label="คำขอรอยืนยัน">
+      <table className="tbl ib-tbl" aria-label="คำขอเร่งด่วนจาก รพ.อื่น">
         <thead>
           <tr>
-            <th style={{ width: 190 }}>คำขอ</th>
+            <th style={{ width: 190 }}>คำขอเร่งด่วน</th>
             <th>ยา · จำนวน</th>
             <th style={{ width: 180 }}>ส่งไปที่</th>
             <th style={{ width: 160 }}>กำหนด</th>

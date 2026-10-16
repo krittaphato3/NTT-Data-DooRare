@@ -16,9 +16,8 @@ interface WhNavDef {
 
 const OPERATE: WhNavDef[] = [
   { page: 'dashboard', th: 'ภาพรวม', en: 'Dashboard', ui: 'UI-01', icon: 'grid' },
-  { page: 'inbox', th: 'คำขอรอยืนยัน', en: 'Requests to confirm (F1 · F2 · F3)', ui: 'WH-REQ', icon: 'inbox', badge: '3', badgeTone: 'red' },
   { page: 'transport', th: 'ติดตามการขนส่ง', en: 'Transport tracking', ui: 'UI-14', icon: 'truck', badge: '3' },
-  { page: 'kit', th: 'เตรียมชุดยา · เหตุฉุกเฉิน', en: 'Pack kits & incidents (F3)', ui: 'UI-13', icon: 'siren' },
+  { page: 'kit', th: 'เตรียมชุดยา · เหตุฉุกเฉิน', en: 'Emergency (F3)', ui: 'UI-13', icon: 'siren', badge: '2', badgeTone: 'red' },
   { page: 'docs', th: 'พิมพ์เอกสาร', en: 'Documents', ui: 'UI-15', icon: 'printer' },
 ];
 

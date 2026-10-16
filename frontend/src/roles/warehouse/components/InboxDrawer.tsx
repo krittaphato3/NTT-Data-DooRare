@@ -29,7 +29,7 @@ export function InboxDrawer({ item: it, urgentLeft, startDeclining, onClose, onC
     <aside className="tr-drawer" aria-label="รายละเอียดคำขอ">
       <div className="tr-drawer-head">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-          <span className="sub">คำขอรอยืนยัน · ตอบแล้วงานจะไปที่ติดตามการขนส่ง</span>
+          <span className="sub">คำขอเร่งด่วน F3 · ตอบแล้วงานจะไปที่ติดตามการขนส่ง</span>
           <button className="icbtn" aria-label="ปิด / Close" onClick={onClose}>
             <Icon name="x" />
           </button>

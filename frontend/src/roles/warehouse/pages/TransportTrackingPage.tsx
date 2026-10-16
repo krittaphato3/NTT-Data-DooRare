@@ -101,7 +101,7 @@ export function TransportTrackingPage({ role = 'WAREHOUSE_OFFICER' }: { role?: T
       label: 'ส่งออกจากเรา',
       count: outAll.length,
       todo: canOperate && waiting ? `รอขึ้นรถ ${waiting}` : '',
-      hint: canOperate ? 'งานที่ยืนยันแล้ว · เตรียมของ แล้วขึ้นรถ + ถ่ายรูปที่นี่' : 'งานที่ รพ.เราส่งไปให้ รพ.อื่น',
+      hint: canOperate ? 'งานที่อนุมัติ/ยืนยันแล้ว · เตรียมของ แล้วขึ้นรถ + ถ่ายรูปที่นี่' : 'งานที่ รพ.เราส่งไปให้ รพ.อื่น',
     },
     {
       id: 'in',
@@ -138,8 +138,8 @@ export function TransportTrackingPage({ role = 'WAREHOUSE_OFFICER' }: { role?: T
           <div style={{ fontSize: 13 }}>รพ.สมุทรปราการ · สต็อกต้นทางตัดเมื่อขึ้นรถ (LOADED) ปลายทางรับเข้าเมื่อยืนยันรับ (RECEIVED) · ขั้นตอนขนส่งไม่มี Agent</div>
           {canOperate && (
             <div style={{ fontSize: 12.5, marginTop: 2 }}>
-              งานส่งออกเริ่มที่นี่หลังกด “ยืนยัน” ที่คำขอรอยืนยัน · ขั้นตอน: เตรียมของ → รอขึ้นรถ → ขึ้นรถ + รูป → ถึง{' '}
-              <a className="link" href="?role=warehouse&page=inbox" style={{ fontSize: 12.5 }}>ไปที่คำขอรอยืนยัน</a>
+              งานส่งออกเข้าที่นี่เมื่อเภสัชกรอนุมัติ (F1/F2) หรือ WH ยืนยันคำขอเร่งด่วน (F3) · ขั้นตอน: เตรียมของ → รอขึ้นรถ → ขึ้นรถ + รูป → ถึง{' '}
+              <a className="link" href="?role=warehouse&page=kit" style={{ fontSize: 12.5 }}>ไปที่คำขอเร่งด่วน F3</a>
             </div>
           )}
         </div>

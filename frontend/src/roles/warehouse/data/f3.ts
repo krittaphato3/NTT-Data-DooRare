@@ -135,7 +135,10 @@ export const INCIDENTS: Incident[] = [
   {
     id: 'INC-2026-0008', own: false, hospital: 'HB', title: 'ไฟไหม้โรงงาน', place: 'นิคมฯ บางพลี', triage: { red: 2, yellow: 5, green: 4 },
     reportedAt: '19:05', eta: 'ผู้ป่วยถึง รพ.บางพลี 19:30', status: 'OPEN', kits: [],
-    requests: [{ id: 'BR-2026-000131', side: 'lender', drug: 'Adrenaline 1 mg/mL amp', qty: 30, unit: 'AMP', counterpart: 'HB', status: 'NEED_CONFIRM', inboxId: 'IB-F3-0131' }],
+    requests: [
+      { id: 'BR-2026-000131', side: 'lender', drug: 'Adrenaline 1 mg/mL amp', qty: 30, unit: 'AMP', counterpart: 'HB', status: 'NEED_CONFIRM', inboxId: 'IB-F3-0131' },
+      { id: 'BR-2026-000134', side: 'lender', drug: 'Tranexamic acid 500 mg inj', qty: 20, unit: 'AMP', counterpart: 'HB', status: 'NEED_CONFIRM', inboxId: 'IB-F3-0134' },
+    ],
   },
   {
     id: 'INC-2026-0005', own: true, hospital: 'HA', title: 'อุบัติเหตุรถตู้ชนหมู่', place: 'ถ.บางนา-ตราด กม.18', triage: { red: 1, yellow: 4, green: 7 },
