@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Icon } from '../../../components/common/icons';
+import { homeHrefFor } from '../../../data/navigation';
+import { can } from '../../../lib/rbac';
 import { AuditHistoryDrawer } from '../components/AuditHistoryDrawer';
 import { DirectionTabs } from '../components/DirectionTabs';
 import type { Direction, DirectionOption } from '../components/DirectionTabs';
@@ -28,16 +30,19 @@ function useOnline(): boolean {
   return online;
 }
 
-export type TransportRole = 'WAREHOUSE_OFFICER' | 'PHARMACIST';
+/**
+ * Roles this screen is rendered for. PHARMACIST and HOSPITAL_ADMIN open it read-only
+ * (API-F2a-012 lets the pharmacist list tasks; POST status/photos is warehouse/driver only).
+ */
+export type TransportRole = 'WAREHOUSE_OFFICER' | 'PHARMACIST' | 'HOSPITAL_ADMIN';
 
 /**
  * UI-14 Transport tracking. UI only — data is mock, actions are local state.
- * WAREHOUSE_OFFICER operates (status, photos, receipt); PHARMACIST is read-only
- * (API-F2a-012 lets the pharmacist list tasks, POST status/photos is warehouse/driver only).
- * Both see only their own hospital's tasks (SEC-002).
+ * WAREHOUSE_OFFICER operates (status, photos, receipt); PHARMACIST and HOSPITAL_ADMIN are read-only.
+ * All roles see only their own hospital's tasks (SEC-002).
  */
 export function TransportTrackingPage({ role = 'WAREHOUSE_OFFICER' }: { role?: TransportRole }) {
-  const canOperate = role === 'WAREHOUSE_OFFICER';
+  const canOperate = can(role, 'transportStatus');
   const online = useOnline();
   const [dir, setDir] = useState<Direction>('all');
   const [status, setStatus] = useState<TransportStatus | null>(null);
@@ -111,7 +116,7 @@ export function TransportTrackingPage({ role = 'WAREHOUSE_OFFICER' }: { role?: T
       <section className="pagehead">
         <div>
           <nav aria-label="breadcrumb" style={{ fontSize: 12, lineHeight: '16px' }}>
-            <a href="/" className="link" style={{ fontSize: 12, fontWeight: 400 }}>หน้าหลัก</a> <span aria-hidden="true">›</span> <span aria-current="page">ติดตามการขนส่ง</span>
+            <a href={homeHrefFor(role)} className="link" style={{ fontSize: 12, fontWeight: 400 }}>หน้าหลัก</a> <span aria-hidden="true">›</span> <span aria-current="page">ติดตามการขนส่ง</span>
           </nav>
           <h1 className="tr-title">
             ติดตามการขนส่ง <span>/ Transport tracking · UI-14</span>

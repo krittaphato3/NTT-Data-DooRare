@@ -1,5 +1,7 @@
 import { Icon } from '../../../components/common/icons';
 import type { IconName } from '../../../components/common/icons';
+import { mayActFor, maySeePeerStock, requiredRoleHint } from '../../../lib/rbac';
+import type { Action, RoleCode } from '../../../lib/rbac';
 import { fmtTime } from '../../../lib/time';
 import { groupMeta, groupOf, LEG_META } from '../data/borrow';
 import type { BorrowRequest, StatusGroup } from '../data/borrow';
@@ -14,6 +16,8 @@ interface BorrowDrawerProps {
   decision: Decision;
   onDecide: (d: 'approve' | 'reject') => void;
   onClose: () => void;
+  /** Role viewing the drawer; every action is gated through `lib/rbac.ts`. */
+  role?: RoleCode;
 }
 
 /** Banner colours per SM-1 group: [background, border, icon colour]. */
@@ -26,8 +30,18 @@ const BANNER: Record<StatusGroup, [string, string, string]> = {
 };
 
 /** UI-05 request detail (we are the borrower). Actions are local state only. */
-export function BorrowDrawer({ request: r, tick, decision, onDecide, onClose }: BorrowDrawerProps) {
+export function BorrowDrawer({ request: r, tick, decision, onDecide, onClose, role = 'PHARMACIST' }: BorrowDrawerProps) {
   const group = groupOf(r.status);
+
+  /** Action each drawer button performs, so a role that may not act sees it disabled with a hint. */
+  const gate = (action: Action) => {
+    const allowed = mayActFor(role, 'PHARMACIST', action);
+    return { allowed, hint: allowed ? undefined : requiredRoleHint(action), action };
+  };
+  const approve = gate('approveBorrow');
+  const addLender = gate('approveBorrow');
+  const recordReturn = gate('updateInventory');
+  const cancelRequest = gate('cancelRequest');
   const [bg, border, fg] = BANNER[group];
   const bannerIcon: IconName = group === 'progress' ? 'clock' : groupMeta(group).icon;
   const activeLeg = r.legs.findIndex((l) => l.state === 'WAITING');
@@ -125,9 +139,13 @@ export function BorrowDrawer({ request: r, tick, decision, onDecide, onClose }: 
                         <span className={`badge t-${m.tone}`} style={{ height: 20, fontSize: 11 }}>
                           {m.label}
                         </span>
-                        <span className="code" style={{ marginLeft: 'auto' }}>
-                          Si {l.si.toFixed(4)}
-                        </span>
+                        {/* The Hospital Priority Score is Agent-internal (rbac.md §3): a role outside
+                            the borrow flow sees the proposed lender and its own requested quantity only. */}
+                        {maySeePeerStock(role) && (
+                          <span className="code" style={{ marginLeft: 'auto' }}>
+                            Si {l.si.toFixed(4)}
+                          </span>
+                        )}
                       </span>
                       <span className="sub" style={{ display: 'block' }}>
                         {l.detail}
@@ -153,17 +171,39 @@ export function BorrowDrawer({ request: r, tick, decision, onDecide, onClose }: 
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {r.action === 'approve' && (
               <>
-                <button className="btn btn-p" onClick={() => onDecide('approve')}>
+                <button
+                  className="btn btn-p"
+                  disabled={!approve.allowed}
+                  title={approve.hint}
+                  onClick={() => onDecide('approve')}
+                >
                   อนุมัติและส่ง
                 </button>
-                <button className="btn btn-g" onClick={() => onDecide('reject')}>
+                <button
+                  className="btn btn-g"
+                  disabled={!approve.allowed}
+                  title={approve.hint}
+                  onClick={() => onDecide('reject')}
+                >
                   ไม่อนุมัติ
                 </button>
               </>
             )}
-            {r.action === 'addLender' && <button className="btn btn-p">เพิ่มผู้ให้ยืม</button>}
-            {r.action === 'recordReturn' && <button className="btn btn-p">บันทึกการคืน</button>}
-            {group === 'progress' && <button className="btn btn-g">ยกเลิกคำขอ</button>}
+            {r.action === 'addLender' && (
+              <button className="btn btn-p" disabled={!addLender.allowed} title={addLender.hint}>
+                เพิ่มผู้ให้ยืม
+              </button>
+            )}
+            {r.action === 'recordReturn' && (
+              <button className="btn btn-p" disabled={!recordReturn.allowed} title={recordReturn.hint}>
+                บันทึกการคืน
+              </button>
+            )}
+            {group === 'progress' && (
+              <button className="btn btn-g" disabled={!cancelRequest.allowed} title={cancelRequest.hint}>
+                ยกเลิกคำขอ
+              </button>
+            )}
           </div>
         )}
       </div>

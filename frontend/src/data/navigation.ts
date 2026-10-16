@@ -80,13 +80,42 @@ export const HOSPITAL_ADMIN_ROLE_QUERY = 'hospital-admin';
 export const HOSPITAL_ADMIN_HOME_HREF = `?page=users&role=${HOSPITAL_ADMIN_ROLE_QUERY}`;
 
 /**
- * Nav keys actually rendered per role. `ROLE_NAV.HOSPITAL_ADMIN` keeps the full catalogue list
- * verbatim from the mockup, but the shell only shows this role's own administration pages
- * (configuration + user management + audit log); the operational entries stay in the data and are
- * reached through the roles that own them.
+ * Roles that are not the implicit default and therefore must be carried in every in-app href.
+ * A relative `?page=…` link replaces the whole query string, so a role whose shell is selected by a
+ * query param would otherwise be dropped on each click (and on browser back/forward).
+ */
+export const ROLE_QUERY: Record<string, string> = {
+  HOSPITAL_ADMIN: HOSPITAL_ADMIN_ROLE_QUERY,
+};
+
+/**
+ * Append the role query param to an href when the role is not the default.
+ * Shared by the shell chrome and by every page that renders its own breadcrumb, so no link is
+ * hand-written and none can silently drop the role.
+ */
+export function withRole(href: string, role: string): string {
+  const r = ROLE_QUERY[role];
+  if (!r || href === '#' || href.includes(`role=${r}`)) return href;
+  return `${href}${href.includes('?') ? '&' : '?'}role=${r}`;
+}
+
+/**
+ * Dashboard href for a role — the breadcrumb "home" a page links back to.
+ * The default shell's dashboard is `/`; a role selected by a query param needs it appended.
+ */
+export function homeHrefFor(role: string): string {
+  return withRole('/', role);
+}
+
+/**
+ * Nav keys actually rendered per role.
+ *
+ * `ROLE_NAV.HOSPITAL_ADMIN` holds the entries the spec allows this role to reach (mockup order).
+ * Phase 2A enabled the three administration pages; Phase 2B adds the operational screens, which the
+ * role opens read-only (no write actions — see `lib/rbac.ts`).
  */
 const VISIBLE_KEYS: Record<string, string[]> = {
-  HOSPITAL_ADMIN: ['|', 'usr', 'cfg', 'aud'],
+  HOSPITAL_ADMIN: ['dash', 'alerts', 'req', 'lend', 'exp', 'pool', 'inc', 'tr', 'doc', 'rep', '|', 'usr', 'cfg', 'aud'],
 };
 
 /**

@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Icon } from '../../../components/common/icons';
+import { homeHrefFor } from '../../../data/navigation';
+import { mayActFor } from '../../../lib/rbac';
+import type { RoleCode } from '../../../lib/rbac';
 import { useTick } from '../../../lib/time';
 import { BorrowDrawer } from '../components/BorrowDrawer';
 import type { Decision } from '../components/BorrowDrawer';
@@ -21,8 +24,10 @@ function withDecision(r: BorrowRequest, d: Decision): BorrowRequest {
  * UI-05 Borrow requests — our hospital as the borrower. UI only: data is mock,
  * approve/reject are local state. Every request needs pharmacist approval before
  * it is sent; an unanswered leg times out and moves to the next lender (SM-1).
+ *
+ * `role` gates the write controls through `lib/rbac.ts` and drives the breadcrumb home.
  */
-export function BorrowRequestsPage() {
+export function BorrowRequestsPage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
   const tick = useTick();
   const [group, setGroup] = useState<StatusGroup | null>(null);
   const [selId, setSelId] = useState('');
@@ -33,6 +38,8 @@ export function BorrowRequestsPage() {
   const [urgency, setUrgency] = useState<'all' | Urgency>('all');
   const [context, setContext] = useState<'all' | BorrowContext>('all');
   const [days, setDays] = useState(90);
+  /* Creating a manual borrow request is a pharmacist action (§4.1) — hidden when the role lacks it. */
+  const mayCreate = mayActFor(role, 'PHARMACIST', 'createBorrowRequest');
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -65,7 +72,7 @@ export function BorrowRequestsPage() {
       <section className="pagehead">
         <div>
           <nav aria-label="breadcrumb" style={{ fontSize: 12, lineHeight: '16px' }}>
-            <a href="/" className="link" style={{ fontSize: 12, fontWeight: 400 }}>หน้าหลัก</a> <span aria-hidden="true">›</span> <span aria-current="page">คำขอยืมของเรา</span>
+            <a href={homeHrefFor(role)} className="link" style={{ fontSize: 12, fontWeight: 400 }}>หน้าหลัก</a> <span aria-hidden="true">›</span> <span aria-current="page">คำขอยืมของเรา</span>
           </nav>
           <h1 className="tr-title">
             คำขอยืมระหว่างโรงพยาบาล <span>/ Borrow requests</span>
@@ -77,10 +84,12 @@ export function BorrowRequestsPage() {
             <Icon name="history" />
             ประวัติ
           </button>
-          <button className="btn btn-p">
-            <Icon name="plus" />
-            สร้างคำขอยืมเอง <span style={{ fontWeight: 400 }}>UI-10</span>
-          </button>
+          {mayCreate && (
+            <button className="btn btn-p">
+              <Icon name="plus" />
+              สร้างคำขอยืมเอง <span style={{ fontWeight: 400 }}>UI-10</span>
+            </button>
+          )}
         </div>
       </section>
 
@@ -166,6 +175,7 @@ export function BorrowRequestsPage() {
           decision={decision[sel.id]}
           onDecide={(d) => setDecision((m) => ({ ...m, [sel.id]: d }))}
           onClose={() => setDrawerOpen(false)}
+          role={role}
         />
       )}
     </>

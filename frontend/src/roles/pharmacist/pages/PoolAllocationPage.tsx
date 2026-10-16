@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Icon } from '../../../components/common/icons';
+import { homeHrefFor } from '../../../data/navigation';
+import type { RoleCode } from '../../../lib/rbac';
 import { AllocationDrawer } from '../components/AllocationDrawer';
 import {
   ALLOCATION_PLANS,
@@ -25,7 +27,11 @@ const RECEIVER_COUNT = new Set(POOL_LOTS.map((l) => l.from)).size + 3;
  * data; approve / uneconomical decisions are local state. Pool quantities are
  * held (ถูกกันไว้) at the origin hospital until a plan ships them.
  */
-export function PoolAllocationPage() {
+/**
+ * UI-08 Central pool + UI-09 Allocation plan review. `role` gates every approval through
+ * `lib/rbac.ts` and drives the breadcrumb home.
+ */
+export function PoolAllocationPage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
   const [tab, setTab] = useState<PoolTab>('plans');
   const [selId, setSelId] = useState('');
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -78,7 +84,7 @@ export function PoolAllocationPage() {
       <section className="pagehead">
         <div>
           <nav aria-label="breadcrumb" style={{ fontSize: 12, lineHeight: '16px' }}>
-            <a href="/" className="link" style={{ fontSize: 12, fontWeight: 400 }}>
+            <a href={homeHrefFor(role)} className="link" style={{ fontSize: 12, fontWeight: 400 }}>
               หน้าหลัก
             </a>{' '}
             <span aria-hidden="true">›</span> <span aria-current="page">คลังกลาง · แผนจัดสรร</span>
@@ -291,6 +297,7 @@ export function PoolAllocationPage() {
         <AllocationDrawer
           key={sel.id}
           plan={sel}
+          role={role}
           decision={decisions[sel.id]}
           onApprove={() => approve(sel.id)}
           onUneconomical={(label) => decideUneconomical(sel.id, label)}

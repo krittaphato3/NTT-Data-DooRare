@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import { Footer } from './components/layout/Footer';
 import { Sidebar } from './components/layout/Sidebar';
 import { TopBar } from './components/layout/TopBar';
-import { getNavForRole, HOSPITAL_ADMIN_HOME_HREF, HOSPITAL_ADMIN_ROLE_QUERY } from './data/navigation';
+import { getNavForRole, HOSPITAL_ADMIN_HOME_HREF, withRole } from './data/navigation';
 import { can } from './lib/rbac';
+import type { RoleCode } from './lib/rbac';
 import type { ShellNavEntry } from './data/navigation';
 import { USER } from './data/session';
 import { ALERTS } from './roles/pharmacist/data/dashboard';
@@ -26,6 +27,14 @@ import { ConfigurationPage } from './roles/hospital-admin/pages/ConfigurationPag
 import { UserManagementPage } from './roles/hospital-admin/pages/UserManagementPage';
 
 type Page = 'dashboard' | 'transport' | 'requests' | 'lend' | 'incident' | 'alerts' | 'report' | 'expiry' | 'pool' | 'docs' | 'users' | 'audit' | 'config';
+
+/**
+ * The pharmacist/warehouse screens the Hospital Admin shell opens read-only (Phase 2B).
+ * They are the shared pages, so every write control inside them is gated through `lib/rbac.ts`.
+ */
+const HA_READ_ONLY_PAGES: Page[] = [
+  'dashboard', 'alerts', 'requests', 'lend', 'expiry', 'pool', 'incident', 'transport', 'docs', 'report',
+];
 
 /** Pharmacist on the ops-style top bar (UI-05 mockup: scope pill, agent pill, TH/EN). */
 const PHARMACIST_OPS_USER = { ...USER, scopeLabel: 'เห็นเฉพาะข้อมูล รพ.สมุทรปราการ' };
@@ -70,22 +79,9 @@ function initialRoute(): { page: Page; transportRole: TransportRole } {
 }
 
 /**
- * Roles that are not the implicit default and therefore must be carried in every in-app href.
- * A relative `?page=…` link replaces the whole query string, so a role whose shell is selected by a
- * query param would otherwise be dropped on each click (and on browser back/forward).
+ * Point the catalogue's mockup hrefs (`*.dc.html`) at the screens that exist in this app.
+ * `withRole` (see `data/navigation.ts`) then keeps the active role in every href.
  */
-const ROLE_QUERY: Record<string, string> = {
-  HOSPITAL_ADMIN: HOSPITAL_ADMIN_ROLE_QUERY,
-};
-
-/** Append the role query param to an href when the role is not the default. */
-function withRole(href: string, role: string): string {
-  const r = ROLE_QUERY[role];
-  if (!r || href === '#' || href.includes(`role=${r}`)) return href;
-  return `${href}${href.includes('?') ? '&' : '?'}role=${r}`;
-}
-
-/** Point the catalogue's mockup hrefs (`*.dc.html`) at the screens that exist in this app. */
 function withLinks(items: ShellNavEntry[], role: string): ShellNavEntry[] {
   const suffix = role === 'PHARMACIST' ? '&role=pharmacist' : '';
   // HOSPITAL_ADMIN shares the pharmacist screens (spec §5.2 grants own-hospital viewing), so the
@@ -153,21 +149,25 @@ export default function App() {
   const onUsers = route.page === 'users';
   const onAudit = route.page === 'audit';
   const onConfig = route.page === 'config';
-  const warehouse = onTransport && route.transportRole === 'WAREHOUSE_OFFICER';
+  // The Hospital Admin shell keeps its own navigation on every page, including transport.
+  const warehouse = !hospitalAdmin && onTransport && route.transportRole === 'WAREHOUSE_OFFICER';
   // Warehouse transport, UI-05, and UI-06 use the ops top bar (no footer); dashboard, alerts, report, and incident console keep standard shell.
   const ops = warehouse || onRequests || onLend;
   // UI-07/08/09/15 screenshots use the ops top bar but keep the standard footer.
   const opsBar = ops || onExpiry || onPool || onDocs;
   const navRole = warehouse ? 'WAREHOUSE_OFFICER' : hospitalAdmin ? 'HOSPITAL_ADMIN' : 'PHARMACIST';
+  /** Role the shared pharmacist/warehouse pages gate their write controls on. */
+  const viewerRole: RoleCode = hospitalAdmin ? 'HOSPITAL_ADMIN' : 'PHARMACIST';
   const activeKey = onTransport ? 'tr' : onRequests ? 'req' : onLend ? 'lend' : onIncident ? 'inc' : onAlerts ? 'alerts' : onReport ? 'rep' : onExpiry ? 'exp' : onPool ? 'pool' : onDocs ? 'doc' : onConfig ? 'cfg' : onUsers ? 'usr' : onAudit ? 'aud' : 'dash';
   const navItems = withLinks(getNavForRole(navRole, activeKey), navRole);
   // Page access for the Hospital Admin shell is decided by lib/rbac.ts, not by local role checks.
   const mayManageUsers = can(navRole, 'manageUsers');
   const mayViewAudit = can(navRole, 'viewAudit');
   const mayConfigure = can(navRole, 'configureRules');
-  /** Pages the Hospital Admin shell may render today (2B/2C will extend this). */
+  const onReadOnlyView = HA_READ_ONLY_PAGES.includes(route.page);
+  /** Pages the Hospital Admin shell may render; anything else keeps the 403 card. */
   const isHospitalAdminPageAllowed =
-    (onUsers && mayManageUsers) || (onAudit && mayViewAudit) || (onConfig && mayConfigure);
+    (onUsers && mayManageUsers) || (onAudit && mayViewAudit) || (onConfig && mayConfigure) || onReadOnlyView;
 
   // Mobile drawer: lock page scroll, close on Escape and when resizing to desktop.
   useEffect(() => {
@@ -219,28 +219,27 @@ export default function App() {
         />
         <main className="mainpad">
           {hospitalAdmin && !isHospitalAdminPageAllowed ? (
-            /* Phase 2A: Configuration, User management and Audit log are built for HOSPITAL_ADMIN.
-               The read-only operational views (2B) and return obligations (2C) are still pending, so
-               a direct ?page= must not render a screen carrying pharmacist write actions. */
+            /* Guard for a Hospital Admin page outside the allowed set. The operational screens
+               render read-only through their `role` prop; this card covers anything else. */
             <AccessDenied homeHref={HOSPITAL_ADMIN_HOME_HREF} />
           ) : onTransport ? (
-            <TransportTrackingPage role={route.transportRole} />
+            <TransportTrackingPage role={hospitalAdmin ? 'HOSPITAL_ADMIN' : route.transportRole} />
           ) : onRequests ? (
-            <BorrowRequestsPage />
+            <BorrowRequestsPage role={viewerRole} />
           ) : onLend ? (
-            <LenderQueuePage />
+            <LenderQueuePage role={viewerRole} />
           ) : onIncident ? (
-            <IncidentConsolePage />
+            <IncidentConsolePage role={viewerRole} />
           ) : onAlerts ? (
-            <StockAlertsPage />
+            <StockAlertsPage role={viewerRole} />
           ) : onReport ? (
-            <ReportsPage />
+            <ReportsPage role={viewerRole} />
           ) : onExpiry ? (
-            <NearExpiryPage />
+            <NearExpiryPage role={viewerRole} />
           ) : onPool ? (
-            <PoolAllocationPage />
+            <PoolAllocationPage role={viewerRole} />
           ) : onDocs ? (
-            <DocumentsPage />
+            <DocumentsPage role={viewerRole} />
           ) : onConfig ? (
             <ConfigurationPage />
           ) : onUsers ? (
@@ -248,7 +247,14 @@ export default function App() {
           ) : onAudit ? (
             <AuditLogPage />
           ) : (
-            <DashboardPage isAdmin={isAdmin} query={query} hospital={hospital} onHospital={setHospital} />
+            <DashboardPage
+              isAdmin={isAdmin}
+              query={query}
+              hospital={hospital}
+              onHospital={setHospital}
+              role={viewerRole}
+              hospitalLocked={hospitalAdmin}
+            />
           )}
         </main>
         {!ops && <Footer isAdmin={isAdmin} />}

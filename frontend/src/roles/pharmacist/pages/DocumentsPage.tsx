@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Icon } from '../../../components/common/icons';
+import { homeHrefFor } from '../../../data/navigation';
+import { mayActFor, requiredRoleHint } from '../../../lib/rbac';
+import type { RoleCode } from '../../../lib/rbac';
 import { DocumentDrawer } from '../components/DocumentDrawer';
 import { DOC_TABS, DOC_TYPE_META, DOCUMENTS } from '../data/documents';
 import type { TransferDoc } from '../data/documents';
@@ -12,12 +15,19 @@ type StatusFilter = 'all' | 'ISSUED' | 'VOID';
  * PDF buttons are visual. Corrections never edit an issued document — a new
  * version is issued and the old one is VOID (FR-XC-005).
  */
-export function DocumentsPage() {
+/**
+ * UI-15 Document printing. `role` gates the print actions through `lib/rbac.ts` and drives the
+ * breadcrumb home.
+ */
+export function DocumentsPage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
   const [tab, setTab] = useState('all');
   const [status, setStatus] = useState<StatusFilter>('all');
   const [q, setQ] = useState('');
   const [selId, setSelId] = useState('');
   const [drawerOpen, setDrawerOpen] = useState(false);
+  /* Printing a borrow / transfer document belongs to the pharmacist and the warehouse (§4.1/§4.2). */
+  const mayPrint = mayActFor(role, 'PHARMACIST', 'printDocuments');
+  const printHint = requiredRoleHint('printDocuments');
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -60,7 +70,7 @@ export function DocumentsPage() {
       <section className="pagehead">
         <div>
           <nav aria-label="breadcrumb" style={{ fontSize: 12, lineHeight: '16px' }}>
-            <a href="/" className="link" style={{ fontSize: 12, fontWeight: 400 }}>
+            <a href={homeHrefFor(role)} className="link" style={{ fontSize: 12, fontWeight: 400 }}>
               หน้าหลัก
             </a>{' '}
             <span aria-hidden="true">›</span> <span aria-current="page">พิมพ์เอกสาร</span>
@@ -74,7 +84,7 @@ export function DocumentsPage() {
           </div>
         </div>
         <div className="pagehead-actions">
-          <button className="btn btn-p">
+          <button className="btn btn-p" disabled={!mayPrint} title={mayPrint ? undefined : printHint}>
             <Icon name="printer" />
             พิมพ์ 30
           </button>
@@ -195,6 +205,7 @@ export function DocumentsPage() {
         <DocumentDrawer
           key={sel.id}
           doc={sel}
+          mayPrint={mayPrint}
           onOpenDoc={(id) => setSelId(id)}
           onClose={() => setDrawerOpen(false)}
         />

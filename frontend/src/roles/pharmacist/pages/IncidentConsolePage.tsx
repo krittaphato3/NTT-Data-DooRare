@@ -1,5 +1,8 @@
 import { useState } from 'react';
 import { Icon } from '../../../components/common/icons';
+import { homeHrefFor } from '../../../data/navigation';
+import { mayActFor, requiredRoleHint } from '../../../lib/rbac';
+import type { RoleCode } from '../../../lib/rbac';
 import { fmtTime, useTick } from '../../../lib/time';
 import {
   EMERGENCY_BORROWS,
@@ -14,7 +17,11 @@ import {
 
 type Scenario = 'normal' | 's1' | 's2' | 's3' | 's4' | 's5' | 's6' | 's7';
 
-export function IncidentConsolePage() {
+/**
+ * UI-11 – UI-13 Emergency incident console. `role` gates every incident write through
+ * `lib/rbac.ts` and drives the breadcrumb home.
+ */
+export function IncidentConsolePage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
   const [scenario, setScenario] = useState<Scenario>('normal');
   const [activeTab, setActiveTab] = useState<'plan' | 'borrow' | 'pack' | 'summary'>('plan');
   const [showIntakeModal, setShowIntakeModal] = useState(false);
@@ -44,6 +51,11 @@ export function IncidentConsolePage() {
   const [triageBlack, setTriageBlack] = useState('0');
   const [intakeEta, setIntakeEta] = useState('20');
   const [unsureEta, setUnsureEta] = useState(true);
+
+  /* Recording an incident, adjusting the plan, packing a kit and closing the event are all F3
+     writes (§4.3). A role without them either does not see the control or sees it disabled. */
+  const mayWrite = mayActFor(role, 'PHARMACIST', 'manageIncident');
+  const writeHint = requiredRoleHint('manageIncident');
 
   const tick = useTick();
   const etaLeft = Math.max(0, INCIDENT_HEADER.etaMinutes - tick);
@@ -162,15 +174,17 @@ export function IncidentConsolePage() {
             ชุดพร้อมใช้: Trauma Set 30 · IV Set 12 · Intubation Set 0 (ต่ำกว่าเป้า)
           </div>
           <div style={{ marginTop: 8 }}>
-            <button
-              type="button"
-              className="btn btn-p"
-              style={{ background: '#b91c1c', border: 'none', fontWeight: 600, padding: '8px 20px' }}
-              onClick={() => setShowIntakeModal(true)}
-            >
-              <Icon name="siren" className="ic14" />
-              + แจ้งเหตุใหม่
-            </button>
+            {mayWrite && (
+              <button
+                type="button"
+                className="btn btn-p"
+                style={{ background: '#b91c1c', border: 'none', fontWeight: 600, padding: '8px 20px' }}
+                onClick={() => setShowIntakeModal(true)}
+              >
+                <Icon name="siren" className="ic14" />
+                + แจ้งเหตุใหม่
+              </button>
+            )}
           </div>
         </div>
 
@@ -242,14 +256,16 @@ export function IncidentConsolePage() {
               อาจเป็นเหตุเดียวกับ INC-2026-000015 · แจ้งเมื่อ 6 นาทีที่ก่อน ห่างจากจุดนี้ 180 ม. (เกณฑ์ 10 นาที / 500 ม.) · รถโดยสารคว่ำ ถ.เทพารักษ์ กม.12
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button
-                type="button"
-                className="btn btn-p btn-sm"
-                style={{ fontSize: 11.5 }}
-                onClick={() => setShowIntakeModal(false)}
-              >
-                รวมกับเหตุเดิม (อัปเดตจำนวน)
-              </button>
+              {mayWrite && (
+                <button
+                  type="button"
+                  className="btn btn-p btn-sm"
+                  style={{ fontSize: 11.5 }}
+                  onClick={() => setShowIntakeModal(false)}
+                >
+                  รวมกับเหตุเดิม (อัปเดตจำนวน)
+                </button>
+              )}
               <button
                 type="button"
                 className="btn btn-s btn-sm"
@@ -436,17 +452,19 @@ export function IncidentConsolePage() {
             >
               ยกเลิก
             </button>
-            <button
-              type="button"
-              className="btn btn-p"
-              style={{ background: '#b91c1c', border: 'none', fontWeight: 600 }}
-              onClick={() => {
-                setShowIntakeModal(false);
-                setScenario('normal');
-              }}
-            >
-              บันทึกเหตุและคำนวณแผน
-            </button>
+            {mayWrite && (
+              <button
+                type="button"
+                className="btn btn-p"
+                style={{ background: '#b91c1c', border: 'none', fontWeight: 600 }}
+                onClick={() => {
+                  setShowIntakeModal(false);
+                  setScenario('normal');
+                }}
+              >
+                บันทึกเหตุและคำนวณแผน
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -510,17 +528,19 @@ export function IncidentConsolePage() {
             >
               ไม่ยกเลิก
             </button>
-            <button
-              type="button"
-              className="btn btn-p"
-              style={{ background: '#b91c1c', border: 'none', fontWeight: 600 }}
-              onClick={() => {
-                setShowCancelModal(false);
-                setScenario('s7');
-              }}
-            >
-              ยืนยันยกเลิกเหตุ
-            </button>
+            {mayWrite && (
+              <button
+                type="button"
+                className="btn btn-p"
+                style={{ background: '#b91c1c', border: 'none', fontWeight: 600 }}
+                onClick={() => {
+                  setShowCancelModal(false);
+                  setScenario('s7');
+                }}
+              >
+                ยืนยันยกเลิกเหตุ
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -566,7 +586,7 @@ export function IncidentConsolePage() {
           alignItems: 'center',
         }}
       >
-        <a href="/" className="link" style={{ fontSize: 12.5, color: '#2563eb' }}>
+        <a href={homeHrefFor(role)} className="link" style={{ fontSize: 12.5, color: '#2563eb' }}>
           หน้าหลัก
         </a>
         <Icon name="chev" className="ic12" style={{ transform: 'rotate(-90deg)', color: '#94a3b8' }} />
@@ -640,6 +660,7 @@ export function IncidentConsolePage() {
               type="text"
               placeholder=""
               value={customEta}
+              disabled={!mayWrite}
               onChange={(e) => setCustomEta(e.target.value)}
               style={{
                 width: 50,
@@ -657,6 +678,8 @@ export function IncidentConsolePage() {
               type="button"
               className="btn btn-p btn-sm"
               style={{ height: 30, fontSize: 12 }}
+              disabled={!mayWrite}
+              title={mayWrite ? undefined : writeHint}
               onClick={() => alert('บันทึก ETA แล้ว')}
             >
               บันทึก
@@ -682,7 +705,12 @@ export function IncidentConsolePage() {
             รพ.พระสมุทรเจดีย์ฯ ปฏิเสธ · รพ.บางพลี หมดเวลา · รพ.บางเสาธง ปฏิเสธ · ยังขาด 8 AMP · แจ้งหัวหน้าเวร ER และเภสัชกรแล้ว
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
-            <button type="button" className="btn btn-p btn-sm">
+            <button
+              type="button"
+              className="btn btn-p btn-sm"
+              disabled={!mayWrite}
+              title={mayWrite ? undefined : writeHint}
+            >
               เพิ่มผู้ให้ยืมเอง
             </button>
             <button type="button" className="btn btn-s btn-sm">
@@ -765,19 +793,21 @@ export function IncidentConsolePage() {
             <Icon name="history" className="ic14" />
             ประวัติ
           </button>
-          <button
-            className="btn btn-sm"
-            style={{
-              background: '#b91c1c',
-              color: '#ffffff',
-              border: 'none',
-              fontWeight: 600,
-            }}
-            onClick={() => setShowIntakeModal(true)}
-          >
-            <Icon name="siren" className="ic14" />
-            + แจ้งเหตุใหม่
-          </button>
+          {mayWrite && (
+            <button
+              className="btn btn-sm"
+              style={{
+                background: '#b91c1c',
+                color: '#ffffff',
+                border: 'none',
+                fontWeight: 600,
+              }}
+              onClick={() => setShowIntakeModal(true)}
+            >
+              <Icon name="siren" className="ic14" />
+              + แจ้งเหตุใหม่
+            </button>
+          )}
         </div>
       </div>
 
@@ -917,13 +947,15 @@ export function IncidentConsolePage() {
               <span style={{ fontSize: 11.5, color: '#0f2a5c', fontWeight: 600 }}>
                 ผู้ป่วยตามระดับคัดแยก
               </span>
-              <button
-                className="link"
-                style={{ fontSize: 11, color: '#2563eb', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
-                onClick={() => setShowIntakeModal(true)}
-              >
-                แก้จำนวนผู้ป่วย
-              </button>
+              {mayWrite && (
+                <button
+                  className="link"
+                  style={{ fontSize: 11, color: '#2563eb', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                  onClick={() => setShowIntakeModal(true)}
+                >
+                  แก้จำนวนผู้ป่วย
+                </button>
+              )}
             </div>
             <div style={{ display: 'flex', gap: 6 }}>
               <div
@@ -1233,6 +1265,8 @@ export function IncidentConsolePage() {
                               type="button"
                               className="btn btn-s btn-sm"
                               style={{ width: 22, height: 22, padding: 0, minWidth: 22 }}
+                              disabled={!mayWrite}
+                              title={mayWrite ? undefined : writeHint}
                               onClick={() => updateAssembleQty(idx, -1)}
                             >
                               -
@@ -1252,6 +1286,8 @@ export function IncidentConsolePage() {
                               type="button"
                               className="btn btn-s btn-sm"
                               style={{ width: 22, height: 22, padding: 0, minWidth: 22 }}
+                              disabled={!mayWrite}
+                              title={mayWrite ? undefined : writeHint}
                               onClick={() => updateAssembleQty(idx, 1)}
                             >
                               +
@@ -1416,6 +1452,8 @@ export function IncidentConsolePage() {
                           type="button"
                           className={`btn btn-sm ${burnKitOption === 'none' ? 'btn-p' : 'btn-s'}`}
                           style={{ flex: 1, height: 28, fontSize: 11 }}
+                          disabled={!mayWrite}
+                          title={mayWrite ? undefined : writeHint}
                           onClick={() => setBurnKitOption('none')}
                         >
                           ไม่มี
@@ -1424,6 +1462,8 @@ export function IncidentConsolePage() {
                           type="button"
                           className={`btn btn-sm ${burnKitOption === 'add' ? 'btn-p' : 'btn-s'}`}
                           style={{ flex: 1.5, height: 28, fontSize: 11 }}
+                          disabled={!mayWrite}
+                          title={mayWrite ? undefined : writeHint}
                           onClick={() => {
                             setBurnKitOption('add');
                             setScenario('s5'); // Preview S5 no recipe
@@ -1444,6 +1484,8 @@ export function IncidentConsolePage() {
                           type="button"
                           className={`btn btn-sm ${prcOption === '4' ? 'btn-p' : 'btn-s'}`}
                           style={{ flex: 1, height: 28, fontSize: 11 }}
+                          disabled={!mayWrite}
+                          title={mayWrite ? undefined : writeHint}
                           onClick={() => setPrcOption('4')}
                         >
                           คง 4 ยูนิต
@@ -1452,6 +1494,8 @@ export function IncidentConsolePage() {
                           type="button"
                           className={`btn btn-sm ${prcOption === '6' ? 'btn-p' : 'btn-s'}`}
                           style={{ flex: 1, height: 28, fontSize: 11 }}
+                          disabled={!mayWrite}
+                          title={mayWrite ? undefined : writeHint}
                           onClick={() => setPrcOption('6')}
                         >
                           เพิ่มเป็น 6
@@ -1703,6 +1747,8 @@ export function IncidentConsolePage() {
                       type="button"
                       className="btn btn-p"
                       style={{ fontWeight: 600 }}
+                      disabled={!mayWrite}
+                      title={mayWrite ? undefined : writeHint}
                       onClick={() => confirmKitAssembly(kit.id)}
                     >
                       ยืนยันจัดชุดเสร็จ
@@ -1785,6 +1831,8 @@ export function IncidentConsolePage() {
               type="button"
               className="btn btn-p"
               style={{ fontWeight: 600, flex: 'none' }}
+              disabled={!mayWrite}
+              title={mayWrite ? undefined : writeHint}
               onClick={() => setIsClosed(true)}
             >
               {isClosed ? 'ขอปิดเหตุการณ์แล้ว' : 'ขอปิดเหตุการณ์'}
@@ -1826,6 +1874,7 @@ export function IncidentConsolePage() {
                         <input
                           type="text"
                           value={row.actualUsed}
+                          disabled={!mayWrite}
                           onChange={(e) => updateActualUsed(idx, e.target.value)}
                           style={{
                             width: 50,
@@ -1861,11 +1910,21 @@ export function IncidentConsolePage() {
               }}
             >
               <div style={{ display: 'flex', gap: 10 }}>
-                <button type="button" className="btn btn-s btn-sm">
+                <button
+                  type="button"
+                  className="btn btn-s btn-sm"
+                  disabled={!mayWrite}
+                  title={mayWrite ? undefined : writeHint}
+                >
                   <Icon name="printer" className="ic14" />
                   สรุปยืม-คืน INCIDENT_REPORT
                 </button>
-                <button type="button" className="btn btn-s btn-sm">
+                <button
+                  type="button"
+                  className="btn btn-s btn-sm"
+                  disabled={!mayWrite}
+                  title={mayWrite ? undefined : writeHint}
+                >
                   <Icon name="printer" className="ic14" />
                   สรุปการใช้เวชภัณฑ์ UCEP_REPORT
                 </button>

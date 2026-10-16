@@ -1,4 +1,5 @@
 import { Icon } from '../../../components/common/icons';
+import { requiredRoleHint } from '../../../lib/rbac';
 import { DocPaper } from './DocPaper';
 import { DOC_TYPE_META } from '../data/documents';
 import type { TransferDoc } from '../data/documents';
@@ -8,10 +9,14 @@ interface DocumentDrawerProps {
   /** link to the replacement document when VOID (FR-XC-005) */
   onOpenDoc: (id: string) => void;
   onClose: () => void;
+  /** Whether the viewer may print/export the document (API-XC-001/002, §4.1). */
+  mayPrint?: boolean;
 }
 
 /** UI-15 document detail — print/PDF actions (API-XC-001/002), versioned paper. */
-export function DocumentDrawer({ doc, onOpenDoc, onClose }: DocumentDrawerProps) {
+export function DocumentDrawer({ doc, onOpenDoc, onClose, mayPrint = true }: DocumentDrawerProps) {
+  /* Tooltip for a viewer without print rights — names the roles that own the action. */
+  const noPrintHint = mayPrint ? undefined : requiredRoleHint('printDocuments');
   const meta = DOC_TYPE_META[doc.type];
   const isVoid = doc.status === 'VOID';
   const voidNote = doc.voidNote;
@@ -40,10 +45,10 @@ export function DocumentDrawer({ doc, onOpenDoc, onClose }: DocumentDrawerProps)
         </div>
 
         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
-          <button className="btn btn-p btn-sm">
+          <button className="btn btn-p btn-sm" disabled={!mayPrint} title={mayPrint ? undefined : noPrintHint}>
             <Icon name="printer" /> พิมพ์
           </button>
-          <button className="btn btn-s btn-sm">
+          <button className="btn btn-s btn-sm" disabled={!mayPrint} title={mayPrint ? undefined : noPrintHint}>
             <Icon name="fileText" /> PDF
           </button>
           <button className="link" type="button" style={{ fontSize: 12.5 }}>
