@@ -1,4 +1,5 @@
 import { Icon } from '../../../components/common/icons';
+import { HOSPITAL_ADMIN_HOME_HREF } from '../../../data/navigation';
 import '../admin.css';
 
 interface AccessDeniedProps {
@@ -11,7 +12,10 @@ interface AccessDeniedProps {
  * 403 card for a direct `?page=` that the signed-in role may not open.
  * The server enforces authorisation on every request (SEC-002) — this only keeps the UI honest.
  */
-export function AccessDenied({ homeHref = '?page=users', homeLabel = 'จัดการผู้ใช้' }: AccessDeniedProps) {
+export function AccessDenied({
+  homeHref = HOSPITAL_ADMIN_HOME_HREF,
+  homeLabel = 'จัดการผู้ใช้',
+}: AccessDeniedProps) {
   return (
     <section className="card" data-part="access-denied">
       <div className="ha-state">

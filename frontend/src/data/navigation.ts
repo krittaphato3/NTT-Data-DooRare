@@ -68,6 +68,18 @@ export const ROLE_NAV: Record<string, string[]> = {
 export const ADMIN_GROUP_LABEL = 'ผู้ดูแลระบบ';
 
 /**
+ * Query value that selects the Hospital Admin shell.
+ *
+ * Every in-app href must carry it: sidebar links are plain `<a href="?page=…">` navigations, and a
+ * relative query-only href REPLACES the whole query string — so without the role in the href the
+ * shell silently falls back to the default role (PHARMACIST) on every click.
+ */
+export const HOSPITAL_ADMIN_ROLE_QUERY = 'hospital-admin';
+
+/** First page of the Hospital Admin shell — the sidebar target and the breadcrumb "home". */
+export const HOSPITAL_ADMIN_HOME_HREF = `?page=users&role=${HOSPITAL_ADMIN_ROLE_QUERY}`;
+
+/**
  * Nav keys actually rendered per role. `ROLE_NAV.HOSPITAL_ADMIN` keeps the full catalogue list
  * verbatim from the mockup, but the shell only shows this role's own administration pages
  * (user management + audit log); the operational entries stay in the data and are reached through

@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Icon } from '../../../components/common/icons';
+import { HOSPITAL_ADMIN_HOME_HREF } from '../../../data/navigation';
 import { can } from '../../../lib/rbac';
 import { AuditDrawer } from '../components/AuditDrawer';
 import { AuditFilterBar, EMPTY_AUDIT_FILTERS } from '../components/AuditFilterBar';
@@ -88,7 +89,7 @@ export function AuditLogPage() {
       <section className="pagehead" data-part="page-header">
         <div>
           <nav aria-label="breadcrumb" style={{ fontSize: 12, lineHeight: '16px' }}>
-            <a href="/" className="link" style={{ fontSize: 12, fontWeight: 400 }}>
+            <a href={HOSPITAL_ADMIN_HOME_HREF} className="link" style={{ fontSize: 12, fontWeight: 400 }}>
               หน้าหลัก
             </a>{' '}
             <span aria-hidden="true">›</span> <span aria-current="page">บันทึกตรวจสอบ</span>

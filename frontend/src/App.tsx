@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Footer } from './components/layout/Footer';
 import { Sidebar } from './components/layout/Sidebar';
 import { TopBar } from './components/layout/TopBar';
-import { getNavForRole } from './data/navigation';
+import { getNavForRole, HOSPITAL_ADMIN_HOME_HREF, HOSPITAL_ADMIN_ROLE_QUERY } from './data/navigation';
 import { can } from './lib/rbac';
 import type { ShellNavEntry } from './data/navigation';
 import { USER } from './data/session';
@@ -67,13 +67,29 @@ function initialRoute(): { page: Page; transportRole: TransportRole } {
   }
 }
 
+/**
+ * Roles that are not the implicit default and therefore must be carried in every in-app href.
+ * A relative `?page=…` link replaces the whole query string, so a role whose shell is selected by a
+ * query param would otherwise be dropped on each click (and on browser back/forward).
+ */
+const ROLE_QUERY: Record<string, string> = {
+  HOSPITAL_ADMIN: HOSPITAL_ADMIN_ROLE_QUERY,
+};
+
+/** Append the role query param to an href when the role is not the default. */
+function withRole(href: string, role: string): string {
+  const r = ROLE_QUERY[role];
+  if (!r || href === '#' || href.includes(`role=${r}`)) return href;
+  return `${href}${href.includes('?') ? '&' : '?'}role=${r}`;
+}
+
 /** Point the catalogue's mockup hrefs (`*.dc.html`) at the screens that exist in this app. */
 function withLinks(items: ShellNavEntry[], role: string): ShellNavEntry[] {
   const suffix = role === 'PHARMACIST' ? '&role=pharmacist' : '';
   // HOSPITAL_ADMIN shares the pharmacist screens (spec §5.2 grants own-hospital viewing), so the
   // pharmacist hrefs apply to it too; its own admin pages are mapped below.
   const pharmacistLike = role === 'PHARMACIST' || role === 'HOSPITAL_ADMIN';
-  return items.map((e) => {
+  const resolved = items.map((e) => {
     if ('kind' in e) return e;
     if (e.key === 'tr') return { ...e, href: `?page=transport${suffix}` };
     if (e.key === 'lend') return { ...e, href: '?page=lend' };
@@ -89,6 +105,8 @@ function withLinks(items: ShellNavEntry[], role: string): ShellNavEntry[] {
     if (e.key === 'req' && pharmacistLike) return { ...e, href: '?page=requests' };
     return e;
   });
+  // Keep the active role in every link so navigation never falls back to the default shell.
+  return resolved.map((e) => ('kind' in e ? e : { ...e, href: withRole(e.href, role) }));
 }
 
 function initialRole(): boolean {
@@ -196,7 +214,7 @@ export default function App() {
             /* Phase 1: only User management + Audit log are built for HOSPITAL_ADMIN. The spec's
                read-only operational views (dashboard, alerts, requests, …) arrive in Phase 2; until
                then a direct ?page= must not render a screen carrying pharmacist write actions. */
-            <AccessDenied />
+            <AccessDenied homeHref={HOSPITAL_ADMIN_HOME_HREF} />
           ) : onTransport ? (
             <TransportTrackingPage role={route.transportRole} />
           ) : onRequests ? (
