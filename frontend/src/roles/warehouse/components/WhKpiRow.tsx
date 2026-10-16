@@ -27,14 +27,16 @@ export function WhKpiRow({ urgentLeft }: { urgentLeft: string }) {
       <div className="card kpi-card">
         <div style={headStyle}>
           <span style={labelStyle}>
-            เตรียมของ<span className="en" style={{ display: 'block' }}>To prepare</span>
+            อยู่ระหว่างจัดส่ง<span className="en" style={{ display: 'block' }}>On the way</span>
           </span>
-          <span className="sev" style={{ width: 32, height: 32, background: '#FFEDD5', color: '#9A3412' }}>
-            <Icon name="box" />
+          <span className="sev" style={{ width: 32, height: 32, background: '#DBEAFE', color: '#1E40AF' }}>
+            <Icon name="truck" />
           </span>
         </div>
-        <div className="num kpi-num" style={{ color: '#0F2A5C' }}>{t.preparing}</div>
-        <div style={subStyle}>งานใหม่จากเภสัชกร (F1/F2) และ F3 ที่ยืนยันแล้ว</div>
+        <div className="num kpi-num" style={{ color: '#0F2A5C' }}>{t.onTheWay}</div>
+        <div style={subStyle}>
+          ขึ้นรถแล้ว <span className="num">{t.loaded}</span> · กำลังเดินทาง <span className="num">{t.inTransit}</span>
+        </div>
       </div>
       <div className="card kpi-card">
         <div style={headStyle}>

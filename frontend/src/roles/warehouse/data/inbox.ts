@@ -1,7 +1,7 @@
 /**
  * Urgent lender requests (F3) the warehouse must confirm before sending goods to another hospital.
  * Only F3 needs a WH decision: for F1 and F2 the pharmacist decides, and the task simply arrives in
- * Transport tracking at "กำลังเตรียมของ". Confirming here starts a transport task at that same step;
+ * Transport tracking at "รอขึ้นรถ" (WAITING_DISPATCH). Confirming here starts a transport task at that same step;
  * declining sends the request back to the pharmacist.
  */
 import type { IconName } from '../../../components/common/icons';
@@ -83,7 +83,7 @@ export function inboxStats() {
  *  - Outbound: goods we pack and send to other hospitals. F1/F2 arrive after the pharmacist approves;
  *    F3 urgent requests are answered on the Emergency page and then show up here too.
  *  - Inbound: goods other hospitals are sending us (heads-up; WH confirms receipt on arrival).
- * Confirming an outbound task hands it to Transport tracking (starting at "กำลังเตรียมของ").
+ * Confirming an outbound task hands it to Transport tracking (starting at "รอขึ้นรถ").
  */
 export const OUTBOUND_TASKS: RequestItem[] = [
   {

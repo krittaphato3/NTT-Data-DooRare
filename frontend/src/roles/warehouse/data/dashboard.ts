@@ -77,10 +77,10 @@ function transportTodo(): TodoItem[] {
   return [
     {
       id: preparing.id, group: 'transport', icon: 'box', sevCls: 'sev-urg',
-      title: `เตรียมของ ${preparing.id}`,
-      detail: `${preparing.drug} · ${fmtQty(preparing.qty)} ${preparing.unit} → ${HOSPITALS[preparing.to]} · หยิบตามล็อต FEFO แล้วกด “เตรียมเสร็จ”`,
-      badge: { label: 'กำลังเตรียมของ', tone: 'orange' },
-      cta: { label: 'เตรียมของ', primary: true, page: 'transport' },
+      title: `ขึ้นรถ + ถ่ายรูป ${preparing.id}`,
+      detail: `${preparing.drug} · ${fmtQty(preparing.qty)} ${preparing.unit} → ${HOSPITALS[preparing.to]} · เตรียมของตามล็อต FEFO แล้วขึ้นรถ`,
+      badge: { label: 'รอขึ้นรถ', tone: 'amber' },
+      cta: { label: 'ขึ้นรถ', primary: true, page: 'transport' },
     },
     {
       id: dispatch.id, group: 'transport', icon: 'hourglass', sevCls: 'sev-urg',
@@ -141,7 +141,6 @@ export function transportStats() {
   const count = (pred: (s: (typeof SHIPMENTS)[number]) => boolean) => SHIPMENTS.filter(pred).length;
   const byStatus = (st: TransportStatus) => count((s) => s.status === st);
   return {
-    preparing: count((s) => s.status === 'PREPARING' && isOutbound(s)),
     waiting: count((s) => s.status === 'WAITING_DISPATCH' && isOutbound(s)),
     cancelRequested: count((s) => s.status === 'WAITING_DISPATCH' && !!s.cancelRequest),
     toReceive: count((s) => s.status === 'ARRIVED' && !isOutbound(s)),
@@ -158,5 +157,5 @@ export function transportStats() {
 }
 
 export const STATUS_ROWS: { code: TransportStatus; label: string; tone: Tone; icon: IconName }[] = (
-  ['PREPARING', 'WAITING_DISPATCH', 'LOADED', 'IN_TRANSIT', 'ARRIVED', 'RECEIVED', 'CANCELLED'] as TransportStatus[]
+  ['WAITING_DISPATCH', 'LOADED', 'IN_TRANSIT', 'ARRIVED', 'RECEIVED', 'CANCELLED'] as TransportStatus[]
 ).map((code) => ({ code, label: STATUS_META[code].label, tone: STATUS_META[code].tone, icon: STATUS_META[code].icon }));

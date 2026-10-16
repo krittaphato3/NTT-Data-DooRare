@@ -31,13 +31,6 @@ interface ShipmentDrawerProps {
   /** Statuses set by the warehouse on behalf of the driver, with the audit reason. */
   proxies: ProxyEntry[];
   onProxy: (to: ProxyEntry['to'], reason: string) => void;
-  /** Pick-list lines (`<taskId>:<lot>`) already ticked while PREPARING. */
-  picked: ReadonlySet<string>;
-  onTogglePick: (lineId: string) => void;
-  /** WH finished picking: the task moves to WAITING_DISPATCH. */
-  onPrepared: () => void;
-  /** The task was marked prepared in this session (for the step note). */
-  preparedNow: boolean;
 }
 
 function returnNote(s: Shipment): string {
@@ -66,9 +59,7 @@ export function ShipmentDrawer(p: ShipmentDrawerProps) {
         : null;
   const canRequestCancel = p.canCancel && status === 'WAITING_DISPATCH' && out && !cancelReq;
   const canProxy = op && out && (status === 'LOADED' || status === 'IN_TRANSIT');
-  const preparing = op && out && status === 'PREPARING';
-  const pickLines = (s.pick ?? []).map((l) => ({ ...l, id: `${s.id}:${l.lot}` }));
-  const allPicked = pickLines.length > 0 && pickLines.every((l) => p.picked.has(l.id));
+  const showPick = op && out && status === 'WAITING_DISPATCH' && (s.pick?.length ?? 0) > 0;
 
   return (
     <aside className="tr-drawer" aria-label="รายละเอียดงานขนส่ง">
@@ -134,7 +125,7 @@ export function ShipmentDrawer(p: ShipmentDrawerProps) {
               const done = i < idx || status === 'RECEIVED';
               const cur = i === idx && status !== 'RECEIVED';
               const proxied = p.proxies.some((x) => x.to === st.code);
-              const sub = proxied ? '19:12 · บันทึกแทนคนขับ โดย คุณประเสริฐ' : st.code === 'PREPARING' && p.preparedNow ? '19:12 · เตรียมเสร็จ · คุณประเสริฐ' : s.times[i] || (cur ? 'ขั้นปัจจุบัน' : status === 'CANCELLED' ? '—' : 'ยังไม่ถึง');
+              const sub = proxied ? '19:12 · บันทึกแทนคนขับ โดย คุณประเสริฐ' : s.times[i] || (cur ? 'ขั้นปัจจุบัน' : status === 'CANCELLED' ? '—' : 'ยังไม่ถึง');
               return (
                 <li key={st.code}>
                   <span className="step-rail">
@@ -178,35 +169,24 @@ export function ShipmentDrawer(p: ShipmentDrawerProps) {
           <div className="return-note">{returnNote(s)}</div>
         </div>
 
-        {preparing && (
-          <section aria-label="เตรียมของ" className="prep-box">
-            <b style={{ fontSize: 14, color: '#0F2A5C', fontWeight: 600 }}>เตรียมของ · หยิบตามล็อต FEFO</b>
-            <ul className="ib-pick">
-              {pickLines.map((l) => (
-                <li key={l.id}>
-                  <label>
-                    <input type="checkbox" checked={p.picked.has(l.id)} onChange={() => p.onTogglePick(l.id)} aria-label={`หยิบแล้ว ${l.lot}`} />
-                    <span style={{ flex: 1, minWidth: 0 }}>
-                      <span className="code" style={{ fontWeight: 600, color: '#0F2A5C', fontSize: 12.5 }}>{l.lot}</span>
-                      {l.coldChain && <span className="badge t-blue" style={{ marginLeft: 6, height: 18, fontSize: 11 }}>Cold chain</span>}
-                      <span className="sub" style={{ display: 'block' }}>หมดอายุ {l.expiry} (เหลือ {l.daysLeft} วัน) · {l.location}</span>
-                    </span>
-                    <span className="num" style={{ fontWeight: 600, color: '#0F2A5C' }}>{fmtQty(l.qty)} {s.unit}</span>
-                  </label>
+        {showPick && (
+          <div>
+            <h3 className="tr-h3">
+              ล็อตที่จะหยิบ <span className="en">FEFO · เตรียมก่อนขึ้นรถ</span>
+            </h3>
+            <ul className="kt-list">
+              {s.pick!.map((l) => (
+                <li key={l.lot}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <span className="code" style={{ fontWeight: 600, color: '#0F2A5C', fontSize: 12.5 }}>{l.lot}</span>
+                    {l.coldChain && <span className="badge t-blue" style={{ marginLeft: 6, height: 18, fontSize: 11 }}>Cold chain</span>}
+                    <span className="sub" style={{ display: 'block' }}>หมดอายุ {l.expiry} (เหลือ {l.daysLeft} วัน) · {l.location}</span>
+                  </div>
+                  <span className="num" style={{ fontWeight: 600, color: '#0F2A5C' }}>{fmtQty(l.qty)} {s.unit}</span>
                 </li>
               ))}
             </ul>
-            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10 }}>
-              <button className="btn btn-p" disabled={!allPicked} title={allPicked ? undefined : 'ต้องติ๊กหยิบครบทุกรายการก่อน'} onClick={p.onPrepared}>
-                <Icon name="checkc" />
-                เตรียมเสร็จ · รอขึ้นรถ
-              </button>
-              <span className="sub">เมื่อเตรียมเสร็จ งานจะอยู่ในสถานะ “รอขึ้นรถ” แล้วขึ้นรถ + ถ่ายรูปต่อ</span>
-            </div>
-          </section>
-        )}
-        {!out && status === 'PREPARING' && (
-          <div role="status" className="proxy-done" style={{ background: '#EFF6FF', color: '#1E40AF' }}>ต้นทางกำลังเตรียมของ · ยังไม่ขึ้นรถ คุณจะยืนยันรับเมื่อของถึง</div>
+          </div>
         )}
 
         {canProxy && <ProxyStatusPanel key={status} status={status} onSubmit={p.onProxy} />}

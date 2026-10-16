@@ -65,7 +65,7 @@ export function InboxDrawer({ item: it, urgentLeft, startDeclining, onClose, onC
           <div role="status" className="receipt-done">
             <Icon name="checkc" style={{ marginTop: 2 }} />
             <span style={{ flex: 1 }}>
-              ยืนยันแล้ว · สร้างงานขนส่ง <span className="code">{it.transportId}</span> สถานะ "กำลังเตรียมของ" ไปหยิบของและขึ้นรถที่หน้าติดตามการขนส่ง
+              ยืนยันแล้ว · สร้างงานขนส่ง <span className="code">{it.transportId}</span> สถานะ "รอขึ้นรถ" ไปเตรียมของและขึ้นรถที่หน้าติดตามการขนส่ง
             </span>
           </div>
         )}

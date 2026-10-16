@@ -26,7 +26,6 @@ function actionFor(r: ShipmentRowState, canOperate: boolean, canCancel: boolean)
   // Only the pharmacist answers a cancel request (RBAC §4.4).
   if (canCancel && r.status === 'WAITING_DISPATCH' && out && r.cancelRequested) return ['ตอบคำขอยกเลิก', 'btn-p'];
   if (!canOperate) return ['ดูรายละเอียด', 'btn-s'];
-  if (r.status === 'PREPARING' && out) return ['เตรียมของ', 'btn-p'];
   if (r.status === 'ARRIVED' && !out) return ['ยืนยันรับของ', 'btn-p'];
   if (r.status === 'WAITING_DISPATCH' && out) return r.cancelRequested ? ['ดูรายละเอียด', 'btn-s'] : ['ขึ้นรถ + ถ่ายรูป', 'btn-p'];
   if (r.status === 'LOADED' && r.pending) return ['ซิงก์ตอนนี้', 'btn-s'];

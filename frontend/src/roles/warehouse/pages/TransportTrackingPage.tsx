@@ -52,8 +52,6 @@ export function TransportTrackingPage({ role = 'WAREHOUSE_OFFICER' }: { role?: T
   const [counted, setCounted] = useState<Record<string, string>>({});
   const [cancel, setCancel] = useState<Record<string, CancelDecision>>({});
   const [proxy, setProxy] = useState<Record<string, ProxyEntry[]>>({});
-  const [prepared, setPrepared] = useState<ReadonlySet<string>>(new Set());
-  const [picked, setPicked] = useState<ReadonlySet<string>>(new Set());
   const [q, setQ] = useState('');
   const [kind, setKind] = useState<'all' | ShipmentKind>('all');
   const [driver, setDriver] = useState('all');
@@ -70,7 +68,6 @@ export function TransportTrackingPage({ role = 'WAREHOUSE_OFFICER' }: { role?: T
 
   const effective = (s: Shipment): ShipmentRowState => {
     let st = s.status;
-    if (st === 'PREPARING' && prepared.has(s.id)) st = 'WAITING_DISPATCH';
     const px = proxy[s.id];
     if (px?.length) st = px[px.length - 1].to;
     if (receipt[s.id] === 'done') st = 'RECEIVED';
@@ -78,7 +75,7 @@ export function TransportTrackingPage({ role = 'WAREHOUSE_OFFICER' }: { role?: T
     return { shipment: s, status: st, pending: canOperate && !!s.pending && !synced, cancelRequested: !!s.cancelRequest && st === 'WAITING_DISPATCH' && cancel[s.id] !== 'no' };
   };
 
-  const all = useMemo(() => SHIPMENTS.map(effective), [receipt, cancel, synced, proxy, prepared]); // eslint-disable-line react-hooks/exhaustive-deps
+  const all = useMemo(() => SHIPMENTS.map(effective), [receipt, cancel, synced, proxy]); // eslint-disable-line react-hooks/exhaustive-deps
   const queued = all.filter((r) => r.pending).length;
 
   const byDir = all.filter((r) => (dir === 'out' ? isOutbound(r.shipment) : !isOutbound(r.shipment)));
@@ -101,7 +98,7 @@ export function TransportTrackingPage({ role = 'WAREHOUSE_OFFICER' }: { role?: T
       label: 'ส่งออกจากเรา',
       count: outAll.length,
       todo: canOperate && waiting ? `รอขึ้นรถ ${waiting}` : '',
-      hint: canOperate ? 'งานที่อนุมัติ/ยืนยันแล้ว · เตรียมของ แล้วขึ้นรถ + ถ่ายรูปที่นี่' : 'งานที่ รพ.เราส่งไปให้ รพ.อื่น',
+      hint: canOperate ? 'งานที่อนุมัติ/ยืนยันแล้ว · เตรียมของแล้วขึ้นรถ + ถ่ายรูปที่นี่' : 'งานที่ รพ.เราส่งไปให้ รพ.อื่น',
     },
     {
       id: 'in',
@@ -138,7 +135,7 @@ export function TransportTrackingPage({ role = 'WAREHOUSE_OFFICER' }: { role?: T
           <div style={{ fontSize: 13 }}>รพ.สมุทรปราการ · สต็อกต้นทางตัดเมื่อขึ้นรถ (LOADED) ปลายทางรับเข้าเมื่อยืนยันรับ (RECEIVED) · ขั้นตอนขนส่งไม่มี Agent</div>
           {canOperate && (
             <div style={{ fontSize: 12.5, marginTop: 2 }}>
-              งานส่งออกเข้าที่นี่เมื่อเภสัชกรอนุมัติ (F1/F2) หรือ WH ยืนยันคำขอเร่งด่วน (F3) · ขั้นตอน: เตรียมของ → รอขึ้นรถ → ขึ้นรถ + รูป → ถึง{' '}
+              งานส่งออกเข้าที่นี่เมื่อเภสัชกรอนุมัติ (F1/F2) หรือ WH ยืนยันคำขอเร่งด่วน (F3) · ขั้นตอน: รอขึ้นรถ (เตรียมของ) → ขึ้นรถ + รูป → ถึง{' '}
               <a className="link" href="?role=warehouse&page=kit" style={{ fontSize: 12.5 }}>ไปที่คำขอเร่งด่วน F3</a>
             </div>
           )}
@@ -231,10 +228,6 @@ export function TransportTrackingPage({ role = 'WAREHOUSE_OFFICER' }: { role?: T
           canOperate={canOperate}
           canCancel={canCancel}
           proxies={proxy[sel.shipment.id] ?? []}
-          picked={picked}
-          onTogglePick={(id) => setPicked((x) => { const n = new Set(x); if (n.has(id)) n.delete(id); else n.add(id); return n; })}
-          onPrepared={() => setPrepared((x) => new Set(x).add(sel.shipment.id))}
-          preparedNow={prepared.has(sel.shipment.id)}
           onProxy={(to, reason) => setProxy((m) => ({ ...m, [sel.shipment.id]: [...(m[sel.shipment.id] ?? []), { to, reason }] }))}
         />
       )}

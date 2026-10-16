@@ -1,8 +1,7 @@
 /** Mock data + status metadata for UI-14 Transport tracking (SM-6). Replace with API-F2a-012 later. */
 import type { IconName } from '../../../components/common/icons';
 
-/** `PREPARING` is a proposed first step (WH confirmed the request and is picking) ahead of SM-6's WAITING_DISPATCH. */
-export type TransportStatus = 'PREPARING' | 'WAITING_DISPATCH' | 'LOADED' | 'IN_TRANSIT' | 'ARRIVED' | 'RECEIVED' | 'CANCELLED';
+export type TransportStatus = 'WAITING_DISPATCH' | 'LOADED' | 'IN_TRANSIT' | 'ARRIVED' | 'RECEIVED' | 'CANCELLED';
 export type Tone = 'amber' | 'green' | 'blue' | 'teal' | 'red' | 'grey' | 'orange';
 export type HospitalCode = 'HA' | 'HB' | 'HC' | 'HD' | 'HE';
 export type ShipmentKind = 'F1' | 'F2';
@@ -53,7 +52,7 @@ export interface Shipment {
   photos: TransportPhoto[];
   /** Timestamp line for each step in STEPS order ('' = not reached). */
   times: string[];
-  /** Lots to pick while the task is PREPARING (outbound only). */
+  /** Lots the warehouse will pick while the task waits for the truck (outbound only, read-only preview). */
   pick?: PickLot[];
   lot: string;
   lotCode: string;
@@ -76,9 +75,9 @@ const RAW_SHIPMENTS: Shipment[] = [
 /** Rows created from confirmed requests (work inbox) that are still being prepared / waiting for a truck. */
 const NEW_ROWS: Shipment[] = [
   {
-    id: 'TR-2026-000342', kind: 'F1', ref: 'BR-2026-000129 · รอบ 1', drug: 'CefTRIAXone 1 g inj', qty: 30, unit: 'VIAL', from: 'HA', to: 'HD', status: 'PREPARING',
+    id: 'TR-2026-000342', kind: 'F1', ref: 'BR-2026-000129 · รอบ 1', drug: 'CefTRIAXone 1 g inj', qty: 30, unit: 'VIAL', from: 'HA', to: 'HD', status: 'WAITING_DISPATCH',
     updatedAt: '17:55', updatedBy: 'คุณประเสริฐ (คลัง)', driver: 'คุณสมชาย แก้วกล้า', photos: [],
-    times: ['17:55 · ยืนยันเตรียม · กำลังหยิบของ', '', '', '', '', ''], lot: 'CF2511 + CF2512 · อายุ > 180 วัน (FEFO)', lotCode: 'CF2511',
+    times: ['17:55 · ยืนยันแล้ว · เตรียมของ รอขึ้นรถ', '', '', '', ''], lot: 'CF2511 + CF2512 · อายุ > 180 วัน (FEFO)', lotCode: 'CF2511',
     pick: [
       { lot: 'CF2511', expiry: '30 พ.ย. 2027', daysLeft: 382, qty: 20, location: 'ชั้น C3' },
       { lot: 'CF2512', expiry: '31 ธ.ค. 2027', daysLeft: 413, qty: 10, location: 'ชั้น C3' },
@@ -87,31 +86,27 @@ const NEW_ROWS: Shipment[] = [
   {
     id: 'TR-2026-000345', kind: 'F1', ref: 'BR-2026-000127 · EMERGENCY', drug: 'Atropine 1 mg/mL amp', qty: 20, unit: 'AMP', from: 'HA', to: 'HD', status: 'IN_TRANSIT',
     updatedAt: '16:05', updatedBy: 'คุณสมชาย (คนขับ)', driver: 'คุณสมชาย แก้วกล้า', photos: [{ stage: 'LOADED', time: '15:55' }, { stage: 'LOADED', time: '15:56' }],
-    times: ['15:42 · WH ยืนยันคำขอเร่งด่วน (F3)', '15:50 · เตรียมเสร็จ', '15:56 · คุณประเสริฐ + รูป 2', '16:05 · คุณสมชาย ออกเดินทาง', '', ''], lot: 'ATR-2504 · หมดอายุ 30 เม.ย. 2027 (198 วัน)', lotCode: 'ATR-2504', expiry: 'หมดอายุ 30 เม.ย. 2027',
+    times: ['15:42 · WH ยืนยันคำขอเร่งด่วน (F3)', '15:56 · คุณประเสริฐ + รูป 2', '16:05 · คุณสมชาย ออกเดินทาง', '', ''], lot: 'ATR-2504 · หมดอายุ 30 เม.ย. 2027 (198 วัน)', lotCode: 'ATR-2504', expiry: 'หมดอายุ 30 เม.ย. 2027',
   },
   {
-    id: 'TR-2026-000343', kind: 'F1', ref: 'BR-2026-000130 · รอบ 1', drug: 'Adrenaline 1 mg/mL amp', qty: 20, unit: 'AMP', from: 'HB', to: 'HA', status: 'PREPARING',
-    updatedAt: '18:20', updatedBy: 'รพ.บางพลี (ต้นทาง)', photos: [], times: ['18:20 · ต้นทางกำลังเตรียมของ', '', '', '', '', ''], lot: 'ต้นทางเลือกล็อต (FEFO)', lotCode: 'ADR-HB2501',
+    id: 'TR-2026-000343', kind: 'F1', ref: 'BR-2026-000130 · รอบ 1', drug: 'Adrenaline 1 mg/mL amp', qty: 20, unit: 'AMP', from: 'HB', to: 'HA', status: 'WAITING_DISPATCH',
+    updatedAt: '18:20', updatedBy: 'รพ.บางพลี (ต้นทาง)', photos: [], times: ['18:20 · ต้นทางกำลังเตรียมของ · รอขึ้นรถ', '', '', '', ''], lot: 'ต้นทางเลือกล็อต (FEFO)', lotCode: 'ADR-HB2501',
   },
   {
     id: 'TR-2026-000344', kind: 'F2', ref: 'AP-2026-000047 · บรรทัด 2', drug: 'Metformin 500 mg tab', qty: 2000, unit: 'เม็ด', from: 'HD', to: 'HA', status: 'WAITING_DISPATCH',
-    updatedAt: '17:10', updatedBy: 'ระบบ (แผนอนุมัติ)', photos: [], times: ['ต้นทางเตรียมเสร็จแล้ว', '17:10 · แผนอนุมัติ', '', '', '', ''], lot: 'MET-HD2412 · หมดอายุ 31 ม.ค. 2027 (109 วัน)', lotCode: 'MET-HD2412', expiry: 'หมดอายุ 31 ม.ค. 2027',
+    updatedAt: '17:10', updatedBy: 'ระบบ (แผนอนุมัติ)', photos: [], times: ['17:10 · แผนอนุมัติ · ต้นทางรอขึ้นรถ', '', '', '', ''], lot: 'MET-HD2412 · หมดอายุ 31 ม.ค. 2027 (109 วัน)', lotCode: 'MET-HD2412', expiry: 'หมดอายุ 31 ม.ค. 2027',
   },
 ];
 
-/** Older mock rows predate the PREPARING step: prefix it as already done. */
-const withPrepStep = (s: Shipment): Shipment => (s.times.length === 5 ? { ...s, times: [s.from === HOME_HOSPITAL ? 'เตรียมเสร็จแล้ว' : 'ต้นทางเตรียมเสร็จแล้ว', ...s.times] } : s);
-
-export const SHIPMENTS: Shipment[] = [...NEW_ROWS, ...RAW_SHIPMENTS.map(withPrepStep)];
+export const SHIPMENTS: Shipment[] = [...NEW_ROWS, ...RAW_SHIPMENTS];
 
 
 export const DRIVERS = ['คุณสมชาย แก้วกล้า', 'คุณวิทยา บุญมา'];
 
 /** SM-6 main path (CANCELLED is a side exit). */
-export const STEP_ORDER: TransportStatus[] = ['PREPARING', 'WAITING_DISPATCH', 'LOADED', 'IN_TRANSIT', 'ARRIVED', 'RECEIVED'];
+export const STEP_ORDER: TransportStatus[] = ['WAITING_DISPATCH', 'LOADED', 'IN_TRANSIT', 'ARRIVED', 'RECEIVED'];
 
 export const STEPS: { label: string; code: TransportStatus; icon: IconName }[] = [
-  { label: 'เตรียมของ · เจ้าหน้าที่คลัง', code: 'PREPARING', icon: 'box' },
   { label: 'รอขึ้นรถ', code: 'WAITING_DISPATCH', icon: 'hourglass' },
   { label: 'ขึ้นรถแล้ว · เจ้าหน้าที่ + รูป', code: 'LOADED', icon: 'box' },
   { label: 'ออกเดินทาง · คนขับ', code: 'IN_TRANSIT', icon: 'truck' },
@@ -120,7 +115,6 @@ export const STEPS: { label: string; code: TransportStatus; icon: IconName }[] =
 ];
 
 export const STATUS_META: Record<TransportStatus, { label: string; tileLabel: string; tone: Tone; icon: IconName }> = {
-  PREPARING: { label: 'กำลังเตรียมของ', tileLabel: 'เตรียมของ', tone: 'orange', icon: 'box' },
   WAITING_DISPATCH: { label: 'รอขึ้นรถ', tileLabel: 'รอขึ้นรถ', tone: 'amber', icon: 'hourglass' },
   LOADED: { label: 'ขึ้นรถแล้ว', tileLabel: 'ขึ้นรถแล้ว', tone: 'blue', icon: 'box' },
   IN_TRANSIT: { label: 'กำลังเดินทาง', tileLabel: 'กำลังเดินทาง', tone: 'blue', icon: 'truck' },
@@ -129,7 +123,7 @@ export const STATUS_META: Record<TransportStatus, { label: string; tileLabel: st
   CANCELLED: { label: 'ยกเลิก', tileLabel: 'ยกเลิก', tone: 'grey', icon: 'minusc' },
 };
 
-export const TILE_ORDER: TransportStatus[] = ['PREPARING', 'WAITING_DISPATCH', 'LOADED', 'IN_TRANSIT', 'ARRIVED', 'RECEIVED', 'CANCELLED'];
+export const TILE_ORDER: TransportStatus[] = ['WAITING_DISPATCH', 'LOADED', 'IN_TRANSIT', 'ARRIVED', 'RECEIVED', 'CANCELLED'];
 
 export const AUDIT_HISTORY = [
   { t: '18:58', who: 'คุณวิทยา บุญมา', role: 'DRIVER · รพ.บางบ่อ', tone: 'orange' as Tone, text: 'TR-2026-000334 ถึงปลายทาง + รูป 1', code: 'TRANSPORT_ARRIVED' },
