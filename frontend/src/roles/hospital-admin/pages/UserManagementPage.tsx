@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Icon } from '../../../components/common/icons';
 import { SESSIONS } from '../../../data/session';
 import type { RoleCode } from '../../../lib/rbac';
+import { can, HOSPITAL_ADMIN_ROLE } from '../../../lib/rbac';
 import { Modal } from '../components/Modal';
 import { ReasonDialog } from '../components/ReasonDialog';
 import { UserFormModal } from '../components/UserFormModal';
@@ -39,9 +40,12 @@ export function UserManagementPage() {
   const [editId, setEditId] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<ConfirmState | null>(null);
 
-  const activeAdmins = users.filter((u) => u.status === 'ACTIVE' && u.roles.includes('HOSPITAL_ADMIN'));
+  // Permission decisions come from lib/rbac.ts; this page only applies them.
+  const mayManage = can(HOSPITAL_ADMIN_ROLE, 'manageUsers');
+
+  const activeAdmins = users.filter((u) => u.status === 'ACTIVE' && u.roles.includes(HOSPITAL_ADMIN_ROLE));
   const isLastAdmin = (u: HospitalUser) =>
-    u.status === 'ACTIVE' && u.roles.includes('HOSPITAL_ADMIN') && activeAdmins.length <= 1;
+    u.status === 'ACTIVE' && u.roles.includes(HOSPITAL_ADMIN_ROLE) && activeAdmins.length <= 1;
 
   const rows = useMemo(() => {
     const needle = search.trim().toLowerCase();
@@ -174,16 +178,18 @@ export function UserManagementPage() {
             <Icon name="refresh" />
             รีเฟรช
           </button>
-          <button
-            className="btn btn-p"
-            onClick={() => {
-              setEditId(null);
-              setFormMode('create');
-            }}
-          >
-            <Icon name="plus" />
-            เชิญผู้ใช้ใหม่
-          </button>
+          {mayManage && (
+            <button
+              className="btn btn-p"
+              onClick={() => {
+                setEditId(null);
+                setFormMode('create');
+              }}
+            >
+              <Icon name="plus" />
+              เชิญผู้ใช้ใหม่
+            </button>
+          )}
         </div>
       </section>
 
@@ -283,6 +289,7 @@ export function UserManagementPage() {
           <UserTable
             rows={rows}
             activeId={detailId}
+            mayManage={mayManage}
             isLastAdmin={isLastAdmin}
             onOpen={setDetailId}
             onEdit={(id) => {
@@ -307,7 +314,7 @@ export function UserManagementPage() {
         <UserFormModal
           mode="edit"
           user={editTarget}
-          lockHospitalAdmin={isLastAdmin(editTarget)}
+          lockedRole={isLastAdmin(editTarget) ? HOSPITAL_ADMIN_ROLE : undefined}
           onClose={() => {
             setFormMode(null);
             setEditId(null);

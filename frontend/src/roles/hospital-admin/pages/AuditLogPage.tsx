@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Icon } from '../../../components/common/icons';
+import { can } from '../../../lib/rbac';
 import { AuditDrawer } from '../components/AuditDrawer';
 import { AuditFilterBar, EMPTY_AUDIT_FILTERS } from '../components/AuditFilterBar';
 import type { AuditFilters } from '../components/AuditFilterBar';
@@ -13,8 +14,8 @@ const PAGE_SIZE = 8;
 /**
  * Audit log (UI-18). Endpoint it will call when wired: API-AD-003 `GET /api/v1/audit-log`.
  *
- * Access: read-only + export for the hospital's own entries only (spec §5.2 "View Audit Log ✔ own";
- * SEC-002/003). "ตรวจสอบ hash chain" verifies the tamper-evident chain of those entries.
+ * Access: read-only + export for the hospital's own entries only (spec §5.2 grants HOSPITAL_ADMIN
+ * own-hospital audit viewing; SEC-002/003). "ตรวจสอบ hash chain" verifies the tamper-evident chain.
  */
 export function AuditLogPage() {
   const [filters, setFilters] = useState<AuditFilters>(EMPTY_AUDIT_FILTERS);
@@ -22,6 +23,9 @@ export function AuditLogPage() {
   const [loading, setLoading] = useState(false);
   const [verify, setVerify] = useState<ChainVerifyResult | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
+
+  // Permission decision comes from lib/rbac.ts, never from a local role check.
+  const mayView = can('HOSPITAL_ADMIN', 'viewAudit');
 
   const filtered = useMemo(() => {
     const needle = filters.q.trim().toLowerCase();
@@ -97,11 +101,11 @@ export function AuditLogPage() {
           </div>
         </div>
         <div className="pagehead-actions">
-          <button className="btn btn-s" onClick={exportCsv} disabled={filtered.length === 0}>
+          <button className="btn btn-s" onClick={exportCsv} disabled={!mayView || filtered.length === 0}>
             <Icon name="upload" />
             ส่งออก CSV
           </button>
-          <button className="btn btn-p" onClick={verifyChain} disabled={loading}>
+          <button className="btn btn-p" onClick={verifyChain} disabled={!mayView || loading}>
             <Icon name="shield" />
             {loading ? 'กำลังตรวจสอบ…' : 'ตรวจสอบ hash chain'}
           </button>

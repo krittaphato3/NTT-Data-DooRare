@@ -68,12 +68,24 @@ export const ROLE_NAV: Record<string, string[]> = {
 export const ADMIN_GROUP_LABEL = 'ผู้ดูแลระบบ';
 
 /**
+ * Nav keys actually rendered per role. `ROLE_NAV.HOSPITAL_ADMIN` keeps the full catalogue list
+ * verbatim from the mockup, but the shell only shows this role's own administration pages
+ * (user management + audit log); the operational entries stay in the data and are reached through
+ * the roles that own them. `cfg` is absent too — Configuration (UI-17) is not built yet.
+ */
+const VISIBLE_KEYS: Record<string, string[]> = {
+  HOSPITAL_ADMIN: ['|', 'usr', 'aud'],
+};
+
+/**
  * Resolve a role's nav keys into renderable entries. `activeKey` marks the
  * current page (today the dashboard shell renders `dash` active).
  */
 export function getNavForRole(role: string, activeKey = 'dash'): ShellNavEntry[] {
   const keys = ROLE_NAV[role] ?? ROLE_NAV.PHARMACIST;
-  return keys.map((k): ShellNavEntry => {
+  const visible = VISIBLE_KEYS[role];
+  const shown = visible ? keys.filter((k) => visible.includes(k)) : keys;
+  return shown.map((k): ShellNavEntry => {
     if (k === '|') return { kind: 'group', th: ADMIN_GROUP_LABEL };
     const d = CATALOGUE[k];
     return {

@@ -3,6 +3,7 @@ import { Footer } from './components/layout/Footer';
 import { Sidebar } from './components/layout/Sidebar';
 import { TopBar } from './components/layout/TopBar';
 import { getNavForRole } from './data/navigation';
+import { can } from './lib/rbac';
 import type { ShellNavEntry } from './data/navigation';
 import { USER } from './data/session';
 import { ALERTS } from './roles/pharmacist/data/dashboard';
@@ -138,6 +139,9 @@ export default function App() {
   const navRole = warehouse ? 'WAREHOUSE_OFFICER' : hospitalAdmin ? 'HOSPITAL_ADMIN' : 'PHARMACIST';
   const activeKey = onTransport ? 'tr' : onRequests ? 'req' : onLend ? 'lend' : onIncident ? 'inc' : onAlerts ? 'alerts' : onReport ? 'rep' : onExpiry ? 'exp' : onPool ? 'pool' : onDocs ? 'doc' : onUsers ? 'usr' : onAudit ? 'aud' : 'dash';
   const navItems = withLinks(getNavForRole(navRole, activeKey), navRole);
+  // Page access for the Hospital Admin shell is decided by lib/rbac.ts, not by local role checks.
+  const mayManageUsers = can(navRole, 'manageUsers');
+  const mayViewAudit = can(navRole, 'viewAudit');
 
   // Mobile drawer: lock page scroll, close on Escape and when resizing to desktop.
   useEffect(() => {
@@ -188,7 +192,7 @@ export default function App() {
           user={warehouse ? WAREHOUSE_USER : hospitalAdmin ? HOSPITAL_ADMIN_USER : opsBar ? PHARMACIST_OPS_USER : undefined}
         />
         <main className="mainpad">
-          {hospitalAdmin && !onUsers && !onAudit ? (
+          {hospitalAdmin && !((onUsers && mayManageUsers) || (onAudit && mayViewAudit)) ? (
             /* Phase 1: only User management + Audit log are built for HOSPITAL_ADMIN. The spec's
                read-only operational views (dashboard, alerts, requests, …) arrive in Phase 2; until
                then a direct ?page= must not render a screen carrying pharmacist write actions. */

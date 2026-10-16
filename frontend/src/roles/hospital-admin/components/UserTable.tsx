@@ -5,6 +5,8 @@ import type { HospitalUser } from '../data/users';
 interface UserTableProps {
   rows: HospitalUser[];
   activeId: string | null;
+  /** From `can(role, 'manageUsers')` — hides the write actions when the role may not manage accounts. */
+  mayManage: boolean;
   /** True when this row is the hospital's last active admin (cannot be suspended/self-demoted). */
   isLastAdmin: (user: HospitalUser) => boolean;
   onOpen: (id: string) => void;
@@ -14,7 +16,7 @@ interface UserTableProps {
 }
 
 /** User list for UI (User management). Own-hospital accounts only. */
-export function UserTable({ rows, activeId, isLastAdmin, onOpen, onEdit, onToggleStatus, onResend }: UserTableProps) {
+export function UserTable({ rows, activeId, mayManage, isLastAdmin, onOpen, onEdit, onToggleStatus, onResend }: UserTableProps) {
   return (
     <div className="scroll-x">
       <table className="tbl" aria-label="บัญชีผู้ใช้ในโรงพยาบาล">
@@ -86,22 +88,30 @@ export function UserTable({ rows, activeId, isLastAdmin, onOpen, onEdit, onToggl
                     <button className="btn btn-s btn-sm" onClick={() => onOpen(u.id)}>
                       ดูรายละเอียด
                     </button>
-                    <button className="btn btn-s btn-sm" onClick={() => onEdit(u.id)}>
-                      แก้ไขบทบาท
-                    </button>
-                    {u.status === 'INVITED' && (
-                      <button className="btn btn-s btn-sm" onClick={() => onResend(u.id)}>
-                        ส่งคำเชิญซ้ำ
-                      </button>
+                    {mayManage && (
+                      <>
+                        <button className="btn btn-s btn-sm" onClick={() => onEdit(u.id)}>
+                          แก้ไขบทบาท
+                        </button>
+                        {u.status === 'INVITED' && (
+                          <button className="btn btn-s btn-sm" onClick={() => onResend(u.id)}>
+                            ส่งคำเชิญซ้ำ
+                          </button>
+                        )}
+                        <button
+                          className="btn btn-s btn-sm"
+                          disabled={u.status === 'SUSPENDED' ? false : lastAdmin}
+                          title={
+                            lastAdmin && u.status !== 'SUSPENDED'
+                              ? 'ต้องมีผู้ดูแลโรงพยาบาลที่ใช้งานได้อย่างน้อย 1 บัญชี'
+                              : undefined
+                          }
+                          onClick={() => onToggleStatus(u.id)}
+                        >
+                          {u.status === 'SUSPENDED' ? 'เปิดใช้งาน' : 'ระงับ'}
+                        </button>
+                      </>
                     )}
-                    <button
-                      className="btn btn-s btn-sm"
-                      disabled={u.status === 'SUSPENDED' ? false : lastAdmin}
-                      title={lastAdmin && u.status !== 'SUSPENDED' ? 'ต้องมีผู้ดูแลโรงพยาบาลที่ใช้งานได้อย่างน้อย 1 บัญชี' : undefined}
-                      onClick={() => onToggleStatus(u.id)}
-                    >
-                      {u.status === 'SUSPENDED' ? 'เปิดใช้งาน' : 'ระงับ'}
-                    </button>
                   </span>
                 </td>
               </tr>

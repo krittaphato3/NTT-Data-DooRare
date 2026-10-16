@@ -162,6 +162,12 @@ export const ROLE_LABEL: Record<RoleCode, string> = {
  * so SYSTEM_ADMIN and REGION_ADMIN are excluded (rbac.md §5.5 reaches the same conclusion, though by
  * capping at "roles 1-5" rather than by scope).
  */
+/**
+ * The hospital-level administrator role. Used for role-identity rules (the "last admin" safeguard,
+ * rbac.md §5.5) so the literal appears once instead of being re-typed in components.
+ */
+export const HOSPITAL_ADMIN_ROLE: RoleCode = 'HOSPITAL_ADMIN';
+
 export const ASSIGNABLE_ROLES: RoleCode[] = [
   'HOSPITAL_ADMIN',
   'PHARMACIST',

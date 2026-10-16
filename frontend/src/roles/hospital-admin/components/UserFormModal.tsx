@@ -15,8 +15,8 @@ export interface UserFormValues {
 interface UserFormModalProps {
   mode: 'create' | 'edit';
   user?: HospitalUser;
-  /** Editing the hospital's last active admin: HOSPITAL_ADMIN must stay checked. */
-  lockHospitalAdmin?: boolean;
+  /** Role that must stay assigned (editing the hospital's last active admin). */
+  lockedRole?: RoleCode;
   onClose: () => void;
   onSubmit: (values: UserFormValues) => void;
 }
@@ -27,7 +27,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
  * Invite / edit a hospital account (API-AD-006/007). Role choices are limited to the roles a
  * hospital admin may grant — SYSTEM_ADMIN and REGION_ADMIN are never offered (spec §5.2 scope).
  */
-export function UserFormModal({ mode, user, lockHospitalAdmin = false, onClose, onSubmit }: UserFormModalProps) {
+export function UserFormModal({ mode, user, lockedRole, onClose, onSubmit }: UserFormModalProps) {
   const [name, setName] = useState(user?.name ?? '');
   const [email, setEmail] = useState(user?.email ?? '');
   const [roles, setRoles] = useState<RoleCode[]>(user?.roles ?? []);
@@ -51,8 +51,8 @@ export function UserFormModal({ mode, user, lockHospitalAdmin = false, onClose, 
     onSubmit({
       name: name.trim(),
       email: email.trim(),
-      // Keep the locked admin role even if the checkbox state drifted.
-      roles: lockHospitalAdmin && !roles.includes('HOSPITAL_ADMIN') ? ['HOSPITAL_ADMIN', ...roles] : roles,
+      // Keep the locked role even if the checkbox state drifted.
+      roles: lockedRole && !roles.includes(lockedRole) ? [lockedRole, ...roles] : roles,
       mfa,
       reason: reason.trim(),
     });
@@ -109,7 +109,7 @@ export function UserFormModal({ mode, user, lockHospitalAdmin = false, onClose, 
           </span>
           <span className="ha-checks" role="group" aria-labelledby="uf-roles-label">
             {ROLE_OPTIONS.map((o) => {
-              const locked = lockHospitalAdmin && o.value === 'HOSPITAL_ADMIN';
+              const locked = lockedRole === o.value;
               return (
                 <label key={o.value} className="ha-check" title={locked ? 'ต้องมีผู้ดูแลโรงพยาบาลอย่างน้อย 1 บัญชี' : undefined}>
                   <input
