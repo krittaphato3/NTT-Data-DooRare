@@ -789,14 +789,16 @@ body.nav-open {
   color: var(--body);
 }
 .side-logo {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  background: #1d4ed8;
-  color: #ffffff;
-  display: grid;
-  place-items: center;
+  width: 38px;
+  height: 36px;
+  object-fit: contain;
   flex: none;
+}
+.side-brand-wordmark {
+  display: block;
+  height: 20px;
+  width: auto;
+  margin-bottom: 2px;
 }
 .side-close {
   display: none;

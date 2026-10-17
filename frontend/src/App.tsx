@@ -11,7 +11,6 @@ import { ALERTS } from './roles/pharmacist/data/dashboard';
 import { BorrowRequestsPage } from './roles/pharmacist/pages/BorrowRequestsPage';
 import { DashboardPage } from './roles/pharmacist/pages/DashboardPage';
 import { DocumentsPage } from './roles/pharmacist/pages/DocumentsPage';
-import { IncidentConsolePage } from './roles/pharmacist/pages/IncidentConsolePage';
 import { LenderQueuePage } from './roles/pharmacist/pages/LenderQueuePage';
 import { NearExpiryPage } from './roles/pharmacist/pages/NearExpiryPage';
 import { PoolAllocationPage } from './roles/pharmacist/pages/PoolAllocationPage';
@@ -34,7 +33,10 @@ import { AuditLogPage } from './roles/hospital-admin/pages/AuditLogPage';
 import { ConfigurationPage } from './roles/hospital-admin/pages/ConfigurationPage';
 import { UserManagementPage } from './roles/hospital-admin/pages/UserManagementPage';
 import { DRIVER_NOTIFICATIONS, DRIVER_USER } from './roles/driver/data/session';
+import { erPageFromQuery, getErNav } from './roles/er/data/navigation';
+import { ErPageSwitch } from './roles/er/pages/ErPageSwitch';
 import { ER_NOTIFICATIONS, ER_USER } from './roles/er/data/session';
+import { IncidentConsolePage } from './roles/er/pages/IncidentConsolePage';
 import { getDriverNav } from './roles/driver/data/navigation';
 import { DriverTransportPage } from './roles/driver/pages/DriverTransportPage';
 import { DriverSyncPage } from './roles/driver/pages/DriverSyncPage';
@@ -208,6 +210,7 @@ export default function App() {
   const [hospitalAdmin] = useState(initialHospitalAdmin);
   const [isDriver] = useState(initialDriver);
   const [route] = useState(initialRoute);
+  const [erPage] = useState(erPageFromQuery);
   const onAdmin = route.page === 'admin';
   const isSystemAdminRole = isAdmin || route.isSystemAdmin || onAdmin;
   const isDriverRole = !isSystemAdminRole && (isDriver || route.isDriver);
@@ -284,12 +287,14 @@ export default function App() {
     : onAudit
     ? 'aud'
     : 'dash';
-  // WH and Driver own their sidebars; other roles use the shared catalogue.
+  // WH, Driver and ER own their sidebars; other roles use the shared catalogue.
   const navItems = isDriverRole
     ? getDriverNav(onSync ? 'sync' : onDocs ? 'docs' : 'transport')
     : warehouse
       ? getWarehouseNav(onTransport ? 'transport' : onInbox ? 'inbox' : onKit ? 'kit' : onDocs ? 'docs' : onStock || onAlerts ? 'stock' : onRequests ? 'requests' : onExpiry ? 'expiry' : onDrugs ? 'drugs' : 'dashboard')
-      : withLinks(getNavForRole(navRole, activeKey), navRole);
+      : isEr
+        ? getErNav(erPage)
+        : withLinks(getNavForRole(navRole, activeKey), navRole);
   // Page access for the Hospital Admin shell is decided by lib/rbac.ts, not by local role checks.
   const mayManageUsers = can(navRole, 'manageUsers');
   const mayViewAudit = can(navRole, 'viewAudit');
@@ -364,6 +369,8 @@ export default function App() {
             ) : (
               <DriverTransportPage />
             )
+          ) : isEr ? (
+            <ErPageSwitch page={erPage} />
           ) : hospitalAdmin && !isHospitalAdminPageAllowed ? (
             /* Guard for a Hospital Admin page outside the allowed set. The operational screens
                render read-only through their `role` prop; this card covers anything else. */

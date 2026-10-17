@@ -13,6 +13,12 @@ src/
       pages/                 route-level screens (DashboardPage)
       components/            role-scoped panels (KpiRow, AlertsPanel, MiddleRow, …)
       data/                  role-scoped mock data (dashboard.ts)
+    er/
+      pages/                 one page per step (ErDashboard, IncidentList, Plan, Borrow, Pack, Summary, ErDocuments) + ErPageSwitch;
+                             IncidentConsolePage = tabbed view for pharmacist / hospital-admin
+      components/            IncidentFrame (shared chrome) + panels/cards/modals per step
+      data/                  incident.ts, navigation.ts (getErNav, erHref), access.ts, scenario.ts, session.ts
+    warehouse/ driver/ …     same pages / components / data layout; each owns its sidebar in data/navigation.ts
   data/                      shared shell data (session.ts, navigation.ts)
   lib/                       helpers (time.ts: countdown formatting + tick hook)
 ```

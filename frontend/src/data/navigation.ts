@@ -88,8 +88,7 @@ export const HOSPITAL_ADMIN_HOME_HREF = `?page=users&role=${HOSPITAL_ADMIN_ROLE_
 export const DRIVER_ROLE_QUERY = 'driver';
 export const DRIVER_HOME_HREF = `?page=transport&role=${DRIVER_ROLE_QUERY}`;
 export const ER_ROLE_QUERY = 'er';
-/** ER has no dashboard (F3 only): its home is the incident console. */
-export const ER_HOME_HREF = `?page=incident&role=${ER_ROLE_QUERY}`;
+export const ER_HOME_HREF = `?page=dashboard&role=${ER_ROLE_QUERY}`;
 export const SYSTEM_ADMIN_ROLE_QUERY = 'admin';
 export const SYSTEM_ADMIN_HOME_HREF = `?page=admin&role=${SYSTEM_ADMIN_ROLE_QUERY}`;
 
