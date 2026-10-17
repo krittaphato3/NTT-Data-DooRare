@@ -15,6 +15,7 @@ import { NearExpiryPage } from './roles/pharmacist/pages/NearExpiryPage';
 import { PoolAllocationPage } from './roles/pharmacist/pages/PoolAllocationPage';
 import { ReportsPage } from './roles/pharmacist/pages/ReportsPage';
 import { StockAlertsPage } from './roles/pharmacist/pages/StockAlertsPage';
+import { ER_NOTIFICATIONS, ER_USER } from './roles/er/data/session';
 import { WAREHOUSE_NOTIFICATIONS, WAREHOUSE_USER } from './roles/warehouse/data/session';
 import { TransportTrackingPage } from './roles/warehouse/pages/TransportTrackingPage';
 import type { TransportRole } from './roles/warehouse/pages/TransportTrackingPage';
@@ -36,8 +37,9 @@ const PHARMACIST_OPS_USER = { ...USER, scopeLabel: 'เห็นเฉพาะ�
  * `?page=pool` shows Pool & allocation (UI-08 · UI-09),
  * `?page=docs` shows Documents (UI-15).
  * `&role=pharmacist` = read-only pharmacist transport view, otherwise the warehouse officer view.
+ * `?role=er` = ER shell (RBAC role 3): F3 incident console only, with ER actions enabled.
  */
-function initialRoute(): { page: Page; transportRole: TransportRole } {
+function initialRoute(): { page: Page; transportRole: TransportRole; er: boolean } {
   try {
     const q = new URLSearchParams(window.location.search);
     const p = q.get('page');
@@ -51,12 +53,15 @@ function initialRoute(): { page: Page; transportRole: TransportRole } {
     else if (p === 'expiry' || p === 'exp') page = 'expiry';
     else if (p === 'pool' || p === 'alloc') page = 'pool';
     else if (p === 'docs' || p === 'doc') page = 'docs';
+    // ER works in F3 only, so every ER URL lands on the incident console.
+    const er = q.get('role')?.toLowerCase() === 'er';
     return {
-      page,
+      page: er ? 'incident' : page,
       transportRole: q.get('role')?.toLowerCase() === 'pharmacist' ? 'PHARMACIST' : 'WAREHOUSE_OFFICER',
+      er,
     };
   } catch {
-    return { page: 'dashboard', transportRole: 'WAREHOUSE_OFFICER' };
+    return { page: 'dashboard', transportRole: 'WAREHOUSE_OFFICER', er: false };
   }
 }
 
@@ -67,7 +72,7 @@ function withLinks(items: ShellNavEntry[], role: string): ShellNavEntry[] {
     if ('kind' in e) return e;
     if (e.key === 'tr') return { ...e, href: `?page=transport${suffix}` };
     if (e.key === 'lend') return { ...e, href: '?page=lend' };
-    if (e.key === 'inc') return { ...e, href: '?page=incident' };
+    if (e.key === 'inc') return { ...e, href: role === 'ER' ? '?page=incident&role=er' : '?page=incident' };
     if (e.key === 'alerts') return { ...e, href: '?page=alerts' };
     if (e.key === 'rep') return { ...e, href: `?page=report${suffix}` };
     if (e.key === 'exp') return { ...e, href: '?page=expiry' };
@@ -108,11 +113,12 @@ export default function App() {
   const onPool = route.page === 'pool';
   const onDocs = route.page === 'docs';
   const warehouse = onTransport && route.transportRole === 'WAREHOUSE_OFFICER';
-  // Warehouse transport, UI-05, and UI-06 use the ops top bar (no footer); dashboard, alerts, report, and incident console keep standard shell.
-  const ops = warehouse || onRequests || onLend;
+  // Warehouse transport, UI-05, UI-06 and the ER shell use the ops top bar (no footer); dashboard, alerts, report, and the pharmacist incident console keep the standard shell.
+  const er = route.er;
+  const ops = warehouse || onRequests || onLend || er;
   // UI-07/08/09/15 screenshots use the ops top bar but keep the standard footer.
   const opsBar = ops || onExpiry || onPool || onDocs;
-  const navRole = warehouse ? 'WAREHOUSE_OFFICER' : 'PHARMACIST';
+  const navRole = warehouse ? 'WAREHOUSE_OFFICER' : er ? 'ER' : 'PHARMACIST';
   const activeKey = onTransport ? 'tr' : onRequests ? 'req' : onLend ? 'lend' : onIncident ? 'inc' : onAlerts ? 'alerts' : onReport ? 'rep' : onExpiry ? 'exp' : onPool ? 'pool' : onDocs ? 'doc' : 'dash';
   const navItems = withLinks(getNavForRole(navRole, activeKey), navRole);
 
@@ -154,9 +160,9 @@ export default function App() {
           isAdmin={isAdmin}
           navOpen={navOpen}
           onMenu={() => setNavOpen((v) => !v)}
-          notifications={warehouse ? WAREHOUSE_NOTIFICATIONS : ALERTS.map((a) => ({ drug: a.drug, time: a.time }))}
+          notifications={warehouse ? WAREHOUSE_NOTIFICATIONS : er ? ER_NOTIFICATIONS : ALERTS.map((a) => ({ drug: a.drug, time: a.time }))}
           variant={opsBar ? 'ops' : 'pharmacist'}
-          user={warehouse ? WAREHOUSE_USER : opsBar ? PHARMACIST_OPS_USER : undefined}
+          user={warehouse ? WAREHOUSE_USER : er ? ER_USER : opsBar ? PHARMACIST_OPS_USER : undefined}
         />
         <main className="mainpad">
           {onTransport ? (
@@ -166,7 +172,7 @@ export default function App() {
           ) : onLend ? (
             <LenderQueuePage />
           ) : onIncident ? (
-            <IncidentConsolePage />
+            <IncidentConsolePage role={er ? 'ER' : 'PHARMACIST'} />
           ) : onAlerts ? (
             <StockAlertsPage />
           ) : onReport ? (

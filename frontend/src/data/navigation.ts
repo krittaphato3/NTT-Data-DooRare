@@ -60,6 +60,8 @@ export const ROLE_NAV: Record<string, string[]> = {
   PROCUREMENT_OFFICER: ['dash', 'alerts', 'req', 'doc', 'rep'],
   WAREHOUSE_OFFICER: ['dash', 'tr', 'inc', 'doc'],
   DRIVER: ['tr'],
+  // RBAC 5.3: ER works in F3 only (no F1/F2, no transport list).
+  ER: ['inc'],
   HOSPITAL_ADMIN: ['dash', 'alerts', 'req', 'lend', 'exp', 'pool', 'inc', 'tr', 'doc', 'rep', '|', 'cfg', 'aud'],
 };
 
