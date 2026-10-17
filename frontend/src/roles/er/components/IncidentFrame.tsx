@@ -12,7 +12,6 @@ import { ErBreadcrumb } from './ErBreadcrumb';
 import { ErPageHeading } from './ErPageHeading';
 import { IncidentPills } from './IncidentPills';
 import { IncidentSummaryCard } from './IncidentSummaryCard';
-import { IntakeModal } from './IntakeModal';
 import { PlanVersionBar } from './PlanVersionBar';
 import { ScenarioBanners } from './ScenarioBanners';
 import { ScenarioSwitcher } from './ScenarioSwitcher';
@@ -22,8 +21,6 @@ export interface IncidentFrameContext {
   scenario: Scenario;
   setScenario: (s: Scenario) => void;
   access: IncidentAccess;
-  /** Open the intake form (record / update an incident). */
-  openIntake: () => void;
 }
 
 interface IncidentFrameProps {
@@ -52,39 +49,24 @@ export function IncidentFrame({
   subtitle = 'รพ.สมุทรปราการ · ข้อมูล ณ 19:31 น. · ทุกขั้นตอนต้องให้เจ้าหน้าที่ตรวจและยืนยัน · Agent เลือกชุดได้ แต่จำนวนทั้งหมดคำนวณโดยระบบ',
   breadcrumb,
   showContext = true,
-  onViewBorrow = () => window.location.assign(erHref('borrow')),
+  onViewBorrow = () => window.location.assign(erHref('track')),
   children,
 }: IncidentFrameProps) {
   const access = getIncidentAccess(role);
   const { mayWrite } = access;
   const [scenario, setScenario] = useState<Scenario>('normal');
-  const [showIntakeModal, setShowIntakeModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
 
   const selectScenario = (s: Scenario) => {
     setScenario(s);
     if (s === 's6') setShowCancelModal(true);
   };
-  const openIntake = () => setShowIntakeModal(true);
-
-  const intakeModal = showIntakeModal && (
-    <IntakeModal
-      mayWrite={mayWrite}
-      onClose={() => setShowIntakeModal(false)}
-      onSaved={() => {
-        setShowIntakeModal(false);
-        setScenario('normal');
-      }}
-    />
-  );
-
   // S7: no open incident.
   if (scenario === 's7') {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         <ScenarioSwitcher scenario={scenario} onSelect={selectScenario} />
-        <EmptyIncidentCard mayWrite={mayWrite} onIntake={openIntake} />
-        {intakeModal}
+        <EmptyIncidentCard mayWrite={mayWrite} />
       </div>
     );
   }
@@ -112,10 +94,10 @@ export function IncidentFrame({
               </button>
             )}
             {mayWrite && (
-              <button className="btn btn-sm" style={{ background: '#b91c1c', color: '#ffffff', border: 'none', fontWeight: 600 }} onClick={openIntake}>
+              <a className="btn btn-sm" style={{ background: '#b91c1c', color: '#ffffff', border: 'none', fontWeight: 600 }} href={erHref('flow')}>
                 <Icon name="siren" className="ic14" />
                 + แจ้งเหตุใหม่
-              </button>
+              </a>
             )}
           </>
         }
@@ -124,14 +106,13 @@ export function IncidentFrame({
       {showContext && (
         <>
           <IncidentPills />
-          <IncidentSummaryCard mayWrite={mayWrite} onEditTriage={openIntake} />
+          <IncidentSummaryCard mayWrite={mayWrite} editHref={erHref('incidents', { incident: 'INC-2026-000015' })} />
           <PlanVersionBar />
         </>
       )}
 
-      {children({ scenario, setScenario, access, openIntake })}
+      {children({ scenario, setScenario, access })}
 
-      {intakeModal}
       {showCancelModal && (
         <CancelModal
           mayWrite={mayWrite}

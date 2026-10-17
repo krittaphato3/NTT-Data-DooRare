@@ -7,11 +7,11 @@ const TABS: { id: IncidentTab; label: string; badge?: string }[] = [
   { id: 'summary', label: 'สรุปหลังเหตุการณ์' },
 ];
 
-/** Sub-tabs for the combined incident console (pharmacist / hospital admin view). ER uses one page per step. */
-export function IncidentTabs({ active, onChange }: { active: IncidentTab; onChange: (tab: IncidentTab) => void }) {
+/** Sub-tabs of the incident console (all four for the pharmacist / hospital admin view; `tabs` narrows them). */
+export function IncidentTabs({ active, onChange, tabs }: { active: IncidentTab; onChange: (tab: IncidentTab) => void; tabs?: IncidentTab[] }) {
   return (
     <div style={{ display: 'flex', gap: 6, borderBottom: '1px solid #e2e8f0', paddingBottom: 2 }}>
-      {TABS.map((t) => (
+      {TABS.filter((t) => !tabs || tabs.includes(t.id)).map((t) => (
         <button
           key={t.id}
           type="button"

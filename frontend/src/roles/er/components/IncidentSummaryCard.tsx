@@ -3,7 +3,7 @@ import { fmtTime, useTick } from '../../../lib/time';
 import { INCIDENT_HEADER } from '../data/incident';
 
 /** Active incident card: description, ETA countdown and triage counts. */
-export function IncidentSummaryCard({ mayWrite, onEditTriage }: { mayWrite: boolean; onEditTriage: () => void }) {
+export function IncidentSummaryCard({ mayWrite, editHref }: { mayWrite: boolean; editHref: string }) {
   const tick = useTick();
   const etaLeft = Math.max(0, INCIDENT_HEADER.etaMinutes - tick);
 
@@ -115,13 +115,9 @@ export function IncidentSummaryCard({ mayWrite, onEditTriage }: { mayWrite: bool
               ผู้ป่วยตามระดับคัดแยก
             </span>
             {mayWrite && (
-              <button
-                className="link"
-                style={{ fontSize: 11, color: '#2563eb', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
-                onClick={() => onEditTriage()}
-              >
-                แก้จำนวนผู้ป่วย
-              </button>
+              <a className="link" style={{ fontSize: 11, color: '#2563eb' }} href={editHref}>
+                อัปเดตผู้ป่วย
+              </a>
             )}
           </div>
           <div style={{ display: 'flex', gap: 6 }}>

@@ -1,7 +1,8 @@
 import { Icon } from '../../../components/common/icons';
+import { erHref } from '../data/navigation';
 
 /** S7: no open incident. */
-export function EmptyIncidentCard({ mayWrite, onIntake }: { mayWrite: boolean; onIntake: () => void }) {
+export function EmptyIncidentCard({ mayWrite }: { mayWrite: boolean }) {
   return (
     <div
       className="card"
@@ -36,15 +37,10 @@ export function EmptyIncidentCard({ mayWrite, onIntake }: { mayWrite: boolean; o
       </div>
       <div style={{ marginTop: 8 }}>
         {mayWrite && (
-          <button
-            type="button"
-            className="btn btn-p"
-            style={{ background: '#b91c1c', border: 'none', fontWeight: 600, padding: '8px 20px' }}
-            onClick={() => onIntake()}
-          >
+          <a className="btn btn-p" style={{ background: '#b91c1c', border: 'none', fontWeight: 600, padding: '8px 20px' }} href={erHref('flow')}>
             <Icon name="siren" className="ic14" />
             + แจ้งเหตุใหม่
-          </button>
+          </a>
         )}
       </div>
     </div>

@@ -25,6 +25,10 @@ summary: Incident console page/data moved to roles/er; ER owns its sidebar like 
 - Reused WH pages: `TransportTrackingPage` (+ `ER_STAFF` read-only), `WhDrugsPage` (new `homeHref` prop).
 - `ER_HOME_HREF` -> `?page=dashboard&role=er`.
 
+- ER flow redesign: `?page=flow` (รับเหตุและวางแผน) = 5 steps on one page (intake → Agent plan review/edit → stock check → borrow requests grouped by hospital → sent); `?page=track` = borrow status + kit pack tabs; sidebar now 8 items.
+- Incident list/detail (`?page=incidents&incident=ID`) reads `roles/er/data/incidentStore.ts` (in-memory mock incidents, no localStorage); detail has status, plan/stock, borrow batches, update history and an update form (marks plan stale -> re-run Agent).
+- "+ แจ้งเหตุใหม่" everywhere links to the flow; intake popup removed (`IntakeFields` shared).
+
 ## Decisions
 
 - State is per page (like other roles), not shared across pages.

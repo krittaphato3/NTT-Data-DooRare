@@ -10,9 +10,8 @@ import { withRole } from '../../../data/navigation';
 export type ErPage =
   | 'dashboard'
   | 'incidents'
-  | 'plan'
-  | 'borrow'
-  | 'pack'
+  | 'flow'
+  | 'track'
   | 'summary'
   | 'documents'
   | 'transport'
@@ -34,10 +33,9 @@ const DATA_GROUP = 'เอกสารและข้อมูล';
 
 const ER_ITEMS: ErNavDef[] = [
   { page: 'dashboard', th: 'หน้าหลัก ER', en: 'ER home', ui: 'F3', icon: 'grid', group: ER_NAV_GROUP },
-  { page: 'incidents', th: 'รายการเหตุการณ์', en: 'Incidents', ui: 'UI-11', icon: 'siren', group: ER_NAV_GROUP },
-  { page: 'plan', th: 'แผนเวชภัณฑ์', en: 'Supply plan', ui: 'UI-12', icon: 'layers', group: ER_NAV_GROUP },
-  { page: 'borrow', th: 'ยืมฉุกเฉิน', en: 'Emergency borrow', ui: 'UI-11', icon: 'hand', group: ER_NAV_GROUP, badge: '2', badgeTone: 'red' },
-  { page: 'pack', th: 'จัดชุด', en: 'Kit assembly', ui: 'UI-13', icon: 'box', group: ER_NAV_GROUP, badge: '2', badgeTone: 'red' },
+  { page: 'incidents', th: 'รายการเหตุการณ์', en: 'Incidents', ui: 'UI-11', icon: 'layers', group: ER_NAV_GROUP },
+  { page: 'flow', th: 'รับเหตุและวางแผน', en: 'Report · plan · borrow', ui: 'UI-11/12', icon: 'siren', group: ER_NAV_GROUP },
+  { page: 'track', th: 'ติดตามคำขอและจัดชุด', en: 'Track & pack', ui: 'UI-11/13', icon: 'hand', group: ER_NAV_GROUP, badge: '2', badgeTone: 'red' },
   { page: 'summary', th: 'สรุปและปิดเหตุการณ์', en: 'Summary & close', ui: 'F3 §11', icon: 'checkc', group: ER_NAV_GROUP },
   { page: 'documents', th: 'เอกสาร', en: 'Documents', ui: 'UI-15', icon: 'printer', group: DATA_GROUP },
   { page: 'transport', th: 'การจัดส่ง', en: 'Transport · view only', ui: 'UI-14', icon: 'truck', group: DATA_GROUP },
@@ -45,8 +43,18 @@ const ER_ITEMS: ErNavDef[] = [
 ];
 
 /** `?page=<page>&role=er` — the URL of an ER page. */
-export function erHref(page: ErPage): string {
-  return withRole(`?page=${page}`, 'ER_STAFF');
+export function erHref(page: ErPage, params?: Record<string, string>): string {
+  const extra = params ? Object.entries(params).map(([k, v]) => `&${k}=${encodeURIComponent(v)}`).join('') : '';
+  return withRole(`?page=${page}${extra}`, 'ER_STAFF');
+}
+
+/** `?<name>=` from the current URL, or undefined. */
+export function readParam(name: string): string | undefined {
+  try {
+    return new URLSearchParams(window.location.search).get(name) ?? undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 /** Page named by `?page=` (ER home when missing or unknown). */

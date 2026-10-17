@@ -3,13 +3,13 @@ import { IncidentSummaryCard } from '../components/IncidentSummaryCard';
 import { KitStockCard } from '../components/KitStockCard';
 import type { RoleCode } from '../../../lib/rbac';
 import { EMERGENCY_BORROWS, INCIDENT_HEADER, KIT_ASSEMBLIES } from '../data/incident';
+import { useIncidents } from '../data/incidentStore';
 import { erHref } from '../data/navigation';
 import type { ErPage } from '../data/navigation';
 
 const NEXT: { page: ErPage; label: string; hint: string }[] = [
-  { page: 'plan', label: 'ตรวจแผนเวชภัณฑ์', hint: 'แก้จำนวนจัด / ตอบคำถาม Agent / อนุมัติแผน' },
-  { page: 'borrow', label: 'ติดตามคำขอยืมฉุกเฉิน', hint: 'ดูผู้ให้ยืมและเวลาที่เหลือ' },
-  { page: 'pack', label: 'จัดชุด', hint: 'ยืนยันเมื่อจัดชุดจากของแยกครบ' },
+  { page: 'flow', label: 'รับเหตุและวางแผน', hint: 'แจ้งเหตุ → Agent เสนอแผน → ตรวจสต็อก → ส่งคำขอยืม' },
+  { page: 'track', label: 'ติดตามคำขอและจัดชุด', hint: 'ดูผู้ให้ยืม เวลาที่เหลือ และยืนยันจัดชุด' },
   { page: 'summary', label: 'สรุปและปิดเหตุการณ์', hint: 'หลังเหตุการณ์สงบ' },
 ];
 
@@ -25,6 +25,7 @@ function Kpi({ label, value, sub, tone }: { label: string; value: string; sub: s
 
 /** ER home: the active incident, what is waiting, kit stock and shortcuts to each step. */
 export function ErDashboardPage({ role = 'ER_STAFF' }: { role?: RoleCode }) {
+  const open = useIncidents().filter((r) => r.status === 'planning' || r.status === 'sent').length;
   const t = INCIDENT_HEADER.triage;
   const pendingAsks = EMERGENCY_BORROWS.reduce((n, b) => n + b.hospitals.filter((h) => h.status === 'pending').length, 0);
   const kitsToPack = KIT_ASSEMBLIES.filter((k) => k.status !== 'done').length;
@@ -37,11 +38,12 @@ export function ErDashboardPage({ role = 'ER_STAFF' }: { role?: RoleCode }) {
       subtitle="รพ.สมุทรปราการ · เหตุที่เปิดอยู่ ของที่รออยู่ และทางลัดไปแต่ละขั้นตอน"
       showContext={false}
     >
-      {({ access, openIntake }) => (
+      {({ access }) => (
         <>
-          <IncidentSummaryCard mayWrite={access.mayWrite} onEditTriage={openIntake} />
+          <IncidentSummaryCard mayWrite={access.mayWrite} editHref={erHref('incidents', { incident: INCIDENT_HEADER.id })} />
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
+            <Kpi label="เหตุที่เปิดอยู่" value={String(open)} sub="ดูทั้งหมดที่รายการเหตุการณ์" tone="#b91c1c" />
             <Kpi label="ผู้ป่วยทั้งหมด" value={String(t.red + t.yellow + t.green + t.black)} sub={`แดง ${t.red} · เหลือง ${t.yellow} · เขียว ${t.green} · ดำ ${t.black}`} />
             <Kpi label="คำขอยืมรอผู้ให้ยืนยัน" value={String(pendingAsks)} sub="ผู้ให้ยืมยืนยันเอง" tone="#dc2626" />
             <Kpi label="ชุดที่ยังต้องจัด" value={String(kitsToPack)} sub="รอยืนยันจัดชุดเสร็จ" tone="#b45309" />
