@@ -3,12 +3,18 @@ import { USER } from '../../data/session';
 import type { UserProfile } from '../../data/session';
 import { Icon } from '../common/icons';
 
-const MENU_ITEMS = ['โปรไฟล์ของฉัน · Profile', 'ตั้งค่า · Settings', 'ออกจากระบบ · Log out'];
+const MENU_ITEMS = [
+  { label: 'คอนโซลผู้ดูแลระบบ · Admin Console', href: '/?page=admin&role=admin' },
+  { label: 'โปรไฟล์ของฉัน · Profile', href: '#' },
+  { label: 'ตั้งค่า · Settings', href: '#' },
+  { label: 'ออกจากระบบ · Log out', href: '#' },
+];
 
 const SWITCH_ROLES = [
   { name: 'ภก.ณัฐวุฒิ ศรีสุข', role: 'PHARMACIST', label: 'เภสัชกร (Pharmacist)', href: '/', initial: 'ณ' },
-  { name: 'คุณประเสริฐ ใจงาม', role: 'WAREHOUSE_OFFICER', label: 'เจ้าหน้าที่คลัง (Warehouse)', href: '/?role=warehouse', initial: 'ป' },
+  { name: 'ดร.สมเกียรติ วิจิตรพงศ์', role: 'SYSTEM_ADMIN', label: 'ผู้ดูแลระบบกลาง (System Admin)', href: '/?page=admin&role=admin', initial: 'ส' },
   { name: 'ภญ.อรอุมา พรหมมา', role: 'HOSPITAL_ADMIN', label: 'ผู้ดูแลโรงพยาบาล (Hospital Admin)', href: '/?page=users&role=hospital-admin', initial: 'อ' },
+  { name: 'คุณประเสริฐ ใจงาม', role: 'WAREHOUSE_OFFICER', label: 'เจ้าหน้าที่คลัง (Warehouse)', href: '/?role=warehouse', initial: 'ป' },
   { name: 'พว.กมลชนก ใจดี', role: 'ER_STAFF', label: 'พยาบาลห้องฉุกเฉิน (ER)', href: '/?role=er', initial: 'ก' },
   { name: 'คุณสมชาย แก้วกล้า', role: 'DRIVER', label: 'พนักงานขับรถ (Driver)', href: '/?page=transport&role=driver', initial: 'ส' },
 ];
@@ -96,8 +102,14 @@ export function AccountMenu({ isAdmin, user = USER, chevron = true }: AccountMen
 
           <div style={{ borderTop: '1px solid #E2E8F0', marginTop: 4, paddingTop: 4 }}>
             {MENU_ITEMS.map((item) => (
-              <a key={item} href="#" role="menuitem" className="navlink" style={{ minHeight: 32, fontSize: 12.5, padding: '4px 8px' }}>
-                {item}
+              <a
+                key={item.label}
+                href={item.href}
+                role="menuitem"
+                className="navlink"
+                style={{ minHeight: 32, fontSize: 12.5, padding: '4px 8px' }}
+              >
+                {item.label}
               </a>
             ))}
           </div>

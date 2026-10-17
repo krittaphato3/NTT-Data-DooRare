@@ -54,6 +54,10 @@ const CATALOGUE: Record<string, NavDef> = {
   aud: { th: 'บันทึกตรวจสอบ', en: 'Audit log', ui: 'UI-18', icon: 'shield', href: '#', badge: '', red: false },
   // Derived entry (no UI-nn code in spec §15.1): Hospital Admin user management, API-AD-006/007.
   usr: { th: 'จัดการผู้ใช้', en: 'User management', ui: '—', icon: 'users', href: '#', badge: '', red: false },
+  // System Admin (Health Region 6) catalogue entries (ADM-01..03)
+  adm: { th: 'ภาพรวมระบบ', en: 'Admin Dashboard', ui: 'ADM-01', icon: 'grid', href: '?page=admin', badge: '', red: false },
+  hosp: { th: 'โรงพยาบาลในเครือข่าย', en: 'Hospitals & Deliveries', ui: 'ADM-02', icon: 'hosp', href: '?page=admin&tab=hospitals', badge: '12', red: false },
+  acct: { th: 'จัดการบัญชีผู้ใช้', en: 'Account Management', ui: 'ADM-03', icon: 'users', href: '?page=admin&tab=accounts', badge: '', red: false },
 };
 
 /** Role → nav keys (`'|'` renders the admin group header) — mockup `ROLES` verbatim. */
@@ -65,6 +69,7 @@ export const ROLE_NAV: Record<string, string[]> = {
   // RBAC 5.3: ER works in F3 only (no F1/F2, no transport list).
   ER_STAFF: ['inc'],
   HOSPITAL_ADMIN: ['dash', 'alerts', 'req', 'lend', 'exp', 'pool', 'inc', 'tr', 'doc', 'rep', '|', 'usr', 'cfg', 'aud'],
+  SYSTEM_ADMIN: ['adm', 'hosp', 'acct', '|', 'cfg', 'aud'],
 };
 
 export const ADMIN_GROUP_LABEL = 'ผู้ดูแลระบบ';
@@ -85,6 +90,8 @@ export const DRIVER_HOME_HREF = `?page=transport&role=${DRIVER_ROLE_QUERY}`;
 export const ER_ROLE_QUERY = 'er';
 /** ER has no dashboard (F3 only): its home is the incident console. */
 export const ER_HOME_HREF = `?page=incident&role=${ER_ROLE_QUERY}`;
+export const SYSTEM_ADMIN_ROLE_QUERY = 'admin';
+export const SYSTEM_ADMIN_HOME_HREF = `?page=admin&role=${SYSTEM_ADMIN_ROLE_QUERY}`;
 
 /**
  * Roles that are not the implicit default and therefore must be carried in every in-app href.
@@ -96,6 +103,7 @@ export const ROLE_QUERY: Record<string, string> = {
   WAREHOUSE_OFFICER: 'warehouse',
   DRIVER: DRIVER_ROLE_QUERY,
   ER_STAFF: ER_ROLE_QUERY,
+  SYSTEM_ADMIN: SYSTEM_ADMIN_ROLE_QUERY,
 };
 
 /**
@@ -116,6 +124,7 @@ export function withRole(href: string, role: string): string {
 export function homeHrefFor(role: string): string {
   if (role === 'DRIVER') return DRIVER_HOME_HREF;
   if (role === 'ER_STAFF') return ER_HOME_HREF;
+  if (role === 'SYSTEM_ADMIN') return SYSTEM_ADMIN_HOME_HREF;
   return withRole('/', role);
 }
 
@@ -128,6 +137,7 @@ export function homeHrefFor(role: string): string {
  */
 const VISIBLE_KEYS: Record<string, string[]> = {
   HOSPITAL_ADMIN: ['dash', 'alerts', 'req', 'lend', 'exp', 'pool', 'inc', 'tr', 'doc', 'rep', '|', 'usr', 'cfg', 'aud'],
+  SYSTEM_ADMIN: ['adm', 'hosp', 'acct', '|', 'cfg', 'aud'],
 };
 
 /**
