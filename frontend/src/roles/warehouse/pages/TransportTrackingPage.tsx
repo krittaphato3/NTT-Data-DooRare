@@ -35,7 +35,7 @@ function useOnline(): boolean {
  * Roles this screen is rendered for. PHARMACIST and HOSPITAL_ADMIN open it read-only
  * (API-F2a-012 lets the pharmacist list tasks; POST status/photos is warehouse/driver only).
  */
-export type TransportRole = 'WAREHOUSE_OFFICER' | 'PHARMACIST' | 'HOSPITAL_ADMIN' | 'DRIVER';
+export type TransportRole = 'WAREHOUSE_OFFICER' | 'PHARMACIST' | 'HOSPITAL_ADMIN' | 'DRIVER' | 'ER_STAFF';
 
 /**
  * UI-14 Transport tracking. UI only — data is mock, actions are local state.

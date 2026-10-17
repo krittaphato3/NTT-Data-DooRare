@@ -12,7 +12,7 @@ const typeOf = (d: DrugRow): ItemType => d.master?.type ?? 'DRUG';
 const nameOf = (d: DrugRow) => (d.master ? `${d.master.name} ${d.master.strength} ${d.master.form}`.trim() : d.localName);
 
 /** WH view of the drug master (RBAC 👁). Editing drug data / code mapping is the pharmacist's, so mapping is not shown here. */
-export function WhDrugsPage() {
+export function WhDrugsPage({ homeHref = whHref('dashboard') }: { homeHref?: string }) {
   const [q, setQ] = useState('');
   const [type, setType] = useState<'all' | ItemType>('all');
   const [flag, setFlag] = useState<'all' | 'cold' | 'critical' | 'high'>('all');
@@ -46,7 +46,7 @@ export function WhDrugsPage() {
       <section className="pagehead">
         <div>
           <nav aria-label="breadcrumb" style={{ fontSize: 12, lineHeight: '16px' }}>
-            <a href={whHref('dashboard')} className="link" style={{ fontSize: 12, fontWeight: 400 }}>หน้าหลัก</a>{' '}
+            <a href={homeHref} className="link" style={{ fontSize: 12, fontWeight: 400 }}>หน้าหลัก</a>{' '}
             <span aria-hidden="true">›</span> <span aria-current="page">ข้อมูลยา</span>
           </nav>
           <h1 className="tr-title">

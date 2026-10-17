@@ -33,7 +33,8 @@ import { AuditLogPage } from './roles/hospital-admin/pages/AuditLogPage';
 import { ConfigurationPage } from './roles/hospital-admin/pages/ConfigurationPage';
 import { UserManagementPage } from './roles/hospital-admin/pages/UserManagementPage';
 import { DRIVER_NOTIFICATIONS, DRIVER_USER } from './roles/driver/data/session';
-import { getErNav } from './roles/er/data/navigation';
+import { erPageFromQuery, getErNav } from './roles/er/data/navigation';
+import { ErPageSwitch } from './roles/er/pages/ErPageSwitch';
 import { ER_NOTIFICATIONS, ER_USER } from './roles/er/data/session';
 import { IncidentConsolePage } from './roles/er/pages/IncidentConsolePage';
 import { getDriverNav } from './roles/driver/data/navigation';
@@ -209,6 +210,7 @@ export default function App() {
   const [hospitalAdmin] = useState(initialHospitalAdmin);
   const [isDriver] = useState(initialDriver);
   const [route] = useState(initialRoute);
+  const [erPage] = useState(erPageFromQuery);
   const onAdmin = route.page === 'admin';
   const isSystemAdminRole = isAdmin || route.isSystemAdmin || onAdmin;
   const isDriverRole = !isSystemAdminRole && (isDriver || route.isDriver);
@@ -291,7 +293,7 @@ export default function App() {
     : warehouse
       ? getWarehouseNav(onTransport ? 'transport' : onInbox ? 'inbox' : onKit ? 'kit' : onDocs ? 'docs' : onStock || onAlerts ? 'stock' : onRequests ? 'requests' : onExpiry ? 'expiry' : onDrugs ? 'drugs' : 'dashboard')
       : isEr
-        ? getErNav('incident')
+        ? getErNav(erPage)
         : withLinks(getNavForRole(navRole, activeKey), navRole);
   // Page access for the Hospital Admin shell is decided by lib/rbac.ts, not by local role checks.
   const mayManageUsers = can(navRole, 'manageUsers');
@@ -367,6 +369,8 @@ export default function App() {
             ) : (
               <DriverTransportPage />
             )
+          ) : isEr ? (
+            <ErPageSwitch page={erPage} />
           ) : hospitalAdmin && !isHospitalAdminPageAllowed ? (
             /* Guard for a Hospital Admin page outside the allowed set. The operational screens
                render read-only through their `role` prop; this card covers anything else. */

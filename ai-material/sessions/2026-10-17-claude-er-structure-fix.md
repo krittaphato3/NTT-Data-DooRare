@@ -19,13 +19,19 @@ summary: Incident console page/data moved to roles/er; ER owns its sidebar like 
 - `App.tsx`: imports from `roles/er`; ER uses `getErNav('incident')`. Pharmacist/hospital-admin still render the same page (view-only via `mayActFor`).
 - `frontend/src/README.md` layout updated.
 
+- Split the 2,010-line page into `roles/er/components/*` (IncidentFrame, Plan/Borrow/Pack/Summary panels, Intake/Cancel modals, cards) with per-page state.
+- 9 ER pages (`?role=er&page=`): dashboard, incidents, plan, borrow, pack, summary, documents, transport, drugs. `ErPageSwitch` renders them; `erPageFromQuery()` reads the URL.
+- `IncidentConsolePage` is now a thin tabbed wrapper (pharmacist / hospital-admin, view-only).
+- Reused WH pages: `TransportTrackingPage` (+ `ER_STAFF` read-only), `WhDrugsPage` (new `homeHref` prop).
+- `ER_HOME_HREF` -> `?page=dashboard&role=er`.
+
 ## Decisions
 
-- Page stays one file for now; splitting the 2,010-line page into `roles/er/components/*` is a follow-up.
+- State is per page (like other roles), not shared across pages.
 
 ## Files touched
 
-- `frontend/src/App.tsx`, `frontend/src/roles/er/**`, `frontend/src/README.md`.
+- `frontend/src/App.tsx`, `frontend/src/data/navigation.ts`, `frontend/src/roles/er/**`, `roles/warehouse/pages/{TransportTrackingPage,WhDrugsPage}.tsx`, `frontend/src/README.md`.
 
 ## Errors
 
@@ -33,5 +39,5 @@ summary: Incident console page/data moved to roles/er; ER owns its sidebar like 
 
 ## Next steps
 
-- Optional: split page into components; add ER read-only transport / drug pages.
+- Verified: tsc, build, all 9 ER pages + pharmacist view render. No behavior diff checked pixel-wise.
 - Do not push/merge until the user says so.
