@@ -189,7 +189,7 @@ export function ShipmentDrawer(p: ShipmentDrawerProps) {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <span className="code" style={{ fontWeight: 600, color: '#0F2A5C', fontSize: 12.5 }}>{l.lot}</span>
                     {l.coldChain && <span className="badge t-blue" style={{ marginLeft: 6, height: 18, fontSize: 11 }}>Cold chain</span>}
-                    <span className="sub" style={{ display: 'block' }}>หมดอายุ {l.expiry} (เหลือ {l.daysLeft} วัน) · {l.location}</span>
+                    <span className="sub" style={{ display: 'block' }}>หมดอายุ {l.expiry} (เหลือ {l.daysLeft} วัน)</span>
                   </div>
                   <span className="num" style={{ fontWeight: 600, color: '#0F2A5C' }}>{fmtQty(l.qty)} {s.unit}</span>
                 </li>

@@ -96,7 +96,7 @@ export function InboxDrawer({ item: it, urgentLeft, startDeclining, onClose, onC
                   <span style={{ flex: 1, minWidth: 0 }}>
                     <span className="code" style={{ fontWeight: 600, color: '#0F2A5C', fontSize: 12.5 }}>{p.lot}</span>
                     {p.coldChain && <span className="badge t-blue" style={{ marginLeft: 6, height: 18, fontSize: 11 }}>Cold chain</span>}
-                    <span className="sub" style={{ display: 'block' }}>หมดอายุ {p.expiry} (เหลือ {p.daysLeft} วัน) · {p.location}</span>
+                    <span className="sub" style={{ display: 'block' }}>หมดอายุ {p.expiry} (เหลือ {p.daysLeft} วัน)</span>
                   </span>
                   <span className="num" style={{ fontWeight: 600, color: '#0F2A5C' }}>{fmtQty(p.qty)} {it.unit}</span>
                 </div>

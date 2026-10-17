@@ -21,7 +21,6 @@ export interface PickLot {
   expiry: string;
   daysLeft: number;
   qty: number;
-  location: string;
   coldChain?: boolean;
 }
 
@@ -79,8 +78,8 @@ const NEW_ROWS: Shipment[] = [
     updatedAt: '17:55', updatedBy: 'คุณประเสริฐ (คลัง)', driver: 'คุณสมชาย แก้วกล้า', photos: [],
     times: ['17:55 · ยืนยันแล้ว · เตรียมของ รอขึ้นรถ', '', '', '', ''], lot: 'CF2511 + CF2512 · อายุ > 180 วัน (FEFO)', lotCode: 'CF2511',
     pick: [
-      { lot: 'CF2511', expiry: '30 พ.ย. 2027', daysLeft: 382, qty: 20, location: 'ชั้น C3' },
-      { lot: 'CF2512', expiry: '31 ธ.ค. 2027', daysLeft: 413, qty: 10, location: 'ชั้น C3' },
+      { lot: 'CF2511', expiry: '30 พ.ย. 2027', daysLeft: 382, qty: 20 },
+      { lot: 'CF2512', expiry: '31 ธ.ค. 2027', daysLeft: 413, qty: 10 },
     ],
   },
   {
