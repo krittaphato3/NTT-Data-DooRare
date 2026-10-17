@@ -111,7 +111,7 @@ export function PackPanel({ access }: { access: IncidentAccess }) {
               </table>
             </div>
 
-            {kit.canConfirm && (
+            {kit.status !== 'done' && (
               <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 12 }}>
                 <button
                   type="button"

@@ -5,7 +5,7 @@ import { triageTotal } from '../data/intake';
 import { erHref } from '../data/navigation';
 import { buildStockCheck } from '../data/stockCheck';
 import { EXTRA_DRUGS } from '../data/incident';
-import { BorrowPanel } from './BorrowPanel';
+import { IncidentBorrowStatus } from './IncidentBorrowStatus';
 import { IncidentUpdateForm } from './IncidentUpdateForm';
 
 const LEVELS: { key: 'red' | 'yellow' | 'green' | 'black' | 'unknown'; label: string; color: string; bg: string }[] = [
@@ -107,52 +107,11 @@ export function IncidentDetail({ rec, access }: { rec: IncidentRecord; access: I
         </div>
       )}
 
-      {rec.seed === 'live' ? (
+      {(open || rec.batches.length > 0) && !rec.seed?.startsWith('arch') && (
         <div>
-          <div style={cardTitle}>สถานะคำขอยืมเร่งด่วน</div>
-          <BorrowPanel />
+          <div style={cardTitle}>สถานะคำขอยืม · แยกตามโรงพยาบาล</div>
+          <IncidentBorrowStatus rec={rec} />
         </div>
-      ) : rec.batches.length > 0 ? (
-        rec.batches.map((b, i) => (
-          <div key={i} className="card" style={{ padding: '14px 18px' }}>
-            <div style={cardTitle}>
-              คำขอยืมที่ส่ง {rec.batches.length > 1 ? `ครั้งที่ ${i + 1} ` : ''}· {b.at} น.
-            </div>
-            <div style={{ overflowX: 'auto' }}>
-              <table className="qt" style={{ minWidth: 520 }}>
-                <thead>
-                  <tr>
-                    <th scope="col">รายการ</th>
-                    <th scope="col" className="r">จำนวน</th>
-                    <th scope="col">ส่งถึง</th>
-                    <th scope="col">สถานะ</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {b.requests.map((r) => (
-                    <tr key={r.id}>
-                      <td style={{ fontWeight: 600, color: '#0f2a5c' }}>
-                        {r.item} <span style={{ color: '#94a3b8', fontWeight: 400, fontSize: 11 }}>{r.id}</span>
-                      </td>
-                      <td className="r">{r.qty} {r.unit}</td>
-                      <td style={{ fontSize: 12 }}>{r.lenders.map((h) => h.name).join(', ')}</td>
-                      <td>
-                        <span className="badge st-pending">รอผู้ให้ยืมตอบ ({r.timeoutMin} นาที)</span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            {b.note && <div style={{ fontSize: 12, color: '#64748b', marginTop: 8 }}>หมายเหตุ: {b.note}</div>}
-          </div>
-        ))
-      ) : (
-        open && (
-          <div className="card" style={{ padding: '14px 18px', fontSize: 12.5, color: '#64748b' }}>
-            ยังไม่ได้ส่งคำขอยืม · กด “ทำต่อ” เพื่อไปขั้นถัดไปของ flow
-          </div>
-        )
       )}
 
       <div className="card" style={{ padding: '14px 18px' }}>

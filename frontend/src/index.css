@@ -590,6 +590,10 @@ button {
 .r {
   text-align: right;
 }
+/* ER pages: `.qt th` is left-aligned by default and beats `.r`, so right-aligned columns got left headers. */
+.er-page .qt th.r {
+  text-align: right;
+}
 .srt {
   position: absolute;
   width: 1px;

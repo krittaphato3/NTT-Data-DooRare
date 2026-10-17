@@ -10,7 +10,7 @@ import { SummaryPage } from './SummaryPage';
 import { TrackPage } from './TrackPage';
 
 /** Renders the ER page named by `?page=`. */
-export function ErPageSwitch({ page }: { page: ErPage }) {
+function pageFor(page: ErPage) {
   switch (page) {
     case 'incidents':
       return <IncidentListPage />;
@@ -29,4 +29,8 @@ export function ErPageSwitch({ page }: { page: ErPage }) {
     default:
       return <ErDashboardPage />;
   }
+}
+
+export function ErPageSwitch({ page }: { page: ErPage }) {
+  return <div className="er-page">{pageFor(page)}</div>;
 }

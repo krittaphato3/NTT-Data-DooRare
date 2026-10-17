@@ -1,15 +1,16 @@
 import { Icon } from '../../../../components/common/icons';
-import type { BorrowRequestDraft } from '../../data/stockCheck';
+import type { SentBatch } from '../../data/incidentStore';
+import { groupBatchesByHospital } from '../../data/borrowView';
 
 interface SentStepProps {
-  requests: BorrowRequestDraft[];
-  sentAt: string;
+  batches: SentBatch[];
   trackHref: string;
   onNew: () => void;
 }
 
-/** Step 5: requests sent. Follow-up (replies, kit assembly) continues on the tracking page. */
-export function SentStep({ requests, sentAt, trackHref, onNew }: SentStepProps) {
+/** Step 5: everything sent, by hospital. Follow-up (replies, kit assembly) continues on the tracking page. */
+export function SentStep({ batches, trackHref, onNew }: SentStepProps) {
+  const groups = groupBatchesByHospital(batches);
   return (
     <div className="card" style={{ padding: '24px 22px', display: 'flex', flexDirection: 'column', gap: 14 }} role="status">
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -17,14 +18,14 @@ export function SentStep({ requests, sentAt, trackHref, onNew }: SentStepProps) 
           <Icon name="checkc" className="ic24" />
         </span>
         <div>
-          <div style={{ fontSize: 16, fontWeight: 700, color: '#0f2a5c' }}>ส่งคำขอยืมเร่งด่วนแล้ว · {sentAt} น.</div>
+          <div style={{ fontSize: 16, fontWeight: 700, color: '#0f2a5c' }}>ส่งคำขอยืมเร่งด่วนแล้ว · {groups.length} โรงพยาบาล</div>
           <div style={{ fontSize: 12, color: '#64748b' }}>รอผู้ให้ยืมตอบ · ข้อมูลทดลอง ไม่ได้บันทึกเข้าระบบ</div>
         </div>
       </div>
       <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12.5, color: '#334155', lineHeight: '22px' }}>
-        {requests.map((r) => (
-          <li key={r.id}>
-            <b>{r.item}</b> × {r.qty} {r.unit} ({r.id}) → {r.lenders.map((h) => h.name).join(', ')}
+        {groups.map((g) => (
+          <li key={g.hospital}>
+            <b>{g.hospital}</b> ({g.sentAt} น.): {g.items.map((i) => `${i.item} × ${i.qty} ${i.unit}`).join(', ')}
           </li>
         ))}
       </ul>
