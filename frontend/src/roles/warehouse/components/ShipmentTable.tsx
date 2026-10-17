@@ -19,20 +19,27 @@ interface ShipmentTableProps {
   canOperate: boolean;
   /** true = this role answers cancel requests (pharmacist). */
   canCancel: boolean;
+  /** true = driver role: milestones are 'ออกเดินทาง' and 'ถึงแล้ว + รูป'. */
+  isDriver?: boolean;
 }
 
-function actionFor(r: ShipmentRowState, canOperate: boolean, canCancel: boolean): [string, string] {
+function actionFor(r: ShipmentRowState, canOperate: boolean, canCancel: boolean, isDriver?: boolean): [string, string] {
   const out = isOutbound(r.shipment);
   // Only the pharmacist answers a cancel request (RBAC §4.4).
   if (canCancel && r.status === 'WAITING_DISPATCH' && out && r.cancelRequested) return ['ตอบคำขอยกเลิก', 'btn-p'];
   if (!canOperate) return ['ดูรายละเอียด', 'btn-s'];
+  if (isDriver) {
+    if (r.status === 'LOADED') return ['ออกเดินทาง', 'btn-p'];
+    if (r.status === 'IN_TRANSIT') return ['ถึงแล้ว + รูป', 'btn-p'];
+    return ['ดูรายละเอียด', 'btn-s'];
+  }
   if (r.status === 'ARRIVED' && !out) return ['ยืนยันรับของ', 'btn-p'];
   if (r.status === 'WAITING_DISPATCH' && out) return r.cancelRequested ? ['ดูรายละเอียด', 'btn-s'] : ['ขึ้นรถ + ถ่ายรูป', 'btn-p'];
   if (r.status === 'LOADED' && r.pending) return ['ซิงก์ตอนนี้', 'btn-s'];
   return ['ดูรายละเอียด', 'btn-s'];
 }
 
-export function ShipmentTable({ rows, activeId, onOpen, onAction, canOperate, canCancel }: ShipmentTableProps) {
+export function ShipmentTable({ rows, activeId, onOpen, onAction, canOperate, canCancel, isDriver }: ShipmentTableProps) {
   return (
     <>
       <div className="scroll-x">
@@ -56,7 +63,7 @@ export function ShipmentTable({ rows, activeId, onOpen, onAction, canOperate, ca
               const s = r.shipment;
               const out = isOutbound(s);
               const idx = r.status === 'CANCELLED' ? -1 : STEP_ORDER.indexOf(r.status);
-              const [label, cls] = actionFor(r, canOperate, canCancel);
+              const [label, cls] = actionFor(r, canOperate, canCancel, isDriver);
               return (
                 <tr key={s.id} className={activeId === s.id ? 'r-active' : ''}>
                   <td>

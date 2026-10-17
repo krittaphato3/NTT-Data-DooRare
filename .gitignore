@@ -9,6 +9,7 @@ dist/
 
 # Local Freebuff tooling state (.freebuff/project-id)
 .freebuff/
+.zcode/
 
 # Scratch screenshot comparison output
 tmp-*/

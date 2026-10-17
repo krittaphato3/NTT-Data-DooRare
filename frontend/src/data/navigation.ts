@@ -78,6 +78,8 @@ export const HOSPITAL_ADMIN_ROLE_QUERY = 'hospital-admin';
 
 /** First page of the Hospital Admin shell — the sidebar target and the breadcrumb "home". */
 export const HOSPITAL_ADMIN_HOME_HREF = `?page=users&role=${HOSPITAL_ADMIN_ROLE_QUERY}`;
+export const DRIVER_ROLE_QUERY = 'driver';
+export const DRIVER_HOME_HREF = `?page=transport&role=${DRIVER_ROLE_QUERY}`;
 
 /**
  * Roles that are not the implicit default and therefore must be carried in every in-app href.
@@ -87,6 +89,7 @@ export const HOSPITAL_ADMIN_HOME_HREF = `?page=users&role=${HOSPITAL_ADMIN_ROLE_
 export const ROLE_QUERY: Record<string, string> = {
   HOSPITAL_ADMIN: HOSPITAL_ADMIN_ROLE_QUERY,
   WAREHOUSE_OFFICER: 'warehouse',
+  DRIVER: DRIVER_ROLE_QUERY,
 };
 
 /**
@@ -105,6 +108,7 @@ export function withRole(href: string, role: string): string {
  * The default shell's dashboard is `/`; a role selected by a query param needs it appended.
  */
 export function homeHrefFor(role: string): string {
+  if (role === 'DRIVER') return DRIVER_HOME_HREF;
   return withRole('/', role);
 }
 
