@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { Icon } from '../../../components/common/icons';
 import type { IconName } from '../../../components/common/icons';
+import { homeHrefFor, withRole } from '../../../data/navigation';
+import { mayActFor, requiredRoleHint } from '../../../lib/rbac';
+import type { RoleCode } from '../../../lib/rbac';
 import { fmtTime, useTick } from '../../../lib/time';
 import {
   BORROW_REQUESTS,
@@ -266,7 +269,19 @@ function LotRow({
 }
 
 // ─── Detail panel ─────────────────────────────────────────────────────
-function DetailPanel({ req, onClose }: { req: BorrowRequest; onClose: () => void }) {
+function DetailPanel({
+  req,
+  onClose,
+  role = 'PHARMACIST',
+}: {
+  req: BorrowRequest;
+  onClose: () => void;
+  /** Role viewing the panel; the lender response is gated through `lib/rbac.ts`. */
+  role?: RoleCode;
+}) {
+  /* Answering a borrow request (give in full / partial / decline) confirms a lending. */
+  const mayRespond = mayActFor(role, 'PHARMACIST', 'confirmLend');
+  const respondHint = requiredRoleHint('confirmLend');
   const [phase, setPhase] = useState<ResponsePhase>('idle');
   const [kind, setKind] = useState<ResponseKind>('full');
   const [selectedLots, setSelectedLots] = useState<Record<string, boolean>>(() => {
@@ -639,7 +654,19 @@ function DetailPanel({ req, onClose }: { req: BorrowRequest; onClose: () => void
             flex: 'none',
           }}
         >
-          {phase === 'idle' && (
+          {/* A role that may not answer still sees the pending decision, disabled with the owner named. */}
+          {!mayRespond && (
+            <button
+              type="button"
+              className="btn btn-p"
+              style={{ width: '100%', height: 42, borderRadius: 8, fontSize: 14, fontWeight: 600 }}
+              disabled
+              title={respondHint}
+            >
+              {confirmLabel}
+            </button>
+          )}
+          {mayRespond && phase === 'idle' && (
             <>
               <div
                 style={{
@@ -721,7 +748,7 @@ function DetailPanel({ req, onClose }: { req: BorrowRequest; onClose: () => void
             </>
           )}
 
-          {phase === 'confirm' && (
+          {mayRespond && phase === 'confirm' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               <div
                 style={{
@@ -774,7 +801,11 @@ function DetailPanel({ req, onClose }: { req: BorrowRequest; onClose: () => void
 }
 
 // ─── Lender Queue Page ────────────────────────────────────────────────
-export function LenderQueuePage() {
+/**
+ * `role` gates the lender response (give in full / partial / decline) through `lib/rbac.ts` and
+ * drives the breadcrumb home and the switch back to UI-05.
+ */
+export function LenderQueuePage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
   const [query, setQuery] = useState('');
   const [urgency, setUrgency] = useState('');
   const [trigger, setTrigger] = useState('');
@@ -812,7 +843,7 @@ export function LenderQueuePage() {
           alignItems: 'center',
         }}
       >
-        <a href="/" className="link" style={{ fontSize: 12.5, color: '#2563eb' }}>
+        <a href={homeHrefFor(role)} className="link" style={{ fontSize: 12.5, color: '#2563eb' }}>
           หน้าหลัก
         </a>
         <Icon name="chev" className="ic12" style={{ transform: 'rotate(-90deg)', color: '#94a3b8' }} />
@@ -862,7 +893,7 @@ export function LenderQueuePage() {
             cursor: 'pointer',
             boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
           }}
-          onClick={() => { window.location.search = '?page=borrow'; }}
+          onClick={() => { window.location.search = withRole('?page=borrow', role); }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <div
@@ -1202,7 +1233,7 @@ export function LenderQueuePage() {
               boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05)',
             }}
           >
-            <DetailPanel req={selected} onClose={() => setSelected(null)} />
+            <DetailPanel req={selected} role={role} onClose={() => setSelected(null)} />
           </div>
         )}
       </div>

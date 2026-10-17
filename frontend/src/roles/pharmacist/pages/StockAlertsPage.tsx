@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Icon } from '../../../components/common/icons';
+import { homeHrefFor } from '../../../data/navigation';
+import type { RoleCode } from '../../../lib/rbac';
 import { StockAlertSummary } from '../components/StockAlertSummary';
 import { StockAlertTable } from '../components/StockAlertTable';
 import type { RowActionCond } from '../components/StockAlertTable';
@@ -59,7 +61,11 @@ const fmt = (n: number) => n.toLocaleString('en-US', { maximumFractionDigits: 2 
  * APIs it will call when wired: GET /alerts (API-F1a-005), POST /alerts/{id}/ack (006),
  * POST /alerts/{id}/snooze (007); "สร้างคำขอ" → POST /borrow-requests (API-F1b-001).
  */
-export function StockAlertsPage() {
+/**
+ * `role` gates the alert actions (ack / snooze / create borrow request) through `lib/rbac.ts` and
+ * drives the breadcrumb home.
+ */
+export function StockAlertsPage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
   const [tab, setTab] = useState<'queue' | 'all'>('queue');
   const [search, setSearch] = useState('');
   const [severity, setSeverity] = useState<'all' | Severity>('all');
@@ -133,7 +139,7 @@ export function StockAlertsPage() {
       <section className="pagehead" data-part="page-header">
         <div>
           <nav aria-label="breadcrumb" style={{ fontSize: 12, lineHeight: '16px' }}>
-            <a href="/" className="link" style={{ fontSize: 12, fontWeight: 400 }}>หน้าหลัก</a>{' '}
+            <a href={homeHrefFor(role)} className="link" style={{ fontSize: 12, fontWeight: 400 }}>หน้าหลัก</a>{' '}
             <span aria-hidden="true">›</span> <span aria-current="page">แจ้งเตือนสต็อก</span>
           </nav>
           <h1 style={{ margin: '2px 0 0', fontSize: 28, lineHeight: '38px', fontWeight: 600, color: '#0F2A5C' }}>
@@ -170,7 +176,7 @@ export function StockAlertsPage() {
           sort={sort}
           onSort={setSort}
         />
-        <StockAlertTable rows={rows} acked={acked} snoozed={snoozed} created={created} onAction={handleAction} />
+        <StockAlertTable rows={rows} acked={acked} snoozed={snoozed} created={created} onAction={handleAction} role={role} />
         <div className="num" style={{ textAlign: 'right', fontSize: 12, color: '#475569', marginTop: 10 }}>
           แสดง {rows.length} จาก {base.length} รายการ
         </div>

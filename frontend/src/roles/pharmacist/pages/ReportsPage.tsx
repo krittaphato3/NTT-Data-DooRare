@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { Icon } from '../../../components/common/icons';
+import { homeHrefFor } from '../../../data/navigation';
+import type { RoleCode } from '../../../lib/rbac';
 import {
   BORROW_KPIS,
   EXPIRY_KPIS,
@@ -31,7 +33,11 @@ const TABS: TabItem[] = [
   { id: 'expiry', title: 'ยาใกล้หมดอายุ', code: 'RPT-05 · 06' },
 ];
 
-export function ReportsPage() {
+/**
+ * UI-19 Reports & Value. Read-only for every role; `role` drives the breadcrumb home, because a role
+ * carried in the query string must keep it in every link.
+ */
+export function ReportsPage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
   const [activeTab, setActiveTab] = useState<ReportTab>('value');
   const [showMonthlyTable, setShowMonthlyTable] = useState(false);
   const [period] = useState('12 เดือน · พ.ย. 68 – ต.ค. 69');
@@ -43,7 +49,7 @@ export function ReportsPage() {
       <section className="pagehead">
         <div style={{ width: '100%' }}>
           <nav aria-label="breadcrumb" style={{ fontSize: 12, lineHeight: '16px', marginBottom: 4 }}>
-            <a href="/" className="link" style={{ fontSize: 12, fontWeight: 400 }}>
+            <a href={homeHrefFor(role)} className="link" style={{ fontSize: 12, fontWeight: 400 }}>
               หน้าหลัก
             </a>{' '}
             <span aria-hidden="true" style={{ color: '#94a3b8' }}>›</span>{' '}

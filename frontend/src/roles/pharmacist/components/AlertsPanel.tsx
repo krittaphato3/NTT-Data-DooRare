@@ -5,10 +5,23 @@ import { fmtTime, useTick } from '../../../lib/time';
 import { AgentSuggestion } from './AgentSuggestion';
 import { Icon } from '../../../components/common/icons';
 import type { IconName } from '../../../components/common/icons';
+import { mayActFor, requiredRoleHint } from '../../../lib/rbac';
+import type { Action, RoleCode } from '../../../lib/rbac';
 
 interface AlertsPanelProps {
   query: string;
   hospital: string;
+  /** Role viewing the panel; the alert actions are gated through `lib/rbac.ts`. */
+  role?: RoleCode;
+}
+
+/**
+ * The primary alert button is a write action. Map its label to the §5.2 action it performs so the
+ * gate can name the role that owns it. Anything not recognised falls to `approveBorrow`, the
+ * stricter of the two.
+ */
+function primaryAction(label: string): Action {
+  return label === 'สร้างคำขอ' ? 'createBorrowRequest' : 'approveBorrow';
 }
 
 const ALL_HOSPITALS = 'ทุกโรงพยาบาล (12)';
@@ -32,7 +45,7 @@ function statusOf(a: Alert, acked: boolean, snoozed: boolean): AlertStatus {
   return 'open';
 }
 
-export function AlertsPanel({ query, hospital }: AlertsPanelProps) {
+export function AlertsPanel({ query, hospital, role = 'PHARMACIST' }: AlertsPanelProps) {
   const [tab, setTab] = useState('all');
   const [expanded, setExpanded] = useState(false);
   const tableWrap = useRef<HTMLDivElement>(null);
@@ -56,6 +69,8 @@ export function AlertsPanel({ query, hospital }: AlertsPanelProps) {
     return true;
   });
   const showAgent = tab === 'all' || tab === 'shortage';
+  /* Acknowledge / snooze are authoring actions the role either has or does not — they are hidden. */
+  const mayAcknowledge = mayActFor(role, 'PHARMACIST', 'acknowledgeAlert');
   const visible = expanded ? filtered : filtered.slice(0, ALERTS_PAGE);
   const remaining = filtered.length - visible.length;
 
@@ -84,7 +99,7 @@ export function AlertsPanel({ query, hospital }: AlertsPanelProps) {
         ))}
       </div>
 
-      {showAgent && <AgentSuggestion />}
+      {showAgent && <AgentSuggestion role={role} />}
 
       <div
         ref={tableWrap}
@@ -105,8 +120,12 @@ export function AlertsPanel({ query, hospital }: AlertsPanelProps) {
             {visible.map((a) => {
               const st = statusOf(a, acked.has(a.drug), snoozed.has(a.drug));
               const meta = STATUS_META[st];
-              const showAck = st === 'open';
-              const showSnooze = st === 'open' || st === 'acked';
+              const showAck = st === 'open' && mayAcknowledge;
+              const showSnooze = (st === 'open' || st === 'acked') && mayAcknowledge;
+              /* Row decisions stay visible: a role that may not act sees them disabled with a hint. */
+              const pa = a.primary ? primaryAction(a.action) : null;
+              const mayAct = pa === null || mayActFor(role, 'PHARMACIST', pa);
+              const hint = pa === null ? undefined : requiredRoleHint(pa);
               return (
                 <tr key={a.drug}>
                   <td style={{ minWidth: 200 }}>
@@ -145,7 +164,13 @@ export function AlertsPanel({ query, hospital }: AlertsPanelProps) {
                     )}
                   </td>
                   <td className="r" style={{ whiteSpace: 'nowrap' }}>
-                    <button className={`btn btn-sm ${a.primary ? 'btn-p' : 'btn-s'}`}>{a.action}</button>
+                    <button
+                      className={`btn btn-sm ${a.primary ? 'btn-p' : 'btn-s'}`}
+                      disabled={!mayAct}
+                      title={mayAct ? undefined : hint}
+                    >
+                      {a.action}
+                    </button>
                     {(showAck || showSnooze) && (
                       <span className="alert-actions">
                         {showAck && (

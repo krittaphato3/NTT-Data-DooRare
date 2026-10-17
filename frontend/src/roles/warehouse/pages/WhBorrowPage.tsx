@@ -164,7 +164,7 @@ export function WhBorrowPage() {
                   <li key={l.hospital}>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <span style={{ fontWeight: 600, color: '#0F2A5C' }}>{l.hospital}</span>
-                      <span className="sub" style={{ display: 'block' }}>Si {l.si.toFixed(2)} · {l.detail}</span>
+                      <span className="sub" style={{ display: 'block' }}>{l.si !== undefined ? `Si ${l.si.toFixed(2)} · ` : 'เพิ่มโดยเภสัชกร · '}{l.detail}</span>
                     </div>
                     <span className={`badge t-${LEG_META[l.state].tone}`}>{LEG_META[l.state].label}</span>
                   </li>

@@ -1,31 +1,45 @@
 [
   {
-    "path": "README.md",
-    "title": "ai-material",
-    "summary": "ai-material",
-    "tags": "session",
-    "date": "2026-10-15"
-  },
-  {
-    "path": "context/conventions.md",
-    "title": "Conventions",
-    "summary": "Conventions",
-    "tags": "session",
-    "date": "2026-10-15"
-  },
-  {
     "path": "context/current-task.md",
     "title": "Current Task",
     "summary": "Current Task",
     "tags": "session",
-    "date": "2026-10-15"
+    "date": "2026-10-16"
   },
   {
     "path": "context/runbook.md",
     "title": "Runbook",
     "summary": "Runbook",
     "tags": "session",
-    "date": "2026-10-15"
+    "date": "2026-10-16"
+  },
+  {
+    "path": "sessions/2026-10-16-1628-buffy-phase2c-return-obligations-waive.md",
+    "title": "Return obligations + Waive (Phase 2C)",
+    "summary": "HOSPITAL_ADMIN gets a read-only ภาระการคืน sub-tab on Borrow requests plus the API-XC-005…",
+    "tags": "session, frontend, hospital-admin, borrow-requests, return-obligations, rbac, audit",
+    "date": "2026-10-16"
+  },
+  {
+    "path": "sessions/2026-10-16-buffy-phase2b-hospital-admin-readonly.md",
+    "title": "Hospital Admin read-only adaptations (Phase 2B)",
+    "summary": "HOSPITAL_ADMIN opens the pharmacist/warehouse screens read-only via an optional role prop and…",
+    "tags": "session, frontend, hospital-admin, rbac, read-only",
+    "date": "2026-10-16"
+  },
+  {
+    "path": "README.md",
+    "title": "ai-material",
+    "summary": "ai-material",
+    "tags": "session",
+    "date": "2026-10-14"
+  },
+  {
+    "path": "context/conventions.md",
+    "title": "Conventions",
+    "summary": "Conventions",
+    "tags": "session",
+    "date": "2026-10-14"
   },
   {
     "path": "decisions/0002-role-based-frontend-structure.md",

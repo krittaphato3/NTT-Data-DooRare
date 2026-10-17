@@ -1,11 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
 import { USER } from '../../../data/session';
 import { Icon } from '../../../components/common/icons';
+import { mayActFor } from '../../../lib/rbac';
+import type { RoleCode } from '../../../lib/rbac';
+import { HOSPITAL_ADMIN_USER } from '../../hospital-admin/data/session';
 
 interface PageHeaderProps {
   isAdmin: boolean;
   hospital: string;
   onHospital: (v: string) => void;
+  /** Role viewing the dashboard; the header actions are gated through `lib/rbac.ts`. */
+  role?: RoleCode;
+  /** Hospital Admin sees own-hospital scope only: the selector is pinned and cannot be changed. */
+  hospitalLocked?: boolean;
 }
 
 type DialogKind = null | 'create' | 'emergency';
@@ -46,10 +53,14 @@ function DialogShell({ label, onClose, children }: { label: string; onClose: () 
 
 const fieldStyle: React.CSSProperties = { height: 36, border: '1px solid #94A3B8', borderRadius: 8, padding: '0 10px', font: 'inherit', color: '#0F2A5C', background: '#FFFFFF', width: '100%' };
 
-export function PageHeader({ isAdmin, hospital, onHospital }: PageHeaderProps) {
+export function PageHeader({ isAdmin, hospital, onHospital, role = 'PHARMACIST', hospitalLocked = false }: PageHeaderProps) {
   const [dialog, setDialog] = useState<DialogKind>(null);
   const [sent, setSent] = useState(false);
-  const roleTh = isAdmin ? 'ผู้ดูแลระบบ (Admin)' : USER.roleTh;
+  /* Own-hospital scope keeps its own identity (name + hospital) — never the pooled pharmacist view. */
+  const viewer = hospitalLocked ? HOSPITAL_ADMIN_USER : USER;
+  const roleTh = isAdmin ? 'ผู้ดูแลระบบ (Admin)' : viewer.roleTh;
+  const mayReportIncident = mayActFor(role, 'PHARMACIST', 'manageIncident');
+  const mayCreateRequest = mayActFor(role, 'PHARMACIST', 'createBorrowRequest');
 
   const open = (k: Exclude<DialogKind, null>) => { setSent(false); setDialog(k); };
 
@@ -61,16 +72,27 @@ export function PageHeader({ isAdmin, hospital, onHospital }: PageHeaderProps) {
         </h1>
         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px 12px', marginTop: 2 }}>
           <span>
-            สวัสดี <strong style={{ color: '#0F2A5C', fontWeight: 600 }}>{USER.name}</strong> · {roleTh}
+            สวัสดี <strong style={{ color: '#0F2A5C', fontWeight: 600 }}>{viewer.name}</strong> · {roleTh}
           </span>
           <span style={{ color: '#CBD5E1' }} aria-hidden="true">
             |
           </span>
+          {hospitalLocked && (
+            <>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <Icon name="shield" />
+                {viewer.scopeLabel}
+              </span>
+              <span style={{ color: '#CBD5E1' }} aria-hidden="true">
+                |
+              </span>
+            </>
+          )}
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
             <Icon name="calendar" />
             วันอังคารที่ 13 ตุลาคม 2569 · <span className="num">19:11</span> น.
           </span>
-          {isAdmin && (
+          {isAdmin && !hospitalLocked && (
             <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
               โรงพยาบาล
               <select aria-label="กรองโรงพยาบาล / Hospital filter" value={hospital} onChange={(e) => onHospital(e.target.value)} style={{ height: 32, border: '1px solid #94A3B8', borderRadius: 8, padding: '0 8px', font: 'inherit', color: '#0F2A5C', background: '#FFFFFF' }}>
@@ -80,17 +102,35 @@ export function PageHeader({ isAdmin, hospital, onHospital }: PageHeaderProps) {
               </select>
             </label>
           )}
+          {hospitalLocked && (
+            <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
+              โรงพยาบาล
+              <select
+                aria-label="โรงพยาบาลของฉัน / Own hospital (fixed)"
+                value={viewer.hospitalLabel}
+                disabled
+                title="ผู้ดูแลโรงพยาบาลเห็นเฉพาะโรงพยาบาลของตนเอง"
+                style={{ height: 32, border: '1px solid #CBD5E1', borderRadius: 8, padding: '0 8px', font: 'inherit', color: '#0F2A5C', background: '#F8FAFC' }}
+              >
+                <option>{viewer.hospitalLabel}</option>
+              </select>
+            </label>
+          )}
         </div>
       </div>
       <div className="pagehead-actions">
-        <button className="btn btn-s" onClick={() => open('emergency')}>
-          <Icon name="siren" />
-          รายงานเหตุฉุกเฉิน <span className="label-en" style={{ fontWeight: 400, opacity: 0.8 }}>Report Emergency</span>
-        </button>
-        <button className="btn btn-p" onClick={() => open('create')}>
-          <Icon name="plus" />
-          สร้างคำขอยืม <span className="label-en" style={{ fontWeight: 400, opacity: 0.85 }}>Create Request</span>
-        </button>
+        {mayReportIncident && (
+          <button className="btn btn-s" onClick={() => open('emergency')}>
+            <Icon name="siren" />
+            รายงานเหตุฉุกเฉิน <span className="label-en" style={{ fontWeight: 400, opacity: 0.8 }}>Report Emergency</span>
+          </button>
+        )}
+        {mayCreateRequest && (
+          <button className="btn btn-p" onClick={() => open('create')}>
+            <Icon name="plus" />
+            สร้างคำขอยืม <span className="label-en" style={{ fontWeight: 400, opacity: 0.85 }}>Create Request</span>
+          </button>
+        )}
       </div>
 
       {dialog !== null && (

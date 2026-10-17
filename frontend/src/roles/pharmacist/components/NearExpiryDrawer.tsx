@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { Icon } from '../../../components/common/icons';
+import { mayActFor, requiredRoleHint } from '../../../lib/rbac';
+import type { RoleCode } from '../../../lib/rbac';
 import { fefoUsable, lotValue, releasable } from '../data/nearExpiry';
 import type { NearExpiryItem, NearExpiryStatus } from '../data/nearExpiry';
 
@@ -7,10 +9,15 @@ interface NearExpiryDrawerProps {
   item: NearExpiryItem;
   onDecide: (status: NearExpiryStatus, qty?: number) => void;
   onClose: () => void;
+  /** Role viewing the drawer; the release/keep decision is gated through `lib/rbac.ts`. */
+  role?: RoleCode;
 }
 
 /** UI-07 detail drawer — FEFO math (F-22) and the release/keep decision (FR-F2a-002). */
-export function NearExpiryDrawer({ item: i, onDecide, onClose }: NearExpiryDrawerProps) {
+export function NearExpiryDrawer({ item: i, onDecide, onClose, role = 'PHARMACIST' }: NearExpiryDrawerProps) {
+  /* Releasing a lot to the central pool is the owner hospital's decision (§4.2). */
+  const mayRelease = mayActFor(role, 'PHARMACIST', 'releaseNearExpiry');
+  const releaseHint = requiredRoleHint('releaseNearExpiry');
   const usable = fefoUsable(i);
   const canRelease = releasable(i);
   const [qty, setQty] = useState(canRelease);
@@ -112,6 +119,7 @@ export function NearExpiryDrawer({ item: i, onDecide, onClose }: NearExpiryDrawe
                   min={0}
                   max={canRelease}
                   value={qty}
+                  disabled={!mayRelease}
                   onChange={(e) => setQty(Math.max(0, Math.min(canRelease, Number(e.target.value))))}
                 />
                 {i.unit}
@@ -124,11 +132,21 @@ export function NearExpiryDrawer({ item: i, onDecide, onClose }: NearExpiryDrawe
               onChange={(e) => setReason(e.target.value)}
             />
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-              <button className="btn btn-p" disabled={qty <= 0} onClick={() => onDecide('RELEASED', qty)}>
+              <button
+                className="btn btn-p"
+                disabled={!mayRelease || qty <= 0}
+                title={mayRelease ? undefined : releaseHint}
+                onClick={() => onDecide('RELEASED', qty)}
+              >
                 <Icon name="pkg" />
                 ปล่อยเข้าคลังกลาง {qty} {i.unit}
               </button>
-              <button className="btn btn-g" onClick={() => onDecide('KEPT')}>
+              <button
+                className="btn btn-g"
+                disabled={!mayRelease}
+                title={mayRelease ? undefined : releaseHint}
+                onClick={() => onDecide('KEPT')}
+              >
                 เก็บไว้ใช้เอง
               </button>
             </div>

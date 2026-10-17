@@ -3,6 +3,8 @@ import { INCOMING, LENDING, ST_CLS, ST_ICON, UG_CLS, UG_ICON } from '../data/das
 import { fmtTime, useTick } from '../../../lib/time';
 import { Icon } from '../../../components/common/icons';
 import type { IconName } from '../../../components/common/icons';
+import { mayActFor, requiredRoleHint } from '../../../lib/rbac';
+import type { Action, RoleCode } from '../../../lib/rbac';
 
 const FLOW = [
   { key: 'pending', th: 'รอดำเนินการ', en: 'Pending' },
@@ -20,9 +22,19 @@ const ALL_HOSPITALS = 'ทุกโรงพยาบาล (12)';
 interface RequestStatusPanelProps {
   query: string;
   hospital: string;
+  /** Role viewing the panel; the request actions are gated through `lib/rbac.ts`. */
+  role?: RoleCode;
 }
 
-export function RequestStatusPanel({ query, hospital }: RequestStatusPanelProps) {
+/**
+ * The row button performs a write action; map its label to the §5.2 action it needs so the gate can
+ * name the role that owns it. Unrecognised primary labels fall to `approveBorrow`, the stricter one.
+ */
+function rowAction(label: string): Action {
+  return label === 'พิจารณา' ? 'confirmLend' : 'approveBorrow';
+}
+
+export function RequestStatusPanel({ query, hospital, role = 'PHARMACIST' }: RequestStatusPanelProps) {
   const [reqTab, setReqTab] = useState<'in' | 'out'>('in');
   const [status, setStatus] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<boolean>(false);
@@ -199,9 +211,20 @@ export function RequestStatusPanel({ query, hospital }: RequestStatusPanelProps)
                 <div style={{ fontSize: 12.5, lineHeight: '18px', color: r.st === 'transit' ? '#1E40AF' : undefined }}>{r.note}</div>
               )}
               <div>
-                <button className={`btn btn-sm ${r.actionPrimary ? 'btn-p' : 'btn-g'}`}>
-                  {r.action}
-                </button>
+                {(() => {
+                  /* A pending row needs a pharmacist decision: visible, but disabled with a hint. */
+                  const needed = r.actionPrimary ? rowAction(r.action) : null;
+                  const allowed = needed === null || mayActFor(role, 'PHARMACIST', needed);
+                  return (
+                    <button
+                      className={`btn btn-sm ${r.actionPrimary ? 'btn-p' : 'btn-g'}`}
+                      disabled={!allowed}
+                      title={allowed || needed === null ? undefined : requiredRoleHint(needed)}
+                    >
+                      {r.action}
+                    </button>
+                  );
+                })()}
               </div>
             </div>
           );
