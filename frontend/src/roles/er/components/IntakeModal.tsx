@@ -18,6 +18,7 @@ export function IntakeModal({ mayWrite, onClose, onSaved }: IntakeModalProps) {
   const [triageYellow, setTriageYellow] = useState('3');
   const [triageGreen, setTriageGreen] = useState('4');
   const [triageBlack, setTriageBlack] = useState('0');
+  const [triageUnknown, setTriageUnknown] = useState('0');
   const [intakeEta, setIntakeEta] = useState('20');
   const [unsureEta, setUnsureEta] = useState(true);
 
@@ -176,7 +177,7 @@ export function IntakeModal({ mayWrite, onClose, onSaved }: IntakeModalProps) {
             <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#334155', marginBottom: 6 }}>
               จำนวนผู้ป่วยตามระดับคัดแยก
             </label>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(96px, 1fr))', gap: 8 }}>
               <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: 8, padding: '8px', textAlign: 'center' }}>
                 <div style={{ fontSize: 11, fontWeight: 600, color: '#b91c1c', marginBottom: 4 }}>แดง · วิกฤต</div>
                 <input
@@ -212,6 +213,17 @@ export function IntakeModal({ mayWrite, onClose, onSaved }: IntakeModalProps) {
                   onChange={(e) => setTriageBlack(e.target.value)}
                   style={{ width: '100%', height: 32, textAlign: 'center', fontSize: 16, fontWeight: 700, color: '#334155', border: '1px solid #94a3b8', borderRadius: 6, fontFamily: 'inherit' }}
                 />
+              </div>
+              <div style={{ background: '#f5f3ff', border: '1px solid #c4b5fd', borderRadius: 8, padding: '8px', textAlign: 'center' }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: '#6d28d9', marginBottom: 4 }}>ไม่ทราบระดับ</div>
+                <input
+                  type="number"
+                  min={0}
+                  value={triageUnknown}
+                  onChange={(e) => setTriageUnknown(e.target.value)}
+                  style={{ width: '100%', height: 32, textAlign: 'center', fontSize: 16, fontWeight: 700, color: '#6d28d9', border: '1px solid #a78bfa', borderRadius: 6, fontFamily: 'inherit' }}
+                />
+                <div style={{ fontSize: 10, color: '#7c3aed', marginTop: 4, lineHeight: '13px' }}>ยังไม่ทราบจำนวนหรือระดับที่ชัดเจน</div>
               </div>
             </div>
           </div>
