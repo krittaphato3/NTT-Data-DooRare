@@ -17,8 +17,16 @@ import { NearExpiryPage } from './roles/pharmacist/pages/NearExpiryPage';
 import { PoolAllocationPage } from './roles/pharmacist/pages/PoolAllocationPage';
 import { ReportsPage } from './roles/pharmacist/pages/ReportsPage';
 import { StockAlertsPage } from './roles/pharmacist/pages/StockAlertsPage';
+import { getWarehouseNav } from './roles/warehouse/data/navigation';
 import { WAREHOUSE_NOTIFICATIONS, WAREHOUSE_USER } from './roles/warehouse/data/session';
 import { TransportTrackingPage } from './roles/warehouse/pages/TransportTrackingPage';
+import { InboxPage } from './roles/warehouse/pages/InboxPage';
+import { KitPage } from './roles/warehouse/pages/KitPage';
+import { WhBorrowPage } from './roles/warehouse/pages/WhBorrowPage';
+import { WhDrugsPage } from './roles/warehouse/pages/WhDrugsPage';
+import { WhExpiryPage } from './roles/warehouse/pages/WhExpiryPage';
+import { WhStockPage } from './roles/warehouse/pages/WhStockPage';
+import { WarehouseDashboardPage } from './roles/warehouse/pages/WarehouseDashboardPage';
 import type { TransportRole } from './roles/warehouse/pages/TransportTrackingPage';
 import { AccessDenied } from './roles/hospital-admin/components/AccessDenied';
 import { ADMIN_NOTIFICATIONS, HOSPITAL_ADMIN_USER } from './roles/hospital-admin/data/session';
@@ -26,11 +34,12 @@ import { AuditLogPage } from './roles/hospital-admin/pages/AuditLogPage';
 import { ConfigurationPage } from './roles/hospital-admin/pages/ConfigurationPage';
 import { UserManagementPage } from './roles/hospital-admin/pages/UserManagementPage';
 
-type Page = 'dashboard' | 'transport' | 'requests' | 'lend' | 'incident' | 'alerts' | 'report' | 'expiry' | 'pool' | 'docs' | 'users' | 'audit' | 'config';
+type Page = 'dashboard' | 'inbox' | 'kit' | 'stock' | 'drugs' | 'transport' | 'requests' | 'lend' | 'incident' | 'alerts' | 'report' | 'expiry' | 'pool' | 'docs' | 'users' | 'audit' | 'config';
 
 /**
  * The pharmacist/warehouse screens the Hospital Admin shell opens read-only (Phase 2B).
  * They are the shared pages, so every write control inside them is gated through `lib/rbac.ts`.
+ * (The warehouse-only pages — inbox, kit, stock, drugs — are not part of the Hospital Admin set.)
  */
 const HA_READ_ONLY_PAGES: Page[] = [
   'dashboard', 'alerts', 'requests', 'lend', 'expiry', 'pool', 'incident', 'transport', 'docs', 'report',
@@ -51,13 +60,20 @@ const PHARMACIST_OPS_USER = { ...USER, scopeLabel: 'เห็นเฉพาะ�
  * `?page=pool` shows Pool & allocation (UI-08 · UI-09),
  * `?page=docs` shows Documents (UI-15).
  * `&role=pharmacist` = read-only pharmacist transport view, otherwise the warehouse officer view.
+ * `?role=warehouse` switches the whole shell to the warehouse officer: `/?role=warehouse` is the WH
+ * dashboard, `&page=inbox` work inbox (F1/F2/F3 out + in), `&page=kit` F3 emergency (urgent requests, kits, incidents), `&page=docs` documents (UI-15, shared with the pharmacist), `&page=stock|requests|expiry|drugs` read-only views, `&page=transport` its transport tracking (other WH pages
+ * fall back to its dashboard).
  */
-function initialRoute(): { page: Page; transportRole: TransportRole } {
+function initialRoute(): { page: Page; transportRole: TransportRole; warehouse: boolean } {
   try {
     const q = new URLSearchParams(window.location.search);
     const p = q.get('page');
     let page: Page = 'dashboard';
     if (p === 'transport') page = 'transport';
+    else if (p === 'inbox') page = 'inbox';
+    else if (p === 'kit') page = 'kit';
+    else if (p === 'stock') page = 'stock';
+    else if (p === 'drugs') page = 'drugs';
     else if (p === 'requests' || p === 'borrow') page = 'requests';
     else if (p === 'lend') page = 'lend';
     else if (p === 'incident' || p === 'inc') page = 'incident';
@@ -69,12 +85,15 @@ function initialRoute(): { page: Page; transportRole: TransportRole } {
     else if (p === 'users' || p === 'usr' || p === 'user') page = 'users';
     else if (p === 'audit' || p === 'aud') page = 'audit';
     else if (p === 'config' || p === 'cfg') page = 'config';
+    const r = q.get('role')?.toLowerCase();
     return {
       page,
-      transportRole: q.get('role')?.toLowerCase() === 'pharmacist' ? 'PHARMACIST' : 'WAREHOUSE_OFFICER',
+      transportRole: r === 'pharmacist' ? 'PHARMACIST' : 'WAREHOUSE_OFFICER',
+      // `page=transport` without a role keeps meaning the warehouse view (back-compat).
+      warehouse: r === 'warehouse' || (page === 'transport' && r !== 'pharmacist'),
     };
   } catch {
-    return { page: 'dashboard', transportRole: 'WAREHOUSE_OFFICER' };
+    return { page: 'dashboard', transportRole: 'WAREHOUSE_OFFICER', warehouse: false };
   }
 }
 
@@ -138,6 +157,10 @@ export default function App() {
   const [hospitalAdmin] = useState(initialHospitalAdmin);
   const [route] = useState(initialRoute);
   const onTransport = route.page === 'transport';
+  const onInbox = route.page === 'inbox';
+  const onKit = route.page === 'kit';
+  const onStock = route.page === 'stock';
+  const onDrugs = route.page === 'drugs';
   const onRequests = route.page === 'requests';
   const onLend = route.page === 'lend';
   const onIncident = route.page === 'incident';
@@ -150,7 +173,7 @@ export default function App() {
   const onAudit = route.page === 'audit';
   const onConfig = route.page === 'config';
   // The Hospital Admin shell keeps its own navigation on every page, including transport.
-  const warehouse = !hospitalAdmin && onTransport && route.transportRole === 'WAREHOUSE_OFFICER';
+  const warehouse = !hospitalAdmin && route.warehouse;
   // Warehouse transport, UI-05, and UI-06 use the ops top bar (no footer); dashboard, alerts, report, and incident console keep standard shell.
   const ops = warehouse || onRequests || onLend;
   // UI-07/08/09/15 screenshots use the ops top bar but keep the standard footer.
@@ -159,7 +182,10 @@ export default function App() {
   /** Role the shared pharmacist/warehouse pages gate their write controls on. */
   const viewerRole: RoleCode = hospitalAdmin ? 'HOSPITAL_ADMIN' : 'PHARMACIST';
   const activeKey = onTransport ? 'tr' : onRequests ? 'req' : onLend ? 'lend' : onIncident ? 'inc' : onAlerts ? 'alerts' : onReport ? 'rep' : onExpiry ? 'exp' : onPool ? 'pool' : onDocs ? 'doc' : onConfig ? 'cfg' : onUsers ? 'usr' : onAudit ? 'aud' : 'dash';
-  const navItems = withLinks(getNavForRole(navRole, activeKey), navRole);
+  // WH owns its sidebar (roles/warehouse/data/navigation.ts); other roles use the shared catalogue.
+  const navItems = warehouse
+    ? getWarehouseNav(onTransport ? 'transport' : onInbox ? 'inbox' : onKit ? 'kit' : onDocs ? 'docs' : onStock || onAlerts ? 'stock' : onRequests ? 'requests' : onExpiry ? 'expiry' : onDrugs ? 'drugs' : 'dashboard')
+    : withLinks(getNavForRole(navRole, activeKey), navRole);
   // Page access for the Hospital Admin shell is decided by lib/rbac.ts, not by local role checks.
   const mayManageUsers = can(navRole, 'manageUsers');
   const mayViewAudit = can(navRole, 'viewAudit');
@@ -222,6 +248,8 @@ export default function App() {
             /* Guard for a Hospital Admin page outside the allowed set. The operational screens
                render read-only through their `role` prop; this card covers anything else. */
             <AccessDenied homeHref={HOSPITAL_ADMIN_HOME_HREF} />
+          ) : warehouse ? (
+            onTransport ? <TransportTrackingPage role="WAREHOUSE_OFFICER" /> : onInbox ? <InboxPage /> : onKit ? <KitPage /> : onDocs ? <DocumentsPage role="WAREHOUSE_OFFICER" /> : onStock || onAlerts ? <WhStockPage /> : onRequests ? <WhBorrowPage /> : onExpiry ? <WhExpiryPage /> : onDrugs ? <WhDrugsPage /> : <WarehouseDashboardPage />
           ) : onTransport ? (
             <TransportTrackingPage role={hospitalAdmin ? 'HOSPITAL_ADMIN' : route.transportRole} />
           ) : onRequests ? (

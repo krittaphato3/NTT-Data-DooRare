@@ -1,0 +1,15 @@
+/* WH F3 "kits & incidents" page (kt- prefix). */
+.kt-tbl { min-width: 960px; }
+.kt-note { display: flex; gap: 8px; margin: 12px 16px 0; padding: 8px 10px; border-radius: 8px; background: #eff6ff; border: 1px solid #dbeafe; font-size: 12.5px; line-height: 18px; color: #1e3a8a; }
+.kt-recipe-cell { background: #f8fafc !important; padding: 12px 16px !important; }
+.kt-recipe { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.kt-recipe th { text-align: left; font-weight: 500; color: #475569; padding: 6px 8px; border-bottom: 1px solid #e2e8f0; }
+.kt-recipe td { padding: 6px 8px; border-bottom: 1px solid #eef2f7; color: #0f2a5c; }
+.kt-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.kt-list li { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid #e2e8f0; border-radius: 8px; }
+.kt-confirm { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+.kt-kits { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; padding: 14px 16px 4px; }
+.kt-kit { border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 14px; background: #ffffff; }
+.kt-subhead { padding: 10px 16px 4px; }
+@media (max-width: 1023px) { .kt-kits { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 479px) { .kt-kits { grid-template-columns: minmax(0, 1fr); } }

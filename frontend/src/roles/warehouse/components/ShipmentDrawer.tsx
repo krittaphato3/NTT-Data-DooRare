@@ -1,6 +1,8 @@
 import { Icon } from '../../../components/common/icons';
 import { fmtQty, HOSPITALS, isOutbound, STEP_ORDER, STEPS } from '../data/transport';
 import type { Shipment, TransportStatus } from '../data/transport';
+import { ProxyStatusPanel } from './ProxyStatusPanel';
+import type { ProxyEntry } from './ProxyStatusPanel';
 import { ReceiptForm } from './ReceiptForm';
 import { StatusBadge } from './StatusBadge';
 
@@ -22,8 +24,13 @@ interface ShipmentDrawerProps {
   onConfirmReceipt: () => void;
   onUndoReceipt: () => void;
   onCancelDecision: (d: 'yes' | 'no') => void;
-  /** false = read-only role (pharmacist): no photo upload, status, receipt or cancel controls. */
+  /** false = read-only role (pharmacist): no photo upload, status or receipt controls. */
   canOperate: boolean;
+  /** Only the pharmacist decides on / requests cancellation (RBAC §4.4). */
+  canCancel: boolean;
+  /** Statuses set by the warehouse on behalf of the driver, with the audit reason. */
+  proxies: ProxyEntry[];
+  onProxy: (to: ProxyEntry['to'], reason: string) => void;
 }
 
 function returnNote(s: Shipment): string {
@@ -50,7 +57,9 @@ export function ShipmentDrawer(p: ShipmentDrawerProps) {
       : status === 'ARRIVED' && !out && !showReceipt
         ? { label: 'ยืนยันรับของ', onClick: p.onOpenReceipt }
         : null;
-  const canCancel = op && status === 'WAITING_DISPATCH' && out && !cancelReq;
+  const canRequestCancel = p.canCancel && status === 'WAITING_DISPATCH' && out && !cancelReq;
+  const canProxy = op && out && (status === 'LOADED' || status === 'IN_TRANSIT');
+  const showPick = op && out && status === 'WAITING_DISPATCH' && (s.pick?.length ?? 0) > 0;
 
   return (
     <aside className="tr-drawer" aria-label="รายละเอียดงานขนส่ง">
@@ -84,9 +93,9 @@ export function ShipmentDrawer(p: ShipmentDrawerProps) {
               <br />
               เหตุผล: “{cancelReq.reason}” · ยกเลิกได้เพราะยังไม่ขึ้นรถ ต้องได้ความยินยอมจากเรา (ผู้ส่ง)
             </div>
-            {!op ? (
+            {!p.canCancel ? (
               <div role="status" style={{ fontSize: 13, color: '#0F2A5C', background: '#FFFFFF', borderRadius: 8, padding: '8px 10px' }}>
-                รอเจ้าหน้าที่คลังตอบคำขอยกเลิก
+                {p.cancel === 'yes' ? 'เภสัชกรยินยอมแล้ว · งานถูกยกเลิก (CANCELLED)' : p.cancel === 'no' ? 'เภสัชกรไม่ยินยอม · งานยังรอขึ้นรถตามแผน' : 'รอเภสัชกรตอบคำขอยกเลิก · การยกเลิกเป็นสิทธิ์ของเภสัชกร'}
               </div>
             ) : !p.cancel ? (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
@@ -115,14 +124,15 @@ export function ShipmentDrawer(p: ShipmentDrawerProps) {
             {STEPS.map((st, i) => {
               const done = i < idx || status === 'RECEIVED';
               const cur = i === idx && status !== 'RECEIVED';
-              const sub = s.times[i] || (cur ? 'ขั้นปัจจุบัน' : status === 'CANCELLED' ? '—' : 'ยังไม่ถึง');
+              const proxied = p.proxies.some((x) => x.to === st.code);
+              const sub = proxied ? '19:12 · บันทึกแทนคนขับ โดย คุณประเสริฐ' : s.times[i] || (cur ? 'ขั้นปัจจุบัน' : status === 'CANCELLED' ? '—' : 'ยังไม่ถึง');
               return (
                 <li key={st.code}>
                   <span className="step-rail">
                     <span className="step-dot" style={{ background: done ? '#1D4ED8' : cur ? '#FFFFFF' : '#F1F5F9', color: done ? '#FFFFFF' : cur ? '#1D4ED8' : '#475569', boxShadow: cur ? '0 0 0 2px #1D4ED8' : 'none' }}>
                       <Icon name={done ? 'check' : st.icon} className="ic14" />
                     </span>
-                    <span className="step-line" style={{ background: i < 4 ? (done ? '#1D4ED8' : '#E2E8F0') : 'transparent' }} />
+                    <span className="step-line" style={{ background: i < STEPS.length - 1 ? (done ? '#1D4ED8' : '#E2E8F0') : 'transparent' }} />
                   </span>
                   <span className="step-body">
                     <span className="step-label" style={{ color: done || cur ? '#0F2A5C' : '#475569', fontWeight: cur ? 600 : 400 }}>
@@ -147,11 +157,44 @@ export function ShipmentDrawer(p: ShipmentDrawerProps) {
             </dd>
             <dt>ล็อต</dt>
             <dd>{s.lot}</dd>
+            {s.coldChain && (
+              <>
+                <dt>Cold chain</dt>
+                <dd>ใช่ · ต้องควบคุมอุณหภูมิระหว่างขนส่ง</dd>
+              </>
+            )}
             <dt>อ้างอิง</dt>
             <dd>{s.ref}</dd>
           </dl>
           <div className="return-note">{returnNote(s)}</div>
         </div>
+
+        {showPick && (
+          <div>
+            <h3 className="tr-h3">
+              ล็อตที่จะหยิบ <span className="en">FEFO · เตรียมก่อนขึ้นรถ</span>
+            </h3>
+            <ul className="kt-list">
+              {s.pick!.map((l) => (
+                <li key={l.lot}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <span className="code" style={{ fontWeight: 600, color: '#0F2A5C', fontSize: 12.5 }}>{l.lot}</span>
+                    {l.coldChain && <span className="badge t-blue" style={{ marginLeft: 6, height: 18, fontSize: 11 }}>Cold chain</span>}
+                    <span className="sub" style={{ display: 'block' }}>หมดอายุ {l.expiry} (เหลือ {l.daysLeft} วัน) · {l.location}</span>
+                  </div>
+                  <span className="num" style={{ fontWeight: 600, color: '#0F2A5C' }}>{fmtQty(l.qty)} {s.unit}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {canProxy && <ProxyStatusPanel key={status} status={status} onSubmit={p.onProxy} />}
+        {p.proxies.map((x, i) => (
+          <div key={i} role="status" className="proxy-done">
+            บันทึกแทนคนขับ → {x.to} · เหตุผล: “{x.reason}” · บันทึกใน audit log
+          </div>
+        ))}
 
         {showReceipt && <ReceiptForm shipment={s} counted={p.counted} onCounted={p.onCounted} onConfirm={p.onConfirmReceipt} />}
         {op && !out && p.receipt === 'done' && (
@@ -220,7 +263,7 @@ export function ShipmentDrawer(p: ShipmentDrawerProps) {
             <Icon name="printer" />
             {s.kind === 'F1' ? 'ใบยืม BORROW_SLIP' : 'ใบโอน TRANSFER_SLIP'}
           </button>
-          {canCancel && <button className="btn btn-g">ขอยกเลิก (ต้องได้ความยินยอม)</button>}
+          {canRequestCancel && <button className="btn btn-g">ขอยกเลิก (ต้องได้ความยินยอม)</button>}
         </div>
       </div>
     </aside>

@@ -86,6 +86,7 @@ export const HOSPITAL_ADMIN_HOME_HREF = `?page=users&role=${HOSPITAL_ADMIN_ROLE_
  */
 export const ROLE_QUERY: Record<string, string> = {
   HOSPITAL_ADMIN: HOSPITAL_ADMIN_ROLE_QUERY,
+  WAREHOUSE_OFFICER: 'warehouse',
 };
 
 /**
