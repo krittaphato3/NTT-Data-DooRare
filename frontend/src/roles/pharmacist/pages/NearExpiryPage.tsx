@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Icon } from '../../../components/common/icons';
+import { homeHrefFor } from '../../../data/navigation';
+import type { RoleCode } from '../../../lib/rbac';
 import { NearExpiryDrawer } from '../components/NearExpiryDrawer';
 import {
   EXPIRY_KPIS,
@@ -43,7 +45,11 @@ function advice(i: NearExpiryItem): { text: string; cls: string } {
  * UI-07 Near-expiry review (spec F2a, JOB-05). UI only: mock data, release/keep
  * decisions are local state. Released lots show as ถูกกันไว้ in the central pool.
  */
-export function NearExpiryPage() {
+/**
+ * UI-07 Near-expiry review. `role` gates the release/keep decision through `lib/rbac.ts` and drives
+ * the breadcrumb home.
+ */
+export function NearExpiryPage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
   const [tab, setTab] = useState<ExpiryTab>('review');
   const [items, setItems] = useState(NEAR_EXPIRY_ITEMS);
   const [selId, setSelId] = useState('');
@@ -111,7 +117,7 @@ export function NearExpiryPage() {
       <section className="pagehead">
         <div>
           <nav aria-label="breadcrumb" style={{ fontSize: 12, lineHeight: '16px' }}>
-            <a href="/" className="link" style={{ fontSize: 12, fontWeight: 400 }}>
+            <a href={homeHrefFor(role)} className="link" style={{ fontSize: 12, fontWeight: 400 }}>
               หน้าหลัก
             </a>{' '}
             <span aria-hidden="true">›</span> <span aria-current="page">หน้าใกล้หมดอายุ</span>
@@ -278,6 +284,7 @@ export function NearExpiryPage() {
         <NearExpiryDrawer
           key={sel.id}
           item={sel}
+          role={role}
           onDecide={(status, qty) => decide(sel.id, status, qty)}
           onClose={() => setDrawerOpen(false)}
         />

@@ -3,7 +3,7 @@ import type { UserProfile } from '../../../data/session';
 /** ER staff (RBAC role 3): records incidents, approves the F3 plan and urgent borrows. Own hospital only. */
 export const ER_USER: UserProfile = {
   name: 'พว.กมลชนก ใจดี',
-  role: 'ER',
+  role: 'ER_STAFF',
   roleTh: 'พยาบาลห้องฉุกเฉิน (ER)',
   scopeLabel: 'เห็นเฉพาะข้อมูล รพ.สมุทรปราการ',
   hospitalLabel: 'โรงพยาบาลสมุทรปราการ',

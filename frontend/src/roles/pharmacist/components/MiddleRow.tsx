@@ -2,6 +2,8 @@ import { useRef, useState } from 'react';
 import { EXPIRY, HELD_LOT, NEARBY, RETURNS_INBOUND, RETURNS_OWE, WORK } from '../data/dashboard';
 import { Icon } from '../../../components/common/icons';
 import type { IconName } from '../../../components/common/icons';
+import { mayActFor, maySeePeerStock, requiredRoleHint } from '../../../lib/rbac';
+import type { RoleCode } from '../../../lib/rbac';
 
 /** Visible rows before Load more is pressed (cards stay fixed-size, no scroll). */
 const NEARBY_PAGE = 6;
@@ -29,7 +31,14 @@ function MoreButton({ expanded, remaining, onClick }: { expanded: boolean; remai
   );
 }
 
-export function MiddleRow() {
+interface MiddleRowProps {
+  /** Role viewing the row; the near-expiry release action is gated through `lib/rbac.ts`. */
+  role?: RoleCode;
+}
+
+export function MiddleRow({ role = 'PHARMACIST' }: MiddleRowProps) {
+  const mayRelease = mayActFor(role, 'PHARMACIST', 'releaseNearExpiry');
+  const releaseHint = requiredRoleHint('releaseNearExpiry');
   const [released, setReleased] = useState<Record<string, boolean>>({});
   const [histTab, setHistTab] = useState<'activity' | 'returns'>('activity');
   const overdueCount = RETURNS_OWE.filter((o) => o.overdue).length;
@@ -100,9 +109,17 @@ export function MiddleRow() {
                   <span className="num">{h.km}</span> กม. · <span className="num">{h.min}</span> นาที
                 </div>
               </div>
-              <span className="badge" style={{ background: '#DCFCE7', color: '#166534' }} title="จำนวนรายการยาที่ให้ยืมได้">
-                ให้ยืมได้ <span className="num">{h.lend}</span> รายการ
-              </span>
+              {/* Another hospital's lendable stock is Agent-internal (rbac.md §3) — own-hospital
+                  scope shows only the hospital name and travel time. */}
+              {maySeePeerStock(role) ? (
+                <span className="badge" style={{ background: '#DCFCE7', color: '#166534' }} title="จำนวนรายการยาที่ให้ยืมได้">
+                  ให้ยืมได้ <span className="num">{h.lend}</span> รายการ
+                </span>
+              ) : (
+                <span className="badge t-grey" title="ซ่อนจำนวนยาให้ยืมของโรงพยาบาลอื่น · เห็นเฉพาะข้อมูลโรงพยาบาลตนเอง (rbac.md §3)">
+                  เห็นเฉพาะ รพ.ตนเอง
+                </span>
+              )}
             </li>
           ))}
         </ul>
@@ -243,7 +260,14 @@ export function MiddleRow() {
                     หมดอายุ {e.exp} · มูลค่า ฿<span className="num">{e.value}</span>
                   </span>
                   {!released[e.k] ? (
-                    <button className="btn btn-s btn-sm" onClick={() => setReleased((v) => ({ ...v, [e.k]: true }))}>ปล่อยเข้าคลังกลาง</button>
+                    <button
+                      className="btn btn-s btn-sm"
+                      disabled={!mayRelease}
+                      title={mayRelease ? undefined : releaseHint}
+                      onClick={() => setReleased((v) => ({ ...v, [e.k]: true }))}
+                    >
+                      ปล่อยเข้าคลังกลาง
+                    </button>
                   ) : (
                     <span className="badge st-pending">
                       <Icon name="hourglass" className="ic14" />

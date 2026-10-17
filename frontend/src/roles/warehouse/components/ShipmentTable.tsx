@@ -17,18 +17,29 @@ interface ShipmentTableProps {
   onAction: (row: ShipmentRowState) => void;
   /** false = read-only role (pharmacist): every action opens the detail only. */
   canOperate: boolean;
+  /** true = this role answers cancel requests (pharmacist). */
+  canCancel: boolean;
+  /** true = driver role: milestones are 'ออกเดินทาง' and 'ถึงแล้ว + รูป'. */
+  isDriver?: boolean;
 }
 
-function actionFor(r: ShipmentRowState, canOperate: boolean): [string, string] {
-  if (!canOperate) return ['ดูรายละเอียด', 'btn-s'];
+function actionFor(r: ShipmentRowState, canOperate: boolean, canCancel: boolean, isDriver?: boolean): [string, string] {
   const out = isOutbound(r.shipment);
+  // Only the pharmacist answers a cancel request (RBAC §4.4).
+  if (canCancel && r.status === 'WAITING_DISPATCH' && out && r.cancelRequested) return ['ตอบคำขอยกเลิก', 'btn-p'];
+  if (!canOperate) return ['ดูรายละเอียด', 'btn-s'];
+  if (isDriver) {
+    if (r.status === 'LOADED') return ['ออกเดินทาง', 'btn-p'];
+    if (r.status === 'IN_TRANSIT') return ['ถึงแล้ว + รูป', 'btn-p'];
+    return ['ดูรายละเอียด', 'btn-s'];
+  }
   if (r.status === 'ARRIVED' && !out) return ['ยืนยันรับของ', 'btn-p'];
-  if (r.status === 'WAITING_DISPATCH' && out) return r.cancelRequested ? ['ตอบคำขอยกเลิก', 'btn-p'] : ['ขึ้นรถ + ถ่ายรูป', 'btn-p'];
+  if (r.status === 'WAITING_DISPATCH' && out) return r.cancelRequested ? ['ดูรายละเอียด', 'btn-s'] : ['ขึ้นรถ + ถ่ายรูป', 'btn-p'];
   if (r.status === 'LOADED' && r.pending) return ['ซิงก์ตอนนี้', 'btn-s'];
   return ['ดูรายละเอียด', 'btn-s'];
 }
 
-export function ShipmentTable({ rows, activeId, onOpen, onAction, canOperate }: ShipmentTableProps) {
+export function ShipmentTable({ rows, activeId, onOpen, onAction, canOperate, canCancel, isDriver }: ShipmentTableProps) {
   return (
     <>
       <div className="scroll-x">
@@ -52,7 +63,7 @@ export function ShipmentTable({ rows, activeId, onOpen, onAction, canOperate }: 
               const s = r.shipment;
               const out = isOutbound(s);
               const idx = r.status === 'CANCELLED' ? -1 : STEP_ORDER.indexOf(r.status);
-              const [label, cls] = actionFor(r, canOperate);
+              const [label, cls] = actionFor(r, canOperate, canCancel, isDriver);
               return (
                 <tr key={s.id} className={activeId === s.id ? 'r-active' : ''}>
                   <td>
@@ -70,6 +81,11 @@ export function ShipmentTable({ rows, activeId, onOpen, onAction, canOperate }: 
                   </td>
                   <td>
                     <span style={{ fontWeight: 600, color: '#0F2A5C' }}>{s.drug}</span>
+                    {s.coldChain && (
+                      <span className="badge t-blue" style={{ marginLeft: 6, height: 18, fontSize: 11 }} title="ต้องควบคุมอุณหภูมิระหว่างขนส่ง">
+                        Cold chain
+                      </span>
+                    )}
                     <span style={{ display: 'block', fontSize: 12.5 }}>
                       <span className="num" style={{ color: '#0F2A5C', fontWeight: 600 }}>
                         {fmtQty(s.qty)}
@@ -102,13 +118,13 @@ export function ShipmentTable({ rows, activeId, onOpen, onAction, canOperate }: 
                     )}
                   </td>
                   <td>
-                    <span className="mst" role="img" aria-label={r.status === 'CANCELLED' ? 'ยกเลิก' : `ขั้นที่ ${idx + 1} จาก 5`}>
+                    <span className="mst" role="img" aria-label={r.status === 'CANCELLED' ? 'ยกเลิก' : `ขั้นที่ ${idx + 1} จาก ${STEP_ORDER.length}`}>
                       {STEP_ORDER.map((o, i) => (
                         <span key={o} style={{ background: r.status === 'CANCELLED' ? '#E2E8F0' : i < idx ? '#1D4ED8' : i === idx ? '#93C5FD' : '#E2E8F0' }} />
                       ))}
                     </span>
                     <span style={{ display: 'block', fontSize: 11.5, lineHeight: '16px', marginTop: 3 }}>
-                      {r.status === 'CANCELLED' ? 'ยกเลิกโดยความยินยอม' : `${idx + 1}/5 · ${STEPS[idx].label.split(' · ')[0]}`}
+                      {r.status === 'CANCELLED' ? 'ยกเลิกโดยความยินยอม' : `${idx + 1}/${STEP_ORDER.length} · ${STEPS[idx].label.split(' · ')[0]}`}
                     </span>
                   </td>
                   <td>

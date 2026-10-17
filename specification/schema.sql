@@ -1,4 +1,12 @@
 -- DooRare schema.sql  (PostgreSQL 16)
+-- v1.4 (on top of spec v1.3): closes gaps found when reading the spec against the mock data.
+--   G1 missing columns : forecast/alert granularity, incident type+ETA, borrow_leg.request_item_id,
+--                        hospital/drug flags (agent_participation, is_controlled, lend_in_packs, ...), document versioning
+--   G2 security        : RLS on pool_entry, allocation_plan, transport_task, return_obligation, document;
+--                        audit_log hash chain serialised via audit_chain_head (+1 table = 63) and audit_chain_verify() for JOB-15
+--   G2b bug fix        : borrow_request <-> borrow_leg RLS policies recursed infinitely (spec v1.3); now via app_is_lender_of / app_is_borrower_of
+--   G3 enums           : mapping_status +DEPRECATED, alert_type +ORDER_AHEAD/ORDER_EARLIER/MIN_MAX
+--   All new columns are nullable or defaulted, so existing v1.3 data/CSV still loads.
 -- Multi-tenant by hospital via Row-Level Security. Session vars set per request:
 --   SET app.user_id = '<uuid>'; SET app.role = '<ROLE>'; SET app.hospital_id = '<uuid>'; SET app.region_id = '<uuid>';
 -- gen_random_uuid() and sha256() are built in (PostgreSQL 13+); no extensions required.
@@ -20,7 +28,7 @@ CREATE TYPE abc_class AS ENUM ('A','B','C');
 CREATE TYPE forecast_method AS ENUM ('MA_ES','QUANTILE_LGBM','MIN_MAX','COLD_START');
 CREATE TYPE alert_severity AS ENUM ('NORMAL','URGENT','VERY_URGENT');
 CREATE TYPE alert_status AS ENUM ('OPEN','ACKNOWLEDGED','LINKED_TO_REQUEST','SNOOZED','RESOLVED','AUTO_CLOSED');
-CREATE TYPE alert_type AS ENUM ('LOW_STOCK','OVERSTOCK','DATA_STALE','LOW_CONFIDENCE');
+CREATE TYPE alert_type AS ENUM ('LOW_STOCK','OVERSTOCK','DATA_STALE','LOW_CONFIDENCE','ORDER_AHEAD','ORDER_EARLIER','MIN_MAX');   -- v1.4: ORDER_AHEAD / ORDER_EARLIER / MIN_MAX per BR-F1a-014/015/020
 CREATE TYPE request_context AS ENUM ('STOCK_ALERT','MANUAL','EMERGENCY');
 CREATE TYPE request_status AS ENUM ('DRAFT','PENDING_APPROVAL','APPROVED','IN_PROGRESS','PARTIALLY_FULFILLED','FULFILLED','ESCALATED','CLOSED_UNFULFILLED','CANCELLED');
 CREATE TYPE leg_status AS ENUM ('PENDING','SENT','ACCEPTED','PARTIAL','REJECTED','TIMED_OUT','CANCELLED','LOADED','IN_TRANSIT','RECEIVED');
@@ -30,12 +38,14 @@ CREATE TYPE expiry_status AS ENUM ('DETECTED','KEPT','DISMISSED','RELEASED_TO_PO
 CREATE TYPE plan_status AS ENUM ('DRAFT','READY_FOR_APPROVAL','AUTO_APPROVED','APPROVED','NEEDS_DISCUSSION','TRANSPORTING','COMPLETED','CANCELLED');
 CREATE TYPE transport_status AS ENUM ('WAITING_DISPATCH','LOADED','IN_TRANSIT','ARRIVED','RECEIVED','CANCELLED');
 CREATE TYPE incident_status AS ENUM ('OPEN','PLAN_REVIEW','ACTIVE','CLOSE_REQUESTED','RECONCILED','CANCELLED');
-CREATE TYPE mapping_status AS ENUM ('UNMATCHED','SUGGESTED','VERIFIED','REJECTED');
+CREATE TYPE mapping_status AS ENUM ('UNMATCHED','SUGGESTED','VERIFIED','REJECTED','DEPRECATED');   -- v1.4: DEPRECATED (TMT release change / local code inactivated); LOW_CONFIDENCE and UNMAPPED are derived from confidence
 CREATE TYPE return_status AS ENUM ('OPEN','REMINDED','RETURNED','OVERDUE','WAIVED');
 CREATE TYPE approval_decision AS ENUM ('PENDING','APPROVED','REJECTED');
 CREATE TYPE job_status AS ENUM ('QUEUED','RUNNING','SUCCEEDED','FAILED','SKIPPED');
 CREATE TYPE ledger_reason AS ENUM ('RECEIPT','ISSUE_USAGE','ADJUST','LEND_OUT','BORROW_IN','RETURN_IN','RETURN_OUT','POOL_TRANSFER_OUT','POOL_TRANSFER_IN','KIT_PACK','KIT_UNPACK','EXPIRED_WRITEOFF','IMPORT');
-CREATE TYPE triage_level AS ENUM ('RED','YELLOW','GREEN','BLACK');
+CREATE TYPE triage_level AS ENUM ('RED','YELLOW','GREEN','BLACK');   -- BLACK is counted in incident_patient_count but has no kit_recipe / incident_extra_rule rows (kits are not computed for BLACK)
+CREATE TYPE forecast_granularity AS ENUM ('WEEK','MONTH');   -- v1.4
+CREATE TYPE eta_source AS ENUM ('REPORTED','ROUTE','UNAVAILABLE');   -- v1.4: F-26
 CREATE TYPE notif_channel AS ENUM ('IN_APP','EMAIL','LINE');
 
 -- ---------- tenancy & identity ----------
@@ -57,6 +67,7 @@ CREATE TABLE hospital (
   lat numeric(9,6), lon numeric(9,6), is_urban boolean NOT NULL DEFAULT true,
   has_cold_chain boolean NOT NULL DEFAULT false,
   has_blood_bank boolean NOT NULL DEFAULT false,   -- rev 1.2: may lend/borrow PRC group O in F3 (ASM-47)
+  agent_participation boolean NOT NULL DEFAULT true,   -- v1.4: lender must participate in the agent flow (F-12, ASM-20)
   active boolean NOT NULL DEFAULT true,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(), version int NOT NULL DEFAULT 1
@@ -118,6 +129,7 @@ CREATE TABLE drug_master (            -- canonical, region-wide, built from VERI
   is_cold_chain boolean NOT NULL DEFAULT false,
   is_blood_product boolean NOT NULL DEFAULT false,  -- rev 1.2: excluded from F1/F2; borrowable only in F3 emergency between blood-bank hospitals (ASM-47)
   is_high_alert boolean NOT NULL DEFAULT false,
+  is_controlled boolean NOT NULL DEFAULT false,   -- v1.4: narcotics/psychotropics, never automated (BR-F1b-014, F-12)
   emergency_class text NOT NULL DEFAULT 'SUPPORTIVE' CHECK (emergency_class IN ('CRITICAL','SUPPORTIVE')),  -- F3 timeouts 3/5 min (Q-12)
   created_at timestamptz NOT NULL DEFAULT now(),
   CHECK (item_type <> 'DRUG' OR gp_id IS NOT NULL),                 -- a medicine must carry its TMT GP
@@ -131,8 +143,15 @@ CREATE TABLE hospital_drug (          -- imported HIS drug list
   local_unit text NOT NULL, tmt_id text, gp_id text, active boolean NOT NULL DEFAULT true,
   ved ved_class NOT NULL DEFAULT 'E', abc abc_class,
   expiry_threshold_days int,          -- pharmacist-set; NULL => config default
+  lend_in_packs boolean NOT NULL DEFAULT false,        -- v1.4: round lending up to whole packs (ASM-04, F-32)
+  method_override forecast_method,                     -- v1.4: DATA_ADMIN override of F-02 (never MIN_MAX for V/E, ASM-09)
+  is_seasonal boolean NOT NULL DEFAULT false,          -- v1.4: manual seasonal flag for F-02
+  standard_lead_time_days int CHECK (standard_lead_time_days > 0),   -- v1.4: L when no open PO (F-08)
+  min_level numeric(14,3), max_level numeric(14,3),    -- v1.4: Min-Max items (BR-F1a-020)
   drug_master_id uuid REFERENCES drug_master(id),
-  UNIQUE (hospital_id, local_code)
+  UNIQUE (hospital_id, local_code),
+  CHECK (method_override IS DISTINCT FROM 'MIN_MAX' OR ved = 'D'),
+  CHECK (max_level IS NULL OR min_level IS NULL OR max_level >= min_level)
 );
 CREATE INDEX hospital_drug_master_idx ON hospital_drug(drug_master_id);
 CREATE TABLE drug_mapping (
@@ -213,6 +232,7 @@ CREATE TABLE forecast_run (
 CREATE TABLE forecast_result (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(), run_id uuid NOT NULL REFERENCES forecast_run(id) ON DELETE CASCADE,
   hospital_id uuid NOT NULL REFERENCES hospital(id), hospital_drug_id uuid NOT NULL REFERENCES hospital_drug(id),
+  granularity forecast_granularity NOT NULL DEFAULT 'WEEK', period_start date,   -- v1.4: one row per period (FR-F1a-005)
   method forecast_method NOT NULL, ved ved_class NOT NULL, abc abc_class,
   u_per_day numeric(14,4) NOT NULL, sigma_per_day numeric(14,4), lead_time_days numeric(6,2) NOT NULL,
   demand_pattern text NOT NULL DEFAULT 'REGULAR' CHECK (demand_pattern IN ('REGULAR','INTERMITTENT','NO_USAGE')),
@@ -220,9 +240,9 @@ CREATE TABLE forecast_result (
   p50 numeric(14,3), p90 numeric(14,3), p95 numeric(14,3),
   total_target numeric(14,3), rop numeric(14,3), min_level numeric(14,3), max_level numeric(14,3),
   confidence_flag text, coverage_ok boolean, computed_at timestamptz NOT NULL DEFAULT now(),
-  UNIQUE (run_id, hospital_id, hospital_drug_id)
+  UNIQUE NULLS NOT DISTINCT (run_id, hospital_id, hospital_drug_id, granularity, period_start)
 );
-CREATE INDEX forecast_result_latest_idx ON forecast_result(hospital_id, hospital_drug_id, computed_at DESC);
+CREATE INDEX forecast_result_latest_idx ON forecast_result(hospital_id, hospital_drug_id, granularity, computed_at DESC);
 CREATE TABLE forecast_backtest (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(), run_id uuid NOT NULL REFERENCES forecast_run(id) ON DELETE CASCADE,
   hospital_id uuid NOT NULL, hospital_drug_id uuid NOT NULL, week_start date NOT NULL,
@@ -238,12 +258,13 @@ CREATE TABLE context_signal (        -- XC-3 context agent signals (seasonality,
 CREATE TABLE stock_alert (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(), hospital_id uuid NOT NULL REFERENCES hospital(id),
   hospital_drug_id uuid NOT NULL REFERENCES hospital_drug(id), type alert_type NOT NULL,
+  granularity forecast_granularity NOT NULL DEFAULT 'WEEK',   -- v1.4: one open alert per drug x type x granularity
   severity alert_severity NOT NULL DEFAULT 'NORMAL', status alert_status NOT NULL DEFAULT 'OPEN',
   stock_qty numeric(14,3), incoming_qty numeric(14,3), days_cover numeric(8,2), suggested_borrow_qty numeric(14,3),
   forecast_result_id uuid REFERENCES forecast_result(id), snoozed_until timestamptz,
   created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(), version int NOT NULL DEFAULT 1
 );
-CREATE UNIQUE INDEX stock_alert_one_open ON stock_alert(hospital_id, hospital_drug_id, type)
+CREATE UNIQUE INDEX stock_alert_one_open ON stock_alert(hospital_id, hospital_drug_id, type, granularity)
   WHERE status IN ('OPEN','ACKNOWLEDGED','LINKED_TO_REQUEST','SNOOZED');
 
 -- ---------- borrowing ----------
@@ -277,13 +298,15 @@ END $$ LANGUAGE plpgsql;
 CREATE TRIGGER borrow_item_blood_guard_trg BEFORE INSERT OR UPDATE ON borrow_request_item FOR EACH ROW EXECUTE FUNCTION borrow_item_blood_guard();
 CREATE TABLE borrow_leg (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(), request_id uuid NOT NULL REFERENCES borrow_request(id) ON DELETE CASCADE,
+  request_item_id uuid REFERENCES borrow_request_item(id),   -- v1.4: which line (drug or kit) this leg asks for; qty_* are for that line
   lender_hospital_id uuid NOT NULL REFERENCES hospital(id), round_no int NOT NULL DEFAULT 1, rank_in_ladder int NOT NULL,
   status leg_status NOT NULL DEFAULT 'PENDING', score_si numeric(5,4), score_parts jsonb, t_transit_min numeric(7,1), window_max_days numeric(7,2),
   qty_asked numeric(14,3) NOT NULL, qty_accepted numeric(14,3), qty_received numeric(14,3),
   sent_at timestamptz, deadline_at timestamptz, reminded_at timestamptz, responded_at timestamptz, responded_by uuid REFERENCES app_user(id),
   reject_reason text, message_text text,
-  UNIQUE (request_id, lender_hospital_id, round_no)
+  UNIQUE NULLS NOT DISTINCT (request_id, request_item_id, lender_hospital_id, round_no)
 );
+CREATE INDEX borrow_leg_item_idx ON borrow_leg(request_item_id);
 CREATE INDEX borrow_leg_deadline_idx ON borrow_leg(deadline_at) WHERE status = 'SENT';
 CREATE TABLE borrow_leg_lot (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(), leg_id uuid NOT NULL REFERENCES borrow_leg(id) ON DELETE CASCADE,
@@ -310,7 +333,13 @@ CREATE TABLE reliability_stat (
 CREATE TABLE document (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(), kind text NOT NULL CHECK (kind IN ('BORROW_SLIP','RETURN_SLIP','TRANSFER_SLIP','INCIDENT_REPORT','UCEP_REPORT')),
   ref_type text NOT NULL, ref_id uuid NOT NULL, hospital_id uuid REFERENCES hospital(id), s3_key text NOT NULL, sha256 text NOT NULL,
-  created_at timestamptz NOT NULL DEFAULT now()
+  counterparty_hospital_id uuid REFERENCES hospital(id),   -- v1.4: the other party; both hospitals may read (FR-XC-006)
+  doc_no text NOT NULL,                                    -- v1.4: DR-<hospital>-<yyyy>-<seq6> (BR-XC-007)
+  version int NOT NULL DEFAULT 1,                          -- v1.4: issued documents are immutable; a correction = new version
+  status text NOT NULL DEFAULT 'ISSUED' CHECK (status IN ('ISSUED','VOID')),
+  supersedes_id uuid REFERENCES document(id), payload jsonb,   -- payload = document lines (lot, expiry, qty, units)
+  created_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (doc_no, version)
 );
 
 -- ---------- near-expiry (F2) ----------
@@ -391,6 +420,8 @@ CREATE TABLE kit_stock (
 CREATE TABLE incident (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(), incident_no text NOT NULL UNIQUE, hospital_id uuid NOT NULL REFERENCES hospital(id),
   status incident_status NOT NULL DEFAULT 'OPEN', location_lat numeric(9,6), location_lon numeric(9,6), location_text text,
+  incident_type text, description text,                      -- v1.4: FR-F3-001 (type and free-text description; no patient data, ASM-27)
+  eta_unsure boolean NOT NULL DEFAULT false, eta_minutes int CHECK (eta_minutes >= 0), eta_source eta_source,   -- v1.4: F-26 result; UNAVAILABLE = radio notice, no number
   reported_eta_min int, created_by uuid NOT NULL REFERENCES app_user(id), duplicate_of uuid REFERENCES incident(id),
   closed_at timestamptz, created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(), version int NOT NULL DEFAULT 1
 );
@@ -438,19 +469,31 @@ CREATE TABLE audit_log_context (      -- personal data kept OUTSIDE the hash cha
   audit_id bigint PRIMARY KEY REFERENCES audit_log(id), ip inet, user_agent text, created_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX audit_entity_idx ON audit_log(entity_type, entity_id);
-CREATE OR REPLACE FUNCTION audit_log_chain() RETURNS trigger LANGUAGE plpgsql AS $$
+CREATE TABLE audit_chain_head (       -- v1.4: one row = tail of the hash chain; locked per insert so concurrent writers queue up instead of forking the chain
+  singleton boolean PRIMARY KEY DEFAULT true CHECK (singleton), last_hash text
+);
+INSERT INTO audit_chain_head(singleton) VALUES (true);
+CREATE OR REPLACE FUNCTION audit_log_chain() RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 DECLARE p text;
 BEGIN
-  SELECT row_hash INTO p FROM audit_log ORDER BY id DESC LIMIT 1;
+  SELECT last_hash INTO p FROM audit_chain_head WHERE singleton FOR UPDATE;   -- lock held until commit; id is assigned BEFORE this lock, so chain order = commit order, not id order
   NEW.prev_hash := p;
-  NEW.row_hash := encode(sha256(convert_to(coalesce(p,'') || NEW.occurred_at::text || coalesce(NEW.actor_id::text,'') || NEW.action || NEW.entity_type
+  NEW.row_hash := encode(sha256(convert_to(coalesce(p,'') || extract(epoch FROM NEW.occurred_at)::text || coalesce(NEW.actor_id::text,'') || NEW.action || NEW.entity_type
                      || coalesce(NEW.entity_id::text,'') || coalesce(NEW.after::text,''), 'UTF8')), 'hex');
+  UPDATE audit_chain_head SET last_hash = NEW.row_hash WHERE singleton;
   RETURN NEW;
 END $$;
 CREATE TRIGGER audit_log_chain_trg BEFORE INSERT ON audit_log FOR EACH ROW EXECUTE FUNCTION audit_log_chain();
 CREATE OR REPLACE FUNCTION forbid_mutation() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION '% is append-only', TG_TABLE_NAME; END $$;
 CREATE TRIGGER audit_log_ro BEFORE UPDATE OR DELETE ON audit_log FOR EACH ROW EXECUTE FUNCTION forbid_mutation();
 CREATE TRIGGER stock_ledger_ro BEFORE UPDATE OR DELETE ON stock_ledger FOR EACH ROW EXECUTE FUNCTION forbid_mutation();
+CREATE OR REPLACE FUNCTION audit_chain_verify() RETURNS bigint LANGUAGE sql STABLE AS $$   -- JOB-15: number of problems (0 = chain intact). Walks by prev_hash, never by id.
+  SELECT (SELECT CASE WHEN count(*) = 0 THEN 0 ELSE abs(count(*) FILTER (WHERE prev_hash IS NULL) - 1) END FROM audit_log)   -- exactly one genesis row
+       + (SELECT count(*) FROM (SELECT prev_hash FROM audit_log WHERE prev_hash IS NOT NULL GROUP BY 1 HAVING count(*) > 1) f)                         -- forks
+       + (SELECT count(*) FROM audit_log a WHERE a.prev_hash IS NOT NULL AND NOT EXISTS (SELECT 1 FROM audit_log x WHERE x.row_hash = a.prev_hash))      -- missing parent
+       + (SELECT count(*) FROM audit_log a WHERE a.row_hash <> encode(sha256(convert_to(coalesce(a.prev_hash,'') || extract(epoch FROM a.occurred_at)::text
+           || coalesce(a.actor_id::text,'') || a.action || a.entity_type || coalesce(a.entity_id::text,'') || coalesce(a.after::text,''), 'UTF8')), 'hex'))  -- tampered
+$$;
 
 -- ---------- notifications, jobs, reporting ----------
 CREATE TABLE notification (
@@ -511,22 +554,46 @@ DO $$ DECLARE t text; BEGIN
   END LOOP;
 END $$;
 -- Borrowing is bilateral: borrower and each lender can see the request / legs.
+-- v1.4 fix: the two policies used to query each other's table, which Postgres rejects with
+-- "infinite recursion detected in policy". These SECURITY DEFINER helpers read the other table without RLS.
+CREATE OR REPLACE FUNCTION app_is_lender_of(req uuid) RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS
+$$ SELECT EXISTS (SELECT 1 FROM borrow_leg l WHERE l.request_id = req AND l.lender_hospital_id = app_hospital() AND l.status <> 'PENDING') $$;
+CREATE OR REPLACE FUNCTION app_is_borrower_of(req uuid) RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS
+$$ SELECT EXISTS (SELECT 1 FROM borrow_request r WHERE r.id = req AND r.borrower_hospital_id = app_hospital()) $$;
 ALTER TABLE borrow_request ENABLE ROW LEVEL SECURITY;
 CREATE POLICY borrow_request_party ON borrow_request USING (
-  app_role() IN ('SYSTEM_ADMIN','AUDITOR','REGION_ADMIN') OR borrower_hospital_id = app_hospital()
-  OR EXISTS (SELECT 1 FROM borrow_leg l WHERE l.request_id = borrow_request.id AND l.lender_hospital_id = app_hospital() AND l.status <> 'PENDING'));
+  app_role() IN ('SYSTEM_ADMIN','AUDITOR','REGION_ADMIN') OR borrower_hospital_id = app_hospital() OR app_is_lender_of(id));
 ALTER TABLE borrow_leg ENABLE ROW LEVEL SECURITY;
 CREATE POLICY borrow_leg_party ON borrow_leg USING (
-  app_role() IN ('SYSTEM_ADMIN','AUDITOR','REGION_ADMIN') OR lender_hospital_id = app_hospital()
-  OR EXISTS (SELECT 1 FROM borrow_request r WHERE r.id = borrow_leg.request_id AND r.borrower_hospital_id = app_hospital()));
+  app_role() IN ('SYSTEM_ADMIN','AUDITOR','REGION_ADMIN') OR lender_hospital_id = app_hospital() OR app_is_borrower_of(request_id));
 ALTER TABLE plan_approval ENABLE ROW LEVEL SECURITY;
 CREATE POLICY plan_approval_party ON plan_approval USING (app_role() IN ('SYSTEM_ADMIN','AUDITOR','REGION_ADMIN') OR hospital_id = app_hospital());
+-- v1.4: remaining hospital-scoped tables (SEC-003)
+ALTER TABLE pool_entry ENABLE ROW LEVEL SECURITY;      -- pool is region-wide data (ASM-12, Q-19)
+CREATE POLICY pool_entry_region ON pool_entry USING (app_role() IN ('SYSTEM_ADMIN','AUDITOR') OR region_id = app_region());
+ALTER TABLE allocation_plan ENABLE ROW LEVEL SECURITY;  -- origin, receivers and approvers of the plan
+CREATE POLICY allocation_plan_party ON allocation_plan USING (
+  app_role() IN ('SYSTEM_ADMIN','AUDITOR','REGION_ADMIN')
+  OR EXISTS (SELECT 1 FROM plan_approval a WHERE a.plan_id = allocation_plan.id AND a.hospital_id = app_hospital())
+  OR EXISTS (SELECT 1 FROM allocation_line l WHERE l.plan_id = allocation_plan.id AND l.receiver_hospital_id = app_hospital())
+  OR EXISTS (SELECT 1 FROM pool_entry p JOIN near_expiry_item n ON n.id = p.near_expiry_item_id
+             WHERE p.id = allocation_plan.pool_entry_id AND n.hospital_id = app_hospital()));
+ALTER TABLE transport_task ENABLE ROW LEVEL SECURITY;
+CREATE POLICY transport_task_party ON transport_task USING (
+  app_role() IN ('SYSTEM_ADMIN','AUDITOR','REGION_ADMIN') OR from_hospital_id = app_hospital() OR to_hospital_id = app_hospital());
+ALTER TABLE return_obligation ENABLE ROW LEVEL SECURITY;
+CREATE POLICY return_obligation_party ON return_obligation USING (
+  app_role() IN ('SYSTEM_ADMIN','AUDITOR','REGION_ADMIN') OR debtor_hospital_id = app_hospital() OR creditor_hospital_id = app_hospital());
+ALTER TABLE document ENABLE ROW LEVEL SECURITY;
+CREATE POLICY document_party ON document USING (
+  app_role() IN ('SYSTEM_ADMIN','AUDITOR','REGION_ADMIN') OR hospital_id = app_hospital() OR counterparty_hospital_id = app_hospital());
 ALTER TABLE audit_log ENABLE ROW LEVEL SECURITY;
 CREATE POLICY audit_read ON audit_log FOR SELECT USING (app_role() IN ('SYSTEM_ADMIN','AUDITOR') OR hospital_id = app_hospital());
 CREATE POLICY audit_insert ON audit_log FOR INSERT WITH CHECK (true);
 
 GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA public TO doorare_app;
 REVOKE UPDATE, DELETE ON audit_log, stock_ledger FROM doorare_app;
+REVOKE INSERT, UPDATE, DELETE ON audit_chain_head FROM doorare_app;   -- only the SECURITY DEFINER trigger moves the chain head
 GRANT USAGE ON ALL SEQUENCES IN SCHEMA public TO doorare_app;
 
 -- ---------- convenience views ----------
@@ -541,4 +608,4 @@ WHERE l.qty_on_hand - l.qty_held > 0
   AND (NOT dm.is_blood_product OR hh.has_blood_bank);   -- rev 1.2: blood visible only at blood-bank hospitals; F1 callers also filter is_blood_product=false     -- LendableStock = max(0, stock - TT) is applied in code (F-10)
 
 CREATE VIEW v_latest_forecast AS
-SELECT DISTINCT ON (hospital_id, hospital_drug_id) * FROM forecast_result ORDER BY hospital_id, hospital_drug_id, computed_at DESC;
+SELECT DISTINCT ON (hospital_id, hospital_drug_id, granularity, period_start) * FROM forecast_result ORDER BY hospital_id, hospital_drug_id, granularity, period_start, computed_at DESC;

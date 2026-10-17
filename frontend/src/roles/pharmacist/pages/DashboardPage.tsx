@@ -1,3 +1,4 @@
+import type { RoleCode } from '../../../lib/rbac';
 import { AlertsPanel } from '../components/AlertsPanel';
 import { AgentSummaryPanel } from '../components/AgentSummaryPanel';
 import { BottomRow } from '../components/BottomRow';
@@ -11,19 +12,32 @@ interface DashboardPageProps {
   query: string;
   hospital: string;
   onHospital: (v: string) => void;
+  /** Role viewing the page; every role other than the owner is gated through `lib/rbac.ts`. */
+  role?: RoleCode;
+  /** Hospital Admin opens the dashboard with the selector pinned to its own hospital. */
+  hospitalLocked?: boolean;
 }
 
-/** Pharmacist landing page: KPIs, alerts, request status and network overview. */
-export function DashboardPage({ isAdmin, query, hospital, onHospital }: DashboardPageProps) {
+/**
+ * Pharmacist landing page: KPIs, alerts, request status and network overview.
+ * HOSPITAL_ADMIN renders the same screen read-only (Phase 2B).
+ */
+export function DashboardPage({ isAdmin, query, hospital, onHospital, role = 'PHARMACIST', hospitalLocked = false }: DashboardPageProps) {
   return (
     <>
-      <PageHeader isAdmin={isAdmin} hospital={hospital} onHospital={onHospital} />
+      <PageHeader
+        isAdmin={isAdmin}
+        hospital={hospital}
+        onHospital={onHospital}
+        role={role}
+        hospitalLocked={hospitalLocked}
+      />
       <KpiRow />
       <section className="rowcards">
-        <AlertsPanel query={query} hospital={hospital} />
-        <RequestStatusPanel query={query} hospital={hospital} />
+        <AlertsPanel query={query} hospital={hospital} role={role} />
+        <RequestStatusPanel query={query} hospital={hospital} role={role} />
       </section>
-      <MiddleRow />
+      <MiddleRow role={role} />
       <BottomRow />
       <AgentSummaryPanel />
     </>

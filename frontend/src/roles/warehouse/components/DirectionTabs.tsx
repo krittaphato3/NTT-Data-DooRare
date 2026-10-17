@@ -1,17 +1,12 @@
-import { Icon } from '../../../components/common/icons';
-import type { IconName } from '../../../components/common/icons';
-
-export type Direction = 'all' | 'out' | 'in';
+export type Direction = 'out' | 'in';
 
 export interface DirectionOption {
   id: Direction;
-  th: string;
-  en: string;
-  icon: IconName;
+  label: string;
   count: number;
+  /** Action badge, e.g. "รอขึ้นรถ 2" (empty = none). */
   todo: string;
-  iconBg: string;
-  iconFg: string;
+  hint: string;
 }
 
 interface DirectionTabsProps {
@@ -20,26 +15,22 @@ interface DirectionTabsProps {
   onChange: (d: Direction) => void;
 }
 
+/** Sub-tabs separating goods we send from goods coming to us (same tab pattern as the pharmacist pool page). */
 export function DirectionTabs({ options, value, onChange }: DirectionTabsProps) {
+  const active = options.find((o) => o.id === value) ?? options[0];
   return (
-    <section role="tablist" aria-label="ทิศทาง" className="dirs">
-      {options.map((d) => (
-        <button key={d.id} role="tab" aria-selected={value === d.id ? 'true' : 'false'} className={`dir ${value === d.id ? 'dir-on' : ''}`} onClick={() => onChange(d.id)}>
-          <span className="dir-icon" style={{ background: d.iconBg, color: d.iconFg }}>
-            <Icon name={d.icon} className="ic20" />
-          </span>
-          <span style={{ flex: 1, minWidth: 0 }}>
-            <span className="dir-th">{d.th}</span>
-            <span className="dir-en">{d.en}</span>
-          </span>
-          <span className="num dir-count">{d.count}</span>
-          {d.todo && (
-            <span className="badge t-amber" style={{ fontWeight: 600 }}>
-              {d.todo}
+    <div role="tablist" aria-label="ทิศทางการขนส่ง" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
+      {options.map((o) => (
+        <button key={o.id} type="button" role="tab" aria-selected={value === o.id ? 'true' : 'false'} className={`tab ${value === o.id ? 'tab-on' : ''}`} onClick={() => onChange(o.id)}>
+          {o.label} <span className="cnt">{o.count}</span>
+          {o.todo && (
+            <span className="badge t-amber" style={{ fontWeight: 600, height: 20, fontSize: 11 }}>
+              {o.todo}
             </span>
           )}
         </button>
       ))}
-    </section>
+      <span className="sub" style={{ marginLeft: 6 }}>{active.hint}</span>
+    </div>
   );
 }

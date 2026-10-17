@@ -1,5 +1,7 @@
 import { Icon } from '../../../components/common/icons';
 import type { IconName } from '../../../components/common/icons';
+import { mayActFor, requiredRoleHint } from '../../../lib/rbac';
+import type { Action, RoleCode } from '../../../lib/rbac';
 import {
   ALERT_STATUS_META,
   ALERT_TYPE_META,
@@ -14,6 +16,8 @@ interface RowAction {
   kind: 'primary' | 'secondary' | 'link';
   label: string;
   cond: RowActionCond;
+  /** Action the button performs; when the viewer lacks it the button renders disabled with a hint. */
+  needs?: Action;
 }
 
 interface StockAlertTableProps {
@@ -23,6 +27,8 @@ interface StockAlertTableProps {
   snoozed: ReadonlySet<string>;
   created: ReadonlySet<string>;
   onAction: (row: StockAlertRow, cond: RowActionCond) => void;
+  /** Role viewing the table; every row action is gated through `lib/rbac.ts`. */
+  role?: RoleCode;
 }
 
 const fmt = (n: number) => n.toLocaleString('en-US', { maximumFractionDigits: 2 });
@@ -48,23 +54,26 @@ function Badge({ cls, label, en, icon }: { cls: string; label: string; en?: stri
  * Button weight follows the spec: สร้างคำขอ / ตรวจสอบและอนุมัติ = primary (blue),
  * ดูคำขอ = secondary (white + gray border).
  */
-function actionsFor(row: StockAlertRow, status: AlertStatus): RowAction[] {
+function actionsFor(row: StockAlertRow, status: AlertStatus, role: RoleCode): RowAction[] {
   const out: RowAction[] = [];
   if (status === 'linked') {
     const critical = row.alert?.severity === 'critical';
-    out.push({
-      kind: critical ? 'primary' : 'secondary',
-      label: critical ? 'ตรวจสอบและอนุมัติ' : 'ดูคำขอ',
-      cond: 'request',
-    });
+    out.push(
+      critical
+        ? { kind: 'primary', label: 'ตรวจสอบและอนุมัติ', cond: 'request', needs: 'approveBorrow' }
+        : { kind: 'secondary', label: 'ดูคำขอ', cond: 'request' },
+    );
   } else if (status === 'open' && row.alert?.type === 'LOW_STOCK') {
-    out.push({ kind: 'primary', label: 'สร้างคำขอ', cond: 'create' });
+    out.push({ kind: 'primary', label: 'สร้างคำขอ', cond: 'create', needs: 'createBorrowRequest' });
   }
-  if (status === 'open') {
-    out.push({ kind: 'link', label: 'รับทราบ', cond: 'ack' });
-    out.push({ kind: 'link', label: 'เลื่อน', cond: 'snooze' });
-  } else if (status === 'acknowledged') {
-    out.push({ kind: 'link', label: 'เลื่อน', cond: 'snooze' });
+  /* Acknowledge / snooze are authoring actions the role either has or does not — they are hidden. */
+  if (mayActFor(role, 'PHARMACIST', 'acknowledgeAlert')) {
+    if (status === 'open') {
+      out.push({ kind: 'link', label: 'รับทราบ', cond: 'ack' });
+      out.push({ kind: 'link', label: 'เลื่อน', cond: 'snooze' });
+    } else if (status === 'acknowledged') {
+      out.push({ kind: 'link', label: 'เลื่อน', cond: 'snooze' });
+    }
   }
   out.push({ kind: 'link', label: 'รายละเอียด', cond: 'detail' });
   return out;
@@ -82,7 +91,7 @@ function targetInfo(row: StockAlertRow): { range: string; target: number; mark: 
 }
 
 /** Stock-alert queue table — columns per spec §15.1 UI-02. */
-export function StockAlertTable({ rows, acked, snoozed, created, onAction }: StockAlertTableProps) {
+export function StockAlertTable({ rows, acked, snoozed, created, onAction, role = 'PHARMACIST' }: StockAlertTableProps) {
   return (
     <div className="scroll-x sa-scroll">
       <table className="qt">
@@ -107,7 +116,7 @@ export function StockAlertTable({ rows, acked, snoozed, created, onAction }: Sto
                 : created.has(row.id)
                   ? 'linked'
                   : (row.alert?.status ?? 'open');
-            const actions = actionsFor(row, status);
+            const actions = actionsFor(row, status, role);
             const buttons = actions.filter((a) => a.kind !== 'link');
             const links = actions.filter((a) => a.kind === 'link');
             const stMeta = ALERT_STATUS_META[status];
@@ -210,15 +219,21 @@ export function StockAlertTable({ rows, acked, snoozed, created, onAction }: Sto
                 {/* Actions */}
                 <td className="r">
                   <div className="sa-actions">
-                    {buttons.map((a) => (
-                      <button
-                        key={a.cond}
-                        className={`btn btn-sm ${a.kind === 'primary' ? 'btn-p' : 'btn-s'}`}
-                        onClick={() => onAction(row, a.cond)}
-                      >
-                        {a.label}
-                      </button>
-                    ))}
+                    {buttons.map((a) => {
+                      const allowed = !a.needs || mayActFor(role, 'PHARMACIST', a.needs);
+                      const hint = a.needs ? requiredRoleHint(a.needs) : undefined;
+                      return (
+                        <button
+                          key={a.cond}
+                          className={`btn btn-sm ${a.kind === 'primary' ? 'btn-p' : 'btn-s'}`}
+                          disabled={!allowed}
+                          title={allowed ? undefined : hint}
+                          onClick={() => onAction(row, a.cond)}
+                        >
+                          {a.label}
+                        </button>
+                      );
+                    })}
                     <span className="sa-links">
                       {links.map((a) => (
                         <button

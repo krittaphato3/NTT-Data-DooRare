@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Icon } from '../../../components/common/icons';
+import { homeHrefFor } from '../../../data/navigation';
+import { can } from '../../../lib/rbac';
 import { AuditHistoryDrawer } from '../components/AuditHistoryDrawer';
 import { DirectionTabs } from '../components/DirectionTabs';
 import type { Direction, DirectionOption } from '../components/DirectionTabs';
+import type { ProxyEntry } from '../components/ProxyStatusPanel';
 import { ShipmentDrawer } from '../components/ShipmentDrawer';
 import type { CancelDecision, ReceiptState } from '../components/ShipmentDrawer';
 import { ShipmentTable } from '../components/ShipmentTable';
@@ -28,18 +31,24 @@ function useOnline(): boolean {
   return online;
 }
 
-export type TransportRole = 'WAREHOUSE_OFFICER' | 'PHARMACIST';
+/**
+ * Roles this screen is rendered for. PHARMACIST and HOSPITAL_ADMIN open it read-only
+ * (API-F2a-012 lets the pharmacist list tasks; POST status/photos is warehouse/driver only).
+ */
+export type TransportRole = 'WAREHOUSE_OFFICER' | 'PHARMACIST' | 'HOSPITAL_ADMIN' | 'DRIVER';
 
 /**
  * UI-14 Transport tracking. UI only — data is mock, actions are local state.
- * WAREHOUSE_OFFICER operates (status, photos, receipt); PHARMACIST is read-only
- * (API-F2a-012 lets the pharmacist list tasks, POST status/photos is warehouse/driver only).
- * Both see only their own hospital's tasks (SEC-002).
+ * WAREHOUSE_OFFICER and DRIVER operate; PHARMACIST and HOSPITAL_ADMIN are read-only.
+ * All roles see only their own hospital's tasks (SEC-002), and DRIVER sees assigned tasks (ASM-44).
  */
 export function TransportTrackingPage({ role = 'WAREHOUSE_OFFICER' }: { role?: TransportRole }) {
-  const canOperate = role === 'WAREHOUSE_OFFICER';
+  const canOperate = can(role, 'transportStatus');
+  const isDriver = role === 'DRIVER';
+  // Only the pharmacist answers / requests a cancellation (RBAC §4.4); the warehouse never does.
+  const canCancel = role === 'PHARMACIST';
   const online = useOnline();
-  const [dir, setDir] = useState<Direction>('all');
+  const [dir, setDir] = useState<Direction>('out');
   const [status, setStatus] = useState<TransportStatus | null>(null);
   // Nothing is selected on entry; the detail drawer opens only when a row is picked.
   const [selId, setSelId] = useState<string | null>(null);
@@ -49,9 +58,10 @@ export function TransportTrackingPage({ role = 'WAREHOUSE_OFFICER' }: { role?: T
   const [receipt, setReceipt] = useState<Record<string, ReceiptState>>({});
   const [counted, setCounted] = useState<Record<string, string>>({});
   const [cancel, setCancel] = useState<Record<string, CancelDecision>>({});
+  const [proxy, setProxy] = useState<Record<string, ProxyEntry[]>>({});
   const [q, setQ] = useState('');
   const [kind, setKind] = useState<'all' | ShipmentKind>('all');
-  const [driver, setDriver] = useState('all');
+  const [driver, setDriver] = useState(isDriver ? 'คุณสมชาย แก้วกล้า' : 'all');
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -65,15 +75,17 @@ export function TransportTrackingPage({ role = 'WAREHOUSE_OFFICER' }: { role?: T
 
   const effective = (s: Shipment): ShipmentRowState => {
     let st = s.status;
+    const px = proxy[s.id];
+    if (px?.length) st = px[px.length - 1].to;
     if (receipt[s.id] === 'done') st = 'RECEIVED';
     if (cancel[s.id] === 'yes') st = 'CANCELLED';
     return { shipment: s, status: st, pending: canOperate && !!s.pending && !synced, cancelRequested: !!s.cancelRequest && st === 'WAITING_DISPATCH' && cancel[s.id] !== 'no' };
   };
 
-  const all = useMemo(() => SHIPMENTS.map(effective), [receipt, cancel, synced]); // eslint-disable-line react-hooks/exhaustive-deps
+  const all = useMemo(() => SHIPMENTS.map(effective), [receipt, cancel, synced, proxy]); // eslint-disable-line react-hooks/exhaustive-deps
   const queued = all.filter((r) => r.pending).length;
 
-  const byDir = all.filter((r) => dir === 'all' || (dir === 'out' ? isOutbound(r.shipment) : !isOutbound(r.shipment)));
+  const byDir = all.filter((r) => (dir === 'out' ? isOutbound(r.shipment) : !isOutbound(r.shipment)));
   const counts = Object.fromEntries(TILE_ORDER.map((c) => [c, byDir.filter((r) => r.status === c).length])) as Record<TransportStatus, number>;
 
   const needle = q.trim().toLowerCase();
@@ -88,9 +100,20 @@ export function TransportTrackingPage({ role = 'WAREHOUSE_OFFICER' }: { role?: T
   const waiting = outAll.filter((r) => r.status === 'WAITING_DISPATCH').length;
   const toReceive = inAll.filter((r) => r.status === 'ARRIVED').length;
   const options: DirectionOption[] = [
-    { id: 'all', th: 'ทั้งหมด', en: '7 วันล่าสุด', icon: 'truck', count: all.length, todo: '', iconBg: '#F1F5F9', iconFg: '#475569' },
-    { id: 'out', th: 'ส่งออกจากเรา', en: 'ต้นทาง รพ.สมุทรปราการ', icon: 'outArrow', count: outAll.length, todo: canOperate && waiting ? `รอขึ้นรถ ${waiting}` : '', iconBg: '#FFF7ED', iconFg: '#9A3412' },
-    { id: 'in', th: 'รับเข้าเรา', en: 'ปลายทาง รพ.สมุทรปราการ', icon: 'inArrow', count: inAll.length, todo: canOperate && toReceive ? `รอรับ ${toReceive}` : '', iconBg: '#EFF6FF', iconFg: '#1D4ED8' },
+    {
+      id: 'out',
+      label: 'ส่งออกจากเรา',
+      count: outAll.length,
+      todo: canOperate && waiting ? `รอขึ้นรถ ${waiting}` : '',
+      hint: canOperate ? 'งานที่อนุมัติ/ยืนยันแล้ว · เตรียมของแล้วขึ้นรถ + ถ่ายรูปที่นี่' : 'งานที่ รพ.เราส่งไปให้ รพ.อื่น',
+    },
+    {
+      id: 'in',
+      label: 'รับเข้าเรา',
+      count: inAll.length,
+      todo: canOperate && toReceive ? `รอรับ ${toReceive}` : '',
+      hint: canOperate ? 'ของที่ รพ.อื่นส่งมาให้เรา · ยืนยันรับเมื่อของถึง' : 'ของที่ รพ.อื่นส่งมาให้ รพ.เรา',
+    },
   ];
 
   const open = (id: string) => {
@@ -111,12 +134,18 @@ export function TransportTrackingPage({ role = 'WAREHOUSE_OFFICER' }: { role?: T
       <section className="pagehead">
         <div>
           <nav aria-label="breadcrumb" style={{ fontSize: 12, lineHeight: '16px' }}>
-            <a href="/" className="link" style={{ fontSize: 12, fontWeight: 400 }}>หน้าหลัก</a> <span aria-hidden="true">›</span> <span aria-current="page">ติดตามการขนส่ง</span>
+            <a href={homeHrefFor(role)} className="link" style={{ fontSize: 12, fontWeight: 400 }}>หน้าหลัก</a> <span aria-hidden="true">›</span> <span aria-current="page">ติดตามการขนส่ง</span>
           </nav>
           <h1 className="tr-title">
             ติดตามการขนส่ง <span>/ Transport tracking · UI-14</span>
           </h1>
           <div style={{ fontSize: 13 }}>รพ.สมุทรปราการ · สต็อกต้นทางตัดเมื่อขึ้นรถ (LOADED) ปลายทางรับเข้าเมื่อยืนยันรับ (RECEIVED) · ขั้นตอนขนส่งไม่มี Agent</div>
+          {canOperate && (
+            <div style={{ fontSize: 12.5, marginTop: 2 }}>
+              งานส่งออกเข้าที่นี่เมื่อเภสัชกรอนุมัติ (F1/F2) หรือ WH ยืนยันคำขอเร่งด่วน (F3) · ขั้นตอน: รอขึ้นรถ (เตรียมของ) → ขึ้นรถ + รูป → ถึง{' '}
+              <a className="link" href="?role=warehouse&page=kit" style={{ fontSize: 12.5 }}>ไปที่คำขอเร่งด่วน F3</a>
+            </div>
+          )}
         </div>
         <div className="pagehead-actions">
           <button className="btn btn-s" onClick={() => setHistOpen(true)}>
@@ -143,17 +172,16 @@ export function TransportTrackingPage({ role = 'WAREHOUSE_OFFICER' }: { role?: T
         </section>
       )}
 
-      <DirectionTabs
-        options={options}
-        value={dir}
-        onChange={(d) => {
-          setDir(d);
-          setStatus(null);
-        }}
-      />
-
       <section className="card" style={{ padding: 0 }}>
         <div className="tr-card-head">
+          <DirectionTabs
+            options={options}
+            value={dir}
+            onChange={(d) => {
+              setDir(d);
+              setStatus(null);
+            }}
+          />
           <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
             <h2 className="sec-h">
               สถานะงานขนส่ง <span className="en">SM-6 · 7 วันล่าสุด</span>
@@ -185,7 +213,7 @@ export function TransportTrackingPage({ role = 'WAREHOUSE_OFFICER' }: { role?: T
           <span style={{ flex: '1 1 0' }} />
           <span style={{ fontSize: 12 }}>เรียง: ต้องทำก่อน → อัปเดตล่าสุด</span>
         </div>
-        <ShipmentTable rows={rows} activeId={drawerOpen && sel ? sel.shipment.id : null} onOpen={open} onAction={onAction} canOperate={canOperate} />
+        <ShipmentTable rows={rows} activeId={drawerOpen && sel ? sel.shipment.id : null} onOpen={open} onAction={onAction} canOperate={canOperate} canCancel={canCancel} isDriver={isDriver} />
       </section>
 
       {drawerOpen && sel && (
@@ -205,6 +233,16 @@ export function TransportTrackingPage({ role = 'WAREHOUSE_OFFICER' }: { role?: T
           onUndoReceipt={() => setReceipt((m) => ({ ...m, [sel.shipment.id]: 'open' }))}
           onCancelDecision={(d) => setCancel((m) => ({ ...m, [sel.shipment.id]: d }))}
           canOperate={canOperate}
+          canCancel={canCancel}
+          proxies={proxy[sel.shipment.id] ?? []}
+          onProxy={(to, reason) => setProxy((m) => ({ ...m, [sel.shipment.id]: [...(m[sel.shipment.id] ?? []), { to, reason }] }))}
+          isDriver={isDriver}
+          onDepart={(id) => {
+            setProxy((m) => ({ ...m, [id]: [...(m[id] ?? []), { to: 'IN_TRANSIT', reason: 'คนขับยืนยันออกเดินทาง' }] }));
+          }}
+          onArrive={(id) => {
+            setProxy((m) => ({ ...m, [id]: [...(m[id] ?? []), { to: 'ARRIVED', reason: 'คนขับถึงปลายทางพร้อมรูปถ่าย' }] }));
+          }}
         />
       )}
       {histOpen && <AuditHistoryDrawer onClose={() => setHistOpen(false)} />}

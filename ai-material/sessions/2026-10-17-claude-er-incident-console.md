@@ -4,28 +4,25 @@ date: 2026-10-17
 author: claude
 ai: Claude Code
 tags: session, frontend, er, incident, rbac
-summary: ER shell plus role-aware incident console per RBAC v1.1
+summary: ER_STAFF shell plus role-aware incident console on team RBAC
 ---
 
 ## Goal
 
-- Build the ER role pages (RBAC role 3, F3) on branch `feature/dashboard-er` (from `origin/frontend-pharma`), extending the existing `IncidentConsolePage`.
+- Build the ER role pages (RBAC role 3, F3) on `feature/dashboard-er`, extending `IncidentConsolePage`. PR #12 targets `frontend`.
 
 ## Done
 
-- `?role=er`: ER shell with ops top bar, `ER_USER` (พว.กมลชนก ใจดี), `ER_NOTIFICATIONS`, nav `ER: ['inc']`; every ER URL lands on the incident console.
-- `IncidentConsolePage` gets a `role` prop (`'ER' | 'PHARMACIST'`, default pharmacist).
-  - ER: report incident, edit triage counts, manual ETA, kit steppers, Agent questions, add lender, request close, actual-used input.
-  - New for ER: "ยกเลิกเหตุ (แจ้งผิด)" and plan approval (an edit makes draft v3, then "อนุมัติแผน v3 และส่งคำขอยืมเร่งด่วน").
-  - Pharmacist: read-only notice bar; edit controls hidden; print buttons kept.
-- Pack tab is view-only for both roles: packing is confirmed by the warehouse officer (RBAC 4.3).
-- Verified: `npm run build` ok. Not yet checked in a browser.
+- Merged `origin/frontend` (29 commits: warehouse, driver and hospital-admin shells, `lib/rbac.ts`) and resolved conflicts on top of the team's RBAC.
+- `?role=er` selects the ER_STAFF shell: `ROLE_QUERY.ER_STAFF = 'er'`, `ROLE_NAV.ER_STAFF = ['inc']`, `ER_HOME_HREF`; ops top bar, `ER_USER`, `ER_NOTIFICATIONS`; every ER URL lands on the incident console.
+- `IncidentConsolePage`: owner role is now ER_STAFF (`mayActFor(role, 'ER_STAFF', 'manageIncident')`), so the pharmacist is view-only. Also added: a read-only notice, the "ยกเลิกเหตุ (แจ้งผิด)" button, and plan approval (an edit makes draft v3; approval needs `approveIncidentPlan`). Print uses `printDocuments`, so the pharmacist can still print.
+- Verified in the browser: ER controls work (stepper → approve v3) and links keep `role=er`. The pharmacist sees the notice and disabled controls with tooltips. Build ok.
 
 ## Decisions
 
-- Page left in `roles/pharmacist/` to avoid churn on a teammate's file (Atiwit); ER-only data lives in `roles/er/data/session.ts`.
-- Followed RBAC v1.1 (pharmacist F3 view-only) over the summary-tab text "ER และเภสัชกรอนุมัติร่วมกัน". The team should confirm which applies.
-- Read-only notice uses inline styles; `.syncbar` lives only in warehouse `transport.css`.
+- Follow the team convention: disable controls and show a `requiredRoleHint` tooltip rather than hiding them.
+- `lib/rbac.ts` makes the spec primary over rbac.md, so the ER pack-kit permission (`manageIncident`) is kept; rbac.md would make packing warehouse-only.
+- Page stays in `roles/pharmacist/` to limit churn on a shared file.
 
 ## Files touched
 
@@ -33,9 +30,9 @@ summary: ER shell plus role-aware incident console per RBAC v1.1
 
 ## Errors encountered
 
-- `git switch -c X origin/frontend-pharma` sets the upstream to frontend-pharma. Ran `git branch --unset-upstream` so a plain `git push` cannot land on frontend-pharma.
-- `npm run dev` must run inside `frontend/` (the root package.json only has the capture scripts).
+- `git switch -c X origin/<branch>` sets that branch as upstream; unset it before pushing.
+- PR conflicts appeared because the PR base was `frontend`, not `frontend-pharma`. Check the PR base before branching.
 
 ## Next steps
 
-- Browser pass for both roles; decide the joint-close wording; existing S2 "บันทึก" still calls `alert()`.
+- Team decision on the summary-tab text "ER และเภสัชกรอนุมัติร่วมกัน" vs pharmacist view-only. The existing S2 "บันทึก" still calls `alert()`.

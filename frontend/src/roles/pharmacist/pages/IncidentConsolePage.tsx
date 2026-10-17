@@ -1,5 +1,8 @@
 import { useState } from 'react';
 import { Icon } from '../../../components/common/icons';
+import { homeHrefFor } from '../../../data/navigation';
+import { can, mayActFor, requiredRoleHint } from '../../../lib/rbac';
+import type { RoleCode } from '../../../lib/rbac';
 import { fmtTime, useTick } from '../../../lib/time';
 import {
   EMERGENCY_BORROWS,
@@ -14,11 +17,11 @@ import {
 
 type Scenario = 'normal' | 's1' | 's2' | 's3' | 's4' | 's5' | 's6' | 's7';
 
-/** RBAC 4.3: ER records the incident, edits/approves the plan and sends urgent borrows; the pharmacist views only. */
-export type IncidentRole = 'ER' | 'PHARMACIST';
-
-export function IncidentConsolePage({ role = 'PHARMACIST' }: { role?: IncidentRole }) {
-  const canEdit = role === 'ER';
+/**
+ * UI-11 – UI-13 Emergency incident console. `role` gates every incident write through
+ * `lib/rbac.ts` and drives the breadcrumb home.
+ */
+export function IncidentConsolePage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
   const [scenario, setScenario] = useState<Scenario>('normal');
   const [activeTab, setActiveTab] = useState<'plan' | 'borrow' | 'pack' | 'summary'>('plan');
   const [showIntakeModal, setShowIntakeModal] = useState(false);
@@ -30,16 +33,9 @@ export function IncidentConsolePage({ role = 'PHARMACIST' }: { role?: IncidentRo
   const [kits, setKits] = useState(PRESET_KITS);
   const [burnKitOption, setBurnKitOption] = useState<'none' | 'add'>('none');
   const [prcOption, setPrcOption] = useState<'4' | '6'>('4');
-  // ER edits to plan v2 make a draft v3 that ER must approve before extra urgent borrows go out.
-  const [planDirty, setPlanDirty] = useState(false);
-  const [planApproved, setPlanApproved] = useState(false);
-  const editPlan = () => {
-    setPlanDirty(true);
-    setPlanApproved(false);
-  };
 
-  // Tab 3: packing is confirmed by the warehouse officer (RBAC 4.3), so this console only shows progress.
-  const assemblyList = KIT_ASSEMBLIES;
+  // Tab 3 state
+  const [assemblyList, setAssemblyList] = useState(KIT_ASSEMBLIES);
 
   // Tab 4 state
   const [returnsList, setReturnsList] = useState(INCIDENT_RETURNS);
@@ -56,6 +52,24 @@ export function IncidentConsolePage({ role = 'PHARMACIST' }: { role?: IncidentRo
   const [intakeEta, setIntakeEta] = useState('20');
   const [unsureEta, setUnsureEta] = useState(true);
 
+  /* Recording an incident, adjusting the plan, packing a kit and closing the event are all F3
+     writes (§4.3). A role without them either does not see the control or sees it disabled.
+     The console is ER_STAFF's own screen; the pharmacist views F3 only (rbac.md v1.1 §4.3, and
+     spec §5.2 grants PHARMACIST neither manageIncident nor approveIncidentPlan). */
+  const mayWrite = mayActFor(role, 'ER_STAFF', 'manageIncident');
+  const writeHint = requiredRoleHint('manageIncident');
+  const mayApprovePlan = mayActFor(role, 'ER_STAFF', 'approveIncidentPlan');
+  // Summary documents: ER prints them; the pharmacist may still view/print (§4.3 "ดู/พิมพ์").
+  const mayPrint = mayWrite || can(role, 'printDocuments');
+
+  // ER edits to plan v2 make a draft v3 that ER must approve before extra urgent borrows go out.
+  const [planDirty, setPlanDirty] = useState(false);
+  const [planApproved, setPlanApproved] = useState(false);
+  const editPlan = () => {
+    setPlanDirty(true);
+    setPlanApproved(false);
+  };
+
   const tick = useTick();
   const etaLeft = Math.max(0, INCIDENT_HEADER.etaMinutes - tick);
 
@@ -71,6 +85,34 @@ export function IncidentConsolePage({ role = 'PHARMACIST' }: { role?: IncidentRo
           ...k,
           assembleFromParts: nextAssemble,
           borrowFullKit: needed,
+        };
+      })
+    );
+  };
+
+  const togglePartChecked = (kitId: string, partIndex: number) => {
+    setAssemblyList((prev) =>
+      prev.map((kit) => {
+        if (kit.id !== kitId) return kit;
+        const newParts = kit.parts.map((p, pIdx) =>
+          pIdx === partIndex ? { ...p, checked: !p.checked } : p
+        );
+        return { ...kit, parts: newParts };
+      })
+    );
+  };
+
+  const confirmKitAssembly = (kitId: string) => {
+    setAssemblyList((prev) =>
+      prev.map((kit) => {
+        if (kit.id !== kitId) return kit;
+        return {
+          ...kit,
+          status: 'done',
+          statusLabel: 'จัดเสร็จ · ยืนยันแล้ว',
+          statusCls: 'st-approved',
+          canConfirm: false,
+          footerText: `ตัดของแยกตามสูตรแล้ว · ชุดพร้อมใช้ +${kit.qty}`,
         };
       })
     );
@@ -105,7 +147,7 @@ export function IncidentConsolePage({ role = 'PHARMACIST' }: { role?: IncidentRo
               }}
               onClick={() => {
                 setScenario(s);
-                if (s === 's6' && canEdit) setShowCancelModal(true);
+                if (s === 's6') setShowCancelModal(true);
               }}
             >
               {s === 'normal' ? 'เหตุปกติ' : s.toUpperCase()}
@@ -145,8 +187,8 @@ export function IncidentConsolePage({ role = 'PHARMACIST' }: { role?: IncidentRo
           <div style={{ fontSize: 13, color: '#64748b' }}>
             ชุดพร้อมใช้: Trauma Set 30 · IV Set 12 · Intubation Set 0 (ต่ำกว่าเป้า)
           </div>
-          {canEdit && (
-            <div style={{ marginTop: 8 }}>
+          <div style={{ marginTop: 8 }}>
+            {mayWrite && (
               <button
                 type="button"
                 className="btn btn-p"
@@ -156,8 +198,8 @@ export function IncidentConsolePage({ role = 'PHARMACIST' }: { role?: IncidentRo
                 <Icon name="siren" className="ic14" />
                 + แจ้งเหตุใหม่
               </button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
         {/* Intake Modal if triggered */}
@@ -228,14 +270,16 @@ export function IncidentConsolePage({ role = 'PHARMACIST' }: { role?: IncidentRo
               อาจเป็นเหตุเดียวกับ INC-2026-000015 · แจ้งเมื่อ 6 นาทีที่ก่อน ห่างจากจุดนี้ 180 ม. (เกณฑ์ 10 นาที / 500 ม.) · รถโดยสารคว่ำ ถ.เทพารักษ์ กม.12
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button
-                type="button"
-                className="btn btn-p btn-sm"
-                style={{ fontSize: 11.5 }}
-                onClick={() => setShowIntakeModal(false)}
-              >
-                รวมกับเหตุเดิม (อัปเดตจำนวน)
-              </button>
+              {mayWrite && (
+                <button
+                  type="button"
+                  className="btn btn-p btn-sm"
+                  style={{ fontSize: 11.5 }}
+                  onClick={() => setShowIntakeModal(false)}
+                >
+                  รวมกับเหตุเดิม (อัปเดตจำนวน)
+                </button>
+              )}
               <button
                 type="button"
                 className="btn btn-s btn-sm"
@@ -422,17 +466,19 @@ export function IncidentConsolePage({ role = 'PHARMACIST' }: { role?: IncidentRo
             >
               ยกเลิก
             </button>
-            <button
-              type="button"
-              className="btn btn-p"
-              style={{ background: '#b91c1c', border: 'none', fontWeight: 600 }}
-              onClick={() => {
-                setShowIntakeModal(false);
-                setScenario('normal');
-              }}
-            >
-              บันทึกเหตุและคำนวณแผน
-            </button>
+            {mayWrite && (
+              <button
+                type="button"
+                className="btn btn-p"
+                style={{ background: '#b91c1c', border: 'none', fontWeight: 600 }}
+                onClick={() => {
+                  setShowIntakeModal(false);
+                  setScenario('normal');
+                }}
+              >
+                บันทึกเหตุและคำนวณแผน
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -496,17 +542,19 @@ export function IncidentConsolePage({ role = 'PHARMACIST' }: { role?: IncidentRo
             >
               ไม่ยกเลิก
             </button>
-            <button
-              type="button"
-              className="btn btn-p"
-              style={{ background: '#b91c1c', border: 'none', fontWeight: 600 }}
-              onClick={() => {
-                setShowCancelModal(false);
-                setScenario('s7');
-              }}
-            >
-              ยืนยันยกเลิกเหตุ
-            </button>
+            {mayWrite && (
+              <button
+                type="button"
+                className="btn btn-p"
+                style={{ background: '#b91c1c', border: 'none', fontWeight: 600 }}
+                onClick={() => {
+                  setShowCancelModal(false);
+                  setScenario('s7');
+                }}
+              >
+                ยืนยันยกเลิกเหตุ
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -534,7 +582,7 @@ export function IncidentConsolePage({ role = 'PHARMACIST' }: { role?: IncidentRo
             }}
             onClick={() => {
               setScenario(s);
-              if (s === 's6' && canEdit) setShowCancelModal(true);
+              if (s === 's6') setShowCancelModal(true);
             }}
           >
             {s === 'normal' ? 'เหตุปกติ' : s.toUpperCase()}
@@ -552,21 +600,21 @@ export function IncidentConsolePage({ role = 'PHARMACIST' }: { role?: IncidentRo
           alignItems: 'center',
         }}
       >
-        <a href={canEdit ? '?role=er' : '/'} className="link" style={{ fontSize: 12.5, color: '#2563eb' }}>
+        <a href={homeHrefFor(role)} className="link" style={{ fontSize: 12.5, color: '#2563eb' }}>
           หน้าหลัก
         </a>
         <Icon name="chev" className="ic12" style={{ transform: 'rotate(-90deg)', color: '#94a3b8' }} />
         <span style={{ color: '#64748b' }}>เหตุฉุกเฉิน</span>
       </nav>
 
-      {!canEdit && (
+      {!mayWrite && (
         <div
           role="status"
           style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#eff6ff', border: '1px solid #dbeafe', borderRadius: 10, padding: '10px 16px', fontSize: 13, lineHeight: '19px', color: '#0f2a5c' }}
         >
           <Icon name="eye" style={{ color: '#1d4ed8' }} />
           <span>
-            <b style={{ fontWeight: 600 }}>ดูอย่างเดียว</b> · เภสัชกรดูเหตุ แผน และสถานะคำขอได้ การบันทึกเหตุ แก้แผน อนุมัติ และส่งคำขอยืมเร่งด่วนทำโดย ER
+            <b style={{ fontWeight: 600 }}>ดูอย่างเดียว</b> · ดูเหตุ แผน และสถานะคำขอได้ การบันทึกเหตุ แก้แผน อนุมัติ และส่งคำขอยืมเร่งด่วนทำโดย ER
           </span>
         </div>
       )}
@@ -632,13 +680,13 @@ export function IncidentConsolePage({ role = 'PHARMACIST' }: { role?: IncidentRo
               ไม่สามารถคำนวณ ETA — ใช้วิทยุสื่อสาร · บริการเดินทางไม่ตอบกลับใน 3 วินาที (ลองซ้ำแล้ว) และไม่มี ETA จากหน่วยกู้ภัย · ระบบคิดผู้ให้ยืมตามเวลาเดินทางไม่ได้ ให้เลือกการโทรศัพท์/วิทยุ · เวลาเฉลี่ย 3/5 นาที/ครั้ง · แจ้ง ER และเภสัชกรแล้ว
             </div>
           </div>
-          {canEdit && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 'none' }}>
             <span style={{ fontSize: 12, color: '#9a3412', fontWeight: 600 }}>ใส่ ETA เอง</span>
             <input
               type="text"
               placeholder=""
               value={customEta}
+              disabled={!mayWrite}
               onChange={(e) => setCustomEta(e.target.value)}
               style={{
                 width: 50,
@@ -656,12 +704,13 @@ export function IncidentConsolePage({ role = 'PHARMACIST' }: { role?: IncidentRo
               type="button"
               className="btn btn-p btn-sm"
               style={{ height: 30, fontSize: 12 }}
+              disabled={!mayWrite}
+              title={mayWrite ? undefined : writeHint}
               onClick={() => alert('บันทึก ETA แล้ว')}
             >
               บันทึก
             </button>
           </div>
-          )}
         </div>
       )}
 
@@ -682,16 +731,17 @@ export function IncidentConsolePage({ role = 'PHARMACIST' }: { role?: IncidentRo
             รพ.พระสมุทรเจดีย์ฯ ปฏิเสธ · รพ.บางพลี หมดเวลา · รพ.บางเสาธง ปฏิเสธ · ยังขาด 8 AMP · แจ้งหัวหน้าเวร ER และเภสัชกรแล้ว
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
-            {canEdit && (
-              <>
-                <button type="button" className="btn btn-p btn-sm">
-                  เพิ่มผู้ให้ยืมเอง
-                </button>
-                <button type="button" className="btn btn-s btn-sm">
-                  โทรคลังเขต
-                </button>
-              </>
-            )}
+            <button
+              type="button"
+              className="btn btn-p btn-sm"
+              disabled={!mayWrite}
+              title={mayWrite ? undefined : writeHint}
+            >
+              เพิ่มผู้ให้ยืมเอง
+            </button>
+            <button type="button" className="btn btn-s btn-sm">
+              โทรคลังเขต
+            </button>
             <button
               type="button"
               className="btn btn-g btn-sm"
@@ -769,25 +819,25 @@ export function IncidentConsolePage({ role = 'PHARMACIST' }: { role?: IncidentRo
             <Icon name="history" className="ic14" />
             ประวัติ
           </button>
-          {canEdit && (
-            <>
-              <button className="btn btn-g btn-sm" onClick={() => setShowCancelModal(true)}>
-                ยกเลิกเหตุ (แจ้งผิด)
-              </button>
-              <button
-                className="btn btn-sm"
-                style={{
-                  background: '#b91c1c',
-                  color: '#ffffff',
-                  border: 'none',
-                  fontWeight: 600,
-                }}
-                onClick={() => setShowIntakeModal(true)}
-              >
-                <Icon name="siren" className="ic14" />
-                + แจ้งเหตุใหม่
-              </button>
-            </>
+          {mayWrite && (
+            <button className="btn btn-g btn-sm" onClick={() => setShowCancelModal(true)}>
+              ยกเลิกเหตุ (แจ้งผิด)
+            </button>
+          )}
+          {mayWrite && (
+            <button
+              className="btn btn-sm"
+              style={{
+                background: '#b91c1c',
+                color: '#ffffff',
+                border: 'none',
+                fontWeight: 600,
+              }}
+              onClick={() => setShowIntakeModal(true)}
+            >
+              <Icon name="siren" className="ic14" />
+              + แจ้งเหตุใหม่
+            </button>
           )}
         </div>
       </div>
@@ -928,7 +978,7 @@ export function IncidentConsolePage({ role = 'PHARMACIST' }: { role?: IncidentRo
               <span style={{ fontSize: 11.5, color: '#0f2a5c', fontWeight: 600 }}>
                 ผู้ป่วยตามระดับคัดแยก
               </span>
-              {canEdit && (
+              {mayWrite && (
                 <button
                   className="link"
                   style={{ fontSize: 11, color: '#2563eb', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
@@ -1242,17 +1292,16 @@ export function IncidentConsolePage({ role = 'PHARMACIST' }: { role?: IncidentRo
                         </td>
                         <td style={{ textAlign: 'center' }}>
                           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                            {canEdit && (
-                              <button
-                                type="button"
-                                className="btn btn-s btn-sm"
-                                style={{ width: 22, height: 22, padding: 0, minWidth: 22 }}
-                                aria-label={`ลดจำนวนจัด ${kit.name}`}
-                                onClick={() => updateAssembleQty(idx, -1)}
-                              >
-                                -
-                              </button>
-                            )}
+                            <button
+                              type="button"
+                              className="btn btn-s btn-sm"
+                              style={{ width: 22, height: 22, padding: 0, minWidth: 22 }}
+                              disabled={!mayWrite}
+                              title={mayWrite ? undefined : writeHint}
+                              onClick={() => updateAssembleQty(idx, -1)}
+                            >
+                              -
+                            </button>
                             <span
                               style={{
                                 minWidth: 24,
@@ -1264,17 +1313,16 @@ export function IncidentConsolePage({ role = 'PHARMACIST' }: { role?: IncidentRo
                             >
                               {kit.assembleFromParts}
                             </span>
-                            {canEdit && (
-                              <button
-                                type="button"
-                                className="btn btn-s btn-sm"
-                                style={{ width: 22, height: 22, padding: 0, minWidth: 22 }}
-                                aria-label={`เพิ่มจำนวนจัด ${kit.name}`}
-                                onClick={() => updateAssembleQty(idx, 1)}
-                              >
-                                +
-                              </button>
-                            )}
+                            <button
+                              type="button"
+                              className="btn btn-s btn-sm"
+                              style={{ width: 22, height: 22, padding: 0, minWidth: 22 }}
+                              disabled={!mayWrite}
+                              title={mayWrite ? undefined : writeHint}
+                              onClick={() => updateAssembleQty(idx, 1)}
+                            >
+                              +
+                            </button>
                           </div>
                           <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 2 }}>
                             จัดได้สูงสุด {kit.maxAssemble}
@@ -1430,37 +1478,35 @@ export function IncidentConsolePage({ role = 'PHARMACIST' }: { role?: IncidentRo
                       <div style={{ fontSize: 11.5, color: '#334155', marginBottom: 6 }}>
                         มีผู้ป่วยแผลไหม้ร่วมด้วยหรือไม่ ถ้ามีควรเพิ่ม Burn Kit
                       </div>
-                      {canEdit ? (
-                        <div style={{ display: 'flex', gap: 6 }}>
-                          <button
-                            type="button"
-                            className={`btn btn-sm ${burnKitOption === 'none' ? 'btn-p' : 'btn-s'}`}
-                            style={{ flex: 1, height: 28, fontSize: 11 }}
-                            onClick={() => {
-                              setBurnKitOption('none');
-                              editPlan();
-                            }}
-                          >
-                            ไม่มี
-                          </button>
-                          <button
-                            type="button"
-                            className={`btn btn-sm ${burnKitOption === 'add' ? 'btn-p' : 'btn-s'}`}
-                            style={{ flex: 1.5, height: 28, fontSize: 11 }}
-                            onClick={() => {
-                              setBurnKitOption('add');
-                              editPlan();
-                              setScenario('s5'); // Preview S5 no recipe
-                            }}
-                          >
-                            มี - เพิ่ม Burn Kit
-                          </button>
-                        </div>
-                      ) : (
-                        <div style={{ fontSize: 11.5, fontWeight: 600, color: '#0f2a5c' }}>
-                          คำตอบ ER: {burnKitOption === 'add' ? 'มี - เพิ่ม Burn Kit' : 'ไม่มี'}
-                        </div>
-                      )}
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button
+                          type="button"
+                          className={`btn btn-sm ${burnKitOption === 'none' ? 'btn-p' : 'btn-s'}`}
+                          style={{ flex: 1, height: 28, fontSize: 11 }}
+                          disabled={!mayWrite}
+                          title={mayWrite ? undefined : writeHint}
+                          onClick={() => {
+                            setBurnKitOption('none');
+                            editPlan();
+                          }}
+                        >
+                          ไม่มี
+                        </button>
+                        <button
+                          type="button"
+                          className={`btn btn-sm ${burnKitOption === 'add' ? 'btn-p' : 'btn-s'}`}
+                          style={{ flex: 1.5, height: 28, fontSize: 11 }}
+                          disabled={!mayWrite}
+                          title={mayWrite ? undefined : writeHint}
+                          onClick={() => {
+                            setBurnKitOption('add');
+                            editPlan();
+                            setScenario('s5'); // Preview S5 no recipe
+                          }}
+                        >
+                          มี - เพิ่ม Burn Kit
+                        </button>
+                      </div>
                     </div>
 
                     {/* Question 2: PRC O */}
@@ -1468,36 +1514,34 @@ export function IncidentConsolePage({ role = 'PHARMACIST' }: { role?: IncidentRo
                       <div style={{ fontSize: 11.5, color: '#334155', marginBottom: 6 }}>
                         ต้องการ PRC group O เพิ่มจาก 4 ยูนิตหรือไม่ (สูงสุด 6)
                       </div>
-                      {canEdit ? (
-                        <div style={{ display: 'flex', gap: 6 }}>
-                          <button
-                            type="button"
-                            className={`btn btn-sm ${prcOption === '4' ? 'btn-p' : 'btn-s'}`}
-                            style={{ flex: 1, height: 28, fontSize: 11 }}
-                            onClick={() => {
-                              setPrcOption('4');
-                              editPlan();
-                            }}
-                          >
-                            คง 4 ยูนิต
-                          </button>
-                          <button
-                            type="button"
-                            className={`btn btn-sm ${prcOption === '6' ? 'btn-p' : 'btn-s'}`}
-                            style={{ flex: 1, height: 28, fontSize: 11 }}
-                            onClick={() => {
-                              setPrcOption('6');
-                              editPlan();
-                            }}
-                          >
-                            เพิ่มเป็น 6
-                          </button>
-                        </div>
-                      ) : (
-                        <div style={{ fontSize: 11.5, fontWeight: 600, color: '#0f2a5c' }}>
-                          คำตอบ ER: {prcOption === '6' ? 'เพิ่มเป็น 6 ยูนิต' : 'คง 4 ยูนิต'}
-                        </div>
-                      )}
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button
+                          type="button"
+                          className={`btn btn-sm ${prcOption === '4' ? 'btn-p' : 'btn-s'}`}
+                          style={{ flex: 1, height: 28, fontSize: 11 }}
+                          disabled={!mayWrite}
+                          title={mayWrite ? undefined : writeHint}
+                          onClick={() => {
+                            setPrcOption('4');
+                            editPlan();
+                          }}
+                        >
+                          คง 4 ยูนิต
+                        </button>
+                        <button
+                          type="button"
+                          className={`btn btn-sm ${prcOption === '6' ? 'btn-p' : 'btn-s'}`}
+                          style={{ flex: 1, height: 28, fontSize: 11 }}
+                          disabled={!mayWrite}
+                          title={mayWrite ? undefined : writeHint}
+                          onClick={() => {
+                            setPrcOption('6');
+                            editPlan();
+                          }}
+                        >
+                          เพิ่มเป็น 6
+                        </button>
+                      </div>
                     </div>
                   </div>
 
@@ -1537,14 +1581,14 @@ export function IncidentConsolePage({ role = 'PHARMACIST' }: { role?: IncidentRo
                 ประมาณการนับทุกระดับคัดแยก · ขั้นวิกฤตนับเฉพาะผู้ป่วยแดง · ส่วนเผื่อคือส่วนเผื่อช่วยจัดทำ · ผู้ป่วยดำไม่นำมาคิดชุด
               </div>
 
-              {/* Plan approval: ER only (RBAC 4.3). Edits to v2 create draft v3. */}
+              {/* Plan approval: approveIncidentPlan (ER_STAFF). Edits to v2 create draft v3. */}
               <div style={{ borderTop: '1px solid #e2e8f0', marginTop: 10, paddingTop: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {planApproved ? (
                   <div role="status" style={{ display: 'flex', gap: 8, background: '#dcfce7', color: '#166534', borderRadius: 8, padding: '8px 10px', fontSize: 12, lineHeight: '18px' }}>
                     <Icon name="checkc" className="ic14" style={{ marginTop: 2 }} />
                     <span>อนุมัติแผน v3 แล้ว 19:32 · ส่งคำขอยืมเร่งด่วนส่วนที่เพิ่ม และแจ้งคลังจัดชุดตามแผนใหม่</span>
                   </div>
-                ) : planDirty && canEdit ? (
+                ) : planDirty && mayApprovePlan ? (
                   <>
                     <div style={{ fontSize: 12, color: '#92400e', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, padding: '8px 10px', lineHeight: '18px' }}>
                       แก้แผนแล้ว · ร่าง v3 ยังไม่ส่ง · คำขอยืมเร่งด่วนส่วนที่เปลี่ยนจะออกหลังอนุมัติ
@@ -1556,7 +1600,7 @@ export function IncidentConsolePage({ role = 'PHARMACIST' }: { role?: IncidentRo
                 ) : (
                   <div style={{ fontSize: 12, color: '#475569', lineHeight: '18px' }}>
                     แผน {INCIDENT_HEADER.versionHistory.version} {INCIDENT_HEADER.versionHistory.approver}
-                    {canEdit && ' · แก้จำนวนจัดหรือตอบคำถาม Agent แล้วต้องอนุมัติใหม่'}
+                    {mayApprovePlan && ' · แก้จำนวนจัดหรือตอบคำถาม Agent แล้วต้องอนุมัติใหม่'}
                   </div>
                 )}
               </div>
@@ -1729,16 +1773,14 @@ export function IncidentConsolePage({ role = 'PHARMACIST' }: { role?: IncidentRo
                       </tr>
                     </thead>
                     <tbody>
-                      {kit.parts.map((part) => (
+                      {kit.parts.map((part, pIdx) => (
                         <tr key={part.name}>
                           <td>
                             <input
                               type="checkbox"
                               checked={part.checked}
-                              readOnly
-                              disabled
-                              aria-label={`${part.name} หยิบแล้ว`}
-                              style={{ accentColor: '#2563eb' }}
+                              onChange={() => togglePartChecked(kit.id, pIdx)}
+                              style={{ cursor: 'pointer', accentColor: '#2563eb' }}
                             />
                           </td>
                           <td style={{ fontWeight: 500, color: '#0f2a5c', fontSize: 13 }}>{part.name}</td>
@@ -1765,9 +1807,20 @@ export function IncidentConsolePage({ role = 'PHARMACIST' }: { role?: IncidentRo
                 </div>
 
                 {kit.canConfirm && (
-                  <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 8, fontSize: 11.5, color: '#64748b' }}>
-                    <Icon name="hourglass" className="ic14" />
-                    รอเจ้าหน้าที่คลังยืนยันจัดชุดเสร็จ · ระบบตัดของแยกตามสูตรและเพิ่มชุดพร้อมใช้ {kit.qty} ชุด (KIT_PACK)
+                  <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <button
+                      type="button"
+                      className="btn btn-p"
+                      style={{ fontWeight: 600 }}
+                      disabled={!mayWrite}
+                      title={mayWrite ? undefined : writeHint}
+                      onClick={() => confirmKitAssembly(kit.id)}
+                    >
+                      ยืนยันจัดชุดเสร็จ
+                    </button>
+                    <span style={{ fontSize: 11, color: '#64748b' }}>
+                      ระบบตัดของแยกตามสูตรและเพิ่มชุดพร้อมใช้ {kit.qty} ชุด (KIT_PACK)
+                    </span>
                   </div>
                 )}
 
@@ -1839,17 +1892,16 @@ export function IncidentConsolePage({ role = 'PHARMACIST' }: { role?: IncidentRo
                 ร่างสรุปจากข้อมูลตอนนี้ · บันทึกจำนวนที่ใช้จริงหลังเหตุการณ์สงบ แล้ว &ldquo;ขอปิดเหตุการณ์&rdquo; - ER และเภสัชกรอนุมัติร่วมกัน ระบบจึงสร้างภาระการคืนและเอกสาร
               </div>
             </div>
-            {canEdit && (
-              <button
-                type="button"
-                className="btn btn-p"
-                style={{ fontWeight: 600, flex: 'none' }}
-                disabled={isClosed}
-                onClick={() => setIsClosed(true)}
-              >
-                {isClosed ? 'ขอปิดเหตุการณ์แล้ว' : 'ขอปิดเหตุการณ์'}
-              </button>
-            )}
+            <button
+              type="button"
+              className="btn btn-p"
+              style={{ fontWeight: 600, flex: 'none' }}
+              disabled={!mayWrite}
+              title={mayWrite ? undefined : writeHint}
+              onClick={() => setIsClosed(true)}
+            >
+              {isClosed ? 'ขอปิดเหตุการณ์แล้ว' : 'ขอปิดเหตุการณ์'}
+            </button>
           </div>
 
           {/* Table: Borrow / Return per hospital */}
@@ -1884,13 +1936,10 @@ export function IncidentConsolePage({ role = 'PHARMACIST' }: { role?: IncidentRo
                         {row.received}
                       </td>
                       <td style={{ textAlign: 'center' }}>
-                        {!canEdit ? (
-                          <span style={{ fontWeight: 600, color: '#0f2a5c', fontFamily: 'Inter, sans-serif' }}>{row.actualUsed || '—'}</span>
-                        ) : (
                         <input
                           type="text"
-                          aria-label={`ใช้จริง ${row.item}`}
                           value={row.actualUsed}
+                          disabled={!mayWrite}
                           onChange={(e) => updateActualUsed(idx, e.target.value)}
                           style={{
                             width: 50,
@@ -1904,7 +1953,6 @@ export function IncidentConsolePage({ role = 'PHARMACIST' }: { role?: IncidentRo
                             fontFamily: 'inherit',
                           }}
                         />
-                        )}
                       </td>
                       <td style={{ fontSize: 12, color: '#334155' }}>{row.returnPolicy}</td>
                     </tr>
@@ -1927,11 +1975,21 @@ export function IncidentConsolePage({ role = 'PHARMACIST' }: { role?: IncidentRo
               }}
             >
               <div style={{ display: 'flex', gap: 10 }}>
-                <button type="button" className="btn btn-s btn-sm">
+                <button
+                  type="button"
+                  className="btn btn-s btn-sm"
+                  disabled={!mayPrint}
+                  title={mayPrint ? undefined : requiredRoleHint('printDocuments')}
+                >
                   <Icon name="printer" className="ic14" />
                   สรุปยืม-คืน INCIDENT_REPORT
                 </button>
-                <button type="button" className="btn btn-s btn-sm">
+                <button
+                  type="button"
+                  className="btn btn-s btn-sm"
+                  disabled={!mayPrint}
+                  title={mayPrint ? undefined : requiredRoleHint('printDocuments')}
+                >
                   <Icon name="printer" className="ic14" />
                   สรุปการใช้เวชภัณฑ์ UCEP_REPORT
                 </button>

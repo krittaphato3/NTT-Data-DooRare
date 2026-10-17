@@ -4,3 +4,42 @@ services:
     ports:
       - "8080:80"
     restart: unless-stopped
+
+  # PostgreSQL 16 for the DooRare schema (db/schema.sql). Host port 5442 (5432/5433 are used by other local projects).
+  # The schema is applied automatically on the first start (empty volume). Mock data: `npm run db:reset`.
+  db:
+    image: postgres:16
+    container_name: doorare-db
+    environment:
+      POSTGRES_USER: doorare
+      POSTGRES_PASSWORD: doorare_dev
+      POSTGRES_DB: doorare
+    ports:
+      - "127.0.0.1:5442:5432"
+    volumes:
+      - doorare_pgdata:/var/lib/postgresql/data
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./db/mock:/mock:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U doorare -d doorare"]
+      interval: 5s
+      retries: 20
+    restart: unless-stopped
+
+  # Web UI to browse tables/columns/data (dev only). http://localhost:8082
+  # login: System=PostgreSQL, Server=db, user=doorare, password=doorare_dev, database=doorare
+  adminer:
+    image: adminer:latest
+    container_name: doorare-adminer
+    environment:
+      ADMINER_DEFAULT_SERVER: db
+    ports:
+      - "127.0.0.1:8082:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  doorare_pgdata:
+    name: doorare_pgdata

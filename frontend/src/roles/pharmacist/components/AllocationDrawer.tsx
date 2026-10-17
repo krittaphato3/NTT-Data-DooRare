@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { Icon } from '../../../components/common/icons';
+import { mayActFor, requiredRoleHint } from '../../../lib/rbac';
+import type { RoleCode } from '../../../lib/rbac';
 import { COST_LIMIT_PCT, planStatusMeta, uneconomicalOptions } from '../data/pool';
 import type { AllocationPlan } from '../data/pool';
 
@@ -9,10 +11,15 @@ interface AllocationDrawerProps {
   onApprove: () => void;
   onUneconomical: (label: string) => void;
   onClose: () => void;
+  /** Role viewing the drawer; the approval decision is gated through `lib/rbac.ts`. */
+  role?: RoleCode;
 }
 
 /** UI-09 Allocation plan review — F-22 feasibility, F-23 economics, approval chain. */
-export function AllocationDrawer({ plan: p, decision, onApprove, onUneconomical, onClose }: AllocationDrawerProps) {
+export function AllocationDrawer({ plan: p, decision, onApprove, onUneconomical, onClose, role = 'PHARMACIST' }: AllocationDrawerProps) {
+  /* Approving a plan and choosing the uneconomical-exit route both belong to the pharmacist. */
+  const mayApprove = mayActFor(role, 'PHARMACIST', 'approveAllocation');
+  const approveHint = requiredRoleHint('approveAllocation');
   const meta = planStatusMeta(p.status);
   const [picked, setPicked] = useState<string | null>(null);
   const [withMerge, setWithMerge] = useState(false);
@@ -173,7 +180,8 @@ export function AllocationDrawer({ plan: p, decision, onApprove, onUneconomical,
               <button
                 className="btn btn-p"
                 style={{ flex: 1 }}
-                disabled={!picked}
+                disabled={!picked || !mayApprove}
+                title={mayApprove ? undefined : approveHint}
                 onClick={() => {
                   const o = uneconomicalOptions().find((x) => x.id === picked);
                   onUneconomical(o ? `${o.label}${withMerge ? ' (รวมส่งกับรอบอื่น)' : ''}` : '');
@@ -182,7 +190,12 @@ export function AllocationDrawer({ plan: p, decision, onApprove, onUneconomical,
                 ยืนยันตัดสินใจ
               </button>
               {picked === 'accept' && nowEconomical && (
-                <button className="btn btn-g" onClick={onApprove}>
+                <button
+                  className="btn btn-g"
+                  disabled={!mayApprove}
+                  title={mayApprove ? undefined : approveHint}
+                  onClick={onApprove}
+                >
                   เห็นชอบแผน
                 </button>
               )}
@@ -190,11 +203,16 @@ export function AllocationDrawer({ plan: p, decision, onApprove, onUneconomical,
           </div>
         ) : canApprove ? (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-            <button className="btn btn-p" onClick={onApprove}>
+            <button
+              className="btn btn-p"
+              disabled={!mayApprove}
+              title={mayApprove ? undefined : approveHint}
+              onClick={onApprove}
+            >
               <Icon name="check" />
               เห็นชอบแผน
             </button>
-            <button className="btn btn-g">
+            <button className="btn btn-g" disabled={!mayApprove} title={mayApprove ? undefined : approveHint}>
               <Icon name="x" />
               ไม่เห็นชอบ · ขอแก้แผน
             </button>

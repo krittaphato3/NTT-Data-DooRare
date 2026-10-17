@@ -1,0 +1,23 @@
+/* Warehouse dashboard (UI-01, WH view) — tokens and card patterns follow the pharmacist dashboard. */
+.wh-kpi-urgent { border-color: #fecaca; }
+.wh-todo { list-style: none; margin: 12px 0 0; padding: 0; }
+.wh-todo li { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 14px 0; border-top: 1px solid var(--border); }
+.wh-todo li:first-child { border-top: 0; }
+.wh-todo-main { flex: 1 1 260px; min-width: 0; }
+.wh-todo-title { font-weight: 600; color: var(--ink); font-size: 14px; line-height: 20px; }
+.wh-todo-detail { font-size: 12.5px; line-height: 18px; margin-top: 2px; }
+.wh-todo-side { display: flex; align-items: center; gap: 12px; flex: none; margin-left: auto; }
+.wh-timer { font-family: Inter, sans-serif; font-variant-numeric: tabular-nums; font-weight: 600; color: #b91c1c; }
+.wh-stat { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--border); }
+.wh-stat:first-child { border-top: 0; }
+.wh-stat-ic { width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; flex: none; }
+.wh-stat-label { flex: 1; min-width: 0; font-size: 13px; color: var(--ink); }
+.wh-stat-n { font-size: 18px; line-height: 24px; font-weight: 600; color: var(--ink); min-width: 20px; text-align: right; }
+.wh-bar { height: 6px; border-radius: 9999px; background: #e2e8f0; overflow: hidden; }
+.wh-bar > span { display: block; height: 100%; border-radius: 9999px; }
+.wh-kit { padding: 12px 0; border-top: 1px solid var(--border); display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 12px; align-items: center; }
+.wh-kit:first-of-type { border-top: 0; }
+.wh-kit .wh-bar { grid-column: 1 / -1; }
+.wh-readonly { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: #475569; }
+.wh-act { padding: 10px 0; border-top: 1px solid var(--border); display: grid; grid-template-columns: 48px minmax(0, 1fr); gap: 10px; }
+.wh-act:first-of-type { border-top: 0; }

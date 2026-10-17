@@ -52,6 +52,8 @@ const CATALOGUE: Record<string, NavDef> = {
   rep: { th: 'รายงานมูลค่า', en: 'Reports · Value', ui: 'UI-19', icon: 'chart', href: '#', badge: '', red: false },
   cfg: { th: 'ตั้งค่า · Kill switch', en: 'Configuration', ui: 'UI-17', icon: 'gear', href: '#', badge: '', red: false },
   aud: { th: 'บันทึกตรวจสอบ', en: 'Audit log', ui: 'UI-18', icon: 'shield', href: '#', badge: '', red: false },
+  // Derived entry (no UI-nn code in spec §15.1): Hospital Admin user management, API-AD-006/007.
+  usr: { th: 'จัดการผู้ใช้', en: 'User management', ui: '—', icon: 'users', href: '#', badge: '', red: false },
 };
 
 /** Role → nav keys (`'|'` renders the admin group header) — mockup `ROLES` verbatim. */
@@ -61,11 +63,72 @@ export const ROLE_NAV: Record<string, string[]> = {
   WAREHOUSE_OFFICER: ['dash', 'tr', 'inc', 'doc'],
   DRIVER: ['tr'],
   // RBAC 5.3: ER works in F3 only (no F1/F2, no transport list).
-  ER: ['inc'],
-  HOSPITAL_ADMIN: ['dash', 'alerts', 'req', 'lend', 'exp', 'pool', 'inc', 'tr', 'doc', 'rep', '|', 'cfg', 'aud'],
+  ER_STAFF: ['inc'],
+  HOSPITAL_ADMIN: ['dash', 'alerts', 'req', 'lend', 'exp', 'pool', 'inc', 'tr', 'doc', 'rep', '|', 'usr', 'cfg', 'aud'],
 };
 
 export const ADMIN_GROUP_LABEL = 'ผู้ดูแลระบบ';
+
+/**
+ * Query value that selects the Hospital Admin shell.
+ *
+ * Every in-app href must carry it: sidebar links are plain `<a href="?page=…">` navigations, and a
+ * relative query-only href REPLACES the whole query string — so without the role in the href the
+ * shell silently falls back to the default role (PHARMACIST) on every click.
+ */
+export const HOSPITAL_ADMIN_ROLE_QUERY = 'hospital-admin';
+
+/** First page of the Hospital Admin shell — the sidebar target and the breadcrumb "home". */
+export const HOSPITAL_ADMIN_HOME_HREF = `?page=users&role=${HOSPITAL_ADMIN_ROLE_QUERY}`;
+export const DRIVER_ROLE_QUERY = 'driver';
+export const DRIVER_HOME_HREF = `?page=transport&role=${DRIVER_ROLE_QUERY}`;
+export const ER_ROLE_QUERY = 'er';
+/** ER has no dashboard (F3 only): its home is the incident console. */
+export const ER_HOME_HREF = `?page=incident&role=${ER_ROLE_QUERY}`;
+
+/**
+ * Roles that are not the implicit default and therefore must be carried in every in-app href.
+ * A relative `?page=…` link replaces the whole query string, so a role whose shell is selected by a
+ * query param would otherwise be dropped on each click (and on browser back/forward).
+ */
+export const ROLE_QUERY: Record<string, string> = {
+  HOSPITAL_ADMIN: HOSPITAL_ADMIN_ROLE_QUERY,
+  WAREHOUSE_OFFICER: 'warehouse',
+  DRIVER: DRIVER_ROLE_QUERY,
+  ER_STAFF: ER_ROLE_QUERY,
+};
+
+/**
+ * Append the role query param to an href when the role is not the default.
+ * Shared by the shell chrome and by every page that renders its own breadcrumb, so no link is
+ * hand-written and none can silently drop the role.
+ */
+export function withRole(href: string, role: string): string {
+  const r = ROLE_QUERY[role];
+  if (!r || href === '#' || href.includes(`role=${r}`)) return href;
+  return `${href}${href.includes('?') ? '&' : '?'}role=${r}`;
+}
+
+/**
+ * Dashboard href for a role — the breadcrumb "home" a page links back to.
+ * The default shell's dashboard is `/`; a role selected by a query param needs it appended.
+ */
+export function homeHrefFor(role: string): string {
+  if (role === 'DRIVER') return DRIVER_HOME_HREF;
+  if (role === 'ER_STAFF') return ER_HOME_HREF;
+  return withRole('/', role);
+}
+
+/**
+ * Nav keys actually rendered per role.
+ *
+ * `ROLE_NAV.HOSPITAL_ADMIN` holds the entries the spec allows this role to reach (mockup order).
+ * Phase 2A enabled the three administration pages; Phase 2B adds the operational screens, which the
+ * role opens read-only (no write actions — see `lib/rbac.ts`).
+ */
+const VISIBLE_KEYS: Record<string, string[]> = {
+  HOSPITAL_ADMIN: ['dash', 'alerts', 'req', 'lend', 'exp', 'pool', 'inc', 'tr', 'doc', 'rep', '|', 'usr', 'cfg', 'aud'],
+};
 
 /**
  * Resolve a role's nav keys into renderable entries. `activeKey` marks the
@@ -73,7 +136,9 @@ export const ADMIN_GROUP_LABEL = 'ผู้ดูแลระบบ';
  */
 export function getNavForRole(role: string, activeKey = 'dash'): ShellNavEntry[] {
   const keys = ROLE_NAV[role] ?? ROLE_NAV.PHARMACIST;
-  return keys.map((k): ShellNavEntry => {
+  const visible = VISIBLE_KEYS[role];
+  const shown = visible ? keys.filter((k) => visible.includes(k)) : keys;
+  return shown.map((k): ShellNavEntry => {
     if (k === '|') return { kind: 'group', th: ADMIN_GROUP_LABEL };
     const d = CATALOGUE[k];
     return {

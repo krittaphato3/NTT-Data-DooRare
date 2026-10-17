@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { Icon } from '../../../components/common/icons';
+import { mayActFor, requiredRoleHint } from '../../../lib/rbac';
+import type { RoleCode } from '../../../lib/rbac';
 
 type AgentPhase = 'open' | 'adjust' | 'confirm' | 'sent' | 'rejected';
 
@@ -8,8 +10,15 @@ const MAX_B = 60;
 const DEF_A = 80;
 const DEF_B = 40;
 
+interface AgentSuggestionProps {
+  /** Role viewing the card; approve / adjust / reject are gated through `lib/rbac.ts`. */
+  role?: RoleCode;
+}
+
 /** Pinned Agent suggestion card — state machine mirrors Main.dc.html exactly. */
-export function AgentSuggestion() {
+export function AgentSuggestion({ role = 'PHARMACIST' }: AgentSuggestionProps) {
+  const mayApprove = mayActFor(role, 'PHARMACIST', 'approveBorrow');
+  const hint = requiredRoleHint('approveBorrow');
   const [phase, setPhase] = useState<AgentPhase>('open');
   const [qA, setQA] = useState(DEF_A);
   const [qB, setQB] = useState(DEF_B);
@@ -54,15 +63,30 @@ export function AgentSuggestion() {
 
       {phase === 'open' && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-          <button className="btn btn-p btn-sm" onClick={() => setPhase('confirm')}>
+          <button
+            className="btn btn-p btn-sm"
+            disabled={!mayApprove}
+            title={mayApprove ? undefined : hint}
+            onClick={() => setPhase('confirm')}
+          >
             <Icon name="check" />
             อนุมัติ · Approve
           </button>
-          <button className="btn btn-s btn-sm" onClick={() => setPhase('adjust')}>
+          <button
+            className="btn btn-s btn-sm"
+            disabled={!mayApprove}
+            title={mayApprove ? undefined : hint}
+            onClick={() => setPhase('adjust')}
+          >
             <Icon name="edit" />
             ปรับจำนวน · Adjust
           </button>
-          <button className="btn btn-g btn-sm" onClick={() => setPhase('rejected')}>
+          <button
+            className="btn btn-g btn-sm"
+            disabled={!mayApprove}
+            title={mayApprove ? undefined : hint}
+            onClick={() => setPhase('rejected')}
+          >
             <Icon name="x" />
             ปฏิเสธ · Reject
           </button>
