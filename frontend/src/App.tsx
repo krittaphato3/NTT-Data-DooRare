@@ -34,6 +34,7 @@ import { AuditLogPage } from './roles/hospital-admin/pages/AuditLogPage';
 import { ConfigurationPage } from './roles/hospital-admin/pages/ConfigurationPage';
 import { UserManagementPage } from './roles/hospital-admin/pages/UserManagementPage';
 import { DRIVER_NOTIFICATIONS, DRIVER_USER } from './roles/driver/data/session';
+import { ER_NOTIFICATIONS, ER_USER } from './roles/er/data/session';
 import { getDriverNav } from './roles/driver/data/navigation';
 import { DriverTransportPage } from './roles/driver/pages/DriverTransportPage';
 import { DriverSyncPage } from './roles/driver/pages/DriverSyncPage';
@@ -67,12 +68,15 @@ const PHARMACIST_OPS_USER = { ...USER, scopeLabel: 'เห็นเฉพาะ�
  * `?role=warehouse` switches the whole shell to the warehouse officer: `/?role=warehouse` is the WH
  * dashboard, `&page=inbox` work inbox (F1/F2/F3 out + in), `&page=kit` F3 emergency (urgent requests, kits, incidents), `&page=docs` documents (UI-15, shared with the pharmacist), `&page=stock|requests|expiry|drugs` read-only views, `&page=transport` its transport tracking (other WH pages
  * fall back to its dashboard).
+ * `?role=er` switches the shell to ER_STAFF (RBAC role 3): F3 only, so every ER URL lands on the
+ * incident console with the ER write controls enabled.
  */
-function initialRoute(): { page: Page; transportRole: TransportRole; warehouse: boolean; isDriver: boolean } {
+function initialRoute(): { page: Page; transportRole: TransportRole; warehouse: boolean; isDriver: boolean; isEr: boolean } {
   try {
     const q = new URLSearchParams(window.location.search);
     const r = q.get('role')?.toLowerCase();
     const isDriver = r === 'driver';
+    const isEr = r === 'er';
     const p = q.get('page');
     let page: Page = isDriver ? 'transport' : 'dashboard';
     if (p === 'transport') page = 'transport';
@@ -92,15 +96,17 @@ function initialRoute(): { page: Page; transportRole: TransportRole; warehouse: 
     else if (p === 'users' || p === 'usr' || p === 'user') page = 'users';
     else if (p === 'audit' || p === 'aud') page = 'audit';
     else if (p === 'config' || p === 'cfg') page = 'config';
+    if (isEr) page = 'incident';
     return {
       page,
       transportRole: isDriver ? 'DRIVER' : r === 'pharmacist' ? 'PHARMACIST' : 'WAREHOUSE_OFFICER',
       // `page=transport` without a role keeps meaning the warehouse view (back-compat).
-      warehouse: !isDriver && (r === 'warehouse' || (page === 'transport' && r !== 'pharmacist')),
+      warehouse: !isDriver && !isEr && (r === 'warehouse' || (page === 'transport' && r !== 'pharmacist')),
       isDriver,
+      isEr,
     };
   } catch {
-    return { page: 'dashboard', transportRole: 'WAREHOUSE_OFFICER', warehouse: false, isDriver: false };
+    return { page: 'dashboard', transportRole: 'WAREHOUSE_OFFICER', warehouse: false, isDriver: false, isEr: false };
   }
 }
 
@@ -193,13 +199,14 @@ export default function App() {
   const onConfig = route.page === 'config';
   // The Hospital Admin shell keeps its own navigation on every page, including transport.
   const warehouse = !hospitalAdmin && !isDriverRole && route.warehouse;
-  // Warehouse transport, driver console, UI-05, and UI-06 use the ops top bar (no footer); dashboard, alerts, report, and incident console keep standard shell.
-  const ops = isDriverRole || warehouse || onRequests || onLend;
+  const isEr = !hospitalAdmin && !isDriverRole && route.isEr;
+  // Warehouse transport, driver console, ER shell, UI-05, and UI-06 use the ops top bar (no footer); dashboard, alerts, report, and the pharmacist incident console keep standard shell.
+  const ops = isDriverRole || warehouse || isEr || onRequests || onLend;
   // UI-07/08/09/15 screenshots use the ops top bar but keep the standard footer.
   const opsBar = ops || onExpiry || onPool || onDocs;
-  const navRole = isDriverRole ? 'DRIVER' : warehouse ? 'WAREHOUSE_OFFICER' : hospitalAdmin ? 'HOSPITAL_ADMIN' : 'PHARMACIST';
+  const navRole = isDriverRole ? 'DRIVER' : warehouse ? 'WAREHOUSE_OFFICER' : hospitalAdmin ? 'HOSPITAL_ADMIN' : isEr ? 'ER_STAFF' : 'PHARMACIST';
   /** Role the shared pharmacist/warehouse pages gate their write controls on. */
-  const viewerRole: RoleCode = hospitalAdmin ? 'HOSPITAL_ADMIN' : 'PHARMACIST';
+  const viewerRole: RoleCode = hospitalAdmin ? 'HOSPITAL_ADMIN' : isEr ? 'ER_STAFF' : 'PHARMACIST';
   const activeKey = onTransport ? 'tr' : onRequests ? 'req' : onLend ? 'lend' : onIncident ? 'inc' : onAlerts ? 'alerts' : onReport ? 'rep' : onExpiry ? 'exp' : onPool ? 'pool' : onDocs ? 'doc' : onConfig ? 'cfg' : onUsers ? 'usr' : onAudit ? 'aud' : 'dash';
   // WH and Driver own their sidebars; other roles use the shared catalogue.
   const navItems = isDriverRole
@@ -261,10 +268,12 @@ export default function App() {
                 ? WAREHOUSE_NOTIFICATIONS
                 : hospitalAdmin
                   ? ADMIN_NOTIFICATIONS
-                  : ALERTS.map((a) => ({ drug: a.drug, time: a.time }))
+                  : isEr
+                    ? ER_NOTIFICATIONS
+                    : ALERTS.map((a) => ({ drug: a.drug, time: a.time }))
           }
           variant={opsBar ? 'ops' : 'pharmacist'}
-          user={isDriverRole ? DRIVER_USER : warehouse ? WAREHOUSE_USER : hospitalAdmin ? HOSPITAL_ADMIN_USER : opsBar ? PHARMACIST_OPS_USER : undefined}
+          user={isDriverRole ? DRIVER_USER : warehouse ? WAREHOUSE_USER : hospitalAdmin ? HOSPITAL_ADMIN_USER : isEr ? ER_USER : opsBar ? PHARMACIST_OPS_USER : undefined}
         />
         <main className="mainpad">
           {isDriverRole ? (

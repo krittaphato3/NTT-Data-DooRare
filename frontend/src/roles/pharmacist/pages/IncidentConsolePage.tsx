@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Icon } from '../../../components/common/icons';
 import { homeHrefFor } from '../../../data/navigation';
-import { mayActFor, requiredRoleHint } from '../../../lib/rbac';
+import { can, mayActFor, requiredRoleHint } from '../../../lib/rbac';
 import type { RoleCode } from '../../../lib/rbac';
 import { fmtTime, useTick } from '../../../lib/time';
 import {
@@ -53,15 +53,29 @@ export function IncidentConsolePage({ role = 'PHARMACIST' }: { role?: RoleCode }
   const [unsureEta, setUnsureEta] = useState(true);
 
   /* Recording an incident, adjusting the plan, packing a kit and closing the event are all F3
-     writes (§4.3). A role without them either does not see the control or sees it disabled. */
-  const mayWrite = mayActFor(role, 'PHARMACIST', 'manageIncident');
+     writes (§4.3). A role without them either does not see the control or sees it disabled.
+     The console is ER_STAFF's own screen; the pharmacist views F3 only (rbac.md v1.1 §4.3, and
+     spec §5.2 grants PHARMACIST neither manageIncident nor approveIncidentPlan). */
+  const mayWrite = mayActFor(role, 'ER_STAFF', 'manageIncident');
   const writeHint = requiredRoleHint('manageIncident');
+  const mayApprovePlan = mayActFor(role, 'ER_STAFF', 'approveIncidentPlan');
+  // Summary documents: ER prints them; the pharmacist may still view/print (§4.3 "ดู/พิมพ์").
+  const mayPrint = mayWrite || can(role, 'printDocuments');
+
+  // ER edits to plan v2 make a draft v3 that ER must approve before extra urgent borrows go out.
+  const [planDirty, setPlanDirty] = useState(false);
+  const [planApproved, setPlanApproved] = useState(false);
+  const editPlan = () => {
+    setPlanDirty(true);
+    setPlanApproved(false);
+  };
 
   const tick = useTick();
   const etaLeft = Math.max(0, INCIDENT_HEADER.etaMinutes - tick);
 
   // Stepper handlers
   const updateAssembleQty = (index: number, delta: number) => {
+    editPlan();
     setKits((prev) =>
       prev.map((k, i) => {
         if (i !== index) return k;
@@ -593,6 +607,18 @@ export function IncidentConsolePage({ role = 'PHARMACIST' }: { role?: RoleCode }
         <span style={{ color: '#64748b' }}>เหตุฉุกเฉิน</span>
       </nav>
 
+      {!mayWrite && (
+        <div
+          role="status"
+          style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#eff6ff', border: '1px solid #dbeafe', borderRadius: 10, padding: '10px 16px', fontSize: 13, lineHeight: '19px', color: '#0f2a5c' }}
+        >
+          <Icon name="eye" style={{ color: '#1d4ed8' }} />
+          <span>
+            <b style={{ fontWeight: 600 }}>ดูอย่างเดียว</b> · ดูเหตุ แผน และสถานะคำขอได้ การบันทึกเหตุ แก้แผน อนุมัติ และส่งคำขอยืมเร่งด่วนทำโดย ER
+          </span>
+        </div>
+      )}
+
       {/* ─── S1 Banner: ผู้ป่วยถึงแล้ว (ETA หมด · PATIENTS_ARRIVED) ── */}
       {scenario === 's1' && (
         <div
@@ -793,6 +819,11 @@ export function IncidentConsolePage({ role = 'PHARMACIST' }: { role?: RoleCode }
             <Icon name="history" className="ic14" />
             ประวัติ
           </button>
+          {mayWrite && (
+            <button className="btn btn-g btn-sm" onClick={() => setShowCancelModal(true)}>
+              ยกเลิกเหตุ (แจ้งผิด)
+            </button>
+          )}
           {mayWrite && (
             <button
               className="btn btn-sm"
@@ -1454,7 +1485,10 @@ export function IncidentConsolePage({ role = 'PHARMACIST' }: { role?: RoleCode }
                           style={{ flex: 1, height: 28, fontSize: 11 }}
                           disabled={!mayWrite}
                           title={mayWrite ? undefined : writeHint}
-                          onClick={() => setBurnKitOption('none')}
+                          onClick={() => {
+                            setBurnKitOption('none');
+                            editPlan();
+                          }}
                         >
                           ไม่มี
                         </button>
@@ -1466,6 +1500,7 @@ export function IncidentConsolePage({ role = 'PHARMACIST' }: { role?: RoleCode }
                           title={mayWrite ? undefined : writeHint}
                           onClick={() => {
                             setBurnKitOption('add');
+                            editPlan();
                             setScenario('s5'); // Preview S5 no recipe
                           }}
                         >
@@ -1486,7 +1521,10 @@ export function IncidentConsolePage({ role = 'PHARMACIST' }: { role?: RoleCode }
                           style={{ flex: 1, height: 28, fontSize: 11 }}
                           disabled={!mayWrite}
                           title={mayWrite ? undefined : writeHint}
-                          onClick={() => setPrcOption('4')}
+                          onClick={() => {
+                            setPrcOption('4');
+                            editPlan();
+                          }}
                         >
                           คง 4 ยูนิต
                         </button>
@@ -1496,7 +1534,10 @@ export function IncidentConsolePage({ role = 'PHARMACIST' }: { role?: RoleCode }
                           style={{ flex: 1, height: 28, fontSize: 11 }}
                           disabled={!mayWrite}
                           title={mayWrite ? undefined : writeHint}
-                          onClick={() => setPrcOption('6')}
+                          onClick={() => {
+                            setPrcOption('6');
+                            editPlan();
+                          }}
                         >
                           เพิ่มเป็น 6
                         </button>
@@ -1538,6 +1579,30 @@ export function IncidentConsolePage({ role = 'PHARMACIST' }: { role?: RoleCode }
               </div>
               <div style={{ borderTop: '1px solid #e2e8f0', marginTop: 10, paddingTop: 8, fontSize: 10.5, color: '#94a3b8', lineHeight: '15px' }}>
                 ประมาณการนับทุกระดับคัดแยก · ขั้นวิกฤตนับเฉพาะผู้ป่วยแดง · ส่วนเผื่อคือส่วนเผื่อช่วยจัดทำ · ผู้ป่วยดำไม่นำมาคิดชุด
+              </div>
+
+              {/* Plan approval: approveIncidentPlan (ER_STAFF). Edits to v2 create draft v3. */}
+              <div style={{ borderTop: '1px solid #e2e8f0', marginTop: 10, paddingTop: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {planApproved ? (
+                  <div role="status" style={{ display: 'flex', gap: 8, background: '#dcfce7', color: '#166534', borderRadius: 8, padding: '8px 10px', fontSize: 12, lineHeight: '18px' }}>
+                    <Icon name="checkc" className="ic14" style={{ marginTop: 2 }} />
+                    <span>อนุมัติแผน v3 แล้ว 19:32 · ส่งคำขอยืมเร่งด่วนส่วนที่เพิ่ม และแจ้งคลังจัดชุดตามแผนใหม่</span>
+                  </div>
+                ) : planDirty && mayApprovePlan ? (
+                  <>
+                    <div style={{ fontSize: 12, color: '#92400e', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, padding: '8px 10px', lineHeight: '18px' }}>
+                      แก้แผนแล้ว · ร่าง v3 ยังไม่ส่ง · คำขอยืมเร่งด่วนส่วนที่เปลี่ยนจะออกหลังอนุมัติ
+                    </div>
+                    <button type="button" className="btn btn-p" style={{ fontWeight: 600 }} onClick={() => setPlanApproved(true)}>
+                      อนุมัติแผน v3 และส่งคำขอยืมเร่งด่วน
+                    </button>
+                  </>
+                ) : (
+                  <div style={{ fontSize: 12, color: '#475569', lineHeight: '18px' }}>
+                    แผน {INCIDENT_HEADER.versionHistory.version} {INCIDENT_HEADER.versionHistory.approver}
+                    {mayApprovePlan && ' · แก้จำนวนจัดหรือตอบคำถาม Agent แล้วต้องอนุมัติใหม่'}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -1913,8 +1978,8 @@ export function IncidentConsolePage({ role = 'PHARMACIST' }: { role?: RoleCode }
                 <button
                   type="button"
                   className="btn btn-s btn-sm"
-                  disabled={!mayWrite}
-                  title={mayWrite ? undefined : writeHint}
+                  disabled={!mayPrint}
+                  title={mayPrint ? undefined : requiredRoleHint('printDocuments')}
                 >
                   <Icon name="printer" className="ic14" />
                   สรุปยืม-คืน INCIDENT_REPORT
@@ -1922,8 +1987,8 @@ export function IncidentConsolePage({ role = 'PHARMACIST' }: { role?: RoleCode }
                 <button
                   type="button"
                   className="btn btn-s btn-sm"
-                  disabled={!mayWrite}
-                  title={mayWrite ? undefined : writeHint}
+                  disabled={!mayPrint}
+                  title={mayPrint ? undefined : requiredRoleHint('printDocuments')}
                 >
                   <Icon name="printer" className="ic14" />
                   สรุปการใช้เวชภัณฑ์ UCEP_REPORT

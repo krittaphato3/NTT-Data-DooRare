@@ -62,6 +62,8 @@ export const ROLE_NAV: Record<string, string[]> = {
   PROCUREMENT_OFFICER: ['dash', 'alerts', 'req', 'doc', 'rep'],
   WAREHOUSE_OFFICER: ['dash', 'tr', 'inc', 'doc'],
   DRIVER: ['tr'],
+  // RBAC 5.3: ER works in F3 only (no F1/F2, no transport list).
+  ER_STAFF: ['inc'],
   HOSPITAL_ADMIN: ['dash', 'alerts', 'req', 'lend', 'exp', 'pool', 'inc', 'tr', 'doc', 'rep', '|', 'usr', 'cfg', 'aud'],
 };
 
@@ -80,6 +82,9 @@ export const HOSPITAL_ADMIN_ROLE_QUERY = 'hospital-admin';
 export const HOSPITAL_ADMIN_HOME_HREF = `?page=users&role=${HOSPITAL_ADMIN_ROLE_QUERY}`;
 export const DRIVER_ROLE_QUERY = 'driver';
 export const DRIVER_HOME_HREF = `?page=transport&role=${DRIVER_ROLE_QUERY}`;
+export const ER_ROLE_QUERY = 'er';
+/** ER has no dashboard (F3 only): its home is the incident console. */
+export const ER_HOME_HREF = `?page=incident&role=${ER_ROLE_QUERY}`;
 
 /**
  * Roles that are not the implicit default and therefore must be carried in every in-app href.
@@ -90,6 +95,7 @@ export const ROLE_QUERY: Record<string, string> = {
   HOSPITAL_ADMIN: HOSPITAL_ADMIN_ROLE_QUERY,
   WAREHOUSE_OFFICER: 'warehouse',
   DRIVER: DRIVER_ROLE_QUERY,
+  ER_STAFF: ER_ROLE_QUERY,
 };
 
 /**
@@ -109,6 +115,7 @@ export function withRole(href: string, role: string): string {
  */
 export function homeHrefFor(role: string): string {
   if (role === 'DRIVER') return DRIVER_HOME_HREF;
+  if (role === 'ER_STAFF') return ER_HOME_HREF;
   return withRole('/', role);
 }
 

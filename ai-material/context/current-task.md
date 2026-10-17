@@ -37,3 +37,8 @@ Relevant files: `frontend/src/App.tsx`, `frontend/src/roles/pharmacist/pages/Das
 - Visual-fix pass done: design alignment (no English glosses, accent borders, badge icons, two bar markers, underline tabs, etc.); build exit 0; DOM probe 46/46; 25 `ui-02-*.png` re-captured fresh.
 - Verify: `cd frontend && npm run build`; page checks via `vite` + Playwright (`?page=alerts`).
 - Next: wire `GET /alerts` (API-F1a-005) + ack/snooze POSTs, "สร้างคำขอ" → API-F1b-001; then UI-03 / UI-07.
+
+## ER role (branch feature/dashboard-er)
+
+- ER shell at `/?role=er`; incident console is role-aware (pharmacist view-only). See `sessions/2026-10-17-claude-er-incident-console.md`.
+- Next: browser pass, team decision on joint close approval.
