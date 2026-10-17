@@ -23,6 +23,7 @@ export function IncidentConsolePage({ role = 'PHARMACIST' }: { role?: RoleCode }
   const [activeTab, setActiveTab] = useState<IncidentTab>('plan');
 
   return (
+    <div className="er-page">
     <IncidentFrame role={role} title="เหตุฉุกเฉินหมู่" titleEn="/ Incident console" breadcrumb="เหตุฉุกเฉิน" onViewBorrow={() => setActiveTab('borrow')}>
       {({ scenario, setScenario, access }) => (
         <>
@@ -42,5 +43,6 @@ export function IncidentConsolePage({ role = 'PHARMACIST' }: { role?: RoleCode }
         </>
       )}
     </IncidentFrame>
+    </div>
   );
 }

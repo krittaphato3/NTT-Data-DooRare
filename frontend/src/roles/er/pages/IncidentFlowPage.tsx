@@ -54,6 +54,8 @@ export function IncidentFlowPage({ role = 'ER_STAFF' }: { role?: RoleCode }) {
   const [excluded, setExcluded] = useState<Set<string>>(new Set(existing?.excluded));
   const [note, setNote] = useState(existing?.note ?? '');
   const [batches, setBatches] = useState<SentBatch[]>(existing?.batches ?? []);
+  // Request numbers are fixed for this visit so sending hospital by hospital keeps the same ids.
+  const [baseNo] = useState(nextRequestNo);
 
   // Save the incident whenever the flow changes so it shows up on the incident list and survives a reload.
   useEffect(() => {
@@ -95,7 +97,8 @@ export function IncidentFlowPage({ role = 'ER_STAFF' }: { role?: RoleCode }) {
 
   const etaMin = effectiveEtaMin(intake);
   const lines = buildStockCheck(kits, EXTRA_DRUGS);
-  const requests = planBorrowRequests(lines, etaMin, nextRequestNo());
+  const requests = planBorrowRequests(lines, etaMin, baseNo);
+  const sentKeys = new Set(batches.flatMap((b) => b.requests.flatMap((r) => r.lenders.map((l) => `${r.id}|${l.name}`))));
   const total = triageTotal(intake);
   const canSubmit = access.mayWrite && intake.location.trim() !== '' && total > 0;
 
@@ -108,6 +111,26 @@ export function IncidentFlowPage({ role = 'ER_STAFF' }: { role?: RoleCode }) {
         return { ...k, assembleFromParts: next, borrowFullKit: Math.max(0, k.estimated - k.readyInStock - next) };
       })
     );
+  };
+
+  /** Send the checked, not-yet-sent items to the given hospitals (one batch per hospital). */
+  const sendTo = (hospitals: string[]) => {
+    const at = nowHHmm();
+    const fresh: SentBatch[] = [];
+    for (const name of [...new Set(hospitals)]) {
+      const reqs = requests
+        .filter((r) => r.lenders.some((l) => l.name === name) && !excluded.has(`${r.id}|${name}`) && !sentKeys.has(`${r.id}|${name}`))
+        .map((r) => ({ ...r, lenders: r.lenders.filter((l) => l.name === name) }));
+      if (reqs.length) fresh.push({ at, note, requests: reqs });
+    }
+    if (fresh.length === 0) return;
+    const next = [...batches, ...fresh];
+    setBatches(next);
+    setNote('');
+    // Everything checked has gone out: finish.
+    const nowSent = new Set(next.flatMap((b) => b.requests.flatMap((r) => r.lenders.map((l) => `${r.id}|${l.name}`))));
+    const left = requests.some((r) => r.lenders.some((l) => !excluded.has(`${r.id}|${l.name}`) && !nowSent.has(`${r.id}|${l.name}`)));
+    if (!left) go(5);
   };
 
   return (
@@ -134,7 +157,7 @@ export function IncidentFlowPage({ role = 'ER_STAFF' }: { role?: RoleCode }) {
             <button
               type="button"
               className="btn btn-p"
-              style={{ background: '#b91c1c', border: 'none', fontWeight: 600 }}
+              style={{ fontWeight: 600 }}
               disabled={!canSubmit}
               title={access.mayWrite ? undefined : access.writeHint}
               onClick={() => {
@@ -192,24 +215,13 @@ export function IncidentFlowPage({ role = 'ER_STAFF' }: { role?: RoleCode }) {
           }
           onNote={setNote}
           onBack={() => go(3)}
-          onSend={() => {
-            const sent = requests.map((r) => ({ ...r, lenders: r.lenders.filter((h) => !excluded.has(`${r.id}|${h.name}`)) }));
-            setBatches((prev) => [...prev, { at: nowHHmm(), note, requests: sent }]);
-            setExcluded(new Set());
-            setNote('');
-            go(5);
-          }}
+          sentKeys={sentKeys}
+          onSendHospital={(name) => sendTo([name])}
+          onSendAll={() => sendTo(requests.flatMap((r) => r.lenders.map((l) => l.name)))}
         />
       )}
 
-      {step === 5 && batches.length > 0 && (
-        <SentStep
-          requests={batches[batches.length - 1].requests}
-          sentAt={batches[batches.length - 1].at}
-          trackHref={erHref('track')}
-          onNew={() => window.location.assign(erHref('flow'))}
-        />
-      )}
+      {step === 5 && batches.length > 0 && <SentStep batches={batches} trackHref={erHref('track')} onNew={() => window.location.assign(erHref('flow'))} />}
     </div>
   );
 }

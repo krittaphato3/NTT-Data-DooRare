@@ -18,7 +18,7 @@ export interface IncidentUpdate {
   text: string;
 }
 
-/** One send of borrow requests (a re-plan after an update sends another batch). Lenders are the ones actually asked. */
+/** One send of borrow requests to one hospital (or several). A request sent to hospitals separately appears in several batches. */
 export interface SentBatch {
   at: string;
   note: string;
@@ -162,9 +162,10 @@ export function nextIncidentId(): string {
   return `INC-2026-${String(n + 1).padStart(6, '0')}`;
 }
 
-/** Next borrow request number: after the mock requests of the live incident and every batch sent so far. */
+/** Next borrow request number: after the mock requests of the live incident and every distinct request sent so far. */
 export function nextRequestNo(): number {
-  return 134 + 5 + records.reduce((n, r) => n + r.batches.reduce((m, b) => m + b.requests.length, 0), 0);
+  const ids = new Set(records.flatMap((r) => r.batches.flatMap((b) => b.requests.map((q) => q.id))));
+  return 134 + 5 + ids.size;
 }
 
 const LABEL: Record<string, string> = { red: 'แดง', yellow: 'เหลือง', green: 'เขียว', black: 'ดำ', unknown: 'ไม่ทราบระดับ' };
