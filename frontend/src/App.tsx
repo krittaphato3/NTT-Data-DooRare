@@ -33,8 +33,12 @@ import { ADMIN_NOTIFICATIONS, HOSPITAL_ADMIN_USER } from './roles/hospital-admin
 import { AuditLogPage } from './roles/hospital-admin/pages/AuditLogPage';
 import { ConfigurationPage } from './roles/hospital-admin/pages/ConfigurationPage';
 import { UserManagementPage } from './roles/hospital-admin/pages/UserManagementPage';
+import { DRIVER_NOTIFICATIONS, DRIVER_USER } from './roles/driver/data/session';
+import { getDriverNav } from './roles/driver/data/navigation';
+import { DriverTransportPage } from './roles/driver/pages/DriverTransportPage';
+import { DriverSyncPage } from './roles/driver/pages/DriverSyncPage';
 
-type Page = 'dashboard' | 'inbox' | 'kit' | 'stock' | 'drugs' | 'transport' | 'requests' | 'lend' | 'incident' | 'alerts' | 'report' | 'expiry' | 'pool' | 'docs' | 'users' | 'audit' | 'config';
+type Page = 'dashboard' | 'inbox' | 'kit' | 'stock' | 'drugs' | 'transport' | 'requests' | 'lend' | 'incident' | 'alerts' | 'report' | 'expiry' | 'pool' | 'docs' | 'users' | 'audit' | 'config' | 'sync';
 
 /**
  * The pharmacist/warehouse screens the Hospital Admin shell opens read-only (Phase 2B).
@@ -64,12 +68,15 @@ const PHARMACIST_OPS_USER = { ...USER, scopeLabel: 'เห็นเฉพาะ�
  * dashboard, `&page=inbox` work inbox (F1/F2/F3 out + in), `&page=kit` F3 emergency (urgent requests, kits, incidents), `&page=docs` documents (UI-15, shared with the pharmacist), `&page=stock|requests|expiry|drugs` read-only views, `&page=transport` its transport tracking (other WH pages
  * fall back to its dashboard).
  */
-function initialRoute(): { page: Page; transportRole: TransportRole; warehouse: boolean } {
+function initialRoute(): { page: Page; transportRole: TransportRole; warehouse: boolean; isDriver: boolean } {
   try {
     const q = new URLSearchParams(window.location.search);
+    const r = q.get('role')?.toLowerCase();
+    const isDriver = r === 'driver';
     const p = q.get('page');
-    let page: Page = 'dashboard';
+    let page: Page = isDriver ? 'transport' : 'dashboard';
     if (p === 'transport') page = 'transport';
+    else if (p === 'sync') page = 'sync';
     else if (p === 'inbox') page = 'inbox';
     else if (p === 'kit') page = 'kit';
     else if (p === 'stock') page = 'stock';
@@ -85,15 +92,15 @@ function initialRoute(): { page: Page; transportRole: TransportRole; warehouse: 
     else if (p === 'users' || p === 'usr' || p === 'user') page = 'users';
     else if (p === 'audit' || p === 'aud') page = 'audit';
     else if (p === 'config' || p === 'cfg') page = 'config';
-    const r = q.get('role')?.toLowerCase();
     return {
       page,
-      transportRole: r === 'pharmacist' ? 'PHARMACIST' : 'WAREHOUSE_OFFICER',
+      transportRole: isDriver ? 'DRIVER' : r === 'pharmacist' ? 'PHARMACIST' : 'WAREHOUSE_OFFICER',
       // `page=transport` without a role keeps meaning the warehouse view (back-compat).
-      warehouse: r === 'warehouse' || (page === 'transport' && r !== 'pharmacist'),
+      warehouse: !isDriver && (r === 'warehouse' || (page === 'transport' && r !== 'pharmacist')),
+      isDriver,
     };
   } catch {
-    return { page: 'dashboard', transportRole: 'WAREHOUSE_OFFICER', warehouse: false };
+    return { page: 'dashboard', transportRole: 'WAREHOUSE_OFFICER', warehouse: false, isDriver: false };
   }
 }
 
@@ -144,6 +151,15 @@ function initialHospitalAdmin(): boolean {
   }
 }
 
+/** `?role=driver` renders the DRIVER shell — assigned transport tasks only (SEC-002, ASM-44). */
+function initialDriver(): boolean {
+  try {
+    return new URLSearchParams(window.location.search).get('role')?.toLowerCase() === 'driver';
+  } catch {
+    return false;
+  }
+}
+
 /**
  * App shell: sidebar + top bar + the active role page + footer.
  * Role pages live in `src/roles/<role>/pages/` (see src/README.md).
@@ -155,8 +171,11 @@ export default function App() {
   const [hospital, setHospital] = useState('ทุกโรงพยาบาล (12)');
   const [isAdmin] = useState(initialRole);
   const [hospitalAdmin] = useState(initialHospitalAdmin);
+  const [isDriver] = useState(initialDriver);
   const [route] = useState(initialRoute);
+  const isDriverRole = isDriver || route.isDriver;
   const onTransport = route.page === 'transport';
+  const onSync = route.page === 'sync';
   const onInbox = route.page === 'inbox';
   const onKit = route.page === 'kit';
   const onStock = route.page === 'stock';
@@ -173,19 +192,21 @@ export default function App() {
   const onAudit = route.page === 'audit';
   const onConfig = route.page === 'config';
   // The Hospital Admin shell keeps its own navigation on every page, including transport.
-  const warehouse = !hospitalAdmin && route.warehouse;
-  // Warehouse transport, UI-05, and UI-06 use the ops top bar (no footer); dashboard, alerts, report, and incident console keep standard shell.
-  const ops = warehouse || onRequests || onLend;
+  const warehouse = !hospitalAdmin && !isDriverRole && route.warehouse;
+  // Warehouse transport, driver console, UI-05, and UI-06 use the ops top bar (no footer); dashboard, alerts, report, and incident console keep standard shell.
+  const ops = isDriverRole || warehouse || onRequests || onLend;
   // UI-07/08/09/15 screenshots use the ops top bar but keep the standard footer.
   const opsBar = ops || onExpiry || onPool || onDocs;
-  const navRole = warehouse ? 'WAREHOUSE_OFFICER' : hospitalAdmin ? 'HOSPITAL_ADMIN' : 'PHARMACIST';
+  const navRole = isDriverRole ? 'DRIVER' : warehouse ? 'WAREHOUSE_OFFICER' : hospitalAdmin ? 'HOSPITAL_ADMIN' : 'PHARMACIST';
   /** Role the shared pharmacist/warehouse pages gate their write controls on. */
   const viewerRole: RoleCode = hospitalAdmin ? 'HOSPITAL_ADMIN' : 'PHARMACIST';
   const activeKey = onTransport ? 'tr' : onRequests ? 'req' : onLend ? 'lend' : onIncident ? 'inc' : onAlerts ? 'alerts' : onReport ? 'rep' : onExpiry ? 'exp' : onPool ? 'pool' : onDocs ? 'doc' : onConfig ? 'cfg' : onUsers ? 'usr' : onAudit ? 'aud' : 'dash';
-  // WH owns its sidebar (roles/warehouse/data/navigation.ts); other roles use the shared catalogue.
-  const navItems = warehouse
-    ? getWarehouseNav(onTransport ? 'transport' : onInbox ? 'inbox' : onKit ? 'kit' : onDocs ? 'docs' : onStock || onAlerts ? 'stock' : onRequests ? 'requests' : onExpiry ? 'expiry' : onDrugs ? 'drugs' : 'dashboard')
-    : withLinks(getNavForRole(navRole, activeKey), navRole);
+  // WH and Driver own their sidebars; other roles use the shared catalogue.
+  const navItems = isDriverRole
+    ? getDriverNav(onSync ? 'sync' : onDocs ? 'docs' : 'transport')
+    : warehouse
+      ? getWarehouseNav(onTransport ? 'transport' : onInbox ? 'inbox' : onKit ? 'kit' : onDocs ? 'docs' : onStock || onAlerts ? 'stock' : onRequests ? 'requests' : onExpiry ? 'expiry' : onDrugs ? 'drugs' : 'dashboard')
+      : withLinks(getNavForRole(navRole, activeKey), navRole);
   // Page access for the Hospital Admin shell is decided by lib/rbac.ts, not by local role checks.
   const mayManageUsers = can(navRole, 'manageUsers');
   const mayViewAudit = can(navRole, 'viewAudit');
@@ -234,17 +255,27 @@ export default function App() {
           navOpen={navOpen}
           onMenu={() => setNavOpen((v) => !v)}
           notifications={
-            warehouse
-              ? WAREHOUSE_NOTIFICATIONS
-              : hospitalAdmin
-                ? ADMIN_NOTIFICATIONS
-                : ALERTS.map((a) => ({ drug: a.drug, time: a.time }))
+            isDriverRole
+              ? DRIVER_NOTIFICATIONS
+              : warehouse
+                ? WAREHOUSE_NOTIFICATIONS
+                : hospitalAdmin
+                  ? ADMIN_NOTIFICATIONS
+                  : ALERTS.map((a) => ({ drug: a.drug, time: a.time }))
           }
           variant={opsBar ? 'ops' : 'pharmacist'}
-          user={warehouse ? WAREHOUSE_USER : hospitalAdmin ? HOSPITAL_ADMIN_USER : opsBar ? PHARMACIST_OPS_USER : undefined}
+          user={isDriverRole ? DRIVER_USER : warehouse ? WAREHOUSE_USER : hospitalAdmin ? HOSPITAL_ADMIN_USER : opsBar ? PHARMACIST_OPS_USER : undefined}
         />
         <main className="mainpad">
-          {hospitalAdmin && !isHospitalAdminPageAllowed ? (
+          {isDriverRole ? (
+            onSync ? (
+              <DriverSyncPage />
+            ) : onDocs ? (
+              <DocumentsPage role="DRIVER" />
+            ) : (
+              <DriverTransportPage />
+            )
+          ) : hospitalAdmin && !isHospitalAdminPageAllowed ? (
             /* Guard for a Hospital Admin page outside the allowed set. The operational screens
                render read-only through their `role` prop; this card covers anything else. */
             <AccessDenied homeHref={HOSPITAL_ADMIN_HOME_HREF} />

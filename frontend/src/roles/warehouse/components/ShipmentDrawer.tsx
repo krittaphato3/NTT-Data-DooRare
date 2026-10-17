@@ -31,6 +31,9 @@ interface ShipmentDrawerProps {
   /** Statuses set by the warehouse on behalf of the driver, with the audit reason. */
   proxies: ProxyEntry[];
   onProxy: (to: ProxyEntry['to'], reason: string) => void;
+  isDriver?: boolean;
+  onDepart?: (id: string) => void;
+  onArrive?: (id: string) => void;
 }
 
 function returnNote(s: Shipment): string {
@@ -52,13 +55,19 @@ export function ShipmentDrawer(p: ShipmentDrawerProps) {
   const canPhoto = op && ['WAITING_DISPATCH', 'LOADED', 'IN_TRANSIT'].includes(status) && s.photos.length < 10;
   const primary = !op
     ? null
-    : status === 'WAITING_DISPATCH' && out && !cancelReq
-      ? { label: 'ยืนยันขึ้นรถ + ถ่ายรูป', onClick: undefined as (() => void) | undefined }
-      : status === 'ARRIVED' && !out && !showReceipt
-        ? { label: 'ยืนยันรับของ', onClick: p.onOpenReceipt }
-        : null;
+    : p.isDriver
+      ? status === 'LOADED'
+        ? { label: 'ออกเดินทาง', onClick: () => p.onDepart?.(s.id) }
+        : status === 'IN_TRANSIT'
+          ? { label: 'ถึงปลายทาง + ถ่ายรูป', onClick: () => p.onArrive?.(s.id) }
+          : null
+      : status === 'WAITING_DISPATCH' && out && !cancelReq
+        ? { label: 'ยืนยันขึ้นรถ + ถ่ายรูป', onClick: undefined as (() => void) | undefined }
+        : status === 'ARRIVED' && !out && !showReceipt
+          ? { label: 'ยืนยันรับของ', onClick: p.onOpenReceipt }
+          : null;
   const canRequestCancel = p.canCancel && status === 'WAITING_DISPATCH' && out && !cancelReq;
-  const canProxy = op && out && (status === 'LOADED' || status === 'IN_TRANSIT');
+  const canProxy = !p.isDriver && op && out && (status === 'LOADED' || status === 'IN_TRANSIT');
   const showPick = op && out && status === 'WAITING_DISPATCH' && (s.pick?.length ?? 0) > 0;
 
   return (

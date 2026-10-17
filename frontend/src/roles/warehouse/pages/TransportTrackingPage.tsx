@@ -35,15 +35,16 @@ function useOnline(): boolean {
  * Roles this screen is rendered for. PHARMACIST and HOSPITAL_ADMIN open it read-only
  * (API-F2a-012 lets the pharmacist list tasks; POST status/photos is warehouse/driver only).
  */
-export type TransportRole = 'WAREHOUSE_OFFICER' | 'PHARMACIST' | 'HOSPITAL_ADMIN';
+export type TransportRole = 'WAREHOUSE_OFFICER' | 'PHARMACIST' | 'HOSPITAL_ADMIN' | 'DRIVER';
 
 /**
  * UI-14 Transport tracking. UI only — data is mock, actions are local state.
- * WAREHOUSE_OFFICER operates (status, photos, receipt); PHARMACIST and HOSPITAL_ADMIN are read-only.
- * All roles see only their own hospital's tasks (SEC-002).
+ * WAREHOUSE_OFFICER and DRIVER operate; PHARMACIST and HOSPITAL_ADMIN are read-only.
+ * All roles see only their own hospital's tasks (SEC-002), and DRIVER sees assigned tasks (ASM-44).
  */
 export function TransportTrackingPage({ role = 'WAREHOUSE_OFFICER' }: { role?: TransportRole }) {
   const canOperate = can(role, 'transportStatus');
+  const isDriver = role === 'DRIVER';
   // Only the pharmacist answers / requests a cancellation (RBAC §4.4); the warehouse never does.
   const canCancel = role === 'PHARMACIST';
   const online = useOnline();
@@ -60,7 +61,7 @@ export function TransportTrackingPage({ role = 'WAREHOUSE_OFFICER' }: { role?: T
   const [proxy, setProxy] = useState<Record<string, ProxyEntry[]>>({});
   const [q, setQ] = useState('');
   const [kind, setKind] = useState<'all' | ShipmentKind>('all');
-  const [driver, setDriver] = useState('all');
+  const [driver, setDriver] = useState(isDriver ? 'คุณสมชาย แก้วกล้า' : 'all');
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -212,7 +213,7 @@ export function TransportTrackingPage({ role = 'WAREHOUSE_OFFICER' }: { role?: T
           <span style={{ flex: '1 1 0' }} />
           <span style={{ fontSize: 12 }}>เรียง: ต้องทำก่อน → อัปเดตล่าสุด</span>
         </div>
-        <ShipmentTable rows={rows} activeId={drawerOpen && sel ? sel.shipment.id : null} onOpen={open} onAction={onAction} canOperate={canOperate} canCancel={canCancel} />
+        <ShipmentTable rows={rows} activeId={drawerOpen && sel ? sel.shipment.id : null} onOpen={open} onAction={onAction} canOperate={canOperate} canCancel={canCancel} isDriver={isDriver} />
       </section>
 
       {drawerOpen && sel && (
@@ -235,6 +236,13 @@ export function TransportTrackingPage({ role = 'WAREHOUSE_OFFICER' }: { role?: T
           canCancel={canCancel}
           proxies={proxy[sel.shipment.id] ?? []}
           onProxy={(to, reason) => setProxy((m) => ({ ...m, [sel.shipment.id]: [...(m[sel.shipment.id] ?? []), { to, reason }] }))}
+          isDriver={isDriver}
+          onDepart={(id) => {
+            setProxy((m) => ({ ...m, [id]: [...(m[id] ?? []), { to: 'IN_TRANSIT', reason: 'คนขับยืนยันออกเดินทาง' }] }));
+          }}
+          onArrive={(id) => {
+            setProxy((m) => ({ ...m, [id]: [...(m[id] ?? []), { to: 'ARRIVED', reason: 'คนขับถึงปลายทางพร้อมรูปถ่าย' }] }));
+          }}
         />
       )}
       {histOpen && <AuditHistoryDrawer onClose={() => setHistOpen(false)} />}
