@@ -1,11 +1,14 @@
 -- โหลดข้อมูล mock เข้า PostgreSQL (รันหลัง schema.sql)   ใช้:  psql -d <db> -f load.sql   (ให้รันจากโฟลเดอร์ csv/)
--- หมายเหตุ: app_user_role_history ถูกสร้างอัตโนมัติจาก trigger ตอนโหลด app_user; audit_log/forecast_*/agent_* ปล่อยว่างให้ระบบสร้างเอง
+-- หมายเหตุ: app_user_role_history และแถว role หลักใน app_user_role ถูกสร้างอัตโนมัติจาก trigger ตอนโหลด app_user (app_user_role.csv มีเฉพาะ role เพิ่มเติม); audit_log/forecast_*/agent_* ปล่อยว่างให้ระบบสร้างเอง
 \set ON_ERROR_STOP on
 SET session_replication_role = origin;
 \copy region (id,code,name_th,name_en,created_at) FROM 'region.csv' WITH (FORMAT csv, HEADER true)
 \copy network (id,region_id,name,auto_approve) FROM 'network.csv' WITH (FORMAT csv, HEADER true)
-\copy hospital (id,region_id,network_id,code,name_th,name_en,lat,lon,is_urban,has_cold_chain,has_blood_bank,active,created_at,updated_at,version) FROM 'hospital.csv' WITH (FORMAT csv, HEADER true)
-\copy app_user (id,cognito_sub,email,display_name,role,hospital_id,region_id,phone,active,created_at) FROM 'app_user.csv' WITH (FORMAT csv, HEADER true)
+\copy hospital (id,region_id,network_id,code,name_th,name_en,lat,lon,is_urban,has_cold_chain,has_blood_bank,active,created_at,updated_at,version,province,tier,bed_count,address,phone) FROM 'hospital.csv' WITH (FORMAT csv, HEADER true)
+\copy vehicle (id,hospital_id,plate,has_cold_box,active) FROM 'vehicle.csv' WITH (FORMAT csv, HEADER true)
+\copy app_user (id,cognito_sub,email,display_name,role,hospital_id,region_id,phone,active,created_at,mfa_enabled,last_login_at,last_seen_at) FROM 'app_user.csv' WITH (FORMAT csv, HEADER true)
+\copy app_user_role (user_id,role) FROM 'app_user_role.csv' WITH (FORMAT csv, HEADER true)
+\copy login_event (user_id,email,occurred_at,success,failure_reason,ip,device,browser,user_agent) FROM 'login_event.csv' WITH (FORMAT csv, HEADER true)
 \copy hospital_distance (from_hospital_id,to_hospital_id,distance_km,duration_min_normal,duration_min_peak,travel_minutes,travel_minutes_override,source,refreshed_at) FROM 'hospital_distance.csv' WITH (FORMAT csv, HEADER true)
 \copy config_setting (key,scope,value,description,updated_by,updated_at) FROM 'config_setting.csv' WITH (FORMAT csv, HEADER true)
 \copy drug_master (id,item_type,gp_id,internal_code,generic_name,strength,dosage_form,base_unit,is_cold_chain,is_blood_product,is_high_alert,emergency_class,created_at) FROM 'drug_master.csv' WITH (FORMAT csv, HEADER true)
@@ -26,7 +29,7 @@ SET session_replication_role = origin;
 \copy kit_component (kit_type_id,drug_master_id,qty_per_kit) FROM 'kit_component.csv' WITH (FORMAT csv, HEADER true)
 \copy kit_recipe (triage,kit_type_id,qty_per_patient,is_critical_min) FROM 'kit_recipe.csv' WITH (FORMAT csv, HEADER true)
 \copy incident_extra_rule (triage,drug_master_id,qty_per_patient,is_critical_min) FROM 'incident_extra_rule.csv' WITH (FORMAT csv, HEADER true)
-\copy incident (id,incident_no,hospital_id,status,location_lat,location_lon,location_text,reported_eta_min,created_by,duplicate_of,closed_at,created_at,updated_at,version) FROM 'incident.csv' WITH (FORMAT csv, HEADER true)
+\copy incident (id,incident_no,hospital_id,status,location_lat,location_lon,location_text,reported_eta_min,created_by,duplicate_of,closed_at,created_at,updated_at,version,incident_type,cancel_reason) FROM 'incident.csv' WITH (FORMAT csv, HEADER true)
 \copy incident_patient_count (incident_id,triage,count,updated_at) FROM 'incident_patient_count.csv' WITH (FORMAT csv, HEADER true)
 \copy emergency_plan (id,incident_id,revision,status,estimated_need,critical_min,buffer,steps,shortfall,approved_by,approved_at,agent_run_id,created_at) FROM 'emergency_plan.csv' WITH (FORMAT csv, HEADER true)
 \copy kit_pack_task (id,plan_id,hospital_id,kit_type_id,qty,status,confirmed_by,confirmed_at) FROM 'kit_pack_task.csv' WITH (FORMAT csv, HEADER true)
@@ -43,8 +46,8 @@ SET session_replication_role = origin;
 \copy allocation_plan (id,plan_no,region_id,pool_entry_id,status,total_value_thb,total_transport_cost_thb,cost_ratio,economical,option_chosen,agent_run_id,approval_deadline,created_at,updated_at,version) FROM 'allocation_plan.csv' WITH (FORMAT csv, HEADER true)
 \copy allocation_line (id,plan_id,receiver_hospital_id,qty,value_thb,expected_use_before_expiry,distance_km,transport_cost_thb,cold_chain) FROM 'allocation_line.csv' WITH (FORMAT csv, HEADER true)
 \copy plan_approval (id,plan_id,hospital_id,decision,decided_by,decided_at,comment) FROM 'plan_approval.csv' WITH (FORMAT csv, HEADER true)
-\copy transport_task (id,ref_type,ref_id,from_hospital_id,to_hospital_id,status,driver_id,cancel_requested_by,cancel_consent_by,loaded_at,departed_at,arrived_at,received_at,created_at,updated_at,version) FROM 'transport_task.csv' WITH (FORMAT csv, HEADER true)
-\copy transport_event (id,task_id,client_event_id,seq,to_status,captured_at,received_at,actor_id,photo_keys,applied,reject_reason) FROM 'transport_event.csv' WITH (FORMAT csv, HEADER true)
+\copy transport_task (id,ref_type,ref_id,from_hospital_id,to_hospital_id,status,driver_id,cancel_requested_by,cancel_consent_by,loaded_at,departed_at,arrived_at,received_at,created_at,updated_at,version,task_no,vehicle_id,eta_at,cancel_reason) FROM 'transport_task.csv' WITH (FORMAT csv, HEADER true)
+\copy transport_event (id,task_id,client_event_id,seq,to_status,captured_at,received_at,actor_id,photo_keys,applied,reject_reason,temperature_c) FROM 'transport_event.csv' WITH (FORMAT csv, HEADER true)
 \copy repeat_expiry_flag (id,hospital_id,drug_master_id,level,lots_12m,value_12m_thb,suggestion,dismissed_until,created_at) FROM 'repeat_expiry_flag.csv' WITH (FORMAT csv, HEADER true)
 \copy kit_stock (hospital_id,kit_type_id,qty_ready,qty_held,updated_at) FROM 'kit_stock.csv' WITH (FORMAT csv, HEADER true)
 \copy regional_warehouse_stock (region_id,drug_master_id,qty,updated_at) FROM 'regional_warehouse_stock.csv' WITH (FORMAT csv, HEADER true)

@@ -1534,13 +1534,15 @@ with open(OUT / "usage_daily.csv", "w", newline="", encoding="utf-8") as f:
     w.writerow(["hospital_id", "hospital_drug_id", "usage_date", "qty_used"])
     w.writerows(USAGE)
 counts["usage_daily"] = len(USAGE)
+import enrich_v15   # v1.5 columns/tables (own random stream: v1.4 values are unchanged)
+counts.update(enrich_v15.run(OUT, CFG))
 json.dump(counts, open(OUT / "_row_counts.json", "w"), indent=1)
 print("[6/6] wrote", len(counts), "CSV files;", sum(counts.values()), "rows", file=sys.stderr)
 
 # --------------------------------------------------------------------------------------
 # 7) load.sql  (โหลดเข้า PostgreSQL ด้วย \copy ตามลำดับ FK)
 # --------------------------------------------------------------------------------------
-LOAD_ORDER = ["region", "network", "hospital", "app_user", "hospital_distance", "config_setting", "drug_master", "tmt_reference",
+LOAD_ORDER = ["region", "network", "hospital", "vehicle", "app_user", "app_user_role", "login_event", "hospital_distance", "config_setting", "drug_master", "tmt_reference",
               "hospital_drug", "drug_mapping", "mapping_candidate", "drug_mapping_history", "hospital_import", "stock_lot", "stock_ledger",
               "stock_snapshot", "usage_daily", "incoming_order", "context_signal", "stock_alert", "kit_type", "kit_component", "kit_recipe",
               "incident_extra_rule", "incident", "incident_patient_count", "emergency_plan", "kit_pack_task", "incident_usage", "borrow_request",
@@ -1549,7 +1551,7 @@ LOAD_ORDER = ["region", "network", "hospital", "app_user", "hospital_distance", 
               "kit_stock", "regional_warehouse_stock", "value_record", "report_definition"]
 with open(ROOT / "load.sql", "w", encoding="utf-8") as f:
     f.write("-- โหลดข้อมูล mock เข้า PostgreSQL (รันหลัง schema.sql)   ใช้:  psql -d <db> -f load.sql   (ให้รันจากโฟลเดอร์ csv/)\n")
-    f.write("-- หมายเหตุ: app_user_role_history ถูกสร้างอัตโนมัติจาก trigger ตอนโหลด app_user; audit_log/forecast_*/agent_* ปล่อยว่างให้ระบบสร้างเอง\n")
+    f.write("-- หมายเหตุ: app_user_role_history และแถว role หลักใน app_user_role ถูกสร้างอัตโนมัติจาก trigger ตอนโหลด app_user (app_user_role.csv มีเฉพาะ role เพิ่มเติม); audit_log/forecast_*/agent_* ปล่อยว่างให้ระบบสร้างเอง\n")
     f.write("\\set ON_ERROR_STOP on\nSET session_replication_role = origin;\n")
     for t in LOAD_ORDER:
         p = OUT / f"{t}.csv"
