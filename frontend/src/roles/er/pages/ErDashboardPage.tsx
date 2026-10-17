@@ -56,7 +56,7 @@ export function ErDashboardPage({ role = 'ER_STAFF' }: { role?: RoleCode }) {
       <ErPageHeading
         title="หน้าหลัก ER"
         titleEn="/ ER home"
-        subtitle="รพ.สมุทรปราการ · เหตุที่เปิดอยู่ทั้งหมด และสิ่งที่ต้องทำต่อของแต่ละเหตุ"
+        subtitle="รพ.สมุทรปราการ · เหตุการณ์ที่เปิดอยู่ทั้งหมด และสิ่งที่ต้องทำต่อของแต่ละเหตุ"
         actions={
           access.mayWrite && (
             <a className="btn btn-sm" style={{ background: '#b91c1c', color: '#ffffff', border: 'none', fontWeight: 600 }} href={erHref('flow')}>
@@ -68,7 +68,7 @@ export function ErDashboardPage({ role = 'ER_STAFF' }: { role?: RoleCode }) {
       />
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
-        <Kpi label="เหตุที่เปิดอยู่" value={open.length} sub="กำลังวางแผน + ส่งคำขอยืมแล้ว" tone="#b91c1c" />
+        <Kpi label="เหตุการณ์ที่เปิดอยู่" value={open.length} sub="กำลังวางแผน + ส่งคำขอยืมแล้ว" tone="#b91c1c" />
         <Kpi label="ผู้ป่วยรวมทุกเหตุ" value={patients} sub="ทุกระดับคัดแยก" />
         <Kpi label="คำขอยืมที่รอผู้ให้ตอบ" value={waiting} sub="รายการที่ส่งแล้ว" tone="#b45309" />
         <Kpi label="ต้องประเมินแผนใหม่" value={stale} sub="จำนวนผู้ป่วยเปลี่ยนหลังทำแผน" tone={stale ? '#dc2626' : '#15803d'} />
@@ -76,7 +76,7 @@ export function ErDashboardPage({ role = 'ER_STAFF' }: { role?: RoleCode }) {
 
       <div className="card" style={{ padding: '14px 18px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-          <div style={{ fontSize: 13.5, fontWeight: 700, color: '#0f2a5c' }}>เหตุที่เปิดอยู่</div>
+          <div style={{ fontSize: 13.5, fontWeight: 700, color: '#0f2a5c' }}>เหตุการณ์ที่เปิดอยู่</div>
           <a className="link" style={{ fontSize: 12 }} href={erHref('incidents')}>
             ดูทั้งหมด (รวมที่ปิดแล้ว)
           </a>
