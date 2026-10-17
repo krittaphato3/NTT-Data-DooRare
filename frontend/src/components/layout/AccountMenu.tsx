@@ -9,6 +9,7 @@ const SWITCH_ROLES = [
   { name: 'ภก.ณัฐวุฒิ ศรีสุข', role: 'PHARMACIST', label: 'เภสัชกร (Pharmacist)', href: '/', initial: 'ณ' },
   { name: 'คุณประเสริฐ ใจงาม', role: 'WAREHOUSE_OFFICER', label: 'เจ้าหน้าที่คลัง (Warehouse)', href: '/?role=warehouse', initial: 'ป' },
   { name: 'ภญ.อรอุมา พรหมมา', role: 'HOSPITAL_ADMIN', label: 'ผู้ดูแลโรงพยาบาล (Hospital Admin)', href: '/?page=users&role=hospital-admin', initial: 'อ' },
+  { name: 'พว.กมลชนก ใจดี', role: 'ER_STAFF', label: 'พยาบาลห้องฉุกเฉิน (ER)', href: '/?role=er', initial: 'ก' },
   { name: 'คุณสมชาย แก้วกล้า', role: 'DRIVER', label: 'พนักงานขับรถ (Driver)', href: '/?page=transport&role=driver', initial: 'ส' },
 ];
 
