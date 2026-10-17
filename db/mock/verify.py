@@ -79,6 +79,28 @@ CHECKS = [
      """select triage, sum(count), round(100.0*sum(count)/sum(sum(count)) over (),1) pct from incident_patient_count group by 1 order by 1""", None),
     ("F3: Critical Minimum ≤ Estimated ของทุกแผน (ต้อง 0 ที่ผิด)",
      """select count(*) from emergency_plan p, jsonb_each(p.estimated_need->'kits') e where (p.critical_min->'kits'->e.key)::numeric > e.value::numeric""", "0"),
+    ("v1.5: role หลักของทุกคนอยู่ใน app_user_role และไม่มีคู่ role ต้องห้าม (ต้อง 0 + 0)",
+     """select (select count(*) from app_user u where not exists (select 1 from app_user_role r where r.user_id=u.id and r.role=u.role))
+        ||' | '||(select count(*) from app_user_role a join app_user_role b on a.user_id=b.user_id and a.role<b.role
+          where a.role in ('SYSTEM_ADMIN','AUDITOR') or b.role in ('SYSTEM_ADMIN','AUDITOR')
+             or (a.role='HOSPITAL_ADMIN' and b.role in ('PHARMACIST','PROCUREMENT_OFFICER','WAREHOUSE_OFFICER','ER_STAFF','DRIVER'))
+             or (b.role='HOSPITAL_ADMIN' and a.role in ('PHARMACIST','PROCUREMENT_OFFICER','WAREHOUSE_OFFICER','ER_STAFF','DRIVER')))""", "0 | 0"),
+    ("v1.5: ประวัติ role ที่เปิดอยู่ = จำนวนแถวใน app_user_role (ต้อง 0 ที่ต่าง)",
+     "select (select count(*) from app_user_role)-(select count(*) from app_user_role_history where valid_to is null)", "0"),
+    ("v1.5: โปรไฟล์ รพ. ครบทุกแห่ง (ต้อง 0 แห่งที่ขาด)",
+     "select count(*) from hospital where province is null or tier is null or bed_count is null or address is null or phone is null", "0"),
+    ("v1.5: งานขนส่งทุกงานมี task_no ไม่ซ้ำ + รถของ รพ.ผู้ส่ง + eta (ต้อง 0 ที่ผิด)",
+     """select count(*) from transport_task t left join vehicle v on v.id=t.vehicle_id
+        where t.task_no is null or t.eta_at is null or v.id is null or v.hospital_id<>t.from_hospital_id""", "0"),
+    ("v1.5: ของ cold chain ต้องไปกับรถกล่องเย็น และมีอุณหภูมิทุกเหตุการณ์ที่ขนส่ง (ต้อง 0 ที่ผิด)",
+     """select count(*) from transport_event e join transport_task t on t.id=e.task_id join vehicle v on v.id=t.vehicle_id
+        where e.temperature_c is not null and not v.has_cold_box and exists (select 1 from vehicle x where x.hospital_id=t.from_hospital_id and x.has_cold_box)""", "0"),
+    ("v1.5: incident ทุกเหตุมีประเภท และเหตุที่ยกเลิกมีเหตุผล (ต้อง 0 ที่ขาด)",
+     "select count(*) from incident where incident_type is null or (status='CANCELLED' and coalesce(cancel_reason,'')='')", "0"),
+    ("v1.5: login_event ย้อนหลัง 90 วัน, last_login_at ตรงกับ event ล่าสุด (ต้อง 0 ที่ไม่ตรง)",
+     """select count(*) from app_user u where u.last_login_at is distinct from (select max(occurred_at) from login_event e where e.user_id=u.id and e.success)""", "0"),
+    ("v1.5: audit hash chain ยังสมบูรณ์หลังเพิ่มคอลัมน์ reason (audit_chain_verify ต้อง 0)",
+     "select audit_chain_verify()", "0"),
     ("v_lendable_stock ใช้งานได้ (จำนวนแถว)", "select count(*) from v_lendable_stock", None),
     ("มูลค่ายาหมดอายุต่อปีงบประมาณ (พันบาท) เทียบมูลค่าการใช้ (%)",
      """with u as (select case when extract(month from usage_date)>=10 then extract(year from usage_date)+1 else extract(year from usage_date) end fy, sum(qty_used*hd.unit_price_thb) v
