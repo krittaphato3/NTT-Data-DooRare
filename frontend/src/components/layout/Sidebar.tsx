@@ -1,3 +1,5 @@
+import logoMark from '../../assets/logo-mark.png';
+import logoWordmark from '../../assets/logo-wordmark.png';
 import type { ShellNavEntry, ShellNavItem } from '../../data/navigation';
 import { Icon } from '../common/icons';
 
@@ -11,18 +13,14 @@ interface SidebarProps {
   items: ShellNavEntry[];
 }
 
-/** Brand row — mockup sidebar header verbatim (`DooRare ดูแร์`). */
+/** Brand row: DooRare logo (heart mark + wordmark) over the health-region label. */
 function SidebarBrand({ collapsed, onToggle, onNavigate }: Pick<SidebarProps, 'collapsed' | 'onToggle' | 'onNavigate'>) {
   return (
     <div className="side-brand">
       <div className="side-brand-main">
-        <span className="side-logo" aria-hidden="true">
-          <Icon name="plus" style={{ strokeWidth: 2.5 }} />
-        </span>
+        <img className="side-logo" src={logoMark} alt="" aria-hidden="true" />
         <div className="side-brand-text">
-          <div className="side-brand-name">
-            DooRare <span className="side-brand-name-th">ดูแร์</span>
-          </div>
+          <img className="side-brand-wordmark" src={logoWordmark} alt="DooRare ดูแร์" />
           <div className="en">เครือข่ายเขตสุขภาพที่ 6</div>
         </div>
       </div>
