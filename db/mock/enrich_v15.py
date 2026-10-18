@@ -61,6 +61,27 @@ def run(out: Path, cfg: dict) -> dict:
     code_of = {h["id"]: h["code"] for h in hosp}
     cold_hosp = {h["code"] for h in hosp if h["has_cold_chain"] == "true"}
 
+    # ---- Min-Max levels (F-02 rule 2: VED = D and price <= 50 THB; BR-F1a-020) ------------------------
+    # min = demand over (lead time + 7 days of safety), max = min + 30 days of demand; from the last 365 days of usage.
+    hd_rows, hd_cols = _read(out / "hospital_drug.csv")
+    usage_sum = defaultdict(float)
+    last_day = dt.date.fromisoformat(cfg["end_date"].isoformat())
+    cutoff = (last_day - dt.timedelta(days=364)).isoformat()
+    for r in _read(out / "usage_daily.csv")[0]:
+        if r["usage_date"] >= cutoff:
+            usage_sum[r["hospital_drug_id"]] += float(r["qty_used"])
+    n_minmax = 0
+    for r in hd_rows:
+        if r["ved"] == "D" and float(r["unit_price_thb"] or 0) <= 50 and usage_sum.get(r["id"], 0) > 0:
+            avg = usage_sum[r["id"]] / 365.0
+            lead = int(r["standard_lead_time_days"] or 7)
+            lo = max(1, int(-(-avg * (lead + 7) // 1)))
+            hi = max(lo + 1, int(-(-avg * (lead + 7 + 30) // 1)))
+            r["min_level"], r["max_level"] = lo, hi
+            n_minmax += 1
+    _write(out / "hospital_drug.csv", hd_rows, hd_cols)
+    print(f"   v1.5: min/max set for {n_minmax} Min-Max hospital_drug rows", file=__import__("sys").stderr)
+
     # ---- vehicles ---------------------------------------------------------------------------------
     vehicles, by_hosp = [], defaultdict(list)
     letters = "กขคงจฉชซฌญ"

@@ -186,7 +186,7 @@ for d in DRUGS:
             d["item_type"], d["internal_code"] = "SUPPLY", f"SUP-{SUP_SEQ[0]:04d}"
     add("drug_master", id=d["id"], item_type=d["item_type"], gp_id=d["gp_id"], internal_code=d["internal_code"], generic_name=d["name"],
         strength=d["strength"], dosage_form=d["form"], base_unit=d["unit"], is_cold_chain=str(d["cold"]).lower(),
-        is_blood_product=str(bool(d.get("blood"))).lower(), is_high_alert=str(bool(d.get("high_alert"))).lower(),
+        is_blood_product=str(bool(d.get("blood"))).lower(), is_high_alert=str(bool(d.get("high_alert"))).lower(), is_controlled=str(bool(d.get("controlled"))).lower(),
         emergency_class=d["emergency"], created_at=ts(START - dt.timedelta(days=25)))
     if not t:
         continue
@@ -217,6 +217,12 @@ NAME_STYLE = {"HA": lambda d: f"{d['name']} {d['strength']} {d['form']}",
 PACK_UNIT = {"tablet": "กล่อง", "capsule": "กล่อง", "injection": "กล่อง", "syrup": "ลัง", "IV bag": "ลัง"}
 
 HD = {}            # (hcode,dkey) -> dict
+def is_seasonal_item(d):
+    """manual seasonal flag for the method router (F-02 rule 3): only items marked `seasonal: true` in the config, plus campaign items.
+    (Auto-detection from >= 24 months of data is the pipeline's job, so the flag is kept for clear cases only.)"""
+    return bool(d.get("seasonal")) or bool(d.get("season"))
+
+
 PACK_MULT = [0.5, 1, 1, 2]
 for d in DRUGS:
     for h in HOSP:
@@ -244,7 +250,9 @@ for d in DRUGS:
         hdrow = dict(id=hd_id, hospital_id=h["id"], local_code=local_code, local_name=NAME_STYLE[h["code"]](d), unit_price_thb=price,
                      local_unit=d["unit"] if not noise_unit else "BOX",
                      tmt_id=("" if not is_drug else (d["ref_gpu"] if noise_gpu else rnd.choice(d["ref_ids"]))), gp_id=d["gp_id"], active="true", ved=ved, abc="",
-                     expiry_threshold_days=(CFG["expiry"]["threshold_days_V"] if ved == "V" else ""), drug_master_id=d["id"] if verified else "")
+                     expiry_threshold_days=(CFG["expiry"]["threshold_days_V"] if ved == "V" else ""), drug_master_id=d["id"] if verified else "",
+                     lend_in_packs=str(bool(d.get("lend_in_packs"))).lower(), method_override="", is_seasonal=str(is_seasonal_item(d)).lower(),
+                     standard_lead_time_days=int(math.ceil(d["lead"] * (1.0 if h["urban"] else 1.3))), min_level="", max_level="")
         TABLES["hospital_drug"].append(hdrow)
         HD[(h["code"], d["key"])] = dict(id=hd_id, row=hdrow, verified=verified, pack=pack, price=price, ved=ved, h=h, d=d,
                                           thr=CFG["expiry"]["threshold_days_V"] if ved == "V" else CFG["expiry"]["threshold_days_default"])
@@ -638,6 +646,9 @@ class St:
         self.par = max(2, math.ceil(d["par_A"] * h["size"])) if d.get("par_A") else 0
         self.f2_lots = set()
         self.alloc_pending = 0
+        sd = d.get("start") or {}          # cold start: this hospital begins stocking the item on that date (no earlier history)
+        st_date = sd.get(h["code"], sd.get("*"))
+        self.s0 = (st_date - START).days if st_date else 0
 
     def incoming(self):
         return sum(o["qty"] for o in self.open_orders) + sum(q for _, q in self.pending_in)
@@ -736,8 +747,8 @@ def process_drug(d):
             q0 = max(st.par, int(st.prior * rnd.uniform(30, 50)))
             q0 = math.ceil(q0 / st.pack) * st.pack
             for k, share in enumerate((0.55, 0.45)):
-                exp = ORD0 + int(d["shelf_days"] * rnd.uniform(0.35, 0.8)) - 5 * k
-                lot = add_lot(st, f"INIT{dkey[:4]}-{k+1}", exp, max(1, int(q0 * share)), "IMPORT", 0)
+                exp = ORD0 + st.s0 + int(d["shelf_days"] * rnd.uniform(0.35, 0.8)) - 5 * k
+                lot = add_lot(st, f"INIT{dkey[:4]}-{k+1}", exp, max(1, int(q0 * share)), "IMPORT", abs_min(st.s0))
     for lot in list(LOTS_ALL):
         LOT_BY_ID[lot.id] = lot
     shorts = SHORT.get(dkey, [])
@@ -753,6 +764,8 @@ def process_drug(d):
         date = DATES[i]
         today_ord = ORD0 + i
         for st in S.values():
+            if i < st.s0:
+                continue                 # not stocked yet (cold start)
             # -- 1) เหตุการณ์ที่ครบกำหนดวันนี้
             for kind, pay in sorted(st.ev.pop(i, []), key=lambda x: x[1].get("_t", 0) if isinstance(x[1], dict) else 0):
                 handle_event(S, st, kind, pay, i, today_ord, d)

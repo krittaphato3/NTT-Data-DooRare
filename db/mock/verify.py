@@ -101,6 +101,15 @@ CHECKS = [
      """select count(*) from app_user u where u.last_login_at is distinct from (select max(occurred_at) from login_event e where e.user_id=u.id and e.success)""", "0"),
     ("v1.5: audit hash chain ยังสมบูรณ์หลังเพิ่มคอลัมน์ reason (audit_chain_verify ต้อง 0)",
      "select audit_chain_verify()", "0"),
+    ("v1.5: Min-Max (VED=D และราคา<=50) มี min/max และ max>=min; รายการอื่นไม่มี (ต้อง 0 ที่ผิด)",
+     """select count(*) from hospital_drug where (ved='D' and unit_price_thb<=50 and (min_level is null or max_level is null or max_level<min_level))
+        or (not (ved='D' and unit_price_thb<=50) and (min_level is not null or max_level is not null))""", "0"),
+    ("v1.5: ยาควบคุมพิเศษ (is_controlled) = morphine, fentanyl, ketamine",
+     "select string_agg(generic_name, ', ' order by generic_name) from drug_master where is_controlled", "Fentanyl, Ketamine, Morphine sulfate"),
+    ("v1.5: ทุกแถว hospital_drug มี standard_lead_time_days (ต้อง 0 ที่ขาด)", "select count(*) from hospital_drug where standard_lead_time_days is null", "0"),
+    ("v1.5: cold start: รายการ รพ.-ยาที่ประวัติ < 90 วัน (ต้อง 7 และเป็น V/E ทั้งหมดจึงเข้า Quantile ไม่ใช่ Min-Max)",
+     """select count(*)||' | '||count(*) filter (where hd.ved in ('V','E')) from hospital_drug hd join (select hospital_drug_id, count(*) n from usage_daily group by 1) u
+        on u.hospital_drug_id=hd.id where u.n < 90""", "7 | 7"),
     ("v_lendable_stock ใช้งานได้ (จำนวนแถว)", "select count(*) from v_lendable_stock", None),
     ("มูลค่ายาหมดอายุต่อปีงบประมาณ (พันบาท) เทียบมูลค่าการใช้ (%)",
      """with u as (select case when extract(month from usage_date)>=10 then extract(year from usage_date)+1 else extract(year from usage_date) end fy, sum(qty_used*hd.unit_price_thb) v

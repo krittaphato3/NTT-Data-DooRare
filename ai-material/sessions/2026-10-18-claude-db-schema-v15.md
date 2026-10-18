@@ -26,6 +26,10 @@ summary: schema v1.5 + enrich_v15.py mock; v_transport_item view; several roles 
 - Catalogue 37 → 41: vitamin C 100 mg (GP 665277), povidone iodine 10% (GP 901938; both verified in TMTRF20261005), cotton SUP-0007, wound plaster SUP-0008 (all VED D). `tools/build_tmt.py` + `config/tmt_real.json` (old 30 entries identical, +2).
 - Because the catalogue changed, the random stream shifted: ALL mock CSVs are new (not byte-identical to v1.4); `npm run db:reset` + all `verify.py` expectation checks pass.
 
+- Real hospital names (Samut Prakan, Bang Phli, Phra Samut Chedi, Bang Bo, Bang Sao Thong); `hospital.tier` from config.
+- Filled v1.4 columns that were empty: hospital_drug lead time (all), min/max (15 Min-Max rows: VED D and price <= 50), is_seasonal (10), lend_in_packs (15); drug_master.is_controlled (morphine, fentanyl, ketamine).
+- Cold start: config `start:` per drug/hospital (7 hospital-drug sets with 46-68 days of history; all V/E so the router sends them to Quantile). This changes usage data -> everything regenerated; retrain models on the new CSVs.
+
 ## Decisions
 
 - No storage location on stock_lot (dropped). HIS gateway/sensor health stays mock in the UI.
