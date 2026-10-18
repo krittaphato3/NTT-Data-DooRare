@@ -1,3 +1,4 @@
+import { apiFetch } from './apiFetch';
 import type { AuthUser, LoginCredentials, LoginResponse, RoleAccountDemo, LoginEventItem } from '../types/auth';
 
 const API_BASE = '/api/v1';
@@ -79,7 +80,7 @@ export async function getRecentLogins(limit = 20, hospitalId?: string): Promise<
   try {
     let url = `${API_BASE}/auth/recent-logins?limit=${limit}`;
     if (hospitalId) url += `&hospitalId=${encodeURIComponent(hospitalId)}`;
-    const res = await fetch(url);
+    const res = await apiFetch(url.replace(API_BASE, ''));
     if (!res.ok) throw new Error('Failed to fetch recent logins');
     const data = await res.json();
     return { events: data.events || [], onlineCount: data.onlineCount || 0 };
