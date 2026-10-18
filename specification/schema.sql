@@ -97,7 +97,7 @@ CREATE TABLE app_user_role_history (   -- which role did the user really hold at
   id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY, user_id uuid NOT NULL REFERENCES app_user(id),
   role role_code NOT NULL, hospital_id uuid REFERENCES hospital(id), region_id uuid REFERENCES region(id),
   valid_from timestamptz NOT NULL DEFAULT now(), valid_to timestamptz, changed_by uuid REFERENCES app_user(id), reason text,
-  CHECK (valid_to IS NULL OR valid_to > valid_from)
+  CHECK (valid_to IS NULL OR valid_to >= valid_from)   -- >= : now() is constant inside a transaction, so open+close in one tx gives a zero-length period
 );
 CREATE UNIQUE INDEX role_history_one_open ON app_user_role_history(user_id, role) WHERE valid_to IS NULL;
 CREATE INDEX role_history_time_idx ON app_user_role_history(user_id, valid_from, valid_to);
@@ -116,6 +116,10 @@ BEGIN
   RETURN NEW;
 END $$;
 CREATE TRIGGER app_user_role_rules_trg BEFORE INSERT ON app_user_role FOR EACH ROW EXECUTE FUNCTION app_user_role_rules();
+-- (user_id, role) of a row never changes: an UPDATE would skip the SoD rules above and leave app_user_role_history out of sync. To change a role, DELETE then INSERT.
+CREATE OR REPLACE FUNCTION app_user_role_immutable() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN RAISE EXCEPTION 'app_user_role.user_id / role cannot be updated; delete the row and insert a new one'; END $$;
+CREATE TRIGGER app_user_role_immutable_trg BEFORE UPDATE OF user_id, role ON app_user_role FOR EACH ROW EXECUTE FUNCTION app_user_role_immutable();
 -- keep app_user.role (primary) listed in app_user_role; changing the primary replaces the old primary role.
 CREATE OR REPLACE FUNCTION app_user_primary_role_sync() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
@@ -369,6 +373,7 @@ CREATE TABLE borrow_leg_lot (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(), leg_id uuid NOT NULL REFERENCES borrow_leg(id) ON DELETE CASCADE,
   lot_id uuid NOT NULL REFERENCES stock_lot(id), qty numeric(14,3) NOT NULL CHECK (qty > 0)
 );
+CREATE INDEX borrow_leg_lot_leg_idx ON borrow_leg_lot(leg_id);   -- v1.5: join key of v_transport_item
 CREATE TABLE return_obligation (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(), leg_id uuid NOT NULL REFERENCES borrow_leg(id),
   debtor_hospital_id uuid NOT NULL REFERENCES hospital(id), creditor_hospital_id uuid NOT NULL REFERENCES hospital(id),
@@ -698,6 +703,8 @@ SELECT DISTINCT ON (hospital_id, hospital_drug_id, granularity, period_start) * 
 -- stock_lot / near_expiry_item / pool_entry. This view runs with the owner's rights (so it can read those tables) and does
 -- its own filtering: a row is visible only to the sending or receiving hospital of the task. SYSTEM_ADMIN/AUDITOR are
 -- deliberately NOT included (RBAC: no lot-level data). No price and no remaining stock of the sender are exposed (RBAC §3).
+-- DEPLOYMENT: a view runs with its OWNER's rights. It only sees the sender's rows if the owner also owns the tables (the migration role creates
+-- both, as here; no BYPASSRLS needed) and the tables do NOT use FORCE ROW LEVEL SECURITY. Keep it that way, or the receiver will see 0 rows.
 CREATE OR REPLACE VIEW v_transport_item WITH (security_barrier = true) AS
 SELECT t.id AS task_id, t.ref_type, t.ref_id, t.from_hospital_id, t.to_hospital_id, t.status,
        dm.id AS drug_master_id, dm.generic_name, dm.strength, dm.dosage_form, dm.base_unit,

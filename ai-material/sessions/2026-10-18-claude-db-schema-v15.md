@@ -30,6 +30,8 @@ summary: schema v1.5 + enrich_v15.py mock; v_transport_item view; several roles 
 - Filled v1.4 columns that were empty: hospital_drug lead time (all), min/max (15 Min-Max rows: VED D and price <= 50), is_seasonal (10), lend_in_packs (15); drug_master.is_controlled (morphine, fentanyl, ketamine).
 - Cold start: config `start:` per drug/hospital (7 hospital-drug sets with 46-68 days of history; all V/E so the router sends them to Quantile). This changes usage data -> everything regenerated; retrain models on the new CSVs.
 
+- PR #14 review fixes: history CHECK `valid_to >= valid_from` (same-transaction open+close failed); `app_user_role.user_id/role` immutable (UPDATE skipped SoD and desynced history); index `borrow_leg_lot(leg_id)`; documented that `v_transport_item` needs owner = table owner and no FORCE RLS (tested with a non-superuser owner, no BYPASSRLS needed); INDEX.md rows added by hand (`npm run ai:index` on Mac rewrites every row: `\` vs `/`).
+
 ## Decisions
 
 - No storage location on stock_lot (dropped). HIS gateway/sensor health stays mock in the UI.
