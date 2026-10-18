@@ -1,10 +1,16 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import { authPlugin } from './server/authPlugin';
 
 export default defineConfig({
-  plugins: [react(), authPlugin()],
-  server: { port: 5173 },
+  plugins: [react()],
+  server: {
+    port: 5173,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+      },
+    },
+  },
   preview: { port: 4173 },
 });
-

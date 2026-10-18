@@ -1,67 +1,59 @@
 ---
-title: Real Database-Backed Login Panel & Multi-Role Authentication
+title: Real Database-Backed Login Panel & Architecture Separation (backend/ and frontend/)
 date: 2026-10-18
 author: ZCode
 ai: zcode
-tags: session, frontend, auth, login, database, postgres, rbac
-summary: Real PostgreSQL-backed login panel, 10-role quick select, login_event logging, and admin live feed integration
+tags: session, frontend, backend, architecture, auth, login, database, postgres, docker
+summary: Separated clean backend/ service from frontend/, PostgreSQL connection pool, Nginx reverse proxy, and 10-role login
 ---
 
 ## Goal
 
-- Implement a real, working database-backed login panel for each role that connects to PostgreSQL (port 5442), records sign-in history to `login_event`, manages authentication sessions, and feeds live authentication events to System Admin and Hospital Admin dashboards.
+- Separate backend logic into a dedicated, scalable `backend/` service at repository root.
+- Revert `frontend/` to pure client code with Nginx reverse proxy and Vite dev proxy.
+- Ensure Docker Compose and dev environments run `db`, `backend`, `frontend`, and `adminer` seamlessly.
 
 ## Done
 
-- Branch `frontend-login-working` created off updated `frontend`.
-- Installed `pg` and `@types/pg` in `frontend/`.
-- Created backend database bridge & Vite middleware:
-  - `frontend/server/db.ts`: PostgreSQL pool connecting to port 5442, queries `app_user`, `app_user_role`, `hospital`, and inserts into `login_event`.
-  - `frontend/server/authPlugin.ts`: Vite connect middleware exposing `/api/v1/auth/login`, `/api/v1/auth/logout`, `/api/v1/me`, `/api/v1/auth/role-accounts`, `/api/v1/auth/recent-logins`, and `/api/v1/health`.
-  - Wired plugin into `frontend/vite.config.ts`.
-- Implemented client authentication layer:
-  - `frontend/src/types/auth.ts`: types for user profile, credentials, login response, and login event.
-  - `frontend/src/services/authApi.ts`: API service with graceful offline fallback.
-  - `frontend/src/context/AuthContext.tsx`: React auth context with `localStorage` persistence, role switching, and SEC-001 30-minute idle timeout.
-- Built enterprise Login UI:
-  - `frontend/src/pages/LoginPage.tsx`: DooRare branding, real-time database connection status badge, 10-role quick select panel, standard credentials form with password visibility toggle, MFA verification step for accounts with `mfa_enabled = true` (SEC-001), and compliance audit notice.
-- Application shell & navigation integration:
-  - `frontend/src/App.tsx`: Wrapped with `AuthProvider`, unauthenticated users see `LoginPage`, authenticated users land on their role's home view with scope and hospital set.
-  - `frontend/src/components/layout/AccountMenu.tsx`: Displays real logged-in user profile, avatar, permitted role switcher, and working "Log out" button.
-- System Admin & Hospital Admin live feed:
-  - `frontend/src/roles/admin/components/AdminDashboardTab.tsx`: Connected Live Authentication Feed (`RECENT_LOGINS`) and online user count to `/api/v1/auth/recent-logins`.
-  - `frontend/src/roles/hospital-admin/pages/AuditLogPage.tsx`: Integrated live `LOGIN` and `LOGIN_FAILED` entries from the database into the audit log.
-- Verification: `npm --prefix frontend run build` compiles with zero errors (TypeScript + Vite).
+- Created `backend/` service at repo root with enterprise clean layered architecture:
+  - `backend/src/config/env.ts`: strongly typed configuration from environment.
+  - `backend/src/db/`: client pool (`pg`) and query helpers (`parsePgArray`).
+  - `backend/src/middleware/`: client metadata parser and RFC 7807 problem details error handler.
+  - `backend/src/modules/auth/`: routes, controller, service, repository, and DTOs.
+  - `backend/src/modules/health/`: `/api/v1/health` endpoint with PostgreSQL live check.
+  - `backend/src/app.ts` & `backend/src/index.ts`: Express application on port 3001.
+  - `backend/Dockerfile`: multi-stage Node 20 build.
+- Cleaned up `frontend/`:
+  - Removed `frontend/server/`.
+  - Uninstalled `pg` and `@types/pg` from frontend dependencies.
+  - Configured `frontend/vite.config.ts` proxy: `/api` -> `http://localhost:3001`.
+  - Created `frontend/nginx.conf` with gzip, SPA fallback (`try_files $uri $uri/ /index.html`), and reverse proxy `/api/` -> `http://backend:3001`.
+  - Restored `frontend/Dockerfile` to multi-stage Nginx production build.
+- Updated root configuration:
+  - `docker-compose.yml`: added `backend` container (`doorare-backend:3001`), wired networking and health check dependencies.
+  - `package.json`: added monorepo helper scripts (`dev:frontend`, `dev:backend`, `build:frontend`, `build:backend`).
+- Verification:
+  - `npm run build:frontend` and `npm run build:backend` compile cleanly.
+  - `docker compose up -d --build` builds and starts all 4 containers (`doorare-db`, `doorare-backend`, `doorare-frontend`, `doorare-adminer`).
+  - `curl http://localhost:8080/api/v1/health` verified 200 OK via Nginx proxy -> backend.
+  - Tested browser login in in-app browser with real PostgreSQL accounts and role navigation.
 
 ## Decisions
 
-- Embedded backend API inside Vite dev server middleware via `frontend/server/authPlugin.ts`, enabling real fullstack database querying during `npm run dev` without requiring a separate server process.
-- Implemented dual-mode login: Quick Role Selector (10 roles) with 1-click test login plus standard credentials form.
-- Connected real login actions to PostgreSQL `login_event` table so failed/successful logins are permanently logged for audit and visible in Admin consoles.
+- Adopted standard enterprise monorepo layout: `frontend/` (React/Vite/Nginx), `backend/` (Node/Express/TypeScript), `db/` (PostgreSQL schemas & mocks).
+- Nginx proxies `/api/` in Docker, while Vite proxies `/api/` in local dev, keeping client API calls identical (`/api/v1/...`).
 
 ## Files touched
 
+- `backend/*` (created)
+- `frontend/server/*` (removed)
+- `frontend/vite.config.ts`
+- `frontend/nginx.conf` (created)
+- `frontend/Dockerfile`
 - `frontend/package.json`
 - `frontend/package-lock.json`
-- `frontend/vite.config.ts`
-- `frontend/server/db.ts`
-- `frontend/server/authPlugin.ts`
-- `frontend/src/types/auth.ts`
-- `frontend/src/services/authApi.ts`
-- `frontend/src/context/AuthContext.tsx`
-- `frontend/src/pages/LoginPage.tsx`
-- `frontend/src/App.tsx`
-- `frontend/src/components/layout/AccountMenu.tsx`
-- `frontend/src/roles/admin/components/AdminDashboardTab.tsx`
-- `frontend/src/roles/hospital-admin/pages/AuditLogPage.tsx`
+- `docker-compose.yml`
+- `package.json`
 - `ai-material/sessions/2026-10-18-zcode-database-backed-login-panel.md`
 - `ai-material/INDEX.md`
 - `ai-material/.index.json`
-
-## Errors
-
-- TypeScript duplicate variable declarations in `App.tsx` and type mismatch in `AuditLogPage.tsx` / `AdminDashboardTab.tsx` fixed during verification.
-
-## Next steps
-
-- Run `docker compose up -d db` or `npm run db:up` and `cd frontend && npm run dev` to test interactive login with live PostgreSQL data.
