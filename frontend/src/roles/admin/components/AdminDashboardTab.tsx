@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Icon } from '../../../components/common/icons';
+import * as authApi from '../../../services/authApi';
 import {
   ADMIN_KPIS,
   DAILY_REQUEST_TRENDS,
@@ -10,6 +11,7 @@ import {
   TOP_REQUESTED_DRUGS,
   type HospitalSummary,
   type UserAccount,
+  type LoginHistoryRow,
 } from '../data/adminData';
 
 interface AdminDashboardTabProps {
@@ -33,9 +35,42 @@ export function AdminDashboardTab({
   const [exportFormat, setExportFormat] = useState<'pdf' | 'excel' | 'csv'>('pdf');
   const [isExporting, setIsExporting] = useState(false);
 
+  // Live PostgreSQL login events
+  const [recentLogins, setRecentLogins] = useState<LoginHistoryRow[]>(RECENT_LOGINS);
+  const [liveOnlineCount, setLiveOnlineCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    authApi.getRecentLogins(25).then(({ events, onlineCount }) => {
+      if (!mounted || !events || events.length === 0) return;
+      const mapped: LoginHistoryRow[] = events.map((e) => {
+        const d = new Date(e.occurred_at);
+        const timeStr = `${d.getDate()} ต.ค. 69 ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')} น.`;
+        return {
+          id: `SES-${e.id}`,
+          userName: e.display_name || e.email.split('@')[0],
+          userRole: e.role || 'ผู้ใช้งานระบบ',
+          hospitalName: e.hospital_name || 'ส่วนกลาง เขต 6',
+          timestamp: timeStr,
+          device: e.device || 'Windows PC',
+          browser: e.browser || 'Chrome',
+          ip: e.ip || '127.0.0.1',
+          status: e.success ? 'SUCCESS' : 'FAILED',
+          failureReason: e.failure_reason || '',
+        };
+      });
+      setRecentLogins(mapped);
+      if (onlineCount > 0) setLiveOnlineCount(onlineCount);
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   // Compute dynamic stats from active state
   const totalUsers = users.length;
-  const activeOnlineUsers = users.filter((u) => u.isOnline).length;
+  const activeOnlineUsers = liveOnlineCount !== null ? liveOnlineCount : users.filter((u) => u.isOnline).length;
+
   const totalRequestsAll = hospitals.reduce((acc, h) => acc + h.requestCount, 0);
   const totalDispatchesAll = hospitals.reduce((acc, h) => acc + h.dispatchedCount, 0);
   const totalApprovedAll = hospitals.reduce((acc, h) => acc + h.approvedCount, 0);
@@ -545,7 +580,7 @@ export function AdminDashboardTab({
                 </tr>
               </thead>
               <tbody>
-                {RECENT_LOGINS.map((row) => (
+                {recentLogins.map((row) => (
                   <tr key={row.id}>
                     <td>
                       <div style={{ fontWeight: 600, color: '#0F2A5C' }}>{row.userName}</div>

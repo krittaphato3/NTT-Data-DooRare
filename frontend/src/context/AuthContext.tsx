@@ -1,0 +1,188 @@
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
+import type { AuthUser, LoginCredentials, LoginResponse } from '../types/auth';
+import type { RoleCode } from '../lib/rbac';
+import * as authApi from '../services/authApi';
+
+const STORAGE_KEY = 'doorare_auth_session';
+const IDLE_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes (SEC-001)
+
+interface AuthContextValue {
+  user: AuthUser | null;
+  token: string | null;
+  activeRole: RoleCode;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  dbConnected: boolean;
+  dbMessage: string;
+  login: (credentials: LoginCredentials) => Promise<LoginResponse>;
+  logout: () => Promise<void>;
+  switchRole: (role: RoleCode) => void;
+  refreshHealth: () => Promise<void>;
+}
+
+const defaultAuth: AuthContextValue = {
+  user: null,
+  token: null,
+  activeRole: 'PHARMACIST',
+  isAuthenticated: false,
+  isLoading: false,
+  dbConnected: false,
+  dbMessage: '',
+  login: async () => ({ ok: false }),
+  logout: async () => {},
+  switchRole: () => {},
+  refreshHealth: async () => {},
+};
+
+const AuthContext = createContext<AuthContextValue>(defaultAuth);
+
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+  const [activeRole, setActiveRole] = useState<RoleCode>('PHARMACIST');
+  const [isLoading, setIsLoading] = useState(true);
+  const [dbConnected, setDbConnected] = useState(false);
+  const [dbMessage, setDbMessage] = useState('กำลังตรวจสอบการเชื่อมต่อฐานข้อมูล...');
+
+  const lastActivityRef = useRef<number>(Date.now());
+
+  const refreshHealth = useCallback(async () => {
+    const health = await authApi.checkHealth();
+    setDbConnected(health.ok);
+    setDbMessage(health.message);
+  }, []);
+
+  // Initialize session from localStorage or verify token
+  useEffect(() => {
+    let mounted = true;
+
+    async function init() {
+      await refreshHealth();
+
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw);
+          if (parsed.user && parsed.token) {
+            setUser(parsed.user);
+            setToken(parsed.token);
+            setActiveRole(parsed.activeRole || parsed.user.role);
+
+            // Verify with /api/v1/me in background
+            const fresh = await authApi.getMe(parsed.token);
+            if (fresh && mounted) {
+              setUser(fresh);
+            }
+          }
+        } catch (e) {
+          localStorage.removeItem(STORAGE_KEY);
+        }
+      }
+      if (mounted) setIsLoading(false);
+    }
+
+    init();
+    return () => {
+      mounted = false;
+    };
+  }, [refreshHealth]);
+
+  // SEC-001: 30-minute idle timeout
+  useEffect(() => {
+    if (!user) return;
+
+    const onActivity = () => {
+      lastActivityRef.current = Date.now();
+    };
+
+    const interval = setInterval(() => {
+      if (Date.now() - lastActivityRef.current > IDLE_TIMEOUT_MS) {
+        console.warn('[Auth] SEC-001: 30-minute idle timeout exceeded, logging out...');
+        logout();
+      }
+    }, 60000);
+
+    window.addEventListener('mousedown', onActivity);
+    window.addEventListener('keydown', onActivity);
+    window.addEventListener('touchstart', onActivity);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('mousedown', onActivity);
+      window.removeEventListener('keydown', onActivity);
+      window.removeEventListener('touchstart', onActivity);
+    };
+  }, [user]);
+
+  const login = async (credentials: LoginCredentials): Promise<LoginResponse> => {
+    const res = await authApi.login(credentials);
+    if (res.ok && res.user && res.token) {
+      setUser(res.user);
+      setToken(res.token);
+      setActiveRole(res.user.role);
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({
+          user: res.user,
+          token: res.token,
+          activeRole: res.user.role,
+        })
+      );
+      setDbConnected(true);
+      setDbMessage('เชื่อมต่อฐานข้อมูล PostgreSQL สำเร็จ');
+    }
+    return res;
+  };
+
+  const logout = async () => {
+    if (token) {
+      await authApi.logout(token);
+    }
+    setUser(null);
+    setToken(null);
+    setActiveRole('PHARMACIST');
+    localStorage.removeItem(STORAGE_KEY);
+  };
+
+  const switchRole = (newRole: RoleCode) => {
+    if (!user) return;
+    // Check if user has this role
+    if (user.allRoles.includes(newRole) || user.role === 'SYSTEM_ADMIN') {
+      setActiveRole(newRole);
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({
+          user,
+          token,
+          activeRole: newRole,
+        })
+      );
+    } else {
+      console.warn(`[Auth] User does not have granted role: ${newRole}`);
+    }
+  };
+
+  return (
+    <AuthContext.Provider
+      value={{
+        user,
+        token,
+        activeRole,
+        isAuthenticated: !!user,
+        isLoading,
+        dbConnected,
+        dbMessage,
+        login,
+        logout,
+        switchRole,
+        refreshHealth,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+export function useAuth() {
+  return useContext(AuthContext) || defaultAuth;
+}

@@ -5,6 +5,7 @@
 #   reset  drop the DB volume, recreate the schema, load mock data
 #   psql   open psql   (host: 127.0.0.1:5442, user doorare, password doorare_dev, db doorare)
 set -euo pipefail
+export MSYS_NO_PATHCONV=1
 cd "$(dirname "$0")/.."
 DC="docker compose"
 PSQL="$DC exec -T db psql -U doorare -d doorare -v ON_ERROR_STOP=1"

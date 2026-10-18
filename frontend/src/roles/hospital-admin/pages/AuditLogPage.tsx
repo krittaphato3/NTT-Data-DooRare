@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { Icon } from '../../../components/common/icons';
 import { HOSPITAL_ADMIN_HOME_HREF } from '../../../data/navigation';
 import { can } from '../../../lib/rbac';
@@ -7,7 +7,8 @@ import { AuditFilterBar, EMPTY_AUDIT_FILTERS } from '../components/AuditFilterBa
 import type { AuditFilters } from '../components/AuditFilterBar';
 import { AuditTable, summarizeChange } from '../components/AuditTable';
 import { AUDIT_ACTION_META, AUDIT_ENTRIES, verifyAuditChain } from '../data/audit';
-import type { ChainVerifyResult } from '../data/audit';
+import type { ChainVerifyResult, AuditEntry } from '../data/audit';
+import * as authApi from '../../../services/authApi';
 import '../admin.css';
 
 const PAGE_SIZE = 8;
@@ -24,6 +25,48 @@ export function AuditLogPage() {
   const [loading, setLoading] = useState(false);
   const [verify, setVerify] = useState<ChainVerifyResult | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
+  const [allEntries, setAllEntries] = useState<AuditEntry[]>(AUDIT_ENTRIES);
+
+  useEffect(() => {
+    let mounted = true;
+    authApi.getRecentLogins(15).then(({ events }) => {
+      if (!mounted || !events || events.length === 0) return;
+      const loginAuditRows: AuditEntry[] = events.map((e) => {
+        const d = new Date(e.occurred_at);
+        const atStr = `${d.getDate()} ต.ค. 69 ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+        const afterMap: Record<string, string | null> = e.success
+          ? { result: 'SUCCESS', device: e.device ?? null, browser: e.browser ?? null }
+          : { result: 'FAILED', note: e.failure_reason || 'รหัสผ่านไม่ถูกต้อง' };
+
+        return {
+          id: `AUD-LGN-${e.id}`,
+          at: atStr,
+          atIso: e.occurred_at,
+          actor: e.display_name || e.email,
+          role: (e.role as any) || 'PHARMACIST',
+          action: e.success ? 'LOGIN' : 'LOGIN_FAILED',
+          entityType: 'session',
+          entityId: `SES-${e.id}`,
+          before: {},
+          after: afterMap,
+          reason: e.success ? 'เข้าสู่ระบบสำเร็จ' : (e.failure_reason || 'เข้าสู่ระบบไม่สำเร็จ'),
+          ip: e.ip || '127.0.0.1',
+          hash: `e${e.id}b…${String(e.id).padStart(4, '0')}`,
+          prevHash: `c510…${String(e.id).padStart(4, '0')}`,
+        };
+      });
+
+      // Merge with AUDIT_ENTRIES avoiding duplicates
+      setAllEntries((prev) => {
+        const existingIds = new Set(prev.map((x) => x.id));
+        const newOnes = loginAuditRows.filter((x) => !existingIds.has(x.id));
+        return [...newOnes, ...prev];
+      });
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   // Permission decision comes from lib/rbac.ts, never from a local role check.
   const mayView = can('HOSPITAL_ADMIN', 'viewAudit');
@@ -31,7 +74,7 @@ export function AuditLogPage() {
   const filtered = useMemo(() => {
     const needle = filters.q.trim().toLowerCase();
     const actor = filters.actor.trim().toLowerCase();
-    return AUDIT_ENTRIES.filter((e) => {
+    return allEntries.filter((e) => {
       if (filters.role !== 'ALL' && e.role !== filters.role) return false;
       if (filters.action !== 'ALL' && e.action !== filters.action) return false;
       if (filters.entityType !== 'ALL' && e.entityType !== filters.entityType) return false;
@@ -41,12 +84,13 @@ export function AuditLogPage() {
       if (needle && !`${e.id} ${e.entityId} ${e.reason} ${e.ip} ${e.actor}`.toLowerCase().includes(needle)) return false;
       return true;
     }).sort((a, b) => (a.atIso < b.atIso ? 1 : a.atIso > b.atIso ? -1 : 0));
-  }, [filters]);
+  }, [allEntries, filters]);
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePage = Math.min(page, pageCount);
   const paged = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
-  const openEntry = openId ? (AUDIT_ENTRIES.find((e) => e.id === openId) ?? null) : null;
+  const openEntry = openId ? (allEntries.find((e) => e.id === openId) ?? null) : null;
+
 
   const changeFilters = (next: AuditFilters) => {
     setFilters(next);
