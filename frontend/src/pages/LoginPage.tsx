@@ -134,17 +134,17 @@ export function LoginPage() {
         fontFamily: "'Noto Sans Thai', sans-serif",
       }}
     >
-      {/* TOP HEADER BAR */}
+      {/* TOP HEADER BAR (Option 2: Soft Ice Blue) */}
       <header
         style={{
           height: 64,
-          background: 'linear-gradient(90deg, #1E40AF 0%, #2563EB 100%)',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.15)',
+          background: 'linear-gradient(180deg, #FFFFFF 0%, #EFF6FF 100%)',
+          borderBottom: '1px solid #DBEAFE',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           padding: '0 24px',
-          boxShadow: '0 2px 10px rgba(30, 64, 175, 0.2)',
+          boxShadow: '0 1px 4px rgba(29, 78, 216, 0.06)',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -153,11 +153,11 @@ export function LoginPage() {
           <span
             style={{
               fontSize: 12,
-              color: 'rgba(255, 255, 255, 0.9)',
-              borderLeft: '1px solid rgba(255, 255, 255, 0.25)',
+              color: '#1E40AF',
+              borderLeft: '1px solid #BFDBFE',
               paddingLeft: 12,
               marginLeft: 4,
-              fontWeight: 500,
+              fontWeight: 600,
             }}
           >
             ระบบสำรองและบริหารจัดการยาขาดแคลน เขตสุขภาพที่ 6
@@ -171,14 +171,14 @@ export function LoginPage() {
               display: 'flex',
               alignItems: 'center',
               gap: 6,
-              background: dbConnected ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)',
-              border: `1px solid ${dbConnected ? 'rgba(52, 211, 153, 0.5)' : 'rgba(248, 113, 113, 0.5)'}`,
-              color: '#FFFFFF',
+              background: dbConnected ? '#ECFDF5' : '#FEF2F2',
+              border: `1px solid ${dbConnected ? '#A7F3D0' : '#FECACA'}`,
+              color: dbConnected ? '#065F46' : '#991B1B',
               padding: '4px 12px',
               borderRadius: 20,
               fontSize: 11.5,
               fontWeight: 600,
-              backdropFilter: 'blur(8px)',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
             }}
           >
             <span
@@ -186,8 +186,8 @@ export function LoginPage() {
                 width: 7,
                 height: 7,
                 borderRadius: '50%',
-                background: dbConnected ? '#34D399' : '#EF4444',
-                boxShadow: dbConnected ? '0 0 8px #34D399' : 'none',
+                background: dbConnected ? '#10B981' : '#EF4444',
+                boxShadow: dbConnected ? '0 0 6px rgba(16, 185, 129, 0.4)' : 'none',
               }}
             />
             {dbConnected ? 'PostgreSQL (Port 5442) ออนไลน์' : 'PostgreSQL ออฟไลน์'}
@@ -199,7 +199,7 @@ export function LoginPage() {
             style={{
               background: 'transparent',
               border: 'none',
-              color: 'rgba(255, 255, 255, 0.85)',
+              color: '#2563EB',
               cursor: 'pointer',
               fontSize: 12,
               padding: 4,
