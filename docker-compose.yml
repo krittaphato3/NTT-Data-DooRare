@@ -1,8 +1,31 @@
 services:
+  # Frontend Web UI (Nginx reverse-proxying /api/ to backend)
   frontend:
     build: ./frontend
+    container_name: doorare-frontend
     ports:
       - "8080:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  # Backend REST API Service
+  backend:
+    build: ./backend
+    container_name: doorare-backend
+    environment:
+      PORT: 3001
+      NODE_ENV: production
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: doorare
+      DB_USER: doorare
+      DB_PASSWORD: doorare_dev
+    ports:
+      - "127.0.0.1:3001:3001"
+    depends_on:
+      db:
+        condition: service_healthy
     restart: unless-stopped
 
   # PostgreSQL 16 for the DooRare schema (db/schema.sql). Host port 5442 (5432/5433 are used by other local projects).

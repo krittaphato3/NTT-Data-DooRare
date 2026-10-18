@@ -5,6 +5,10 @@
   "description": "Repo tooling: UI artifact capture and ai-material scripts (not part of the frontend build).",
   "type": "commonjs",
   "scripts": {
+    "dev:frontend": "npm --prefix frontend run dev",
+    "dev:backend": "npm --prefix backend run dev",
+    "build:frontend": "npm --prefix frontend run build",
+    "build:backend": "npm --prefix backend run build",
     "capture": "node scripts/capture-screenshots.mjs",
     "capture:dev": "node scripts/capture-screenshots.mjs --url http://127.0.0.1:5173",
     "e2e:loadmore": "node scripts/e2e-loadmore.mjs",

@@ -41,6 +41,9 @@ import { getDriverNav } from './roles/driver/data/navigation';
 import { DriverTransportPage } from './roles/driver/pages/DriverTransportPage';
 import { DriverSyncPage } from './roles/driver/pages/DriverSyncPage';
 import { AdminPage } from './roles/admin/pages/AdminPage';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import { LoginPage } from './pages/LoginPage';
+
 
 type Page = 'dashboard' | 'inbox' | 'kit' | 'stock' | 'drugs' | 'transport' | 'requests' | 'lend' | 'incident' | 'alerts' | 'report' | 'expiry' | 'pool' | 'docs' | 'users' | 'audit' | 'config' | 'sync' | 'admin';
 
@@ -202,18 +205,85 @@ function initialDriver(): boolean {
  * Role pages live in `src/roles/<role>/pages/` (see src/README.md).
  */
 export default function App() {
+  return (
+    <AuthProvider>
+      <AppRoot />
+    </AuthProvider>
+  );
+}
+
+function AppRoot() {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div
+        style={{
+          minHeight: '100vh',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: '#F8FAFC',
+          fontFamily: "'Noto Sans Thai', sans-serif",
+        }}
+      >
+        <div style={{ textAlign: 'center' }}>
+          <div
+            style={{
+              width: 32,
+              height: 32,
+              border: '3px solid #E2E8F0',
+              borderTopColor: '#0F2A5C',
+              borderRadius: '50%',
+              animation: 'spin 0.8s linear infinite',
+              margin: '0 auto 16px',
+            }}
+          />
+          <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
+          <div style={{ fontSize: 14, fontWeight: 600, color: '#0F2A5C' }}>กำลังโหลดระบบ DooRare...</div>
+          <div style={{ fontSize: 12, color: '#64748B', marginTop: 4 }}>กำลังตรวจสอบสิทธิ์การใช้งาน</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <LoginPage />;
+  }
+
+  return <AuthenticatedShell />;
+}
+
+function AuthenticatedShell() {
+  const { user, activeRole } = useAuth();
+
   const [query, setQuery] = useState('');
   const [collapsed, setCollapsed] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
   const [hospital, setHospital] = useState('ทุกโรงพยาบาล (12)');
   const [isAdmin] = useState(initialRole);
-  const [hospitalAdmin] = useState(initialHospitalAdmin);
-  const [isDriver] = useState(initialDriver);
+  const [initHospAdmin] = useState(initialHospitalAdmin);
+  const [initDriver] = useState(initialDriver);
   const [route] = useState(initialRoute);
   const [erPage] = useState(erPageFromQuery);
+
+  // Sync hospital with authenticated user
+  useEffect(() => {
+    if (user?.hospitalName && user.role !== 'SYSTEM_ADMIN' && user.role !== 'AUDITOR') {
+      setHospital(user.hospitalName);
+    }
+  }, [user]);
+
+  // Active role is controlled by auth session or URL override for dev
+  const effectiveRole: RoleCode = activeRole || user?.role || 'PHARMACIST';
   const onAdmin = route.page === 'admin';
-  const isSystemAdminRole = isAdmin || route.isSystemAdmin || onAdmin;
-  const isDriverRole = !isSystemAdminRole && (isDriver || route.isDriver);
+  const isSystemAdminRole = effectiveRole === 'SYSTEM_ADMIN' || (!user && (isAdmin || route.isSystemAdmin || onAdmin));
+  const hospitalAdmin = effectiveRole === 'HOSPITAL_ADMIN' || (!user && initHospAdmin);
+  const isDriverRole = !isSystemAdminRole && (effectiveRole === 'DRIVER' || (!user && (initDriver || route.isDriver)));
+  const warehouse = !isSystemAdminRole && !hospitalAdmin && !isDriverRole && (effectiveRole === 'WAREHOUSE_OFFICER' || (!user && route.warehouse));
+  const isEr = !isSystemAdminRole && !hospitalAdmin && !isDriverRole && (effectiveRole === 'ER_STAFF' || (!user && route.isEr));
+
   const onTransport = route.page === 'transport';
   const onSync = route.page === 'sync';
   const onInbox = route.page === 'inbox';
@@ -231,14 +301,12 @@ export default function App() {
   const onUsers = route.page === 'users';
   const onAudit = route.page === 'audit';
   const onConfig = route.page === 'config';
-  // The Hospital Admin shell keeps its own navigation on every page, including transport.
-  const warehouse = !isSystemAdminRole && !hospitalAdmin && !isDriverRole && route.warehouse;
-  const isEr = !isSystemAdminRole && !hospitalAdmin && !isDriverRole && route.isEr;
-  // Warehouse transport, driver console, ER shell, UI-05, and UI-06 use the ops top bar (no footer); dashboard, alerts, report, and the pharmacist incident console keep standard shell.
+
+  // Ops top bar styles
   const ops = isDriverRole || warehouse || isEr || onRequests || onLend;
-  // UI-07/08/09/15 screenshots use the ops top bar but keep the standard footer.
   const opsBar = !isSystemAdminRole && (ops || onExpiry || onPool || onDocs);
-  const navRole = isSystemAdminRole
+
+  const navRole: RoleCode = isSystemAdminRole
     ? 'SYSTEM_ADMIN'
     : isDriverRole
     ? 'DRIVER'
@@ -249,8 +317,9 @@ export default function App() {
     : isEr
     ? 'ER_STAFF'
     : 'PHARMACIST';
+
   /** Role the shared pharmacist/warehouse pages gate their write controls on. */
-  const viewerRole: RoleCode = hospitalAdmin ? 'HOSPITAL_ADMIN' : isEr ? 'ER_STAFF' : 'PHARMACIST';
+  const viewerRole: RoleCode = hospitalAdmin ? 'HOSPITAL_ADMIN' : isEr ? 'ER_STAFF' : navRole;
   const adminTab = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('tab') : null;
   const activeKey = isSystemAdminRole
     ? adminTab === 'hospitals'
@@ -287,6 +356,7 @@ export default function App() {
     : onAudit
     ? 'aud'
     : 'dash';
+
   // WH, Driver and ER own their sidebars; other roles use the shared catalogue.
   const navItems = isDriverRole
     ? getDriverNav(onSync ? 'sync' : onDocs ? 'docs' : 'transport')
@@ -295,14 +365,37 @@ export default function App() {
       : isEr
         ? getErNav(erPage)
         : withLinks(getNavForRole(navRole, activeKey), navRole);
-  // Page access for the Hospital Admin shell is decided by lib/rbac.ts, not by local role checks.
+
   const mayManageUsers = can(navRole, 'manageUsers');
   const mayViewAudit = can(navRole, 'viewAudit');
   const mayConfigure = can(navRole, 'configureRules');
   const onReadOnlyView = HA_READ_ONLY_PAGES.includes(route.page);
-  /** Pages the Hospital Admin shell may render; anything else keeps the 403 card. */
   const isHospitalAdminPageAllowed =
     (onUsers && mayManageUsers) || (onAudit && mayViewAudit) || (onConfig && mayConfigure) || onReadOnlyView;
+
+  // Real user profile for TopBar
+  const currentUserProfile = user
+    ? {
+        name: user.name,
+        role: navRole,
+        roleTh: user.roleTh,
+        scopeLabel: user.scopeLabel,
+        hospitalLabel: user.hospitalName,
+        initial: user.initial || user.name.charAt(0),
+      }
+    : isSystemAdminRole
+    ? SYSTEM_ADMIN_USER
+    : isDriverRole
+    ? DRIVER_USER
+    : warehouse
+    ? WAREHOUSE_USER
+    : hospitalAdmin
+    ? HOSPITAL_ADMIN_USER
+    : isEr
+    ? ER_USER
+    : opsBar
+    ? PHARMACIST_OPS_USER
+    : undefined;
 
   // Mobile drawer: lock page scroll, close on Escape and when resizing to desktop.
   useEffect(() => {
@@ -356,7 +449,7 @@ export default function App() {
                     : ALERTS.map((a) => ({ drug: a.drug, time: a.time }))
           }
           variant={opsBar ? 'ops' : 'pharmacist'}
-          user={isSystemAdminRole ? SYSTEM_ADMIN_USER : isDriverRole ? DRIVER_USER : warehouse ? WAREHOUSE_USER : hospitalAdmin ? HOSPITAL_ADMIN_USER : isEr ? ER_USER : opsBar ? PHARMACIST_OPS_USER : undefined}
+          user={currentUserProfile}
         />
         <main className="mainpad">
           {isSystemAdminRole ? (

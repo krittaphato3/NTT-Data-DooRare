@@ -7,6 +7,13 @@
     "date": "2026-10-18"
   },
   {
+    "path": "sessions\\2026-10-18-zcode-database-backed-login-panel.md",
+    "title": "Real Database-Backed Login Panel & Architecture Separation (backend/ and frontend/)",
+    "summary": "Separated clean backend/ service from frontend/, PostgreSQL connection pool, Nginx reverse proxy,…",
+    "tags": "session, frontend, backend, architecture, auth, login, database, postgres, docker",
+    "date": "2026-10-18"
+  },
+  {
     "path": "context\\current-task.md",
     "title": "Current Task",
     "summary": "Current Task",
@@ -14,17 +21,17 @@
     "date": "2026-10-17"
   },
   {
-    "path": "sessions\\2026-10-17-claude-er-structure-fix.md",
-    "title": "ER role structure moved out of pharmacist",
-    "summary": "Incident console page/data moved to roles/er; ER owns its sidebar like warehouse/driver",
-    "tags": "session, frontend, er, structure",
-    "date": "2026-10-17"
-  },
-  {
     "path": "sessions\\2026-10-17-claude-er-incident-console.md",
     "title": "ER role on incident console",
     "summary": "ER_STAFF shell plus role-aware incident console on team RBAC",
     "tags": "session, frontend, er, incident, rbac",
+    "date": "2026-10-17"
+  },
+  {
+    "path": "sessions\\2026-10-17-claude-er-structure-fix.md",
+    "title": "ER role structure moved out of pharmacist",
+    "summary": "Incident console page/data moved to roles/er; ER owns its sidebar like warehouse/driver",
+    "tags": "session, frontend, er, structure",
     "date": "2026-10-17"
   },
   {
