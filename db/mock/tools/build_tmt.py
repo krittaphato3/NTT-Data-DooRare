@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""สร้าง tmt_real.json จากไฟล์ TMT Release (สมสท.) : แมปยา 37 รายการ -> รหัส TMT จริงทุกระดับ
+"""สร้าง tmt_real.json จากไฟล์ TMT Release (สมสท.) : แมปยา 41 รายการ -> รหัส TMT จริงทุกระดับ
 ใช้:  python3 tools/build_tmt.py <โฟลเดอร์ TMTRFyyyymmdd_BONUS>   (ต้องมี pandas + xlrd)
 ผลลัพธ์: config/tmt_real.json  (รวมเข้าชุด mock แล้ว ไม่ต้องรันซ้ำถ้าไม่เปลี่ยนรอบ TMT)"""
 import json, sys, re
@@ -42,6 +42,8 @@ MAP = {
  "ANTIVENOM_COBRA":   ("762264",  "Cobra antivenin", "600 mcg/1 mL", "powder and solvent for solution for injection"),
  "PRALIDOXIME_1G":    ("697750",  "Pralidoxime", "1 g", "powder for solution for injection/infusion"),
  "ALCOHOL_GEL":       ("816410",  "Ethyl alcohol", "70 mL/100 mL", "gel"),
+ "VITAMIN_C_100":     ("665277",  "Ascorbic acid", "100 mg", "tablet"),
+ "POVIDONE_IODINE_10":("901938",  "Povidone iodine", "10 g/100 mL", "cutaneous solution"),
 }
 
 def rd(sub, name):

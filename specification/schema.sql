@@ -1,4 +1,9 @@
 -- DooRare schema.sql  (PostgreSQL 16)
+-- v1.5 (on top of v1.4): the UI can now be fed from the database.
+--   hospital profile (province, tier, beds, address, phone) · vehicle + transport task number/ETA/cancel reason + temperature
+--   triage_level +UNKNOWN · incident.cancel_reason · audit_log.reason/agent_run_id (inside the hash)
+--   several roles per user (app_user_role; app_user.role stays the primary role) · login_event + app_user.mfa_enabled/last_login_at/last_seen_at
+--   v_transport_item: a receiving hospital sees drug/lot/expiry/qty of what is on its way (security-definer view, RLS keeps the tables closed)
 -- v1.4 (on top of spec v1.3): closes gaps found when reading the spec against the mock data.
 --   G1 missing columns : forecast/alert granularity, incident type+ETA, borrow_leg.request_item_id,
 --                        hospital/drug flags (agent_participation, is_controlled, lend_in_packs, ...), document versioning
@@ -43,7 +48,7 @@ CREATE TYPE return_status AS ENUM ('OPEN','REMINDED','RETURNED','OVERDUE','WAIVE
 CREATE TYPE approval_decision AS ENUM ('PENDING','APPROVED','REJECTED');
 CREATE TYPE job_status AS ENUM ('QUEUED','RUNNING','SUCCEEDED','FAILED','SKIPPED');
 CREATE TYPE ledger_reason AS ENUM ('RECEIPT','ISSUE_USAGE','ADJUST','LEND_OUT','BORROW_IN','RETURN_IN','RETURN_OUT','POOL_TRANSFER_OUT','POOL_TRANSFER_IN','KIT_PACK','KIT_UNPACK','EXPIRED_WRITEOFF','IMPORT');
-CREATE TYPE triage_level AS ENUM ('RED','YELLOW','GREEN','BLACK');   -- BLACK is counted in incident_patient_count but has no kit_recipe / incident_extra_rule rows (kits are not computed for BLACK)
+CREATE TYPE triage_level AS ENUM ('RED','YELLOW','GREEN','BLACK','UNKNOWN');   -- BLACK and UNKNOWN (count/level not yet clear) are counted in incident_patient_count but have no kit_recipe / incident_extra_rule rows (kits are not computed for them)
 CREATE TYPE forecast_granularity AS ENUM ('WEEK','MONTH');   -- v1.4
 CREATE TYPE eta_source AS ENUM ('REPORTED','ROUTE','UNAVAILABLE');   -- v1.4: F-26
 CREATE TYPE notif_channel AS ENUM ('IN_APP','EMAIL','LINE');
@@ -68,6 +73,8 @@ CREATE TABLE hospital (
   has_cold_chain boolean NOT NULL DEFAULT false,
   has_blood_bank boolean NOT NULL DEFAULT false,   -- rev 1.2: may lend/borrow PRC group O in F3 (ASM-47)
   agent_participation boolean NOT NULL DEFAULT true,   -- v1.4: lender must participate in the agent flow (F-12, ASM-20)
+  province text, tier text CHECK (tier IN ('TERTIARY','SECONDARY','COMMUNITY','PRIMARY')), bed_count int CHECK (bed_count >= 0),   -- v1.5: ADM-01 hospital list
+  address text, phone text,                                                                                                      -- v1.5: document headers (UI-15)
   active boolean NOT NULL DEFAULT true,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(), version int NOT NULL DEFAULT 1
@@ -77,29 +84,83 @@ CREATE TABLE app_user (
   cognito_sub text NOT NULL UNIQUE, email text NOT NULL UNIQUE, display_name text NOT NULL,
   role role_code NOT NULL, hospital_id uuid REFERENCES hospital(id), region_id uuid REFERENCES region(id),
   phone text, active boolean NOT NULL DEFAULT true,
+  mfa_enabled boolean NOT NULL DEFAULT false, last_login_at timestamptz, last_seen_at timestamptz,   -- v1.5: no Cognito, the app keeps these (last_seen_at < 15 min = online)
   created_at timestamptz NOT NULL DEFAULT now(),
   CHECK (role IN ('SYSTEM_ADMIN','AUDITOR') OR hospital_id IS NOT NULL OR region_id IS NOT NULL)
 );
-CREATE TABLE app_user_role_history (   -- which role did the user really hold at time T (forensics)
+CREATE TABLE app_user_role (   -- v1.5: a user may hold several roles in the same hospital/region. app_user.role is the PRIMARY role (default at login) and is always listed here too.
+  user_id uuid NOT NULL REFERENCES app_user(id), role role_code NOT NULL,
+  granted_at timestamptz NOT NULL DEFAULT now(), granted_by uuid REFERENCES app_user(id),
+  PRIMARY KEY (user_id, role)
+);
+CREATE TABLE app_user_role_history (   -- which role did the user really hold at time T (forensics); one row per (user, role) period
   id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY, user_id uuid NOT NULL REFERENCES app_user(id),
   role role_code NOT NULL, hospital_id uuid REFERENCES hospital(id), region_id uuid REFERENCES region(id),
   valid_from timestamptz NOT NULL DEFAULT now(), valid_to timestamptz, changed_by uuid REFERENCES app_user(id), reason text,
-  CHECK (valid_to IS NULL OR valid_to > valid_from)
+  CHECK (valid_to IS NULL OR valid_to >= valid_from)   -- >= : now() is constant inside a transaction, so open+close in one tx gives a zero-length period
 );
-CREATE UNIQUE INDEX role_history_one_open ON app_user_role_history(user_id) WHERE valid_to IS NULL;
+CREATE UNIQUE INDEX role_history_one_open ON app_user_role_history(user_id, role) WHERE valid_to IS NULL;
 CREATE INDEX role_history_time_idx ON app_user_role_history(user_id, valid_from, valid_to);
-CREATE OR REPLACE FUNCTION app_user_role_track() RETURNS trigger LANGUAGE plpgsql AS $$
+-- Separation of duties (rbac-permissions §1.4 / §9): SYSTEM_ADMIN and AUDITOR hold exactly one role; HOSPITAL_ADMIN never combines with an operational role.
+CREATE OR REPLACE FUNCTION app_user_role_rules() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE others role_code[]; ops role_code[] := ARRAY['PHARMACIST','PROCUREMENT_OFFICER','WAREHOUSE_OFFICER','ER_STAFF','DRIVER']::role_code[];
 BEGIN
-  IF TG_OP = 'INSERT' THEN
-    INSERT INTO app_user_role_history(user_id, role, hospital_id, region_id, reason) VALUES (NEW.id, NEW.role, NEW.hospital_id, NEW.region_id, 'created');
-  ELSIF NEW.role IS DISTINCT FROM OLD.role OR NEW.hospital_id IS DISTINCT FROM OLD.hospital_id OR NEW.region_id IS DISTINCT FROM OLD.region_id OR NEW.active IS DISTINCT FROM OLD.active THEN
-    UPDATE app_user_role_history SET valid_to = now() WHERE user_id = NEW.id AND valid_to IS NULL;
-    INSERT INTO app_user_role_history(user_id, role, hospital_id, region_id, reason)
-      VALUES (NEW.id, NEW.role, NEW.hospital_id, NEW.region_id, CASE WHEN NOT NEW.active THEN 'deactivated' ELSE 'changed' END);
+  SELECT coalesce(array_agg(role), '{}') INTO others FROM app_user_role WHERE user_id = NEW.user_id AND role <> NEW.role;
+  IF cardinality(others) = 0 THEN RETURN NEW; END IF;
+  IF NEW.role IN ('SYSTEM_ADMIN','AUDITOR') OR others && ARRAY['SYSTEM_ADMIN','AUDITOR']::role_code[] THEN
+    RAISE EXCEPTION 'SYSTEM_ADMIN and AUDITOR accounts must hold exactly one role';
+  END IF;
+  IF (NEW.role = 'HOSPITAL_ADMIN' AND others && ops) OR (NEW.role = ANY(ops) AND 'HOSPITAL_ADMIN' = ANY(others)) THEN
+    RAISE EXCEPTION 'HOSPITAL_ADMIN cannot be combined with an operational role (separation of duties)';
   END IF;
   RETURN NEW;
 END $$;
-CREATE TRIGGER app_user_role_track_trg AFTER INSERT OR UPDATE ON app_user FOR EACH ROW EXECUTE FUNCTION app_user_role_track();
+CREATE TRIGGER app_user_role_rules_trg BEFORE INSERT ON app_user_role FOR EACH ROW EXECUTE FUNCTION app_user_role_rules();
+-- (user_id, role) of a row never changes: an UPDATE would skip the SoD rules above and leave app_user_role_history out of sync. To change a role, DELETE then INSERT.
+CREATE OR REPLACE FUNCTION app_user_role_immutable() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN RAISE EXCEPTION 'app_user_role.user_id / role cannot be updated; delete the row and insert a new one'; END $$;
+CREATE TRIGGER app_user_role_immutable_trg BEFORE UPDATE OF user_id, role ON app_user_role FOR EACH ROW EXECUTE FUNCTION app_user_role_immutable();
+-- keep app_user.role (primary) listed in app_user_role; changing the primary replaces the old primary role.
+CREATE OR REPLACE FUNCTION app_user_primary_role_sync() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF TG_OP = 'UPDATE' AND NEW.role IS DISTINCT FROM OLD.role THEN
+    DELETE FROM app_user_role WHERE user_id = NEW.id AND role = OLD.role;
+  END IF;
+  INSERT INTO app_user_role(user_id, role) VALUES (NEW.id, NEW.role) ON CONFLICT DO NOTHING;
+  RETURN NEW;
+END $$;
+CREATE TRIGGER app_user_primary_role_trg AFTER INSERT OR UPDATE OF role ON app_user FOR EACH ROW EXECUTE FUNCTION app_user_primary_role_sync();
+CREATE OR REPLACE FUNCTION app_user_role_guard_delete() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF OLD.role = (SELECT role FROM app_user WHERE id = OLD.user_id) THEN RAISE EXCEPTION 'cannot remove the primary role; change app_user.role instead'; END IF;
+  RETURN OLD;
+END $$;
+CREATE TRIGGER app_user_role_guard_del_trg BEFORE DELETE ON app_user_role FOR EACH ROW EXECUTE FUNCTION app_user_role_guard_delete();
+CREATE OR REPLACE FUNCTION app_user_role_hist_open() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  INSERT INTO app_user_role_history(user_id, role, hospital_id, region_id, reason)
+    SELECT NEW.user_id, NEW.role, u.hospital_id, u.region_id, 'granted' FROM app_user u WHERE u.id = NEW.user_id;
+  RETURN NEW;
+END $$;
+CREATE TRIGGER app_user_role_hist_open_trg AFTER INSERT ON app_user_role FOR EACH ROW EXECUTE FUNCTION app_user_role_hist_open();
+CREATE OR REPLACE FUNCTION app_user_role_hist_close() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  UPDATE app_user_role_history SET valid_to = now() WHERE user_id = OLD.user_id AND role = OLD.role AND valid_to IS NULL;
+  RETURN OLD;
+END $$;
+CREATE TRIGGER app_user_role_hist_close_trg AFTER DELETE ON app_user_role FOR EACH ROW EXECUTE FUNCTION app_user_role_hist_close();
+-- hospital / region / active changed: close every open period and reopen one per role
+CREATE OR REPLACE FUNCTION app_user_scope_track() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  UPDATE app_user_role_history SET valid_to = now() WHERE user_id = NEW.id AND valid_to IS NULL;
+  INSERT INTO app_user_role_history(user_id, role, hospital_id, region_id, reason)
+    SELECT NEW.id, r.role, NEW.hospital_id, NEW.region_id, CASE WHEN NOT NEW.active THEN 'deactivated' ELSE 'changed' END
+    FROM app_user_role r WHERE r.user_id = NEW.id;
+  RETURN NEW;
+END $$;
+CREATE TRIGGER app_user_scope_track_trg AFTER UPDATE ON app_user FOR EACH ROW
+  WHEN (NEW.hospital_id IS DISTINCT FROM OLD.hospital_id OR NEW.region_id IS DISTINCT FROM OLD.region_id OR NEW.active IS DISTINCT FROM OLD.active)
+  EXECUTE FUNCTION app_user_scope_track();
 CREATE OR REPLACE FUNCTION forbid_delete() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'app_user rows are never deleted; deactivate instead'; END $$;
 CREATE TRIGGER app_user_no_delete BEFORE DELETE ON app_user FOR EACH ROW EXECUTE FUNCTION forbid_delete();
 
@@ -312,6 +373,7 @@ CREATE TABLE borrow_leg_lot (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(), leg_id uuid NOT NULL REFERENCES borrow_leg(id) ON DELETE CASCADE,
   lot_id uuid NOT NULL REFERENCES stock_lot(id), qty numeric(14,3) NOT NULL CHECK (qty > 0)
 );
+CREATE INDEX borrow_leg_lot_leg_idx ON borrow_leg_lot(leg_id);   -- v1.5: join key of v_transport_item
 CREATE TABLE return_obligation (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(), leg_id uuid NOT NULL REFERENCES borrow_leg(id),
   debtor_hospital_id uuid NOT NULL REFERENCES hospital(id), creditor_hospital_id uuid NOT NULL REFERENCES hospital(id),
@@ -372,11 +434,16 @@ CREATE TABLE plan_approval (
   hospital_id uuid NOT NULL REFERENCES hospital(id), decision approval_decision NOT NULL DEFAULT 'PENDING',
   decided_by uuid REFERENCES app_user(id), decided_at timestamptz, comment text, UNIQUE (plan_id, hospital_id)
 );
+CREATE TABLE vehicle (               -- v1.5: delivery vehicles of a hospital (plate shown on the transport screens)
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(), hospital_id uuid NOT NULL REFERENCES hospital(id), plate text NOT NULL,
+  has_cold_box boolean NOT NULL DEFAULT false, active boolean NOT NULL DEFAULT true, UNIQUE (hospital_id, plate)
+);
 CREATE TABLE transport_task (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(), ref_type text NOT NULL CHECK (ref_type IN ('ALLOCATION_LINE','BORROW_LEG')),
   ref_id uuid NOT NULL, from_hospital_id uuid NOT NULL REFERENCES hospital(id), to_hospital_id uuid NOT NULL REFERENCES hospital(id),
   status transport_status NOT NULL DEFAULT 'WAITING_DISPATCH', driver_id uuid REFERENCES app_user(id),
   cancel_requested_by uuid REFERENCES hospital(id), cancel_consent_by uuid REFERENCES hospital(id),
+  task_no text UNIQUE, vehicle_id uuid REFERENCES vehicle(id), eta_at timestamptz, cancel_reason text,   -- v1.5
   loaded_at timestamptz, departed_at timestamptz, arrived_at timestamptz, received_at timestamptz,
   created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(), version int NOT NULL DEFAULT 1
 );
@@ -389,6 +456,7 @@ CREATE TABLE transport_event (        -- offline-first driver events, synced ide
   client_event_id uuid NOT NULL, seq int NOT NULL, to_status transport_status NOT NULL,
   captured_at timestamptz NOT NULL, received_at timestamptz NOT NULL DEFAULT now(), actor_id uuid REFERENCES app_user(id),
   photo_keys text[] NOT NULL DEFAULT '{}', applied boolean NOT NULL DEFAULT false, reject_reason text,
+  temperature_c numeric(4,1),            -- v1.5: cold-chain reading taken with the event
   UNIQUE (task_id, client_event_id)
 );
 CREATE TABLE repeat_expiry_flag (
@@ -423,6 +491,7 @@ CREATE TABLE incident (
   incident_type text, description text,                      -- v1.4: FR-F3-001 (type and free-text description; no patient data, ASM-27)
   eta_unsure boolean NOT NULL DEFAULT false, eta_minutes int CHECK (eta_minutes >= 0), eta_source eta_source,   -- v1.4: F-26 result; UNAVAILABLE = radio notice, no number
   reported_eta_min int, created_by uuid NOT NULL REFERENCES app_user(id), duplicate_of uuid REFERENCES incident(id),
+  cancel_reason text,                                      -- v1.5: given when status = CANCELLED (reported by mistake)
   closed_at timestamptz, created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(), version int NOT NULL DEFAULT 1
 );
 ALTER TABLE borrow_request ADD CONSTRAINT br_incident_fk FOREIGN KEY (incident_id) REFERENCES incident(id);
@@ -463,12 +532,20 @@ CREATE TABLE decision_log (
 CREATE TABLE audit_log (               -- append-only, hash-chained
   id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY, occurred_at timestamptz NOT NULL DEFAULT now(),
   actor_id uuid, actor_role text, hospital_id uuid, action text NOT NULL, entity_type text NOT NULL, entity_id uuid,
-  before jsonb, after jsonb, request_id text, prev_hash text, row_hash text NOT NULL
+  before jsonb, after jsonb, request_id text, prev_hash text, row_hash text NOT NULL,
+  reason text, agent_run_id uuid REFERENCES agent_run(id)   -- v1.5: why (waive, config change...) and the Agent run behind it; reason is part of the hash
 );
 CREATE TABLE audit_log_context (      -- personal data kept OUTSIDE the hash chain so it can be deleted after retention (12 months)
   audit_id bigint PRIMARY KEY REFERENCES audit_log(id), ip inet, user_agent text, created_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX audit_entity_idx ON audit_log(entity_type, entity_id);
+CREATE TABLE login_event (            -- v1.5: sign-in history (ADM-01 KPIs, ADM-02/03 account tables). Personal data (ip, device): purge after the same 12-month retention as audit_log_context.
+  id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY, user_id uuid REFERENCES app_user(id),   -- NULL when the e-mail matches no account
+  email text NOT NULL, occurred_at timestamptz NOT NULL DEFAULT now(), success boolean NOT NULL, failure_reason text,
+  ip inet, device text, browser text, user_agent text
+);
+CREATE INDEX login_event_time_idx ON login_event(occurred_at);
+CREATE INDEX login_event_user_idx ON login_event(user_id, occurred_at);
 CREATE TABLE audit_chain_head (       -- v1.4: one row = tail of the hash chain; locked per insert so concurrent writers queue up instead of forking the chain
   singleton boolean PRIMARY KEY DEFAULT true CHECK (singleton), last_hash text
 );
@@ -479,7 +556,7 @@ BEGIN
   SELECT last_hash INTO p FROM audit_chain_head WHERE singleton FOR UPDATE;   -- lock held until commit; id is assigned BEFORE this lock, so chain order = commit order, not id order
   NEW.prev_hash := p;
   NEW.row_hash := encode(sha256(convert_to(coalesce(p,'') || extract(epoch FROM NEW.occurred_at)::text || coalesce(NEW.actor_id::text,'') || NEW.action || NEW.entity_type
-                     || coalesce(NEW.entity_id::text,'') || coalesce(NEW.after::text,''), 'UTF8')), 'hex');
+                     || coalesce(NEW.entity_id::text,'') || coalesce(NEW.after::text,'') || coalesce(NEW.reason,''), 'UTF8')), 'hex');
   UPDATE audit_chain_head SET last_hash = NEW.row_hash WHERE singleton;
   RETURN NEW;
 END $$;
@@ -492,7 +569,7 @@ CREATE OR REPLACE FUNCTION audit_chain_verify() RETURNS bigint LANGUAGE sql STAB
        + (SELECT count(*) FROM (SELECT prev_hash FROM audit_log WHERE prev_hash IS NOT NULL GROUP BY 1 HAVING count(*) > 1) f)                         -- forks
        + (SELECT count(*) FROM audit_log a WHERE a.prev_hash IS NOT NULL AND NOT EXISTS (SELECT 1 FROM audit_log x WHERE x.row_hash = a.prev_hash))      -- missing parent
        + (SELECT count(*) FROM audit_log a WHERE a.row_hash <> encode(sha256(convert_to(coalesce(a.prev_hash,'') || extract(epoch FROM a.occurred_at)::text
-           || coalesce(a.actor_id::text,'') || a.action || a.entity_type || coalesce(a.entity_id::text,'') || coalesce(a.after::text,''), 'UTF8')), 'hex'))  -- tampered
+           || coalesce(a.actor_id::text,'') || a.action || a.entity_type || coalesce(a.entity_id::text,'') || coalesce(a.after::text,'') || coalesce(a.reason,''), 'UTF8')), 'hex'))  -- tampered
 $$;
 
 -- ---------- notifications, jobs, reporting ----------
@@ -547,7 +624,7 @@ END $$;
 DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='doorare_app') THEN CREATE ROLE doorare_app NOLOGIN; END IF; END $$;
 
 DO $$ DECLARE t text; BEGIN
-  FOREACH t IN ARRAY ARRAY['stock_lot','stock_ledger','stock_snapshot','usage_daily','incoming_order','forecast_result','stock_alert','near_expiry_item','hospital_drug','kit_stock','incident','notification','hospital_import'] LOOP
+  FOREACH t IN ARRAY ARRAY['stock_lot','stock_ledger','stock_snapshot','usage_daily','incoming_order','forecast_result','stock_alert','near_expiry_item','hospital_drug','kit_stock','incident','notification','hospital_import','vehicle'] LOOP
     EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', t);
     EXECUTE format($f$CREATE POLICY %I_tenant ON %I USING (
         app_role() IN ('SYSTEM_ADMIN','AUDITOR','REGION_ADMIN','DATA_ADMIN') OR hospital_id = app_hospital()) $f$, t, t);
@@ -587,12 +664,23 @@ CREATE POLICY return_obligation_party ON return_obligation USING (
 ALTER TABLE document ENABLE ROW LEVEL SECURITY;
 CREATE POLICY document_party ON document USING (
   app_role() IN ('SYSTEM_ADMIN','AUDITOR','REGION_ADMIN') OR hospital_id = app_hospital() OR counterparty_hospital_id = app_hospital());
+-- v1.5: user-scoped tables. app_user has no hospital column the policy can use on these rows, so a SECURITY DEFINER helper looks it up.
+CREATE OR REPLACE FUNCTION app_user_hospital(uid uuid) RETURNS uuid LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS
+$$ SELECT hospital_id FROM app_user WHERE id = uid $$;
+ALTER TABLE app_user_role ENABLE ROW LEVEL SECURITY;
+CREATE POLICY app_user_role_scope ON app_user_role USING (
+  app_role() IN ('SYSTEM_ADMIN','AUDITOR','REGION_ADMIN') OR app_user_hospital(user_id) = app_hospital());
+ALTER TABLE login_event ENABLE ROW LEVEL SECURITY;      -- SYSTEM_ADMIN/AUDITOR see all; a hospital sees its own users' sign-ins
+CREATE POLICY login_event_read ON login_event FOR SELECT USING (
+  app_role() IN ('SYSTEM_ADMIN','AUDITOR') OR app_user_hospital(user_id) = app_hospital());
+CREATE POLICY login_event_insert ON login_event FOR INSERT WITH CHECK (true);   -- written by the sign-in service before a role is known
 ALTER TABLE audit_log ENABLE ROW LEVEL SECURITY;
 CREATE POLICY audit_read ON audit_log FOR SELECT USING (app_role() IN ('SYSTEM_ADMIN','AUDITOR') OR hospital_id = app_hospital());
 CREATE POLICY audit_insert ON audit_log FOR INSERT WITH CHECK (true);
 
 GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA public TO doorare_app;
 REVOKE UPDATE, DELETE ON audit_log, stock_ledger FROM doorare_app;
+REVOKE UPDATE ON login_event FROM doorare_app;   -- history is never edited
 REVOKE INSERT, UPDATE, DELETE ON audit_chain_head FROM doorare_app;   -- only the SECURITY DEFINER trigger moves the chain head
 GRANT USAGE ON ALL SEQUENCES IN SCHEMA public TO doorare_app;
 
@@ -609,3 +697,43 @@ WHERE l.qty_on_hand - l.qty_held > 0
 
 CREATE VIEW v_latest_forecast AS
 SELECT DISTINCT ON (hospital_id, hospital_drug_id, granularity, period_start) * FROM forecast_result ORDER BY hospital_id, hospital_drug_id, granularity, period_start, computed_at DESC;
+
+-- ---------- cross-hospital shipment detail ----------
+-- A receiving hospital must see WHAT is on its way (drug, lot, expiry, qty, cold chain), but RLS hides the sender's
+-- stock_lot / near_expiry_item / pool_entry. This view runs with the owner's rights (so it can read those tables) and does
+-- its own filtering: a row is visible only to the sending or receiving hospital of the task. SYSTEM_ADMIN/AUDITOR are
+-- deliberately NOT included (RBAC: no lot-level data). No price and no remaining stock of the sender are exposed (RBAC §3).
+-- DEPLOYMENT: a view runs with its OWNER's rights. It only sees the sender's rows if the owner also owns the tables (the migration role creates
+-- both, as here; no BYPASSRLS needed) and the tables do NOT use FORCE ROW LEVEL SECURITY. Keep it that way, or the receiver will see 0 rows.
+CREATE OR REPLACE VIEW v_transport_item WITH (security_barrier = true) AS
+SELECT t.id AS task_id, t.ref_type, t.ref_id, t.from_hospital_id, t.to_hospital_id, t.status,
+       dm.id AS drug_master_id, dm.generic_name, dm.strength, dm.dosage_form, dm.base_unit,
+       dm.is_cold_chain, dm.is_blood_product,
+       l.lot_no, l.expiry_date, bl.qty AS qty,
+       t.task_no, t.eta_at, veh.plate AS vehicle_plate, drv.display_name AS driver_name
+FROM transport_task t
+LEFT JOIN vehicle veh ON veh.id = t.vehicle_id
+LEFT JOIN app_user drv ON drv.id = t.driver_id
+JOIN borrow_leg_lot bl ON t.ref_type = 'BORROW_LEG' AND bl.leg_id = t.ref_id
+JOIN stock_lot l ON l.id = bl.lot_id
+JOIN hospital_drug hd ON hd.id = l.hospital_drug_id
+JOIN drug_master dm ON dm.id = hd.drug_master_id
+WHERE t.from_hospital_id = app_hospital() OR t.to_hospital_id = app_hospital()
+UNION ALL
+SELECT t.id, t.ref_type, t.ref_id, t.from_hospital_id, t.to_hospital_id, t.status,
+       dm.id, dm.generic_name, dm.strength, dm.dosage_form, dm.base_unit,
+       dm.is_cold_chain, dm.is_blood_product,
+       l.lot_no, l.expiry_date, al.qty,
+       t.task_no, t.eta_at, veh.plate, drv.display_name
+FROM transport_task t
+LEFT JOIN vehicle veh ON veh.id = t.vehicle_id
+LEFT JOIN app_user drv ON drv.id = t.driver_id
+JOIN allocation_line al ON t.ref_type = 'ALLOCATION_LINE' AND al.id = t.ref_id
+JOIN allocation_plan ap ON ap.id = al.plan_id
+JOIN pool_entry pe ON pe.id = ap.pool_entry_id
+JOIN near_expiry_item ne ON ne.id = pe.near_expiry_item_id
+JOIN stock_lot l ON l.id = ne.lot_id
+JOIN hospital_drug hd ON hd.id = l.hospital_drug_id
+JOIN drug_master dm ON dm.id = hd.drug_master_id
+WHERE t.from_hospital_id = app_hospital() OR t.to_hospital_id = app_hospital();
+GRANT SELECT ON v_transport_item TO doorare_app;

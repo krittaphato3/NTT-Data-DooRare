@@ -2199,5 +2199,177 @@
    }
   ],
   "n_tp_total": 8
+ },
+ "VITAMIN_C_100": {
+  "real": true,
+  "gp": "665277",
+  "gp_name": "ascorbic acid 100 mg tablet",
+  "disp": {
+   "name": "Ascorbic acid",
+   "strength": "100 mg",
+   "form": "tablet"
+  },
+  "subs": [
+   {
+    "id": "225901",
+    "name": "ascorbic acid"
+   }
+  ],
+  "vtm": [
+   {
+    "id": "665103",
+    "name": "ascorbic acid"
+   }
+  ],
+  "gpu": {
+   "id": "665283",
+   "name": "ascorbic acid 100 mg tablet, 1 tablet"
+  },
+  "gpp": [
+   {
+    "id": "1050047",
+    "name": "ascorbic acid 100 mg tablet, 1000 tablet, 1 bottle"
+   }
+  ],
+  "tps": [
+   {
+    "tp": {
+     "id": "1009775",
+     "name": "VITAMIN C (พาตาร์แลบ) (ascorbic acid 100 mg) tablet",
+     "mfr": "พาตาร์แลบ"
+    },
+    "tpu": {
+     "id": "1009781",
+     "name": "VITAMIN C (พาตาร์แลบ) (ascorbic acid 100 mg) tablet, 1 tablet"
+    },
+    "tpp": [
+     {
+      "id": "1248122",
+      "name": "VITAMIN C (พาตาร์แลบ) (ascorbic acid 100 mg) tablet, 1000 tablet, 1 jar"
+     }
+    ]
+   },
+   {
+    "tp": {
+     "id": "1050023",
+     "name": "ASCORBIC ACID (ชินต้าเทรดดิ้ง) (ascorbic acid 100 mg) tablet",
+     "mfr": "ชินต้าเทรดดิ้ง"
+    },
+    "tpu": {
+     "id": "1050034",
+     "name": "ASCORBIC ACID (ชินต้าเทรดดิ้ง) (ascorbic acid 100 mg) tablet, 1 tablet"
+    },
+    "tpp": [
+     {
+      "id": "1050052",
+      "name": "ASCORBIC ACID (ชินต้าเทรดดิ้ง) (ascorbic acid 100 mg) tablet, 1000 tablet, 1 bottle"
+     }
+    ]
+   },
+   {
+    "tp": {
+     "id": "1181662",
+     "name": "VISTAR-C 100 (ห้างขายยาตราเจ็ดดาว) (ascorbic acid 100 mg) tablet",
+     "mfr": "ห้างขายยาตราเจ็ดดาว"
+    },
+    "tpu": {
+     "id": "1181670",
+     "name": "VISTAR-C 100 (ห้างขายยาตราเจ็ดดาว) (ascorbic acid 100 mg) tablet, 1 tablet"
+    },
+    "tpp": [
+     {
+      "id": "1181691",
+      "name": "VISTAR-C 100 (ห้างขายยาตราเจ็ดดาว) (ascorbic acid 100 mg) tablet, 1000 tablet, 1 jar"
+     }
+    ]
+   }
+  ],
+  "n_tp_total": 19
+ },
+ "POVIDONE_IODINE_10": {
+  "real": true,
+  "gp": "901938",
+  "gp_name": "povidone iodine 10 g/100 mL cutaneous solution",
+  "disp": {
+   "name": "Povidone iodine",
+   "strength": "10 g/100 mL",
+   "form": "cutaneous solution"
+  },
+  "subs": [
+   {
+    "id": "901901",
+    "name": "povidone iodine"
+   }
+  ],
+  "vtm": [
+   {
+    "id": "901929",
+    "name": "povidone iodine"
+   }
+  ],
+  "gpu": {
+   "id": "743257",
+   "name": "povidone iodine 10 g/100 mL cutaneous solution, 5 L gallon"
+  },
+  "gpp": [
+   {
+    "id": "1105523",
+    "name": "povidone iodine 10 g/100 mL cutaneous solution, 4 x 5 L gallon, 1 box"
+   }
+  ],
+  "tps": [
+   {
+    "tp": {
+     "id": "814339",
+     "name": "GERMIDINE (ไทยแจแปนแลบบอเรเตอรี่ส์) (povidone iodine 10 g/100 mL) cutaneous solution",
+     "mfr": "ไทยแจแปนแลบบอเรเตอรี่ส์"
+    },
+    "tpu": {
+     "id": "1355939",
+     "name": "GERMIDINE (ไทยแจแปนแลบบอเรเตอรี่ส์) (povidone iodine 10 g/100 mL) cutaneous solution, 450 mL bottle"
+    },
+    "tpp": [
+     {
+      "id": "1355941",
+      "name": "GERMIDINE (ไทยแจแปนแลบบอเรเตอรี่ส์) (povidone iodine 10 g/100 mL) cutaneous solution, 450 mL bottle"
+     }
+    ]
+   },
+   {
+    "tp": {
+     "id": "973237",
+     "name": "LEOPOVIDONE (ห้างขายยาตราเสือดาว) (povidone iodine 10 g/100 mL) cutaneous solution",
+     "mfr": "ห้างขายยาตราเสือดาว"
+    },
+    "tpu": {
+     "id": "1362213",
+     "name": "LEOPOVIDONE (ห้างขายยาตราเสือดาว) (povidone iodine 10 g/100 mL) cutaneous solution, 2 L bottle"
+    },
+    "tpp": [
+     {
+      "id": "1362232",
+      "name": "LEOPOVIDONE (ห้างขายยาตราเสือดาว) (povidone iodine 10 g/100 mL) cutaneous solution, 2 L bottle"
+     }
+    ]
+   },
+   {
+    "tp": {
+     "id": "1017761",
+     "name": "POVIDONE IODINE SOLUTION (อินแพคฟาร์มา) (povidone iodine 10 g/100 mL) cutaneous solution",
+     "mfr": "อินแพคฟาร์มา"
+    },
+    "tpu": {
+     "id": "1017774",
+     "name": "POVIDONE IODINE SOLUTION (อินแพคฟาร์มา) (povidone iodine 10 g/100 mL) cutaneous solution, 450 mL bottle"
+    },
+    "tpp": [
+     {
+      "id": "1045909",
+      "name": "POVIDONE IODINE SOLUTION (อินแพคฟาร์มา) (povidone iodine 10 g/100 mL) cutaneous solution, 100 mL bottle, 1 bottle"
+     }
+    ]
+   }
+  ],
+  "n_tp_total": 49
  }
 }

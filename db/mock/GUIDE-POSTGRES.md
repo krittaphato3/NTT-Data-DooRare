@@ -1,14 +1,14 @@
 # คู่มือ mock data แบบ PostgreSQL (Doo rare)
 
-ข้อมูลจำลอง 10 ปี (1 ต.ค. 2559 – 30 ก.ย. 2569) · 5 โรงพยาบาล · 37 รายการ · รวม ~1.41 ล้านแถว · spec v1.3 · seed 20260930
-รหัสยาใช้ **TMT จริง** (release 5 ต.ค. 2569) 30 จาก 37 รายการ (อีก 7 = เวชภัณฑ์ 6 + เลือด 1 ไม่ใช้ TMT)
+ข้อมูลจำลอง 10 ปี (1 ต.ค. 2559 – 30 ก.ย. 2569) · 5 โรงพยาบาล · 41 รายการ · รวม ~1.52 ล้านแถว · schema v1.5 · seed 20260930
+รหัสยาใช้ **TMT จริง** (release 5 ต.ค. 2569) 32 จาก 41 รายการ (อีก 9 = เวชภัณฑ์ 8 + เลือด 1 ไม่ใช้ TMT)
 
 ## 1) ไฟล์ในชุดนี้
 
 | ไฟล์ | ใช้ทำอะไร |
 |---|---|
-| `schema.sql` | สร้างตารางทั้งหมด (62 ตาราง + constraint + trigger) ตัวเดียวกับใน spec v1.3 |
-| `csv/` | ข้อมูล 48 ไฟล์ ไฟล์ละตาราง (อีก 14 ตารางใน schema ไม่มีข้อมูลเริ่มต้น) |
+| `schema.sql` | สร้างตารางทั้งหมด (66 ตาราง + constraint + trigger + RLS) schema v1.5 |
+| `csv/` | ข้อมูล 51 ไฟล์ ไฟล์ละตาราง (อีก 13 ตารางใน schema ไม่มีข้อมูลเริ่มต้น เช่น forecast_*, agent_*, document, audit_log, notification) |
 | `load.sql` | คำสั่งโหลด csv เข้าตาราง (รันจากในโฟลเดอร์ `csv/`) |
 | `views.sql` | **view ให้อ่านง่าย** มีชื่อ รพ./ชื่อยาแทน ID และ `v_f1_training` สำหรับ train |
 | `verify.py` + `verify_output.txt` | ตัวตรวจ (โหลดเข้า PostgreSQL 16 แล้วตรวจ FK/CHECK/ยอดสต็อก/pattern) → ผ่านทุกข้อ |
@@ -37,7 +37,7 @@ select * from v_f1_training where item_code = '747132' limit 5;
 
 F1 แบ่งยาเป็น 3 วิธีตาม spec F-02 (MA/ES, Quantile, Min-Max) ข้อมูลชุดเดียวนี้ใช้ได้ทุกวิธี การจัดกลุ่มคำนวณจาก CV และสัดส่วนวันที่มีการใช้ของแต่ละ รพ.+ยา
 
-## 4) ตาราง (48 ตารางที่มีข้อมูล) แยกตามหมวด
+## 4) ตาราง (51 ตารางที่มีข้อมูล) แยกตามหมวด
 
 **ข้อมูลหลัก**
 
@@ -55,62 +55,62 @@ F1 แบ่งยาเป็น 3 วิธีตาม spec F-02 (MA/ES, Quan
 
 | ตาราง | แถว | คอลัมน์ |
 |---|---|---|
-| `drug_master` | 37 | id, item_type, gp_id, internal_code, generic_name, strength, dosage_form, base_unit, is_cold_chain, is_blood_product, is_high_alert, emergency_class, created_at |
-| `tmt_reference` | 346 | tmt_id, level, name, parent_tmt_id, gp_id |
-| `hospital_drug` | 171 | id, hospital_id, local_code, local_name, unit_price_thb, local_unit, tmt_id, gp_id, active, ved, abc, expiry_threshold_days, drug_master_id |
-| `drug_mapping` | 171 | id, hospital_drug_id, drug_master_id, status, method, confidence, unit_conversion_factor, local_pack_unit, base_units_per_pack, manufacturer, suggested_by, verified_by, verified_at, reject_reason, created_at, updated_at, version |
-| `mapping_candidate` | 42 | id, drug_mapping_id, tmt_id, score, score_parts, rank |
-| `drug_mapping_history` | 460 | drug_mapping_id, from_status, to_status, actor_id, note, occurred_at |
+| `drug_master` | 41 | id, item_type, gp_id, internal_code, generic_name, strength, dosage_form, base_unit, is_cold_chain, is_blood_product, is_high_alert, emergency_class, created_at |
+| `tmt_reference` | 374 | tmt_id, level, name, parent_tmt_id, gp_id |
+| `hospital_drug` | 191 | id, hospital_id, local_code, local_name, unit_price_thb, local_unit, tmt_id, gp_id, active, ved, abc, expiry_threshold_days, drug_master_id |
+| `drug_mapping` | 191 | id, hospital_drug_id, drug_master_id, status, method, confidence, unit_conversion_factor, local_pack_unit, base_units_per_pack, manufacturer, suggested_by, verified_by, verified_at, reject_reason, created_at, updated_at, version |
+| `mapping_candidate` | 48 | id, drug_mapping_id, tmt_id, score, score_parts, rank |
+| `drug_mapping_history` | 510 | drug_mapping_id, from_status, to_status, actor_id, note, occurred_at |
 | `hospital_import` | 605 | id, hospital_id, kind, file_key, rows_total, rows_ok, rows_error, errors, created_by, created_at |
-| `stock_lot` | 15,173 | id, hospital_id, hospital_drug_id, lot_no, expiry_date, manufacturer, pack_size_base_units, qty_on_hand, qty_held, updated_at, version |
-| `stock_ledger` | 118,506 | hospital_id, lot_id, delta, reason, ref_type, ref_id, occurred_at, actor_id |
-| `stock_snapshot` | 624,492 | hospital_id, hospital_drug_id, snap_date, qty_on_hand, qty_incoming, qty_held |
-| `usage_daily` | 624,492 | hospital_id, hospital_drug_id, usage_date, qty_used |
-| `incoming_order` | 14,532 | id, hospital_id, hospital_drug_id, qty, expected_date, status, lead_time_days |
-| `stock_alert` | 1,855 | id, hospital_id, hospital_drug_id, type, severity, status, stock_qty, incoming_qty, days_cover, suggested_borrow_qty, forecast_result_id, snoozed_until, created_at, updated_at, version |
-| `regional_warehouse_stock` | 37 | region_id, drug_master_id, qty, updated_at |
+| `stock_lot` | 16,534 | id, hospital_id, hospital_drug_id, lot_no, expiry_date, manufacturer, pack_size_base_units, qty_on_hand, qty_held, updated_at, version |
+| `stock_ledger` | 128,344 | hospital_id, lot_id, delta, reason, ref_type, ref_id, occurred_at, actor_id |
+| `stock_snapshot` | 672,367 | hospital_id, hospital_drug_id, snap_date, qty_on_hand, qty_incoming, qty_held |
+| `usage_daily` | 672,367 | hospital_id, hospital_drug_id, usage_date, qty_used |
+| `incoming_order` | 15,961 | id, hospital_id, hospital_drug_id, qty, expected_date, status, lead_time_days |
+| `stock_alert` | 1,667 | id, hospital_id, hospital_drug_id, type, severity, status, stock_qty, incoming_qty, days_cover, suggested_borrow_qty, forecast_result_id, snoozed_until, created_at, updated_at, version |
+| `regional_warehouse_stock` | 41 | region_id, drug_master_id, qty, updated_at |
 | `context_signal` | 73 | id, region_id, signal_type, payload, valid_from, valid_to, source, approved_by, created_at |
 
 **F1 ยืมยา**
 
 | ตาราง | แถว | คอลัมน์ |
 |---|---|---|
-| `borrow_request` | 637 | id, request_no, borrower_hospital_id, context, status, urgency, stock_alert_id, incident_id, reason, created_by, approved_by, approved_at, ladder, first_round_qty, stop_threshold, created_at, updated_at, version |
-| `borrow_request_item` | 669 | id, request_id, kind, drug_master_id, kit_type_id, qty_requested, qty_fulfilled, r_value |
-| `borrow_leg` | 856 | id, request_id, lender_hospital_id, round_no, rank_in_ladder, status, score_si, score_parts, t_transit_min, window_max_days, qty_asked, qty_accepted, qty_received, sent_at, deadline_at, reminded_at, responded_at, responded_by, reject_reason, message_text |
-| `borrow_leg_lot` | 704 | id, leg_id, lot_id, qty |
-| `return_obligation` | 721 | id, leg_id, debtor_hospital_id, creditor_hospital_id, drug_master_id, kit_type_id, qty, qty_returned, return_mode, due_date, status, returned_at, waived_reason, waived_by |
-| `return_receipt` | 938 | id, obligation_id, drug_master_id, lot_id, qty_local, qty_base, received_by, received_at |
-| `transport_task` | 744 | id, ref_type, ref_id, from_hospital_id, to_hospital_id, status, driver_id, cancel_requested_by, cancel_consent_by, loaded_at, departed_at, arrived_at, received_at, created_at, updated_at, version |
-| `transport_event` | 2,976 | id, task_id, client_event_id, seq, to_status, captured_at, received_at, actor_id, photo_keys, applied, reject_reason |
-| `reliability_stat` | 374 | lender_hospital_id, month, requests_received, accepted_on_time |
+| `borrow_request` | 574 | id, request_no, borrower_hospital_id, context, status, urgency, stock_alert_id, incident_id, reason, created_by, approved_by, approved_at, ladder, first_round_qty, stop_threshold, created_at, updated_at, version |
+| `borrow_request_item` | 594 | id, request_id, kind, drug_master_id, kit_type_id, qty_requested, qty_fulfilled, r_value |
+| `borrow_leg` | 777 | id, request_id, lender_hospital_id, round_no, rank_in_ladder, status, score_si, score_parts, t_transit_min, window_max_days, qty_asked, qty_accepted, qty_received, sent_at, deadline_at, reminded_at, responded_at, responded_by, reject_reason, message_text |
+| `borrow_leg_lot` | 618 | id, leg_id, lot_id, qty |
+| `return_obligation` | 641 | id, leg_id, debtor_hospital_id, creditor_hospital_id, drug_master_id, kit_type_id, qty, qty_returned, return_mode, due_date, status, returned_at, waived_reason, waived_by |
+| `return_receipt` | 809 | id, obligation_id, drug_master_id, lot_id, qty_local, qty_base, received_by, received_at |
+| `transport_task` | 679 | id, ref_type, ref_id, from_hospital_id, to_hospital_id, status, driver_id, cancel_requested_by, cancel_consent_by, loaded_at, departed_at, arrived_at, received_at, created_at, updated_at, version, task_no, vehicle_id, eta_at, cancel_reason |
+| `transport_event` | 2,716 | id, task_id, client_event_id, seq, to_status, captured_at, received_at, actor_id, photo_keys, applied, reject_reason |
+| `reliability_stat` | 355 | lender_hospital_id, month, requests_received, accepted_on_time |
 
 **F2 ใกล้หมดอายุ**
 
 | ตาราง | แถว | คอลัมน์ |
 |---|---|---|
-| `near_expiry_item` | 128 | id, hospital_id, lot_id, status, qty, days_left, value_thb, decided_by, decided_at, note, review_after, created_at, updated_at, version |
-| `pool_entry` | 81 | id, region_id, near_expiry_item_id, qty_available, released_at |
-| `allocation_plan` | 81 | id, plan_no, region_id, pool_entry_id, status, total_value_thb, total_transport_cost_thb, cost_ratio, economical, option_chosen, agent_run_id, approval_deadline, created_at, updated_at, version |
-| `allocation_line` | 55 | id, plan_id, receiver_hospital_id, qty, value_thb, expected_use_before_expiry, distance_km, transport_cost_thb, cold_chain |
-| `plan_approval` | 85 | id, plan_id, hospital_id, decision, decided_by, decided_at, comment |
-| `repeat_expiry_flag` | 5 | id, hospital_id, drug_master_id, level, lots_12m, value_12m_thb, suggestion, dismissed_until, created_at |
-| `value_record` | 613 | id, hospital_id, region_id, metric, period, value_thb, value_qty, ref_type, ref_id, detail, created_at |
+| `near_expiry_item` | 137 | id, hospital_id, lot_id, status, qty, days_left, value_thb, decided_by, decided_at, note, review_after, created_at, updated_at, version |
+| `pool_entry` | 82 | id, region_id, near_expiry_item_id, qty_available, released_at |
+| `allocation_plan` | 82 | id, plan_no, region_id, pool_entry_id, status, total_value_thb, total_transport_cost_thb, cost_ratio, economical, option_chosen, agent_run_id, approval_deadline, created_at, updated_at, version |
+| `allocation_line` | 58 | id, plan_id, receiver_hospital_id, qty, value_thb, expected_use_before_expiry, distance_km, transport_cost_thb, cold_chain |
+| `plan_approval` | 97 | id, plan_id, hospital_id, decision, decided_by, decided_at, comment |
+| `repeat_expiry_flag` | 7 | id, hospital_id, drug_master_id, level, lots_12m, value_12m_thb, suggestion, dismissed_until, created_at |
+| `value_record` | 655 | id, hospital_id, region_id, metric, period, value_thb, value_qty, ref_type, ref_id, detail, created_at |
 
 **F3 เหตุหมู่**
 
 | ตาราง | แถว | คอลัมน์ |
 |---|---|---|
 | `incident` | 66 | id, incident_no, hospital_id, status, location_lat, location_lon, location_text, reported_eta_min, created_by, duplicate_of, closed_at, created_at, updated_at, version |
-| `incident_patient_count` | 264 | incident_id, triage, count, updated_at |
-| `incident_usage` | 1,277 | id, incident_id, drug_master_id, kit_type_id, qty_used, recorded_by |
-| `emergency_plan` | 62 | id, incident_id, revision, status, estimated_need, critical_min, buffer, steps, shortfall, approved_by, approved_at, agent_run_id, created_at |
+| `incident_patient_count` | 274 | incident_id, triage, count, updated_at |
+| `incident_usage` | 1,331 | id, incident_id, drug_master_id, kit_type_id, qty_used, recorded_by |
+| `emergency_plan` | 64 | id, incident_id, revision, status, estimated_need, critical_min, buffer, steps, shortfall, approved_by, approved_at, agent_run_id, created_at |
 | `kit_type` | 7 | id, code, name, description, needs_cold_chain, active |
 | `kit_component` | 29 | kit_type_id, drug_master_id, qty_per_kit |
 | `kit_recipe` | 18 | triage, kit_type_id, qty_per_patient, is_critical_min |
 | `incident_extra_rule` | 10 | triage, drug_master_id, qty_per_patient, is_critical_min |
 | `kit_stock` | 35 | hospital_id, kit_type_id, qty_ready, qty_held, updated_at |
-| `kit_pack_task` | 45 | id, plan_id, hospital_id, kit_type_id, qty, status, confirmed_by, confirmed_at |
+| `kit_pack_task` | 28 | id, plan_id, hospital_id, kit_type_id, qty, status, confirmed_by, confirmed_at |
 
 คอลัมน์ `*_id` เป็น UUID เชื่อมตารางกัน (อ่านยาก) จึงมี view ใน `views.sql`: `v_f1_training`, `v_hospital_drug`, `v_stock_lot`, `v_borrow`
 
@@ -120,20 +120,20 @@ F1 แบ่งยาเป็น 3 วิธีตาม spec F-02 (MA/ES, Quan
 
 | ชนิด | จำนวน | รหัส | การจับคู่ (`drug_mapping.method`) |
 |---|---|---|---|
-| DRUG | 30 | `gp_id` = TMT GP จริง (เช่น Paracetamol 500 mg tablet = `747132`) | `TMT` (VERIFIED 124 / SUGGESTED 8 / UNMATCHED 6) |
-| SUPPLY | 6 | ไม่มี TMT, `gp_id` ว่าง, ใช้ `internal_code` SUP-0001..0006 | `CENTRAL_LIST` ผู้ดูแลระบบดูแลรายการกลาง, VERIFIED ทั้งหมด, ไม่มีคะแนนแนะนำ |
+| DRUG | 32 | `gp_id` = TMT GP จริง (เช่น Paracetamol 500 mg tablet = `747132`) | `TMT` (VERIFIED 132 / SUGGESTED 10 / UNMATCHED 5 / REJECTED 1) |
+| SUPPLY | 8 | ไม่มี TMT, `gp_id` ว่าง, ใช้ `internal_code` SUP-0001..0008 | `CENTRAL_LIST` ผู้ดูแลระบบดูแลรายการกลาง, VERIFIED ทั้งหมด, ไม่มีคะแนนแนะนำ |
 | BLOOD | 1 | `internal_code` BLD-0001 | `CENTRAL_LIST` |
 
-- DRUG 30 รายการ: `tmt_reference` มีสาย SUBS→VTM→GP→GPU→GPP และ GP→TP→TPU→TPP ชื่อ FSN จริงทั้งหมด (ORS จริงถึง GP/GPP เท่านั้น เพราะ TMT ไม่มีระดับอื่น) ไม่มีรหัส TMT ปลอมในข้อมูลแล้ว
+- DRUG 32 รายการ: `tmt_reference` มีสาย SUBS→VTM→GP→GPU→GPP และ GP→TP→TPU→TPP ชื่อ FSN จริงทั้งหมด (ORS จริงถึง GP/GPP เท่านั้น เพราะ TMT ไม่มีระดับอื่น) ไม่มีรหัส TMT ปลอมในข้อมูลแล้ว
 - **ไม่มีรหัส สปสช. 24 หลักแล้ว** (ตัดทั้งคอลัมน์และตาราง `nhso_catalogue`)
-- เวชภัณฑ์ 6 รายการ: N95, PPE, ATK, ถุงมือไนไตรล์, IV catheter 18G, ชุดทำแผล
+- เวชภัณฑ์ 8 รายการ: N95, PPE, ATK, ถุงมือไนไตรล์, IV catheter 18G, ชุดทำแผล, สำลี (SUP-0007), พลาสเตอร์ปิดแผล (SUP-0008)
 - F4 (จับคู่รหัส) เป็นฟีเจอร์ย่อยของ F2
 
 ## 6) จริงหรือ mock
 
 | ส่วน | สถานะ |
 |---|---|
-| รหัส/ชื่อ TMT ของยา 30 รายการ | จริง |
+| รหัส/ชื่อ TMT ของยา 32 รายการ | จริง |
 | เวชภัณฑ์ 6 + เลือด 1 (ชื่อ, รหัสภายใน) | mock |
 | วันที่ระลอก COVID, ปีไข้เลือดออก/ไข้หวัดใหญ่ระบาด, เทศกาล | อิงข้อมูลสาธารณะ (ดู `SOURCES.md`) |
 | ความแรงของ pattern ต่อยาแต่ละตัว | สมมติ |
@@ -148,3 +148,34 @@ python3 tools/build_tmt.py <โฟลเดอร์ TMTRF…_BONUS>   # (ทำ
 python3 generate.py     # สร้าง csv/ + load.sql ใหม่ (ผลเหมือนเดิมทุกครั้ง)
 python3 verify.py       # ต้อง pip install pgserver psycopg2-binary
 ```
+
+
+## v1.5 (เพิ่มจาก v1.4)
+สร้างโดย `enrich_v15.py` (เรียกจาก `generate.py` ตอนท้าย ใช้ตัวสุ่มของตัวเอง seed+15 จึง **ไม่ทำให้ข้อมูล v1.4 เปลี่ยนค่า**):
+
+| ตาราง / คอลัมน์ | ข้อมูล |
+|---|---|
+| `hospital` +province, tier, bed_count, address, phone | โปรไฟล์ 5 รพ. (ค่าสมมติจาก `mock_config.yaml` > `v15`) |
+| `vehicle` (ใหม่) | 12 คัน (รพ.ละ 2–3) คันแรกของ รพ.ที่มี cold chain เป็นรถกล่องเย็น |
+| `transport_task` +task_no, vehicle_id, eta_at, cancel_reason | เลขงาน `TR-ปี-ลำดับ`, รถของ รพ.ผู้ส่ง (ของ cold chain ใช้รถกล่องเย็น), ETA |
+| `transport_event` +temperature_c | อุณหภูมิเฉพาะงาน cold chain (2–8 °C มีเกินบ้างเล็กน้อย) |
+| `incident` +incident_type, cancel_reason | ประเภทเหตุ (backfill) และเหตุผลของเหตุที่ยกเลิก |
+| `incident_patient_count` | เพิ่มแถว `UNKNOWN` (ผู้ป่วยที่ยังไม่ทราบระดับ) ราว 15% ของเหตุ |
+| `app_user` +mfa_enabled, last_login_at, last_seen_at | `last_login_at` ตรงกับ login_event ล่าสุด |
+| `app_user_role` (ใหม่) | CSV มีเฉพาะ role เพิ่มเติม 4 แถว; role หลักถูก trigger ใส่ให้ตอนโหลด app_user (รวม 48 แถว) |
+| `login_event` (ใหม่) | ประวัติ login 90 วัน (~2,900 แถว รวมล้มเหลวและอีเมลที่ไม่มีบัญชี) |
+
+view `v_transport_item` (รพ.ผู้รับเห็นยา/ล็อต/วันหมดอายุของของที่ส่งมา โดย RLS ของตารางจริงยังปิดอยู่) ดู `db/schema.sql`
+ตารางที่ยังว่างโดยตั้งใจ: forecast_*, agent_*, decision_log, document, audit_log(+context), notification, job_run, idempotency_key, transport_photo
+
+## เติมคอลัมน์ที่เคยว่าง (v1.4) และ cold start
+| ข้อมูล | ค่าใน mock |
+|---|---|
+| `hospital_drug.standard_lead_time_days` | ทุกแถว มาจาก lead time ของรายการ (รพ.นอกเมืองนานกว่า 1.3 เท่า) |
+| `hospital_drug.min_level / max_level` | 15 แถวที่เข้ากฎ Min-Max (VED = D และราคา ≤ 50 บาท ตาม F-02 / BR-F1a-005): min = ยอดใช้เฉลี่ย x (lead time + 7 วัน), max = min + 30 วัน จากยอดใช้ 365 วันล่าสุด |
+| `hospital_drug.is_seasonal` | 10 แถว: วัคซีนไข้หวัดใหญ่ (campaign) และ oseltamivir เท่านั้น (เป็นธงมือ; การตรวจฤดูกาลอัตโนมัติเป็นหน้าที่ pipeline) |
+| `hospital_drug.lend_in_packs` | 15 แถว: วัคซีน dT / ไข้หวัดใหญ่ / พิษสุนัขบ้า |
+| `hospital_drug.method_override` | ว่างทั้งหมด (เป็นค่าที่ DATA_ADMIN ตั้งเอง) |
+| `drug_master.is_controlled` | morphine, fentanyl, ketamine (ยาควบคุมพิเศษ ไม่เข้ากระบวนการอัตโนมัติ) |
+| cold start | 7 รายการ รพ.–ยามีประวัติสั้น (46–68 วัน): วัคซีนพิษสุนัขบ้าที่ รพ.บางบ่อ (เริ่ม 16 ส.ค. 2569), Salbutamol nebuliser ทุก รพ. (5 ส.ค.), Dexamethasone inj ที่ รพ.บางเสาธง (25 ก.ค.) ทุกรายการเป็น V/E จึงเข้า Quantile ตามกฎ F-02 ข้อ 3 |
+ตั้งค่าได้ใน `config/mock_config.yaml` (`controlled`, `lend_in_packs`, `seasonal`, `start`)

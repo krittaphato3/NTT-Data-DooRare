@@ -1,9 +1,23 @@
 [
   {
+    "path": "sessions\\2026-10-18-claude-db-schema-v15.md",
+    "title": "DB schema v1.5 (UI data gaps, multi-role, login history)",
+    "summary": "schema v1.5 + enrich_v15.py mock; v_transport_item view; several roles per user",
+    "tags": "session, database, schema, postgres, mock",
+    "date": "2026-10-18"
+  },
+  {
     "path": "context\\current-task.md",
     "title": "Current Task",
     "summary": "Current Task",
     "tags": "session",
+    "date": "2026-10-17"
+  },
+  {
+    "path": "sessions\\2026-10-17-claude-er-structure-fix.md",
+    "title": "ER role structure moved out of pharmacist",
+    "summary": "Incident console page/data moved to roles/er; ER owns its sidebar like warehouse/driver",
+    "tags": "session, frontend, er, structure",
     "date": "2026-10-17"
   },
   {
