@@ -138,12 +138,13 @@ export function LoginPage() {
       <header
         style={{
           height: 64,
-          background: '#0F2A5C',
+          background: '#FFFFFF',
+          borderBottom: '1px solid #E2E8F0',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           padding: '0 24px',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -152,8 +153,8 @@ export function LoginPage() {
           <span
             style={{
               fontSize: 12,
-              color: 'rgba(255,255,255,0.75)',
-              borderLeft: '1px solid rgba(255,255,255,0.2)',
+              color: '#64748B',
+              borderLeft: '1px solid #CBD5E1',
               paddingLeft: 12,
               marginLeft: 4,
             }}
@@ -169,9 +170,9 @@ export function LoginPage() {
               display: 'flex',
               alignItems: 'center',
               gap: 6,
-              background: dbConnected ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)',
-              border: `1px solid ${dbConnected ? '#10B981' : '#EF4444'}`,
-              color: dbConnected ? '#6EE7B7' : '#FCA5A5',
+              background: dbConnected ? '#ECFDF5' : '#FEF2F2',
+              border: `1px solid ${dbConnected ? '#A7F3D0' : '#FECACA'}`,
+              color: dbConnected ? '#065F46' : '#991B1B',
               padding: '4px 10px',
               borderRadius: 20,
               fontSize: 11.5,
@@ -184,7 +185,7 @@ export function LoginPage() {
                 height: 7,
                 borderRadius: '50%',
                 background: dbConnected ? '#10B981' : '#EF4444',
-                boxShadow: dbConnected ? '0 0 8px #10B981' : 'none',
+                boxShadow: dbConnected ? '0 0 6px rgba(16, 185, 129, 0.4)' : 'none',
               }}
             />
             {dbConnected ? 'PostgreSQL (Port 5442) ออนไลน์' : 'PostgreSQL ออฟไลน์'}
@@ -196,7 +197,7 @@ export function LoginPage() {
             style={{
               background: 'transparent',
               border: 'none',
-              color: 'rgba(255,255,255,0.6)',
+              color: '#64748B',
               cursor: 'pointer',
               fontSize: 12,
               padding: 4,
@@ -462,7 +463,7 @@ export function LoginPage() {
                   style={{
                     flex: 2,
                     height: 40,
-                    background: '#0F2A5C',
+                    background: '#1D4ED8',
                     border: 'none',
                     borderRadius: 8,
                     color: '#FFFFFF',
@@ -592,7 +593,7 @@ export function LoginPage() {
                 style={{
                   marginTop: 6,
                   height: 42,
-                  background: '#0F2A5C',
+                  background: '#1D4ED8',
                   color: '#FFFFFF',
                   border: 'none',
                   borderRadius: 8,
@@ -604,7 +605,7 @@ export function LoginPage() {
                   justifyContent: 'center',
                   gap: 8,
                   transition: 'background 0.15s',
-                  boxShadow: '0 2px 6px rgba(15, 42, 92, 0.25)',
+                  boxShadow: '0 2px 6px rgba(29, 78, 216, 0.25)',
                 }}
               >
                 {loading ? 'กำลังตรวจสอบสิทธิ์...' : 'เข้าสู่ระบบ (Sign In)'}
