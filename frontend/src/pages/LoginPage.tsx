@@ -138,13 +138,13 @@ export function LoginPage() {
       <header
         style={{
           height: 64,
-          background: '#FFFFFF',
-          borderBottom: '1px solid #E2E8F0',
+          background: 'linear-gradient(90deg, #1E40AF 0%, #2563EB 100%)',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.15)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           padding: '0 24px',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+          boxShadow: '0 2px 10px rgba(30, 64, 175, 0.2)',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -153,10 +153,11 @@ export function LoginPage() {
           <span
             style={{
               fontSize: 12,
-              color: '#64748B',
-              borderLeft: '1px solid #CBD5E1',
+              color: 'rgba(255, 255, 255, 0.9)',
+              borderLeft: '1px solid rgba(255, 255, 255, 0.25)',
               paddingLeft: 12,
               marginLeft: 4,
+              fontWeight: 500,
             }}
           >
             ระบบสำรองและบริหารจัดการยาขาดแคลน เขตสุขภาพที่ 6
@@ -170,13 +171,14 @@ export function LoginPage() {
               display: 'flex',
               alignItems: 'center',
               gap: 6,
-              background: dbConnected ? '#ECFDF5' : '#FEF2F2',
-              border: `1px solid ${dbConnected ? '#A7F3D0' : '#FECACA'}`,
-              color: dbConnected ? '#065F46' : '#991B1B',
-              padding: '4px 10px',
+              background: dbConnected ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)',
+              border: `1px solid ${dbConnected ? 'rgba(52, 211, 153, 0.5)' : 'rgba(248, 113, 113, 0.5)'}`,
+              color: '#FFFFFF',
+              padding: '4px 12px',
               borderRadius: 20,
               fontSize: 11.5,
-              fontWeight: 500,
+              fontWeight: 600,
+              backdropFilter: 'blur(8px)',
             }}
           >
             <span
@@ -184,8 +186,8 @@ export function LoginPage() {
                 width: 7,
                 height: 7,
                 borderRadius: '50%',
-                background: dbConnected ? '#10B981' : '#EF4444',
-                boxShadow: dbConnected ? '0 0 6px rgba(16, 185, 129, 0.4)' : 'none',
+                background: dbConnected ? '#34D399' : '#EF4444',
+                boxShadow: dbConnected ? '0 0 8px #34D399' : 'none',
               }}
             />
             {dbConnected ? 'PostgreSQL (Port 5442) ออนไลน์' : 'PostgreSQL ออฟไลน์'}
@@ -197,10 +199,11 @@ export function LoginPage() {
             style={{
               background: 'transparent',
               border: 'none',
-              color: '#64748B',
+              color: 'rgba(255, 255, 255, 0.85)',
               cursor: 'pointer',
               fontSize: 12,
               padding: 4,
+              fontWeight: 500,
             }}
           >
             ↻ ตรวจสอบ
