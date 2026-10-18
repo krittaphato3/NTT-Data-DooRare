@@ -12,7 +12,10 @@ declare global {
   }
 }
 
-const bearer = (req: Request): string => (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
+const bearer = (req: Request): string => {
+  const match = (req.headers.authorization || '').trim().match(/^Bearer\s+(.+)$/i);
+  return match ? match[1].trim() : '';
+};
 
 /**
  * 401 unless the request carries a valid session token. Attaches `req.user` (id, role, hospitalId…).

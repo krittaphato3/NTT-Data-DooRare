@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import { authService, AuthService } from './auth.service.js';
+import { scopeHospitalId } from '../../middleware/auth.js';
 
 export class AuthController {
   constructor(private service: AuthService = authService) {}
@@ -57,7 +58,9 @@ export class AuthController {
   getRecentLogins = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const limit = Number(req.query.limit || 25);
-      const hospitalId = typeof req.query.hospitalId === 'string' ? req.query.hospitalId : undefined;
+      // users bound to a hospital can only see their own hospital (SEC-002)
+      const requested = typeof req.query.hospitalId === 'string' ? req.query.hospitalId : undefined;
+      const hospitalId = scopeHospitalId(req) ?? requested;
       const data = await this.service.getRecentLogins(limit, hospitalId);
       res.status(200).json({ ok: true, ...data });
     } catch (err) {
