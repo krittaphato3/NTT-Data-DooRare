@@ -52,9 +52,8 @@ def run(out: Path, cfg: dict) -> dict:
     yaml_h = {h["code"]: h for h in cfg["hospitals"]}
     for h in hosp:
         p = v15["hospital_profile"][h["code"]]
-        name = h["name_th"]
         h["province"] = p["province"]
-        h["tier"] = "TERTIARY" if "ตติยภูมิ" in name else "COMMUNITY" if "ชุมชน" in name else "SECONDARY"
+        h["tier"] = p["tier"]   # from config, not guessed from the name
         h["bed_count"] = yaml_h[h["code"]]["beds"]
         h["address"] = p["address"]
         h["phone"] = p["phone"]

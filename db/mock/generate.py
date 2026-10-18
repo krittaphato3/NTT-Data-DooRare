@@ -63,7 +63,7 @@ for h in CFG["hospitals"]:
     hh["id"] = uid()
     HOSP.append(hh)
     add("hospital", id=hh["id"], region_id=REGION_ID, network_id=NETWORK_ID, code=h["code"], name_th=h["name_th"],
-        name_en=f"Demo Hospital {h['code'][1]}", lat=h["lat"], lon=h["lon"], is_urban=str(h["urban"]).lower(),
+        name_en=h.get("name_en", f"Demo Hospital {h['code'][1]}"), lat=h["lat"], lon=h["lon"], is_urban=str(h["urban"]).lower(),
         has_cold_chain=str(h["cold"]).lower(), has_blood_bank=str(h["blood_bank"]).lower(), active="true", created_at=ts(START - dt.timedelta(days=30)),
         updated_at=ts(START - dt.timedelta(days=30)), version=1)
 HBY = {h["code"]: h for h in HOSP}

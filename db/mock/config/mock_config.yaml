@@ -8,11 +8,11 @@ end_date: 2026-09-30
 # size = สัดส่วนปริมาณการใช้เทียบกับ A [สมมติ]; cold = รับของ cold chain จากการยืม/โอนได้ [สมมติ]
 # reliability = โอกาสตอบรับตรงเวลาเมื่อเป็นผู้ให้ยืม [สมมติ]
 hospitals:
-  - {code: HA, name_th: "โรงพยาบาลตัวอย่าง เอ (ตติยภูมิ)",     lat: 13.7563, lon: 100.5018, urban: true,  size: 1.00, cold: true,  reliability: 0.92, blood_bank: true, beds: 800}
-  - {code: HB, name_th: "โรงพยาบาลตัวอย่าง บี (ทุติยภูมิ)",     lat: 13.79,   lon: 100.54,   urban: true,  size: 0.60, cold: true,  reliability: 0.90, blood_bank: true, beds: 450}
-  - {code: HC, name_th: "โรงพยาบาลตัวอย่าง ซี (ทุติยภูมิ)",     lat: 13.70,   lon: 100.45,   urban: true,  size: 0.45, cold: false, reliability: 0.84, blood_bank: false, beds: 350}
-  - {code: HD, name_th: "โรงพยาบาลตัวอย่าง ดี (ชุมชน ชานเมือง)", lat: 14.02,   lon: 100.73,   urban: false, size: 0.22, cold: false, reliability: 0.70, blood_bank: false, beds: 120}
-  - {code: HE, name_th: "โรงพยาบาลตัวอย่าง อี (ทุติยภูมิ)",     lat: 13.85,   lon: 100.60,   urban: true,  size: 0.35, cold: true,  reliability: 0.80, blood_bank: true, beds: 250}
+  - {code: HA, name_th: "โรงพยาบาลสมุทรปราการ", name_en: "Samut Prakan Hospital", lat: 13.7563, lon: 100.5018, urban: true,  size: 1.00, cold: true,  reliability: 0.92, blood_bank: true, beds: 650}
+  - {code: HB, name_th: "โรงพยาบาลบางพลี", name_en: "Bang Phli Hospital", lat: 13.79,   lon: 100.54,   urban: true,  size: 0.60, cold: true,  reliability: 0.90, blood_bank: true, beds: 280}
+  - {code: HC, name_th: "โรงพยาบาลพระสมุทรเจดีย์สวาทยานนท์", name_en: "Phra Samut Chedi Hospital", lat: 13.70,   lon: 100.45,   urban: true,  size: 0.45, cold: false, reliability: 0.84, blood_bank: false, beds: 350}
+  - {code: HD, name_th: "โรงพยาบาลบางบ่อ", name_en: "Bang Bo Hospital", lat: 14.02,   lon: 100.73,   urban: false, size: 0.22, cold: false, reliability: 0.70, blood_bank: false, beds: 120}
+  - {code: HE, name_th: "โรงพยาบาลบางเสาธง", name_en: "Bang Sao Thong Hospital", lat: 13.85,   lon: 100.60,   urban: true,  size: 0.35, cold: true,  reliability: 0.80, blood_bank: true, beds: 150}
 
 # ---------------- ช่วงเหตุการณ์ COVID [ยืนยัน/ประมาณ/สมมติ ตามรายงาน A1] ----------------
 # favi/remd/atk = สัดส่วนของ "ค่าพีค" (ยาที่ไม่ใช้เลยก่อนโควิด); para/dexa/ppe = ตัวคูณจาก baseline
@@ -210,12 +210,12 @@ drugs:
 # ---------------- v1.5: ข้อมูลโปรไฟล์/ขนส่ง/login ที่ UI ต้องใช้ [สมมติทั้งหมด] ----------------
 # enrich_v15.py ใช้ตัวสุ่มของตัวเอง (seed + 15) จึงไม่ทำให้ข้อมูลเดิมเปลี่ยนค่า
 v15:
-  hospital_profile:       # bed_count มาจาก hospitals[].beds; tier มาจากชื่อ (ตติยภูมิ/ทุติยภูมิ/ชุมชน)
-    HA: {province: "กรุงเทพมหานคร", address: "99 ถนนตัวอย่าง แขวงตัวอย่าง เขตตัวอย่าง กรุงเทพมหานคร 10100", phone: "02-111-0001"}
-    HB: {province: "นนทบุรี",       address: "88 ถนนตัวอย่าง ตำบลตัวอย่าง อำเภอเมือง นนทบุรี 11000",             phone: "02-111-0002"}
-    HC: {province: "สมุทรปราการ",   address: "77 ถนนตัวอย่าง ตำบลตัวอย่าง อำเภอเมือง สมุทรปราการ 10270",         phone: "02-111-0003"}
-    HD: {province: "ปทุมธานี",      address: "66 ถนนตัวอย่าง ตำบลตัวอย่าง อำเภอลำลูกกา ปทุมธานี 12150",          phone: "02-111-0004"}
-    HE: {province: "นนทบุรี",       address: "55 ถนนตัวอย่าง ตำบลตัวอย่าง อำเภอปากเกร็ด นนทบุรี 11120",          phone: "02-111-0005"}
+  hospital_profile:       # ชื่อ/พิกัดเป็นของ hospitals[] ด้านบน; bed_count มาจาก hospitals[].beds; ที่อยู่/เบอร์/จำนวนเตียง/ระดับ เป็นค่า [สมมติ]
+    HA: {tier: TERTIARY,  province: "สมุทรปราการ", address: "ที่อยู่สมมติ ถนนตัวอย่าง ตำบลปากน้ำ อำเภอเมืองสมุทรปราการ สมุทรปราการ 10270", phone: "02-111-0001"}   # รพศ.
+    HB: {tier: SECONDARY, province: "สมุทรปราการ", address: "ที่อยู่สมมติ ถนนตัวอย่าง ตำบลบางพลีใหญ่ อำเภอบางพลี สมุทรปราการ 10540",         phone: "02-111-0002"}   # รพท.
+    HC: {tier: SECONDARY, province: "สมุทรปราการ", address: "ที่อยู่สมมติ ถนนตัวอย่าง ตำบลปากคลองบางปลากด อำเภอพระสมุทรเจดีย์ สมุทรปราการ 10290", phone: "02-111-0003"}
+    HD: {tier: COMMUNITY, province: "สมุทรปราการ", address: "ที่อยู่สมมติ ถนนตัวอย่าง ตำบลบางบ่อ อำเภอบางบ่อ สมุทรปราการ 10560",             phone: "02-111-0004"}   # รพช.
+    HE: {tier: COMMUNITY, province: "สมุทรปราการ", address: "ที่อยู่สมมติ ถนนตัวอย่าง ตำบลบางเสาธง อำเภอบางเสาธง สมุทรปราการ 10570",          phone: "02-111-0005"}   # รพช.
   vehicles_per_hospital: {HA: 3, HB: 3, HC: 2, HD: 2, HE: 2}   # คันแรกของ รพ.ที่มี cold chain เป็นรถกล่องเย็น
   roles_extra:            # role เพิ่มของผู้ใช้คนแรกของ role นั้นใน รพ. (รพ.เล็กทำสองหน้าที่) [สมมติ]
     - {hospital: HD, from: PHARMACIST, add: WAREHOUSE_OFFICER}
