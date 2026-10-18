@@ -167,7 +167,13 @@ export class AuthService {
     };
   }
 
-  async getMe(token: string): Promise<AuthSessionUser | null> {
+  /** Resolve a token to its user without touching `last_seen_at` (used by the auth middleware on every request). */
+  async getSessionUser(token: string): Promise<AuthSessionUser | null> {
+    return this.getMe(token, false);
+  }
+
+  /** `touch` = also bump `last_seen_at` (the `/me` poll marks the user online). */
+  async getMe(token: string, touch = true): Promise<AuthSessionUser | null> {
     const session = this.activeSessions.get(token);
     if (!session) return null;
 
@@ -177,7 +183,7 @@ export class AuthService {
       return null;
     }
 
-    await this.repo.updateUserLastSeen(user.id);
+    if (touch) await this.repo.updateUserLastSeen(user.id);
 
     const addRoles = user.additional_roles || [];
     const allRoles = Array.from(new Set([user.role, ...addRoles]));
