@@ -19,6 +19,25 @@ const ROLE_INFO: Record<RoleCode, { label: string; icon: string; desc: string; c
   PROCUREMENT_OFFICER: { label: 'เจ้าหน้าที่จัดซื้อ (Procurement)', icon: 'chart', desc: 'ดูการพยากรณ์และร่างใบสั่งซื้อ (UI-02)', color: '#C2410C', bg: '#FFF7ED' },
 };
 
+type HeaderThemeKey = 'sky' | 'ice';
+
+const HEADER_THEMES: Record<HeaderThemeKey, { label: string; bg: string; border: string; text: string; divider: string }> = {
+  sky: {
+    label: '#E3EFFB (Sky Blue)',
+    bg: '#E3EFFB',
+    border: '#BFDBFE',
+    text: '#1E40AF',
+    divider: '#93C5FD',
+  },
+  ice: {
+    label: '#EFF6FF (Ice Blue)',
+    bg: 'linear-gradient(180deg, #FFFFFF 0%, #EFF6FF 100%)',
+    border: '#DBEAFE',
+    text: '#1E40AF',
+    divider: '#BFDBFE',
+  },
+};
+
 export function LoginPage() {
   const { login, dbConnected, dbMessage, refreshHealth } = useAuth();
 
@@ -35,6 +54,9 @@ export function LoginPage() {
   const [mfaRequired, setMfaRequired] = useState(false);
   const [otpCode, setOtpCode] = useState('');
   const [mfaNotice, setMfaNotice] = useState('');
+
+  const [headerTheme, setHeaderTheme] = useState<HeaderThemeKey>('sky');
+  const currentTheme = HEADER_THEMES[headerTheme];
 
   // Fetch real accounts from database
   useEffect(() => {
@@ -134,17 +156,18 @@ export function LoginPage() {
         fontFamily: "'Noto Sans Thai', sans-serif",
       }}
     >
-      {/* TOP HEADER BAR (Option 2: Soft Ice Blue) */}
+      {/* TOP HEADER BAR */}
       <header
         style={{
           height: 64,
-          background: 'linear-gradient(180deg, #FFFFFF 0%, #EFF6FF 100%)',
-          borderBottom: '1px solid #DBEAFE',
+          background: currentTheme.bg,
+          borderBottom: `1px solid ${currentTheme.border}`,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           padding: '0 24px',
           boxShadow: '0 1px 4px rgba(29, 78, 216, 0.06)',
+          transition: 'background 0.2s ease, border-color 0.2s ease',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -153,8 +176,8 @@ export function LoginPage() {
           <span
             style={{
               fontSize: 12,
-              color: '#1E40AF',
-              borderLeft: '1px solid #BFDBFE',
+              color: currentTheme.text,
+              borderLeft: `1px solid ${currentTheme.divider}`,
               paddingLeft: 12,
               marginLeft: 4,
               fontWeight: 600,
@@ -164,8 +187,56 @@ export function LoginPage() {
           </span>
         </div>
 
-        {/* Database Health Badge */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        {/* Right Tools: Theme Switcher & Database Health Badge */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {/* Header Theme Switcher */}
+          <div
+            title="สลับโทนสีแถบด้านบน / Switch header theme"
+            style={{
+              display: 'flex',
+              background: 'rgba(255, 255, 255, 0.75)',
+              padding: '2px',
+              borderRadius: 16,
+              border: '1px solid #BFDBFE',
+              fontSize: 11,
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => setHeaderTheme('sky')}
+              style={{
+                border: 'none',
+                background: headerTheme === 'sky' ? '#FFFFFF' : 'transparent',
+                color: headerTheme === 'sky' ? '#1D4ED8' : '#64748B',
+                fontWeight: headerTheme === 'sky' ? 700 : 500,
+                padding: '2px 8px',
+                borderRadius: 14,
+                cursor: 'pointer',
+                boxShadow: headerTheme === 'sky' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              #E3EFFB
+            </button>
+            <button
+              type="button"
+              onClick={() => setHeaderTheme('ice')}
+              style={{
+                border: 'none',
+                background: headerTheme === 'ice' ? '#FFFFFF' : 'transparent',
+                color: headerTheme === 'ice' ? '#1D4ED8' : '#64748B',
+                fontWeight: headerTheme === 'ice' ? 700 : 500,
+                padding: '2px 8px',
+                borderRadius: 14,
+                cursor: 'pointer',
+                boxShadow: headerTheme === 'ice' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              Ice Blue
+            </button>
+          </div>
+
           <div
             style={{
               display: 'flex',
