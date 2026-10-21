@@ -10,24 +10,13 @@
  */
 import crypto from 'node:crypto';
 import type { NextFunction, Request, RequestHandler, Response } from 'express';
+import { stableStringify } from '../core/canonical.js';
 import { query } from '../db/client.js';
 import { HttpError } from './httpError.js';
 
 const KEY_MAX_LENGTH = 200;
 /** A first attempt with no stored response older than this is treated as abandoned (server crashed mid-request). */
 const ABANDONED_AFTER_MINUTES = 5;
-
-/** JSON with sorted keys, so two bodies that differ only in key order hash the same. */
-function stableStringify(value: unknown): string {
-  if (Array.isArray(value)) return `[${value.map(stableStringify).join(',')}]`;
-  if (value && typeof value === 'object') {
-    const entries = Object.entries(value as Record<string, unknown>)
-      .filter(([, v]) => v !== undefined)
-      .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
-    return `{${entries.map(([k, v]) => `${JSON.stringify(k)}:${stableStringify(v)}`).join(',')}}`;
-  }
-  return JSON.stringify(value) ?? 'null';
-}
 
 export function requestHash(req: Request): string {
   const payload = `${req.method} ${req.baseUrl}${req.path}\n${stableStringify(req.body ?? {})}`;
