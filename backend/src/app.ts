@@ -8,6 +8,7 @@ import { authController } from './modules/auth/auth.controller.js';
 import { healthRouter } from './modules/health/health.routes.js';
 import { documentsRouter } from './modules/documents/documents.routes.js';
 import { returnsRouter } from './modules/returns/returns.routes.js';
+import { alertsRouter } from './modules/alerts/alerts.routes.js';
 import { dashboardRouter } from './modules/dashboard/dashboard.routes.js';
 import { hospitalsRouter } from './modules/hospitals/hospitals.routes.js';
 import { inventoryRouter } from './modules/inventory/inventory.routes.js';
@@ -39,6 +40,7 @@ app.use('/api/v1/hospital-drugs', hospitalDrugsRouter);
 app.use('/api/v1/kit-types', kitTypesRouter); // API-F3-016
 app.use('/api/v1/inventory', inventoryRouter);
 app.use('/api/v1/notifications', notificationsRouter); // API-PL-004 / -005
+app.use('/api/v1/alerts', alertsRouter); // API-F1a-005 / -006 / -007
 app.use('/api/v1/dashboard', dashboardRouter); // API-PL-006
 app.get('/api/v1/me', authController.getMe); // API-PL-001
 

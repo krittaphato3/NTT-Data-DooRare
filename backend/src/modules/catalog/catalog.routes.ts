@@ -27,3 +27,8 @@ hospitalDrugsRouter.get('/', requireAuth, readers, asyncHandler(async (req, res)
 hospitalDrugsRouter.get('/:id', requireAuth, readers, asyncHandler(async (req, res) => {
   res.status(200).json(await catalogService.hospitalDrug(req.user!, req.params.id, req.query));
 }));
+
+/** API-F1a-004 (PHARMACIST, HOSPITAL_ADMIN): VED / expiry threshold of the caller's own listing. */
+hospitalDrugsRouter.patch('/:id/classification', requireAuth, requireRole('PHARMACIST', 'HOSPITAL_ADMIN'), asyncHandler(async (req, res) => {
+  res.status(200).json(await catalogService.classify(req, req.params.id));
+}));

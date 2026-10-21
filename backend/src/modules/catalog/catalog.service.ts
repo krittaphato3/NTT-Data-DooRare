@@ -4,7 +4,10 @@
  */
 import { hospitalForRead } from '../../core/scope.js';
 import { oneOf, parsePage, toPage } from '../../core/pagination.js';
-import { uuidParam } from '../../core/validate.js';
+import type { Request } from 'express';
+import { auditContext, writeAudit } from '../../core/audit.js';
+import { bodyObject, optionalNumber, uuidParam } from '../../core/validate.js';
+import { withTransaction } from '../../db/tx.js';
 import { query } from '../../db/client.js';
 import { HttpError } from '../../middleware/httpError.js';
 import type { AuthSessionUser } from '../auth/auth.types.js';
@@ -98,6 +101,44 @@ export class CatalogService {
       candidates: candidates.rows.map((c) => ({ tmtId: c.tmt_id, name: c.name, score: c.score, parts: c.score_parts ?? {} })),
     };
     return { ok: true, id, data };
+  }
+
+  /**
+   * API-F1a-004: set VED and / or the expiry threshold of one of the caller's drug listings (audited, FR-F1a-014).
+   * `hospital_drug` has no version column, so there is no optimistic lock here.
+   */
+  async classify(req: Request, rawId: string) {
+    const id = uuidParam(rawId, 'id');
+    const body = bodyObject(req.body);
+    const user = req.user!;
+    const ved = body.ved === undefined ? undefined : oneOf(body.ved, ['V', 'E', 'D'] as const, 'ved');
+    const hasThreshold = body.expiryThresholdDays !== undefined;
+    const threshold = body.expiryThresholdDays === null ? null : optionalNumber(body.expiryThresholdDays, 'expiryThresholdDays', { min: 1, max: 3650 });
+    if (ved === undefined && !hasThreshold) throw new HttpError(400, 'VALIDATION', 'ต้องระบุ ved หรือ expiryThresholdDays');
+    if (threshold !== undefined && threshold !== null && !Number.isInteger(threshold)) throw new HttpError(400, 'VALIDATION', 'expiryThresholdDays ต้องเป็นจำนวนเต็ม');
+    const reason = typeof body.reason === 'string' ? body.reason.trim() : '';
+    if (ved !== undefined && reason.length < 3) throw new HttpError(400, 'VALIDATION', 'การเปลี่ยน VED ต้องระบุเหตุผล (อย่างน้อย 3 ตัวอักษร)');
+    return withTransaction(async (client) => {
+      const before = (await client.query(`SELECT id, hospital_id, ved::text AS ved, expiry_threshold_days, method_override::text AS method_override FROM hospital_drug WHERE id = $1 FOR UPDATE`, [id])).rows[0];
+      if (!before || !user.hospitalId || before.hospital_id !== user.hospitalId) throw new HttpError(404, 'NOT_FOUND', 'ไม่พบรายการยา');
+      if (ved !== undefined && before.method_override === 'MIN_MAX' && ved !== 'D') {
+        throw new HttpError(409, 'CONFLICT', 'รายการ Min-Max ต้องเป็น VED = D (ASM-09)');
+      }
+      await client.query(
+        `UPDATE hospital_drug SET ved = COALESCE($2::ved_class, ved), expiry_threshold_days = CASE WHEN $3 THEN $4::int ELSE expiry_threshold_days END WHERE id = $1`,
+        [id, ved ?? null, hasThreshold, threshold ?? null],
+      );
+      const row = (await client.query(`${HOSPITAL_DRUG_SELECT} WHERE hd.id = $1`, [id])).rows[0];
+      await writeAudit(client, auditContext(req), {
+        action: 'HOSPITAL_DRUG_CLASSIFIED',
+        entityType: 'hospital_drug',
+        entityId: id,
+        before: { ved: before.ved, expiryThresholdDays: before.expiry_threshold_days },
+        after: { ved: row.ved, expiryThresholdDays: row.expiry_threshold_days },
+        reason: reason || null,
+      });
+      return { ok: true, id, data: hospitalDrugView(row) };
+    });
   }
 
   /** API-F3-016: kit types with components and the per-patient recipe by triage level. */
