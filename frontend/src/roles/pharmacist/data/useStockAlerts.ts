@@ -3,12 +3,13 @@ import { ackAlert, getAlerts, getInventorySummary, snoozeAlert } from '../../../
 import type { ApiAlert } from '../../../services/alertsApi';
 import { getDashboard } from '../../../services/catalogApi';
 import { getForecasts } from '../../../services/forecastApi';
+import { onLoadFailure, onLoadSuccess } from '../../../services/dataSource';
 import { ALERT_ROWS } from './stockAlerts';
 import type { StockAlertRow, SummaryCard } from './stockAlerts';
 import { buildStockAlertRows, buildSummaryCards } from './stockAlertRows';
 
 interface State {
-  source: 'loading' | 'live' | 'mock';
+  source: 'loading' | 'live' | 'mock' | 'error';
   rows: StockAlertRow[];
   cards: SummaryCard[] | null;
   versions: Map<string, number>;
@@ -26,7 +27,8 @@ export function useStockAlerts() {
   const load = useCallback(async () => {
     const [alertsRes, forecastsRes, inventoryRes, dashboardRes] = await Promise.allSettled([getAlerts(200), getForecasts('WEEK'), getInventorySummary(200), getDashboard()]);
     if (alertsRes.status === 'rejected') {
-      setState({ source: 'mock', rows: ALERT_ROWS, cards: null, versions: new Map(), error: alertsRes.reason?.message ?? 'โหลดไม่ได้', forecastMeta: null });
+      const f = onLoadFailure('alerts', alertsRes.reason, ALERT_ROWS, []);
+      setState({ source: f.source, rows: f.data, cards: null, versions: new Map(), error: f.error, forecastMeta: null });
       return;
     }
     const alerts: ApiAlert[] = alertsRes.value.items;
@@ -34,6 +36,7 @@ export function useStockAlerts() {
     const usable = new Map<string, number>();
     if (inventoryRes.status === 'fulfilled') for (const i of inventoryRes.value.items) usable.set(i.hospitalDrugId, i.usable);
     const nearExpiry = dashboardRes.status === 'fulfilled' ? dashboardRes.value.tiles.nearExpiry.detected : null;
+    onLoadSuccess('alerts');
     setState({
       source: 'live',
       rows: buildStockAlertRows(forecasts, usable, alerts),

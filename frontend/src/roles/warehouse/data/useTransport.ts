@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { compressImageToBase64 } from '../../../lib/imageCompress';
 import { advanceTransportTask, getTransportTasks, uploadTransportPhoto } from '../../../services/transportApi';
 import type { ApiTransportTask } from '../../../services/transportApi';
+import { onLoadFailure, onLoadSuccess } from '../../../services/dataSource';
 import { AUDIT_HISTORY, SHIPMENTS } from './transport';
 import type { Shipment } from './transport';
 import { buildHistory, taskToShipment } from './transportLive';
@@ -15,7 +16,7 @@ export interface HistoryRow {
   code: string;
 }
 
-export type TransportSource = 'loading' | 'live' | 'mock';
+export type TransportSource = 'loading' | 'live' | 'mock' | 'error';
 
 interface State {
   source: TransportSource;
@@ -36,9 +37,11 @@ export function useTransport() {
   const load = useCallback(async () => {
     try {
       const res = await getTransportTasks({ limit: 200 });
+      onLoadSuccess('transport');
       setState({ source: 'live', shipments: res.items.map((t) => taskToShipment(t)), tasks: res.items, history: buildHistory(res.items), error: null });
     } catch (error) {
-      setState({ source: 'mock', shipments: SHIPMENTS, tasks: [], history: AUDIT_HISTORY, error: (error as Error).message });
+      const f = onLoadFailure('transport', error, { shipments: SHIPMENTS, history: AUDIT_HISTORY }, { shipments: [] as Shipment[], history: [] as HistoryRow[] });
+      setState({ source: f.source, shipments: f.data.shipments, tasks: [], history: f.data.history, error: f.error });
     }
   }, []);
 

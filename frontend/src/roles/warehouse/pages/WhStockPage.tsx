@@ -38,9 +38,10 @@ function Target({ r }: { r: StockAlertRow }) {
 export function WhStockPage() {
   const sa = useStockAlerts();
   const live = sa.source === 'live';
-  const ALL_ROWS = live ? sa.rows : ALERT_ROWS;
-  const QUEUE = live ? sa.rows.filter((r) => r.alert) : QUEUE_ROWS;
-  const CARDS = live && sa.cards ? sa.cards : ALERT_SUMMARY;
+  const demo = sa.source === 'mock';
+  const ALL_ROWS = live ? sa.rows : demo ? ALERT_ROWS : [];
+  const QUEUE = live ? sa.rows.filter((r) => r.alert) : demo ? QUEUE_ROWS : [];
+  const CARDS = live && sa.cards ? sa.cards : demo ? ALERT_SUMMARY : [];
   const [tab, setTab] = useState<Tab>('stock');
   const [q, setQ] = useState('');
   const [alertOnly, setAlertOnly] = useState<'all' | 'alert' | 'none'>('all');

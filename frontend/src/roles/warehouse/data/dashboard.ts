@@ -128,6 +128,32 @@ function kitTodo(): TodoItem[] {
   });
 }
 
+/** To-do list from the live transport tasks (own hospital): load the waiting outbound ones, confirm the arrived inbound ones. */
+export function liveTodos(shipments: Shipment[]): TodoItem[] {
+  const name = (c: string) => (HOSPITALS as Record<string, string>)[c] ?? c;
+  const out: TodoItem[] = [];
+  for (const s of shipments) {
+    if (s.status === 'WAITING_DISPATCH' && isOutbound(s)) {
+      out.push({
+        id: s.id, group: 'transport', icon: 'box', sevCls: 'sev-urg',
+        title: `ขึ้นรถ + ถ่ายรูป ${s.id}`,
+        detail: `${s.drug} · ${fmtQty(s.qty)} ${s.unit} → ${name(s.to)} · เตรียมของตามล็อต FEFO แล้วขึ้นรถ`,
+        badge: { label: 'รอขึ้นรถ', tone: 'amber' },
+        cta: { label: 'ขึ้นรถ', primary: true, page: 'transport' },
+      });
+    } else if (s.status === 'ARRIVED' && !isOutbound(s)) {
+      out.push({
+        id: s.id, group: 'transport', icon: 'checkc', sevCls: 'sev-norm',
+        title: `ยืนยันรับของ ${s.id}`,
+        detail: `${s.drug} · ${fmtQty(s.qty)} ${s.unit} · จาก ${name(s.from)} · ถึง ${s.updatedAt} น.`,
+        badge: { label: 'ถึงปลายทาง · รอรับ', tone: 'green' },
+        cta: { label: 'ยืนยันรับของ', primary: true, page: 'transport' },
+      });
+    }
+  }
+  return out;
+}
+
 export const TODOS: TodoItem[] = [...requestTodo().sort((a, b) => Number(!!b.urgent) - Number(!!a.urgent)), ...inboxTodo(), ...transportTodo(), ...kitTodo()];
 
 export const TODO_TABS: { key: 'all' | TodoGroup; label: string }[] = [
@@ -151,9 +177,10 @@ export function transportStats(shipments: Shipment[] = SHIPMENTS) {
     pendingSync: count((s) => !!s.pending),
     total: shipments.length,
     byStatus,
-    inbox: inboxStats(),
-    box: outboundStats(),
-    packWaiting: PACK_TASKS.length,
+    // The work inbox and pack tasks are F3 / mock-only: zero on live data.
+    inbox: shipments === SHIPMENTS ? inboxStats() : { newTotal: 0, f1: 0, f2: 0, f3: 0, urgent: 0, confirmed: 0 },
+    box: shipments === SHIPMENTS ? outboundStats() : { newTotal: 0, f1: 0, f2: 0, f3: 0, inbound: 0, inboundNew: 0, toReceive: 0 },
+    packWaiting: shipments === SHIPMENTS ? PACK_TASKS.length : 0,
   };
 }
 

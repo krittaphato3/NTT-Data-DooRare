@@ -49,6 +49,13 @@
     "date": "2026-10-21"
   },
   {
+    "path": "sessions/2026-10-21-claude-frontend-live-data-no-mock.md",
+    "title": "Frontend - live data everywhere an API exists, no silent mock fallback",
+    "summary": "Central load-failure policy (error banner, 401 -> login, mock only with ?mock=1);…",
+    "tags": "session, frontend, live-data, fallback, dashboard, notifications, detailed",
+    "date": "2026-10-21"
+  },
+  {
     "path": "sessions/2026-10-20-buffy-f1-quantile-phase5.md",
     "title": "F1 quantile forecast module (Phase 5 — monthly quantile model)",
     "summary": "MONTH model (7 quantiles, 167 series); gate passes vs all 3 baselines…",

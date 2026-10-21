@@ -1,14 +1,17 @@
 import { useState } from 'react';
 import { Icon } from '../../../components/common/icons';
-import { TODO_TABS, TODOS } from '../data/dashboard';
+import { liveTodos, TODO_TABS, TODOS } from '../data/dashboard';
+import type { Shipment } from '../data/transport';
+import { mockFallbackEnabled } from '../../../services/dataSource';
 import type { TodoGroup } from '../data/dashboard';
 import { WhCta } from './WhCta';
 
 /** "งานที่ต้องทำ" — same tabbed card pattern as the pharmacist alerts panel. */
-export function WhTodoPanel({ urgentLeft }: { urgentLeft: string }) {
+export function WhTodoPanel({ urgentLeft, shipments }: { urgentLeft: string; shipments?: Shipment[] }) {
+  const TODOS_NOW = shipments ? liveTodos(shipments) : mockFallbackEnabled() ? TODOS : [];
   const [tab, setTab] = useState<'all' | TodoGroup>('all');
-  const count = (k: 'all' | TodoGroup) => (k === 'all' ? TODOS.length : TODOS.filter((t) => t.group === k).length);
-  const rows = TODOS.filter((t) => tab === 'all' || t.group === tab);
+  const count = (k: 'all' | TodoGroup) => (k === 'all' ? TODOS_NOW.length : TODOS_NOW.filter((t) => t.group === k).length);
+  const rows = TODOS_NOW.filter((t) => tab === 'all' || t.group === tab);
 
   return (
     <div className="card cardpad" data-part="todo" style={{ flex: '3 1 560px', minWidth: 0 }}>

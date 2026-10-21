@@ -12,13 +12,17 @@ interface TopBarProps {
   navOpen: boolean;
   onMenu: () => void;
   /** Unread notifications for the bell popover (role-scoped data passed in). */
-  notifications: { drug: string; time: string }[];
+  notifications: { id?: string; drug: string; time: string }[];
+  /** Real unread count from the API (the list is capped); falls back to the list length. */
+  unreadCount?: number;
+  /** Marks one notification read (live bell only). */
+  onRead?: (id: string) => void;
   /** `pharmacist` = hospital selector + scope chip; `ops` = scope pill, agent pill, TH/EN switch. */
   variant?: 'pharmacist' | 'ops';
   user?: UserProfile;
 }
 
-export function TopBar({ query, onQuery, isAdmin, navOpen, onMenu, notifications, variant = 'pharmacist', user = USER }: TopBarProps) {
+export function TopBar({ query, onQuery, isAdmin, navOpen, onMenu, notifications, unreadCount, onRead, variant = 'pharmacist', user = USER }: TopBarProps) {
   const ops = variant === 'ops';
   const [bellOpen, setBellOpen] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
@@ -103,23 +107,26 @@ export function TopBar({ query, onQuery, isAdmin, navOpen, onMenu, notifications
       <div className="menu-wrap bell-wrap" ref={bellRef}>
         <button
           className="icbtn bell-btn"
-          aria-label={`การแจ้งเตือน ${notifications.length} รายการที่ยังไม่อ่าน`}
+          aria-label={`การแจ้งเตือน ${unreadCount ?? notifications.length} รายการที่ยังไม่อ่าน`}
           aria-expanded={bellOpen ? 'true' : 'false'}
           onClick={() => setBellOpen((v) => !v)}
         >
           <Icon name="bell" className="ic20" />
-          <span className="num bell-count">{notifications.length}</span>
+          {(unreadCount ?? notifications.length) > 0 && <span className="num bell-count">{unreadCount ?? notifications.length}</span>}
         </button>
         {bellOpen && (
           <div role="region" aria-label="การแจ้งเตือนที่ยังไม่อ่าน" className="card popover bell-pop">
             <div style={{ fontSize: 13, fontWeight: 600, color: '#0F2A5C', marginBottom: 8 }}>
-              การแจ้งเตือนที่ยังไม่อ่าน ({notifications.length})
+              การแจ้งเตือนที่ยังไม่อ่าน ({unreadCount ?? notifications.length})
             </div>
             <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
               {notifications.map((n) => (
-                <li key={n.drug} style={{ fontSize: 12, lineHeight: '18px' }}>
+                <li key={n.id ?? n.drug} style={{ fontSize: 12, lineHeight: '18px' }}>
                   <span style={{ fontWeight: 600, color: '#0F2A5C' }}>{n.drug}</span>
                   <span style={{ color: '#475569' }}> · {n.time}</span>
+                  {n.id && onRead && (
+                    <button className="link" style={{ marginLeft: 8, fontSize: 11 }} onClick={() => onRead(n.id!)}>อ่านแล้ว</button>
+                  )}
                 </li>
               ))}
             </ul>

@@ -1,6 +1,10 @@
 import { useRef, useState } from 'react';
 import { ALERTS, ALERT_TABS } from '../data/dashboard';
 import type { Alert } from '../data/dashboard';
+import { alertRowToDashboard } from '../data/dashboardLive';
+import { useStockAlerts } from '../data/useStockAlerts';
+import { mockFallbackEnabled } from '../../../services/dataSource';
+import { withRole } from '../../../data/navigation';
 import { fmtTime, useTick } from '../../../lib/time';
 import { AgentSuggestion } from './AgentSuggestion';
 import { Icon } from '../../../components/common/icons';
@@ -39,6 +43,7 @@ const STATUS_META: Record<AlertStatus, { label: string; cls: string; icon: IconN
 };
 
 function statusOf(a: Alert, acked: boolean, snoozed: boolean): AlertStatus {
+  if (a.status) return a.status === 'acknowledged' ? 'acked' : a.status;
   if (snoozed) return 'snoozed';
   if (acked) return 'acked';
   if (a.req) return 'linked';
@@ -59,16 +64,29 @@ export function AlertsPanel({ query, hospital, role = 'PHARMACIST' }: AlertsPane
   const [acked, setAcked] = useState<ReadonlySet<string>>(new Set());
   const [snoozed, setSnoozed] = useState<ReadonlySet<string>>(new Set());
   const tick = useTick();
+  const sa = useStockAlerts();
+  const live = sa.source === 'live';
+  const demo = !live && sa.source === 'mock' && mockFallbackEnabled();
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const allAlerts: Alert[] = live ? sa.rows.map(alertRowToDashboard).filter((x): x is Alert => x !== null) : demo ? ALERTS : [];
+  const tabs = live
+    ? [
+        { key: 'all', label: 'ทั้งหมด', count: allAlerts.length },
+        { key: 'shortage', label: 'สต็อกต่ำ/เตรียมสั่ง', count: allAlerts.filter((a) => a.type === 'shortage').length },
+        { key: 'request', label: 'ผูกคำขอแล้ว', count: allAlerts.filter((a) => a.type === 'request').length },
+      ]
+    : ALERT_TABS;
   const q = query.trim().toLowerCase();
   const h = hospital !== ALL_HOSPITALS ? hospital : '';
 
-  const filtered = ALERTS.filter((a) => {
+  const filtered = allAlerts.filter((a) => {
     if (tab !== 'all' && a.type !== tab) return false;
     if (h !== '' && !(a.drug + a.msg).includes(h)) return false;
     if (q !== '' && !(a.drug + a.msg + a.typeLabel).toLowerCase().includes(q)) return false;
     return true;
   });
-  const showAgent = tab === 'all' || tab === 'shortage';
+  // The Agent suggestion is a fixture (no agent is connected yet): shown only in demo mode.
+  const showAgent = mockFallbackEnabled() && (tab === 'all' || tab === 'shortage');
   /* Acknowledge / snooze are authoring actions the role either has or does not — they are hidden. */
   const mayAcknowledge = mayActFor(role, 'PHARMACIST', 'acknowledgeAlert');
   const visible = expanded ? filtered : filtered.slice(0, ALERTS_PAGE);
@@ -83,7 +101,7 @@ export function AlertsPanel({ query, hospital, role = 'PHARMACIST' }: AlertsPane
         <span style={{ fontSize: 12, lineHeight: '16px' }}>เรียงตาม: ยา V ก่อน แล้วตามมูลค่าผลกระทบ</span>
       </div>
       <div role="tablist" aria-label="กรองการแจ้งเตือน" style={{ display: 'flex', flexWrap: 'wrap', gap: 4, margin: '12px 0 16px' }}>
-        {ALERT_TABS.map((t) => (
+        {tabs.map((t) => (
           <button
             key={t.key}
             role="tab"
@@ -127,7 +145,7 @@ export function AlertsPanel({ query, hospital, role = 'PHARMACIST' }: AlertsPane
               const mayAct = pa === null || mayActFor(role, 'PHARMACIST', pa);
               const hint = pa === null ? undefined : requiredRoleHint(pa);
               return (
-                <tr key={a.drug}>
+                <tr key={a.alertId ?? a.drug}>
                   <td style={{ minWidth: 200 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <span className={`sev ${a.sevCls}`} title={a.sevLabel}>
@@ -168,6 +186,9 @@ export function AlertsPanel({ query, hospital, role = 'PHARMACIST' }: AlertsPane
                       className={`btn btn-sm ${a.primary ? 'btn-p' : 'btn-s'}`}
                       disabled={!mayAct}
                       title={mayAct ? undefined : hint}
+                      onClick={() => {
+                        if (a.alertId) window.location.search = withRole(a.req ? '?page=requests' : '?page=alerts', role);
+                      }}
                     >
                       {a.action}
                     </button>
@@ -177,7 +198,12 @@ export function AlertsPanel({ query, hospital, role = 'PHARMACIST' }: AlertsPane
                           <button
                             className="link"
                             style={{ fontSize: 12.5 }}
-                            onClick={() => setAcked((prev) => new Set(prev).add(a.drug))}
+                            disabled={busyId === a.alertId}
+                            onClick={() => {
+                              if (!a.alertId) return setAcked((prev) => new Set(prev).add(a.drug));
+                              setBusyId(a.alertId);
+                              sa.ack(a.alertId).finally(() => setBusyId(null));
+                            }}
                           >
                             รับทราบ
                           </button>
@@ -187,7 +213,12 @@ export function AlertsPanel({ query, hospital, role = 'PHARMACIST' }: AlertsPane
                             className="link"
                             style={{ fontSize: 12.5 }}
                             title="เลื่อนการแจ้งเตือน 4 ชั่วโมง"
-                            onClick={() => setSnoozed((prev) => new Set(prev).add(a.drug))}
+                            disabled={busyId === a.alertId}
+                            onClick={() => {
+                              if (!a.alertId) return setSnoozed((prev) => new Set(prev).add(a.drug));
+                              setBusyId(a.alertId);
+                              sa.snooze(a.alertId, 'เลื่อนจากหน้าภาพรวม', 4).finally(() => setBusyId(null));
+                            }}
                           >
                             เลื่อน 4 ชม.
                           </button>
@@ -222,8 +253,8 @@ export function AlertsPanel({ query, hospital, role = 'PHARMACIST' }: AlertsPane
         </div>
       )}
       <div className="equal-footer" style={{ borderTop: '1px solid #E2E8F0', padding: '12px 0', display: 'flex', justifyContent: 'center' }}>
-        <a href="#" className="link">
-          ดูการแจ้งเตือนทั้งหมด (<span className="num">14</span>)
+        <a href={withRole('?page=alerts', role)} className="link">
+          ดูการแจ้งเตือนทั้งหมด (<span className="num">{live ? allAlerts.length : 14}</span>)
         </a>
       </div>
     </div>

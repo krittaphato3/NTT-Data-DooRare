@@ -18,7 +18,17 @@ export async function apiFetch(path: string, init: RequestInit = {}): Promise<Re
   const headers = new Headers(init.headers);
   if (token) headers.set('Authorization', `Bearer ${token}`);
   if (init.body && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
-  return fetch(`${API_BASE}${path}`, { ...init, headers });
+  const res = await fetch(`${API_BASE}${path}`, { ...init, headers });
+  // A rejected token (expired, or the server restarted and dropped its sessions) must not leave screens quietly on stale/mock data.
+  if (res.status === 401 && token && !path.startsWith('/auth/')) {
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch {
+      /* ignore */
+    }
+    window.location.reload();
+  }
+  return res;
 }
 
 export async function apiJson<T>(path: string, init?: RequestInit): Promise<T> {

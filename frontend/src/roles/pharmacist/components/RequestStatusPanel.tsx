@@ -1,6 +1,12 @@
 import { useRef, useState } from 'react';
 import { INCOMING, LENDING, ST_CLS, ST_ICON, UG_CLS, UG_ICON } from '../data/dashboard';
 import { fmtTime, useTick } from '../../../lib/time';
+import { useAuth } from '../../../context/AuthContext';
+import { withRole } from '../../../data/navigation';
+import { mockFallbackEnabled } from '../../../services/dataSource';
+import { lenderRowToRow, ownRequestToRow } from '../data/requestPanelLive';
+import { useBorrowRequests } from '../data/useBorrowRequests';
+import { useLenderQueue } from '../data/useLenderQueue';
 import { Icon } from '../../../components/common/icons';
 import type { IconName } from '../../../components/common/icons';
 import { mayActFor, requiredRoleHint } from '../../../lib/rbac';
@@ -50,7 +56,14 @@ export function RequestStatusPanel({ query, hospital, role = 'PHARMACIST' }: Req
   const q = query.trim().toLowerCase();
   const h = hospital !== ALL_HOSPITALS ? hospital : '';
 
-  const list = reqTab === 'in' ? INCOMING : LENDING;
+  const { user } = useAuth();
+  const me = user?.hospitalName ?? '';
+  const own = useBorrowRequests();
+  const lend = useLenderQueue();
+  const demo = mockFallbackEnabled() && (own.source === 'mock' || lend.source === 'mock');
+  const incoming = demo ? INCOMING : own.requests.slice(0, 60).map((r) => ownRequestToRow(r, me));
+  const lending = demo ? LENDING : lend.requests.slice(0, 60).map((r) => lenderRowToRow(r, me));
+  const list = reqTab === 'in' ? incoming : lending;
   const rows = list.filter((r) => {
     if (status !== null && r.st !== status) return false;
     if (h !== '' && r.from !== h && r.to !== h) return false;
@@ -70,7 +83,7 @@ export function RequestStatusPanel({ query, hospital, role = 'PHARMACIST' }: Req
         <h2 style={{ margin: 0, fontSize: 20, lineHeight: '30px', fontWeight: 600, color: '#0F2A5C' }}>
           สถานะคำขอ <span style={{ fontSize: 14, fontWeight: 400, color: '#94A3B8' }}>/ Request Status</span>
         </h2>
-        <span style={{ fontSize: 12 }}>7 วันล่าสุด</span>
+        <span style={{ fontSize: 12 }}>ล่าสุด</span>
       </div>
       <div role="tablist" aria-label="ประเภทคำขอ" style={{ display: 'flex', gap: 4, padding: 4, background: '#F1F5F9', borderRadius: 10, margin: '12px 0 14px' }}>
         {([
@@ -142,13 +155,13 @@ export function RequestStatusPanel({ query, hospital, role = 'PHARMACIST' }: Req
         <h3 style={{ margin: 0, fontSize: 16, lineHeight: '26px', fontWeight: 600, color: '#0F2A5C' }}>
           คำขอล่าสุด <span className="en">Recent requests</span>
         </h3>
-        <a href="#" className="link">ดูทั้งหมด</a>
+        <a href={withRole(reqTab === 'in' ? '?page=requests' : '?page=lend', role)} className="link">ดูทั้งหมด</a>
       </div>
       <div aria-label="คำขอล่าสุด" style={{ display: 'flex', flexDirection: 'column', flex: '1 1 auto', minHeight: 0 }}>
         <div ref={listBody} className="equal-scroll" style={{ maxHeight: 'none', height: expanded ? frozenBody : undefined }}>
         {visible.map((r) => {
           const left = (r.secs ?? 0) - tick;
-          const urgent = r.st === 'pending' && left < 1800;
+          const urgent = r.st === 'pending' && r.secs !== undefined && left < 1800;
           const stBadge = (
             <span className={`badge ${ST_CLS[r.st]}`} title={r.stEn}>
               <Icon name={ST_ICON[r.st] as IconName} className="ic14" />
@@ -178,7 +191,7 @@ export function RequestStatusPanel({ query, hospital, role = 'PHARMACIST' }: Req
                 {reqTab === 'in' ? stBadge : ugBadge}
                 {reqTab === 'in' ? ugBadge : stBadge}
                 <span style={{ flex: '1 1 0' }} />
-                {r.st === 'pending' && (
+                {r.st === 'pending' && r.secs !== undefined && (
                   <span className={`timer ${left < 1800 ? 'timer-crit' : 'timer-warn'}`}>
                     <Icon name="clock" className="ic14" />
                     เหลือ {fmtTime(left)}
@@ -218,6 +231,7 @@ export function RequestStatusPanel({ query, hospital, role = 'PHARMACIST' }: Req
                   return (
                     <button
                       className={`btn btn-sm ${r.actionPrimary ? 'btn-p' : 'btn-g'}`}
+                      onClick={() => { window.location.search = withRole(reqTab === 'in' ? '?page=requests' : '?page=lend', role); }}
                       disabled={!allowed}
                       title={allowed || needed === null ? undefined : requiredRoleHint(needed)}
                     >

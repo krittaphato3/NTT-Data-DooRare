@@ -14,6 +14,7 @@ import {
   SM1B,
 } from '../data/lender';
 import type { BorrowRequest, BRStatus, LendableStock, LotOption } from '../data/lender';
+import { mockFallbackEnabled } from '../../../services/dataSource';
 import { useLenderQueue } from '../data/useLenderQueue';
 import { useBorrowRequests } from '../data/useBorrowRequests';
 import { respondToLeg } from '../../../services/borrowApi';
@@ -844,11 +845,11 @@ export function LenderQueuePage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
   const [trigger, setTrigger] = useState('');
   const [statusFilter, setStatusFilter] = useState<'' | BRStatus>('');
   const lq = useLenderQueue();
-  const isLive = lq.source === 'live';
   const mine = useBorrowRequests();
   const minePending = mine.requests.filter((r) => r.status === 'PENDING_APPROVAL' || r.status === 'DRAFT').length;
-  const data = isLive ? lq.requests : BORROW_REQUESTS;
-  const [selected, setSelected] = useState<BorrowRequest | null>(BORROW_REQUESTS[0]);
+  const demo = lq.source === 'mock';
+  const data = demo ? BORROW_REQUESTS : lq.requests;
+  const [selected, setSelected] = useState<BorrowRequest | null>(mockFallbackEnabled() ? BORROW_REQUESTS[0] : null);
   const panelRef = useRef<HTMLDivElement>(null);
   // A mock row must not stay selected once the live queue has loaded (and vice versa).
   useEffect(() => {
@@ -1049,21 +1050,21 @@ export function LenderQueuePage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
           <SummaryTile
-            count={isLive ? data.filter((r) => r.status === 'waiting').length : SM1B.sent}
+            count={demo ? SM1B.sent : data.filter((r) => r.status === 'waiting').length}
             badgeText="รอเราตอบ"
             badgeCls="st-pending"
             icon="hourglass"
             en="SENT"
           />
           <SummaryTile
-            count={isLive ? data.filter((r) => r.status === 'accepted' || r.status === 'partial').length : SM1B.accepted}
+            count={demo ? SM1B.accepted : data.filter((r) => r.status === 'accepted' || r.status === 'partial').length}
             badgeText="ตอบรับแล้ว"
             badgeCls="st-approved"
             icon="checkc"
             en="ACCEPTED · PARTIAL"
           />
           <SummaryTile
-            count={isLive ? data.filter((r) => r.status === 'loaded' || r.status === 'in_transit').length : SM1B.loaded}
+            count={demo ? SM1B.loaded : data.filter((r) => r.status === 'loaded' || r.status === 'in_transit').length}
             badgeText="กำลังส่ง"
             badgeCls="st-transit"
             icon="truck"

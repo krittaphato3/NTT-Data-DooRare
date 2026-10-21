@@ -1,4 +1,5 @@
 import type { RoleCode } from '../../../lib/rbac';
+import { mockFallbackEnabled } from '../../../services/dataSource';
 import { AlertsPanel } from '../components/AlertsPanel';
 import { AgentSummaryPanel } from '../components/AgentSummaryPanel';
 import { BottomRow } from '../components/BottomRow';
@@ -37,9 +38,14 @@ export function DashboardPage({ isAdmin, query, hospital, onHospital, role = 'PH
         <AlertsPanel query={query} hospital={hospital} role={role} />
         <RequestStatusPanel query={query} hospital={hospital} role={role} />
       </section>
-      <MiddleRow role={role} />
-      <BottomRow />
-      <AgentSummaryPanel />
+      {/* Nearby hospitals, work history, near-expiry lots, network activity and the Agent summary have no API yet: demo mode only. */}
+      {mockFallbackEnabled() && (
+        <>
+          <MiddleRow role={role} />
+          <BottomRow />
+          <AgentSummaryPanel />
+        </>
+      )}
     </>
   );
 }

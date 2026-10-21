@@ -88,6 +88,26 @@ function parseFields(body: Record<string, unknown>, creating: boolean) {
   };
 }
 
+/** Activity counters per hospital for the admin screens (`?stats=true`): requests as borrower, legs as lender, shipments, staff. */
+async function statsFor(ids: string[]): Promise<Map<string, Record<string, number>>> {
+  const rows = (
+    await query(
+      `SELECT h.id,
+              (SELECT count(*) FROM borrow_request br WHERE br.borrower_hospital_id = h.id)::int AS request_count,
+              (SELECT count(*) FROM borrow_leg bl WHERE bl.lender_hospital_id = h.id AND bl.status <> 'PENDING')::int AS incoming_count,
+              (SELECT count(*) FROM borrow_leg bl WHERE bl.lender_hospital_id = h.id AND bl.status IN ('ACCEPTED','PARTIAL','LOADED','IN_TRANSIT','RECEIVED'))::int AS approved_count,
+              (SELECT count(*) FROM borrow_leg bl WHERE bl.lender_hospital_id = h.id AND bl.status = 'REJECTED')::int AS rejected_count,
+              (SELECT count(*) FROM borrow_leg bl WHERE bl.lender_hospital_id = h.id AND bl.status = 'TIMED_OUT')::int AS timeout_count,
+              (SELECT count(*) FROM transport_task t WHERE t.from_hospital_id = h.id AND t.status IN ('LOADED','IN_TRANSIT','ARRIVED','RECEIVED'))::int AS dispatched_count,
+              (SELECT count(*) FROM transport_task t WHERE t.from_hospital_id = h.id AND t.status = 'IN_TRANSIT')::int AS in_transit_count,
+              (SELECT count(*) FROM app_user u WHERE u.hospital_id = h.id AND u.active)::int AS staff_count
+         FROM hospital h WHERE h.id = ANY($1::uuid[])`,
+      [ids],
+    )
+  ).rows;
+  return new Map(rows.map((r) => [r.id, { requestCount: r.request_count, incomingCount: r.incoming_count, approvedCount: r.approved_count, rejectedCount: r.rejected_count, timeoutCount: r.timeout_count, dispatchedCount: r.dispatched_count, inTransitCount: r.in_transit_count, staffCount: r.staff_count }]));
+}
+
 export class HospitalsService {
   async list(user: AuthSessionUser, raw: Record<string, unknown>) {
     const page = parsePage(raw);
@@ -101,7 +121,8 @@ export class HospitalsService {
     params.push(page.limit + 1, page.offset);
     const result = await query(`${SELECT} WHERE ${where.join(' AND ')} ORDER BY h.code LIMIT $${params.length - 1} OFFSET $${params.length}`, params);
     const slice = toPage(result.rows, page);
-    return { ok: true, items: slice.items.map(view), nextCursor: slice.nextCursor };
+    const stats = raw.stats === 'true' && ['SYSTEM_ADMIN', 'HOSPITAL_ADMIN', 'REGION_ADMIN'].includes(user.role) ? await statsFor(slice.items.map((h) => h.id)) : null;
+    return { ok: true, items: slice.items.map((h) => (stats ? { ...view(h), stats: stats.get(h.id) } : view(h))), nextCursor: slice.nextCursor };
   }
 
   async get(user: AuthSessionUser, rawId: string) {

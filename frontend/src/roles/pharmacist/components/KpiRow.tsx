@@ -1,6 +1,10 @@
 import { Icon } from '../../../components/common/icons';
+import { useDashboardTiles } from '../data/useDashboardTiles';
 
 export function KpiRow() {
+  const t = useDashboardTiles();
+  const v = (n: number | undefined) => (n === undefined ? '–' : n.toLocaleString('en-US'));
+  const inTransit = t ? t.transport.outInFlight + t.transport.inOnTheWay : undefined;
   return (
     <section aria-label="สรุปตัวชี้วัด" className="kpi-row" data-part="kpi-row">
       <div className="card kpi-card" style={{ borderColor: '#FECACA' }}>
@@ -12,10 +16,10 @@ export function KpiRow() {
             <Icon name="tri" />
           </span>
         </div>
-        <div className="num kpi-num" style={{ color: '#B91C1C' }}>12</div>
+        <div className="num kpi-num" style={{ color: '#B91C1C' }}>{v(t?.stockAlerts.active)}</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, lineHeight: '16px', color: '#B91C1C' }}>
           <Icon name="trendUp" className="ic14" />
-          <span className="num">+3</span> จากเมื่อวาน · V <span className="num">4</span> รายการ
+          เร่งด่วน <span className="num">{v(t?.stockAlerts.urgent)}</span> รายการ
         </div>
       </div>
       <div className="card kpi-card">
@@ -27,10 +31,10 @@ export function KpiRow() {
             <Icon name="hourglass" />
           </span>
         </div>
-        <div className="num kpi-num" style={{ color: '#0F2A5C' }}>5</div>
+        <div className="num kpi-num" style={{ color: '#0F2A5C' }}>{v(t?.borrowRequests.pendingApproval)}</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, lineHeight: '16px', color: '#92400E' }}>
           <Icon name="clock" className="ic14" />
-          <span className="num">2</span> รายการเหลือ &lt; 1 ชม.
+          กำลังขอยืม <span className="num">{v(t?.borrowRequests.inProgress)}</span> · ส่งต่อผู้ดูแล <span className="num">{v(t?.borrowRequests.escalated)}</span>
         </div>
       </div>
       <div className="card kpi-card">
@@ -42,9 +46,9 @@ export function KpiRow() {
             <Icon name="truck" />
           </span>
         </div>
-        <div className="num kpi-num" style={{ color: '#0F2A5C' }}>3</div>
+        <div className="num kpi-num" style={{ color: '#0F2A5C' }}>{v(inTransit)}</div>
         <div style={{ fontSize: 12, lineHeight: '16px', color: '#475569' }}>
-          ถึงภายในวันนี้ <span className="num">2</span> · ขาเข้า <span className="num">1</span> / ขาออก <span className="num">2</span>
+          ขาเข้า <span className="num">{v(t?.transport.inOnTheWay)}</span> / ขาออก <span className="num">{v(t?.transport.outInFlight)}</span> · รอรับ <span className="num">{v(t?.transport.toReceive)}</span>
         </div>
       </div>
       <div className="card kpi-card">
@@ -56,9 +60,9 @@ export function KpiRow() {
             <Icon name="calx" />
           </span>
         </div>
-        <div className="num kpi-num" style={{ color: '#0F2A5C' }}>18</div>
+        <div className="num kpi-num" style={{ color: '#0F2A5C' }}>{v(t?.nearExpiry.detected)}</div>
         <div style={{ fontSize: 12, lineHeight: '16px', color: '#475569' }}>
-          ภายใน <span className="num">90</span> วัน · มูลค่า ฿<span className="num">46,200</span>
+          ล็อตในคลังที่หมดอายุภายใน 90 วัน <span className="num">{v(t?.inventory.expiringWithin90Days)}</span> · ในคลังกลาง <span className="num">{v(t?.nearExpiry.inPool)}</span>
         </div>
       </div>
       <div className="card kpi-card">
@@ -71,9 +75,9 @@ export function KpiRow() {
             <circle cx="62" cy="19" r="2.5" fill="#166534" />
           </svg>
         </div>
-        <div className="num kpi-num" style={{ color: '#0F2A5C' }}>2.1%</div>
+        <div className="num kpi-num" style={{ color: '#0F2A5C' }}>–</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, lineHeight: '16px', color: '#166534' }}>
-          <Icon name="trendDown" className="ic14" />↓ <span className="num">14%</span> vs เดือนที่แล้ว · ลด over/understock ฿<span className="num">184k</span>
+          ยังไม่มีข้อมูล (รอรายงานมูลค่า)
         </div>
       </div>
     </section>

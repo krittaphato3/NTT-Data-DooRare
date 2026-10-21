@@ -93,8 +93,9 @@ export function StockAlertsPage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sa.source]);
 
-  const allRows = live ? sa.rows : ALERT_ROWS;
-  const queueRows = live ? sa.rows.filter((r) => r.alert) : QUEUE_ROWS;
+  const demo = sa.source === 'mock';
+  const allRows = live ? sa.rows : demo ? ALERT_ROWS : [];
+  const queueRows = live ? sa.rows.filter((r) => r.alert) : demo ? QUEUE_ROWS : [];
   const base = tab === 'queue' ? queueRows : allRows;
   const tabCounts = { queue: queueRows.length, all: allRows.length };
 

@@ -28,6 +28,9 @@ export interface Alert {
   primary: boolean;
   /** Linked borrow request shown under the status badge (e.g. `#REQ-1050`). */
   req?: string;
+  /** Live rows only: the API alert id and its SM-8 status. */
+  alertId?: string;
+  status?: 'open' | 'acknowledged' | 'linked' | 'snoozed';
 }
 
 export interface ReqRow {

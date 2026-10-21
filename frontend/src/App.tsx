@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react';
-import { getDashboard } from './services/catalogApi';
+import { mockFallbackEnabled } from './services/dataSource';
+import { useNotifications } from './lib/useNotifications';
+import { DataStatusBanner } from './components/layout/DataStatusBanner';
+import { getDashboard, getHospitals } from './services/catalogApi';
 import type { ApiDashboard } from './services/catalogApi';
 import { Footer } from './components/layout/Footer';
 import { Sidebar } from './components/layout/Sidebar';
@@ -174,8 +177,11 @@ function withLinks(items: ShellNavEntry[], role: string): ShellNavEntry[] {
 }
 
 /** Sidebar counters from `GET /dashboard` (own-hospital tiles); entries without a live counter keep their static value. */
-function liveBadges(t: ApiDashboard['tiles']): Record<string, string> {
+function liveBadges(t: ApiDashboard['tiles'], role: string): Record<string, string> {
   const n = (v: number) => (v > 0 ? String(v) : '');
+  if (role === 'DRIVER') return { transport: n(t.driver?.assignedTasks ?? 0) };
+  if (role === 'WAREHOUSE_OFFICER') return { inbox: n(t.transport.waitingDispatch + t.transport.toReceive), transport: n(t.transport.waitingDispatch + t.transport.outInFlight + t.transport.inOnTheWay + t.transport.toReceive), kit: n(t.incidents.open) };
+  if (role === 'ER_STAFF') return { track: n(t.incidents.open) };
   return {
     alerts: n(t.stockAlerts.active),
     req: n(t.borrowRequests.pendingApproval + t.borrowRequests.escalated),
@@ -273,12 +279,17 @@ function AppRoot() {
 function AuthenticatedShell() {
   const { user, activeRole } = useAuth();
   const [badges, setBadges] = useState<Record<string, string>>({});
+  const bell = useNotifications(Boolean(user), []);
   useEffect(() => {
     if (!user) return;
     getDashboard()
-      .then((d) => setBadges(liveBadges(d.tiles)))
-      .catch(() => setBadges({}));
-  }, [user, window.location.search]);
+      .then(async (d) => {
+        const live = liveBadges(d.tiles, activeRole);
+        if (activeRole === 'SYSTEM_ADMIN') live.hosp = String((await getHospitals({ limit: 200 })).items.length);
+        setBadges(live);
+      })
+      .catch(() => setBadges(Object.fromEntries(['alerts', 'req', 'lend', 'exp', 'pool', 'tr', 'inbox', 'transport', 'kit', 'track', 'hosp'].map((k) => [k, '']))));
+  }, [user, activeRole, window.location.search]);
 
   const [query, setQuery] = useState('');
   const [collapsed, setCollapsed] = useState(false);
@@ -380,13 +391,14 @@ function AuthenticatedShell() {
     : 'dash';
 
   // WH, Driver and ER own their sidebars; other roles use the shared catalogue.
-  const navItems = isDriverRole
+  const rawNavItems = isDriverRole
     ? getDriverNav(onSync ? 'sync' : onDocs ? 'docs' : 'transport')
     : warehouse
       ? getWarehouseNav(onTransport ? 'transport' : onInbox ? 'inbox' : onKit ? 'kit' : onDocs ? 'docs' : onStock || onAlerts ? 'stock' : onRequests ? 'requests' : onExpiry ? 'expiry' : onDrugs ? 'drugs' : 'dashboard')
       : isEr
         ? getErNav(erPage)
-        : withLinks(getNavForRole(navRole, activeKey), navRole).map((e) => ('kind' in e || !(e.key in badges) ? e : { ...e, badge: badges[e.key] }));
+        : withLinks(getNavForRole(navRole, activeKey), navRole);
+  const navItems = rawNavItems.map((e) => ('kind' in e || !(e.key in badges) ? e : { ...e, badge: badges[e.key] }));
 
   const mayManageUsers = can(navRole, 'manageUsers');
   const mayViewAudit = can(navRole, 'viewAudit');
@@ -457,8 +469,12 @@ function AuthenticatedShell() {
           isAdmin={isSystemAdminRole}
           navOpen={navOpen}
           onMenu={() => setNavOpen((v) => !v)}
+          unreadCount={bell.live ? bell.unread : undefined}
+          onRead={bell.live ? (id) => void bell.markRead(id) : undefined}
           notifications={
-            isSystemAdminRole
+            bell.live || !mockFallbackEnabled()
+              ? bell.items
+              : isSystemAdminRole
               ? SYSTEM_ADMIN_NOTIFICATIONS
               : isDriverRole
               ? DRIVER_NOTIFICATIONS
@@ -474,6 +490,14 @@ function AuthenticatedShell() {
           user={currentUserProfile}
         />
         <main className="mainpad">
+          <DataStatusBanner />
+          {/* Screens whose API is not built yet still show sample data; say so instead of passing it off as real. */}
+          {!mockFallbackEnabled() &&
+            (isEr || onIncident || onReport || onExpiry || onPool || onUsers || onAudit || onConfig || (warehouse && (onInbox || onKit)) || (onAdmin && ['accounts', 'config', 'audit'].includes(adminTab ?? ''))) && (
+              <div role="note" className="card" style={{ margin: '0 0 12px', padding: '10px 16px', fontSize: 13, background: '#FFFBEB', borderColor: '#FDE68A', color: '#92400E' }}>
+                หน้านี้ยังแสดงข้อมูลตัวอย่าง — ระบบหลังบ้านของส่วนนี้ยังไม่เปิดให้ใช้ ตัวเลขและรายการที่เห็นไม่ได้มาจากฐานข้อมูล
+              </div>
+            )}
           {isSystemAdminRole ? (
             <AdminPage query={query} onQuery={setQuery} />
           ) : isDriverRole ? (

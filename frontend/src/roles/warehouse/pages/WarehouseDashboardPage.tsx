@@ -1,3 +1,4 @@
+import { mockFallbackEnabled } from '../../../services/dataSource';
 import { useTick } from '../../../lib/time';
 import { WhActivityPanel } from '../components/WhActivityPanel';
 import { WhKitStockPanel } from '../components/WhKitStockPanel';
@@ -26,12 +27,12 @@ export function WarehouseDashboardPage() {
       <WhPageHeader />
       <WhKpiRow urgentLeft={urgentLeft} shipments={tr.source === 'live' ? tr.shipments : undefined} />
       <section className="rowcards">
-        <WhTodoPanel urgentLeft={urgentLeft} />
+        <WhTodoPanel urgentLeft={urgentLeft} shipments={tr.source === 'live' ? tr.shipments : undefined} />
         <WhTransportPanel shipments={tr.source === 'live' ? tr.shipments : undefined} />
       </section>
       <section className="rowcards">
-        <WhKitStockPanel />
-        <WhActivityPanel />
+        {mockFallbackEnabled() && <WhKitStockPanel />}
+        <WhActivityPanel history={tr.source === 'live' ? tr.history : undefined} />
       </section>
     </>
   );

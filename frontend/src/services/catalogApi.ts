@@ -77,11 +77,17 @@ export interface ApiHospital {
   updatedAt: string;
 }
 
-export function getHospitals(params: { active?: boolean; limit?: number } = {}) {
+export interface ApiHospitalStats { requestCount: number; incomingCount: number; approvedCount: number; rejectedCount: number; timeoutCount: number; dispatchedCount: number; inTransitCount: number; staffCount: number }
+
+export function getHospitals(params: { active?: boolean; limit?: number; stats?: boolean } = {}) {
   const q = new URLSearchParams({ limit: String(params.limit ?? 200) });
+  if (params.stats) q.set('stats', 'true');
   if (params.active !== undefined) q.set('active', String(params.active));
-  return apiJson<{ ok: true; items: ApiHospital[]; nextCursor: string | null }>(`/hospitals?${q}`);
+  return apiJson<{ ok: true; items: (ApiHospital & { stats?: ApiHospitalStats })[]; nextCursor: string | null }>(`/hospitals?${q}`);
 }
+
+export const createHospital = (body: Record<string, unknown>) => apiJson<{ ok: true; id: string }>('/hospitals', { method: 'POST', headers: { 'Idempotency-Key': crypto.randomUUID() }, body: JSON.stringify(body) });
+export const updateHospital = (id: string, body: Record<string, unknown>) => apiJson<{ ok: true; id: string }>(`/hospitals/${id}`, { method: 'PATCH', body: JSON.stringify(body) });
 
 export interface ApiDashboard {
   ok: true;

@@ -45,6 +45,8 @@ export interface HospitalDrugRequestLog {
 
 export interface HospitalSummary {
   id: string;
+  /** Row version of the API hospital (needed to PATCH it). */
+  version?: number;
   code: string;
   name: string;
   shortName: string;

@@ -19,6 +19,7 @@ import { ObligationTable, ObligationTiles } from '../components/ObligationTable'
 import { BORROW_REQUESTS, GROUPS, groupOf, LENDER_QUEUE } from '../data/borrow';
 import { useBorrowRequests } from '../data/useBorrowRequests';
 import { approveBorrowRequest, escalateManual as escalateManualApi, rejectBorrowRequest } from '../../../services/borrowApi';
+import { mockFallbackEnabled } from '../../../services/dataSource';
 import { getHospitals } from '../../../services/catalogApi';
 import type { ApiHospital } from '../../../services/catalogApi';
 import type { BorrowContext, BorrowRequest, StatusGroup, Urgency } from '../data/borrow';
@@ -79,8 +80,9 @@ export function BorrowRequestsPage({ role = 'PHARMACIST' }: { role?: RoleCode })
   useEffect(() => {
     if (live.source === 'live') setDays(36500);
   }, [live.source]);
-  const lenderTotal = lender.source === 'live' ? lender.requests.length : LENDER_QUEUE.total;
-  const lenderToAnswer = lender.source === 'live' ? lender.requests.filter((r) => r.status === 'waiting').length : LENDER_QUEUE.toAnswer;
+  const lenderDemo = lender.source === 'mock';
+  const lenderTotal = lenderDemo ? LENDER_QUEUE.total : lender.requests.length;
+  const lenderToAnswer = lenderDemo ? LENDER_QUEUE.toAnswer : lender.requests.filter((r) => r.status === 'waiting').length;
   const isLive = live.source === 'live';
   const [actionError, setActionError] = useState<string | null>(null);
   const [historyOnly, setHistoryOnly] = useState(false);
@@ -102,7 +104,7 @@ export function BorrowRequestsPage({ role = 'PHARMACIST' }: { role?: RoleCode })
   // what it rendered before (no extra control, no extra state in the DOM).
   const maySeeObligations = role === 'HOSPITAL_ADMIN';
   const [view, setView] = useState<'requests' | 'obligations'>('requests');
-  const [obligations, setObligations] = useState<ReturnObligation[]>(RETURN_OBLIGATIONS);
+  const [obligations, setObligations] = useState<ReturnObligation[]>(mockFallbackEnabled() ? RETURN_OBLIGATIONS : []);
   const [obligationsLive, setObligationsLive] = useState(false);
   const [waiveError, setWaiveError] = useState<string | null>(null);
   const reloadObligations = () =>
@@ -142,8 +144,8 @@ export function BorrowRequestsPage({ role = 'PHARMACIST' }: { role?: RoleCode })
   }, []);
 
   const all = useMemo(
-    () => (isLive ? live.requests : BORROW_REQUESTS.map((r) => withEscalation(withDecision(r, decision[r.id]), escalations))),
-    [isLive, live.requests, decision, escalations],
+    () => (live.source === 'mock' ? BORROW_REQUESTS.map((r) => withEscalation(withDecision(r, decision[r.id]), escalations)) : live.requests),
+    [live.source, live.requests, decision, escalations],
   );
   const inPeriod = all.filter((r) => r.daysAgo <= days);
   const counts = Object.fromEntries(GROUPS.map((g) => [g.id, inPeriod.filter((r) => groupOf(r.status) === g.id).length])) as Record<StatusGroup, number>;

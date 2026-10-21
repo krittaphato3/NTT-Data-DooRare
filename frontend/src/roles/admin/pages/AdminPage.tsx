@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import '../admin.css';
 import { AccountCrudTab } from '../components/AccountCrudTab';
 import { AdminDashboardTab } from '../components/AdminDashboardTab';
@@ -7,6 +7,9 @@ import { AuditLogTab } from '../components/AuditLogTab';
 import { HospitalDetailView } from '../components/HospitalDetailView';
 import { HospitalListTab } from '../components/HospitalListTab';
 import { SystemConfigTab } from '../components/SystemConfigTab';
+import { createHospital, getHospitals, updateHospital } from '../../../services/catalogApi';
+import { mockFallbackEnabled, onLoadFailure, onLoadSuccess } from '../../../services/dataSource';
+import { hospitalFromApi, hospitalToApi } from '../data/hospitalsLive';
 import { INITIAL_HOSPITALS, INITIAL_USERS, type HospitalSummary, type UserAccount } from '../data/adminData';
 
 function initialTab(): AdminTab {
@@ -28,7 +31,23 @@ interface AdminPageProps {
 export function AdminPage({ query = '', onQuery }: AdminPageProps) {
   const [activeTab, setActiveTab] = useState<AdminTab>(initialTab);
   const [selectedHospitalId, setSelectedHospitalId] = useState<string | null>(null);
-  const [hospitals, setHospitals] = useState<HospitalSummary[]>(INITIAL_HOSPITALS);
+  const [hospitals, setHospitals] = useState<HospitalSummary[]>(mockFallbackEnabled() ? INITIAL_HOSPITALS : []);
+  const [hospitalsLive, setHospitalsLive] = useState(false);
+  const reloadHospitals = () =>
+    getHospitals({ stats: true })
+      .then((res) => {
+        onLoadSuccess('hospitals');
+        setHospitals(res.items.map(hospitalFromApi));
+        setHospitalsLive(true);
+      })
+      .catch((e) => {
+        const f = onLoadFailure('hospitals', e, INITIAL_HOSPITALS, [] as HospitalSummary[]);
+        setHospitals(f.data);
+        setHospitalsLive(false);
+      });
+  useEffect(() => {
+    void reloadHospitals();
+  }, []);
   const [users, setUsers] = useState<UserAccount[]>(INITIAL_USERS);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -51,6 +70,14 @@ export function AdminPage({ query = '', onQuery }: AdminPageProps) {
 
   // Hospital CRUD Handlers
   const handleUpdateHospital = (id: string, updates: Partial<HospitalSummary>) => {
+    if (hospitalsLive) {
+      const version = hospitals.find((h) => h.id === id)?.version;
+      updateHospital(id, { ...hospitalToApi(updates), ...(version ? { version } : {}) })
+        .then(() => reloadHospitals())
+        .then(() => showToast('อัปเดตข้อมูลโรงพยาบาลเรียบร้อยแล้ว'))
+        .catch((e: Error) => showToast(`บันทึกไม่สำเร็จ: ${e.message}`));
+      return;
+    }
     setHospitals((prev) => prev.map((h) => (h.id === id ? { ...h, ...updates } : h)));
     showToast(`อัปเดตข้อมูลและขีดความสามารถของโรงพยาบาลเรียบร้อยแล้ว`);
   };
@@ -70,6 +97,13 @@ export function AdminPage({ query = '', onQuery }: AdminPageProps) {
       | 'detailedLogs'
     >,
   ) => {
+    if (hospitalsLive) {
+      createHospital(hospitalToApi(newHosp))
+        .then(() => reloadHospitals())
+        .then(() => showToast(`เพิ่มโรงพยาบาล "${newHosp.name}" เข้าสู่เครือข่ายเรียบร้อยแล้ว`))
+        .catch((e: Error) => showToast(`เพิ่มไม่สำเร็จ: ${e.message}`));
+      return;
+    }
     const id = `HOSP-${String(hospitals.length + 1).padStart(2, '0')}`;
     const hospital: HospitalSummary = {
       ...newHosp,
