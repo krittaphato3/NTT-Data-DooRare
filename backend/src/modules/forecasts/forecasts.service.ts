@@ -203,6 +203,7 @@ export class ForecastsService {
       );
     const slice = rows.slice(params.offset, params.offset + params.limit);
     items = slice.map((row) => this.mapJsonRow(row, file));
+    const named = await this.enrichNames(items);
     meta = metaFor('JSON_FALLBACK', params.granularity, {
       modelVersion: file.payload.modelVersion,
       originUsed: file.payload.originUsed,
@@ -218,10 +219,7 @@ export class ForecastsService {
       note: `source: ${file.path} (JSON fallback; DB empty or unreachable)`,
       fieldsUnavailable: [
         ...SHARED_UNAVAILABLE,
-        'hospitalName',
-        'itemName',
-        'genericName',
-        'baseUnit',
+        ...(named ? [] : ['hospitalName', 'itemName', 'genericName', 'baseUnit']),
         'computedAt',
         'history',
         'backtest',
@@ -301,6 +299,7 @@ export class ForecastsService {
     }
     const item = this.mapJsonRow(row, file);
     this.assertHospitalScoped(item, sessionHospitalId);
+    const named = await this.enrichNames([item]);
     meta = metaFor('JSON_FALLBACK', granularity, {
       modelVersion: file.payload.modelVersion,
       originUsed: file.payload.originUsed,
@@ -314,10 +313,7 @@ export class ForecastsService {
       note: `source: ${file.path} (JSON fallback; DB empty or unreachable)`,
       fieldsUnavailable: [
         ...SHARED_UNAVAILABLE,
-        'hospitalName',
-        'itemName',
-        'genericName',
-        'baseUnit',
+        ...(named ? [] : ['hospitalName', 'itemName', 'genericName', 'baseUnit']),
         'computedAt',
       ],
       ...(meta?.dbError ? { dbError: meta.dbError } : {}),
@@ -415,6 +411,27 @@ export class ForecastsService {
       calibration: { enabled: null, variant: null },
       computedAt: iso(row.computed_at),
     };
+  }
+
+  /**
+   * The JSON contract has codes but no names. Fill them from the DB when it is reachable; if the lookup
+   * fails the items keep `null` names and the caller keeps them in `fieldsUnavailable`.
+   */
+  private async enrichNames(items: ForecastItem[]): Promise<boolean> {
+    try {
+      const names = await this.repo.lookupNames([...new Set(items.map((item) => item.hospitalDrugId))]);
+      for (const item of items) {
+        const found = names.get(item.hospitalDrugId);
+        if (!found) continue;
+        item.hospitalName = found.hospitalName;
+        item.itemName = found.itemName;
+        item.genericName = found.genericName;
+        item.baseUnit = found.baseUnit;
+      }
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   private mapJsonRow(row: Record<string, any>, file: JsonForecastFile): ForecastItem {

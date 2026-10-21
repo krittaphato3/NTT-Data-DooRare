@@ -80,7 +80,50 @@ const SELECT_ROW = `
     LEFT JOIN forecast_run r ON r.id = f.run_id
 `;
 
+export interface ItemNames {
+  hospitalName: string | null;
+  itemName: string | null;
+  genericName: string | null;
+  baseUnit: string | null;
+}
+
 export class ForecastsRepository {
+  /**
+   * Display names for series that came from the JSON contract (it carries codes only).
+   * Same joins as the DB read path, so both sources label a row identically.
+   */
+  async lookupNames(hospitalDrugIds: string[]): Promise<Map<string, ItemNames>> {
+    const names = new Map<string, ItemNames>();
+    if (hospitalDrugIds.length === 0) return names;
+    const result = await query<{
+      id: string;
+      hospital_name: string | null;
+      item_name: string | null;
+      generic_name: string | null;
+      base_unit: string | null;
+    }>(
+      `SELECT hd.id,
+              COALESCE(h.name_en, h.name_th) AS hospital_name,
+              hd.local_name                  AS item_name,
+              dm.generic_name,
+              dm.base_unit
+         FROM hospital_drug hd
+         JOIN hospital h ON h.id = hd.hospital_id
+         LEFT JOIN drug_master dm ON dm.id = hd.drug_master_id
+        WHERE hd.id = ANY($1::uuid[])`,
+      [hospitalDrugIds],
+    );
+    for (const row of result.rows) {
+      names.set(row.id, {
+        hospitalName: row.hospital_name,
+        itemName: row.item_name,
+        genericName: row.generic_name,
+        baseUnit: row.base_unit,
+      });
+    }
+    return names;
+  }
+
   /** Latest rows from the DB, ordered deterministically so the offset cursor is stable. */
   async listFromDb(params: ForecastListQuery): Promise<DbForecastRow[]> {
     const where: string[] = ['f.granularity = $1'];
