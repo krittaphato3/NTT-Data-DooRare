@@ -1,4 +1,4 @@
-import { apiJson } from './apiFetch';
+import { apiJson, apiJsonAll } from './apiFetch';
 
 export type ApiItemType = 'DRUG' | 'SUPPLY' | 'BLOOD';
 
@@ -51,7 +51,7 @@ export interface ApiHospitalDrug {
 export function getHospitalDrugs(params: { q?: string; limit?: number } = {}) {
   const q = new URLSearchParams({ limit: String(params.limit ?? 200) });
   if (params.q) q.set('q', params.q);
-  return apiJson<{ ok: true; items: ApiHospitalDrug[]; nextCursor: string | null }>(`/hospital-drugs?${q}`);
+  return apiJsonAll<{ ok: true; items: ApiHospitalDrug[]; nextCursor: string | null }>(`/hospital-drugs?${q}`);
 }
 
 export interface ApiHospital {
@@ -83,7 +83,7 @@ export function getHospitals(params: { active?: boolean; limit?: number; stats?:
   const q = new URLSearchParams({ limit: String(params.limit ?? 200) });
   if (params.stats) q.set('stats', 'true');
   if (params.active !== undefined) q.set('active', String(params.active));
-  return apiJson<{ ok: true; items: (ApiHospital & { stats?: ApiHospitalStats })[]; nextCursor: string | null }>(`/hospitals?${q}`);
+  return apiJsonAll<{ ok: true; items: (ApiHospital & { stats?: ApiHospitalStats })[]; nextCursor: string | null }>(`/hospitals?${q}`);
 }
 
 export const createHospital = (body: Record<string, unknown>) => apiJson<{ ok: true; id: string }>('/hospitals', { method: 'POST', headers: { 'Idempotency-Key': crypto.randomUUID() }, body: JSON.stringify(body) });
@@ -102,7 +102,7 @@ export interface ApiDashboard {
     incidents: { open: number };
     transport: { waitingDispatch: number; outInFlight: number; inOnTheWay: number; toReceive: number };
     returns: { open: number; overdue: number };
-    inventory: { lotsInStock: number; expiringWithin90Days: number };
+    inventory: { lotsInStock: number; expiringWithin90Days: number; expired: number };
     driver?: { assignedTasks: number };
   };
 }

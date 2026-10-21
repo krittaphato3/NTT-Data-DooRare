@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Icon } from '../../../components/common/icons';
 import * as authApi from '../../../services/authApi';
+import { mockFallbackEnabled } from '../../../services/dataSource';
 import {
   ADMIN_KPIS,
   DAILY_REQUEST_TRENDS,
@@ -78,6 +79,11 @@ export function AdminDashboardTab({
   const totalTimeoutAll = hospitals.reduce((acc, h) => acc + h.timeoutCount, 0);
 
   const maxLoginsHour = Math.max(...HOURLY_LOGIN_STATS.map((s) => s.logins));
+  // Executive value, system health, trend charts and top drugs have no data source yet: demo mode only.
+  const demo = mockFallbackEnabled();
+  const totalLegsAll = hospitals.reduce((acc, h) => acc + h.incomingCount, 0);
+  const pct = (n: number) => (totalLegsAll > 0 ? ((n / totalLegsAll) * 100).toFixed(1) : '0.0');
+  const staffTotal = hospitals.reduce((acc, h) => acc + h.staffCount, 0);
 
   const handleDownloadReport = () => {
     setIsExporting(true);
@@ -140,7 +146,7 @@ export function AdminDashboardTab({
             ภาพรวมศูนย์บริหารจัดการยาและเวชภัณฑ์ฉุกเฉิน · เขตสุขภาพที่ 6
           </h2>
           <div style={{ fontSize: 12, color: '#64748B', marginTop: 2 }}>
-            ข้อมูล Real-time ประจำวันที่ 16 ตุลาคม 2569 · ครอบคลุม 12 โรงพยาบาลศูนย์/ทั่วไป/ชุมชน
+            ข้อมูลจากฐานข้อมูล ณ {new Date().toLocaleString('th-TH', { dateStyle: 'long', timeStyle: 'short' })} · ครอบคลุม {hospitals.length} โรงพยาบาล
           </div>
         </div>
 
@@ -167,8 +173,8 @@ export function AdminDashboardTab({
           </div>
           <div className="admin-kpi-value">{totalRequestsAll.toLocaleString()} รอบ</div>
           <div className="admin-kpi-subtext">
-            <span className="admin-kpi-trend-good">นำส่งสำเร็จ {totalDispatchesAll.toLocaleString()} รอบ</span>
-            <span>· สำเร็จ 89.7%</span>
+            <span className="admin-kpi-trend-good">ส่งของออกจากคลังแล้ว {totalDispatchesAll.toLocaleString()} รอบ</span>
+            {demo && <span>· สำเร็จ 89.7%</span>}
           </div>
         </div>
 
@@ -180,9 +186,9 @@ export function AdminDashboardTab({
               <Icon name="users" style={{ width: 20, height: 20 }} />
             </div>
           </div>
-          <div className="admin-kpi-value">{totalUsers} บัญชี</div>
+          <div className="admin-kpi-value">{demo ? totalUsers : staffTotal} บัญชี</div>
           <div className="admin-kpi-subtext">
-            <span>ครอบคลุม 12 โรงพยาบาล</span>
+            <span>ครอบคลุม {hospitals.length} โรงพยาบาล</span>
             <button
               type="button"
               onClick={onGoToAccounts}
@@ -210,9 +216,9 @@ export function AdminDashboardTab({
               <Icon name="login" style={{ width: 20, height: 20 }} />
             </div>
           </div>
-          <div className="admin-kpi-value">{ADMIN_KPIS.totalLoginsToday.toLocaleString()} ครั้ง</div>
+          <div className="admin-kpi-value">{demo ? `${ADMIN_KPIS.totalLoginsToday.toLocaleString()} ครั้ง` : '–'}</div>
           <div className="admin-kpi-subtext">
-            <span>วันนี้ (สะสมเดือนนี้ {ADMIN_KPIS.totalLoginsMonth.toLocaleString()} ครั้ง)</span>
+            <span>{demo ? `วันนี้ (สะสมเดือนนี้ ${ADMIN_KPIS.totalLoginsMonth.toLocaleString()} ครั้ง)` : 'ยังไม่มีสถิติสะสม · ดูรายการล่าสุดด้านล่าง'}</span>
           </div>
         </div>
 
@@ -225,17 +231,19 @@ export function AdminDashboardTab({
             </div>
           </div>
           <div className="admin-kpi-value" style={{ color: '#059669', display: 'flex', alignItems: 'center', gap: 10 }}>
-            {activeOnlineUsers} คน
+            {demo || liveOnlineCount !== null ? activeOnlineUsers : '–'} คน
             <span className="admin-live-pulse" style={{ width: 12, height: 12 }} />
           </div>
           <div className="admin-kpi-subtext">
             <span className="admin-badge admin-badge-success" style={{ fontSize: 11 }}>
-              Real-time WebSocket เชื่อมต่อปกติ
+              {demo ? 'Real-time WebSocket เชื่อมต่อปกติ' : 'นับจากเซสชันที่ยังไม่หมดอายุ'}
             </span>
           </div>
         </div>
       </section>
 
+      {demo && (
+        <>
       {/* EXECUTIVE VALUE & IMPACT METRICS */}
       <section
         style={{
@@ -329,7 +337,11 @@ export function AdminDashboardTab({
           </div>
         </div>
       </section>
+        </>
+      )}
 
+      {demo && (
+        <>
       {/* SYSTEM HEALTH & GATEWAY INFRASTRUCTURE BAR */}
       <div
         style={{
@@ -365,6 +377,8 @@ export function AdminDashboardTab({
           </span>
         </div>
       </div>
+        </>
+      )}
 
       {/* SUMMARY BANNER OF REQUEST STATUSES */}
       <div
@@ -389,19 +403,21 @@ export function AdminDashboardTab({
         <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
           <div className="admin-badge admin-badge-success" style={{ padding: '6px 12px', fontSize: 12 }}>
             <Icon name="check" style={{ width: 14, height: 14 }} />
-            อนุมัติ (Approved): {totalApprovedAll} รายการ ({((totalApprovedAll / totalRequestsAll) * 100).toFixed(1)}%)
+            อนุมัติ (Approved): {totalApprovedAll} รายการ ({pct(totalApprovedAll)}%)
           </div>
           <div className="admin-badge admin-badge-danger" style={{ padding: '6px 12px', fontSize: 12 }}>
             <Icon name="x" style={{ width: 14, height: 14 }} />
-            ปฏิเสธ (Rejected): {totalRejectedAll} รายการ ({((totalRejectedAll / totalRequestsAll) * 100).toFixed(1)}%)
+            ปฏิเสธ (Rejected): {totalRejectedAll} รายการ ({pct(totalRejectedAll)}%)
           </div>
           <div className="admin-badge admin-badge-warning" style={{ padding: '6px 12px', fontSize: 12 }}>
             <Icon name="clock" style={{ width: 14, height: 14 }} />
-            หมดเวลา (Timeout): {totalTimeoutAll} รายการ ({((totalTimeoutAll / totalRequestsAll) * 100).toFixed(1)}%)
+            หมดเวลา (Timeout): {totalTimeoutAll} รายการ ({pct(totalTimeoutAll)}%)
           </div>
         </div>
       </div>
 
+      {demo && (
+        <>
       {/* CHARTS SECTION */}
       <section className="admin-grid-2col">
         {/* CHART 1: Daily Requests & Fulfillment */}
@@ -557,6 +573,8 @@ export function AdminDashboardTab({
           </div>
         </div>
       </section>
+        </>
+      )}
 
       {/* RECENT LOGINS & NETWORK STATUS */}
       <section className="admin-grid-2col">
@@ -658,6 +676,8 @@ export function AdminDashboardTab({
         </div>
       </section>
 
+      {demo && (
+        <>
       {/* TOP 5 ESSENTIAL & RARE DRUGS IN REGION 6 */}
       <section className="admin-section-card" aria-label="5 อันดับยาจำเป็นและยากำพร้าที่มีการแลกเปลี่ยนสูงสุด">
         <div className="admin-section-head">
@@ -746,6 +766,8 @@ export function AdminDashboardTab({
           </table>
         </div>
       </section>
+        </>
+      )}
 
       {/* EXECUTIVE REPORT EXPORT MODAL */}
       {isExportOpen && (

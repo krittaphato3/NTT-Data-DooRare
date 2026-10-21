@@ -1,4 +1,4 @@
-import { apiJson } from './apiFetch';
+import { apiJson, apiJsonAll } from './apiFetch';
 
 export type ApiRequestStatus =
   | 'DRAFT' | 'PENDING_APPROVAL' | 'APPROVED' | 'IN_PROGRESS' | 'PARTIALLY_FULFILLED' | 'ESCALATED' | 'FULFILLED' | 'CLOSED_UNFULFILLED' | 'CANCELLED';
@@ -44,7 +44,7 @@ export interface ApiBorrowRequest {
   id: string;
   requestNo: string;
   status: ApiRequestStatus;
-  context: 'STOCK_ALERT' | 'MANUAL';
+  context: 'STOCK_ALERT' | 'MANUAL' | 'EMERGENCY';
   urgency: ApiUrgency;
   reason: string | null;
   version: number;
@@ -80,7 +80,7 @@ export interface ApiLenderItem {
   status: ApiLegStatus;
   urgency: ApiUrgency;
   reason: string | null;
-  context: 'STOCK_ALERT' | 'MANUAL';
+  context: 'STOCK_ALERT' | 'MANUAL' | 'EMERGENCY';
   ved: 'V' | 'E' | 'D' | null;
   borrower: { id: string; code: string; name: string };
   drug: { id: string; name: string; baseUnit: string; coldChain: boolean };
@@ -107,7 +107,7 @@ export const listBorrowRequests = (params: { status?: string; role?: 'borrower' 
   const q = new URLSearchParams({ limit: String(params.limit ?? 200) });
   if (params.status) q.set('status', params.status);
   if (params.role) q.set('role', params.role);
-  return apiJson<{ ok: true; items: ApiBorrowRequest[]; nextCursor: string | null }>(`/borrow-requests?${q}`);
+  return apiJsonAll<{ ok: true; items: ApiBorrowRequest[]; nextCursor: string | null }>(`/borrow-requests?${q}`);
 };
 export const getBorrowRequest = (id: string) => apiJson<One>(`/borrow-requests/${id}`);
 
@@ -121,7 +121,7 @@ export const editLadder = (id: string, body: { version?: number; legs?: { hospit
   apiJson<One>(`/borrow-requests/${id}/ladder`, { method: 'PATCH', body: JSON.stringify(body) });
 
 export const listLenderQueue = (status?: string) =>
-  apiJson<{ ok: true; items: ApiLenderItem[]; nextCursor: string | null }>(`/lender-queue?limit=200${status ? `&status=${status}` : ''}`);
+  apiJsonAll<{ ok: true; items: ApiLenderItem[]; nextCursor: string | null }>(`/lender-queue?limit=200${status ? `&status=${status}` : ''}`);
 
 export interface RespondBody { decision: 'ACCEPT' | 'PARTIAL' | 'REJECT'; qty?: number; reason?: string; lots?: { lotId: string; qty: number }[] }
 export const respondToLeg = (legId: string, body: RespondBody) =>

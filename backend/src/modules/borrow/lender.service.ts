@@ -59,12 +59,13 @@ const QUEUE_SELECT = `
          bl.sent_at, bl.deadline_at, bl.reminded_at, bl.responded_at, bl.reject_reason, bl.message_text, br.request_no, br.urgency::text AS urgency, br.reason, br.context::text AS context,
          (SELECT hd.ved::text FROM hospital_drug hd WHERE hd.hospital_id = br.borrower_hospital_id AND hd.drug_master_id = i.drug_master_id LIMIT 1) AS ved,
          br.borrower_hospital_id, bh.code AS borrower_code, COALESCE(bh.name_th, bh.name_en) AS borrower_name,
-         i.drug_master_id, concat_ws(' ', dm.generic_name, dm.strength, dm.dosage_form) AS drug_name, dm.base_unit, COALESCE(dm.is_cold_chain, false) AS cold_chain,
+         i.drug_master_id, COALESCE(NULLIF(concat_ws(' ', dm.generic_name, dm.strength, dm.dosage_form), ''), kt.name) AS drug_name, COALESCE(dm.base_unit, 'ชุด') AS base_unit, COALESCE(dm.is_cold_chain, kt.needs_cold_chain, false) AS cold_chain,
          tt.id AS task_id, tt.task_no, tt.status::text AS task_status
     FROM borrow_leg bl
     JOIN borrow_request br ON br.id = bl.request_id
-    JOIN borrow_request_item i ON i.request_id = bl.request_id AND (bl.request_item_id IS NULL OR i.id = bl.request_item_id)
-    JOIN drug_master dm ON dm.id = i.drug_master_id
+    JOIN LATERAL (SELECT x.* FROM borrow_request_item x WHERE x.request_id = bl.request_id ORDER BY (x.id = bl.request_item_id) DESC, x.id LIMIT 1) i ON true
+    LEFT JOIN drug_master dm ON dm.id = i.drug_master_id
+    LEFT JOIN kit_type kt ON kt.id = i.kit_type_id
     JOIN hospital bh ON bh.id = br.borrower_hospital_id
     LEFT JOIN transport_task tt ON tt.ref_type = 'BORROW_LEG' AND tt.ref_id = bl.id AND tt.status <> 'CANCELLED'`;
 
@@ -139,9 +140,9 @@ export class LenderService {
       const leg = (
         await client.query(
           `SELECT bl.id, bl.request_id, bl.status::text AS status, bl.qty_asked::float8 AS qty_asked, bl.lender_hospital_id, bl.sent_at, bl.deadline_at, bl.window_max_days,
-                  br.borrower_hospital_id, br.request_no, br.status::text AS request_status, i.drug_master_id, dm.base_unit,
-                  concat_ws(' ', dm.generic_name, dm.strength, dm.dosage_form) AS drug_name, COALESCE(dm.is_cold_chain, false) AS cold_chain
-             FROM borrow_leg bl JOIN borrow_request br ON br.id = bl.request_id JOIN borrow_request_item i ON i.request_id = bl.request_id AND (bl.request_item_id IS NULL OR i.id = bl.request_item_id) JOIN drug_master dm ON dm.id = i.drug_master_id
+                  br.borrower_hospital_id, br.request_no, br.status::text AS request_status, i.drug_master_id, COALESCE(dm.base_unit, 'ชุด') AS base_unit,
+                  COALESCE(NULLIF(concat_ws(' ', dm.generic_name, dm.strength, dm.dosage_form), ''), kt.name) AS drug_name, COALESCE(dm.is_cold_chain, kt.needs_cold_chain, false) AS cold_chain
+             FROM borrow_leg bl JOIN borrow_request br ON br.id = bl.request_id JOIN LATERAL (SELECT x.* FROM borrow_request_item x WHERE x.request_id = bl.request_id ORDER BY (x.id = bl.request_item_id) DESC, x.id LIMIT 1) i ON true LEFT JOIN drug_master dm ON dm.id = i.drug_master_id LEFT JOIN kit_type kt ON kt.id = i.kit_type_id
             WHERE bl.id = $1 FOR UPDATE OF bl`,
           [legId],
         )
@@ -149,6 +150,7 @@ export class LenderService {
       if (!leg || leg.lender_hospital_id !== hospitalId) throw new HttpError(404, 'NOT_FOUND', 'ไม่พบคำขอยืมที่ส่งถึงโรงพยาบาลนี้');
       if (leg.status !== 'SENT') throw new HttpError(409, 'ALREADY_DECIDED', `คำขอนี้อยู่ในสถานะ ${leg.status} ตอบไม่ได้แล้ว`, { status: leg.status });
       if (leg.deadline_at && new Date(leg.deadline_at).getTime() <= Date.now()) throw new HttpError(409, 'TIMED_OUT', 'หมดเวลาตอบแล้ว (ถือเป็นการปฏิเสธ)');
+      if (!leg.drug_master_id) throw new HttpError(422, 'NOT_SUPPORTED', 'คำขอชุดยา (F3) ตอบด้วยขั้นตอนนี้ไม่ได้');
       void version; // legs have no version column; the status guard above is the concurrency check
 
       const ctx = auditContext(req);

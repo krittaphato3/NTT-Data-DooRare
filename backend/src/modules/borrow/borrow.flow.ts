@@ -50,7 +50,8 @@ interface RequestRow {
   stop_threshold: number | null;
   ladder: StoredLadder | null;
   item_id: string;
-  drug_master_id: string;
+  drug_master_id: string | null;
+  item_kind: string;
   qty_requested: number;
   drug_name: string;
   base_unit: string;
@@ -62,12 +63,13 @@ async function loadRequest(client: pg.PoolClient, id: string): Promise<RequestRo
   const r = (
     await client.query(
       `SELECT br.id, br.request_no, br.borrower_hospital_id, br.status::text AS status, br.urgency::text AS urgency, br.version, br.stock_alert_id,
-              br.stop_threshold::float8 AS stop_threshold, br.ladder, i.id AS item_id, i.drug_master_id, i.qty_requested::float8 AS qty_requested,
-              concat_ws(' ', dm.generic_name, dm.strength, dm.dosage_form) AS drug_name, dm.base_unit, COALESCE(h.name_th, h.name_en) AS borrower_name,
+              br.stop_threshold::float8 AS stop_threshold, br.ladder, i.id AS item_id, i.drug_master_id, i.kind::text AS item_kind, i.qty_requested::float8 AS qty_requested,
+              COALESCE(NULLIF(concat_ws(' ', dm.generic_name, dm.strength, dm.dosage_form), ''), kt.name) AS drug_name, COALESCE(dm.base_unit, 'ชุด') AS base_unit, COALESCE(h.name_th, h.name_en) AS borrower_name,
               (SELECT hd.ved::text FROM hospital_drug hd WHERE hd.hospital_id = br.borrower_hospital_id AND hd.drug_master_id = i.drug_master_id LIMIT 1) AS ved
          FROM borrow_request br
-         JOIN borrow_request_item i ON i.request_id = br.id
-         JOIN drug_master dm ON dm.id = i.drug_master_id
+         JOIN LATERAL (SELECT x.* FROM borrow_request_item x WHERE x.request_id = br.id ORDER BY x.id LIMIT 1) i ON true
+         LEFT JOIN drug_master dm ON dm.id = i.drug_master_id
+         LEFT JOIN kit_type kt ON kt.id = i.kit_type_id
          JOIN hospital h ON h.id = br.borrower_hospital_id
         WHERE br.id = $1 FOR UPDATE OF br`,
       [id],

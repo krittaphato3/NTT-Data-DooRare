@@ -1,4 +1,4 @@
-import { apiJson } from './apiFetch';
+import { apiJson, apiJsonAll } from './apiFetch';
 
 export type ApiDocKind = 'BORROW_SLIP' | 'RETURN_SLIP' | 'TRANSFER_SLIP' | 'INCIDENT_REPORT' | 'UCEP_REPORT';
 
@@ -53,7 +53,7 @@ export function listDocuments(params: { kind?: ApiDocKind; status?: 'ISSUED' | '
   const q = new URLSearchParams({ limit: String(params.limit ?? 100) });
   if (params.kind) q.set('kind', params.kind);
   if (params.status) q.set('status', params.status);
-  return apiJson<{ ok: true; items: ApiDocument[]; nextCursor: string | null }>(`/documents?${q}`);
+  return apiJsonAll<{ ok: true; items: ApiDocument[]; nextCursor: string | null }>(`/documents?${q}`);
 }
 
 /** API-XC-002: returns the existing document for the reference when it was already issued. */

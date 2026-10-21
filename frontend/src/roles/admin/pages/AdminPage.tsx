@@ -7,6 +7,7 @@ import { AuditLogTab } from '../components/AuditLogTab';
 import { HospitalDetailView } from '../components/HospitalDetailView';
 import { HospitalListTab } from '../components/HospitalListTab';
 import { SystemConfigTab } from '../components/SystemConfigTab';
+import * as authApi from '../../../services/authApi';
 import { createHospital, getHospitals, updateHospital } from '../../../services/catalogApi';
 import { mockFallbackEnabled, onLoadFailure, onLoadSuccess } from '../../../services/dataSource';
 import { hospitalFromApi, hospitalToApi } from '../data/hospitalsLive';
@@ -33,6 +34,10 @@ export function AdminPage({ query = '', onQuery }: AdminPageProps) {
   const [selectedHospitalId, setSelectedHospitalId] = useState<string | null>(null);
   const [hospitals, setHospitals] = useState<HospitalSummary[]>(mockFallbackEnabled() ? INITIAL_HOSPITALS : []);
   const [hospitalsLive, setHospitalsLive] = useState(false);
+  const [liveOnline, setLiveOnline] = useState<number | null>(null);
+  useEffect(() => {
+    authApi.getRecentLogins(1).then((r) => setLiveOnline(r.onlineCount)).catch(() => setLiveOnline(null));
+  }, []);
   const reloadHospitals = () =>
     getHospitals({ stats: true })
       .then((res) => {
@@ -172,8 +177,8 @@ export function AdminPage({ query = '', onQuery }: AdminPageProps) {
           if (tab !== 'hospitals') setSelectedHospitalId(null);
         }}
         hospitalCount={hospitals.length}
-        userCount={users.length}
-        onlineCount={users.filter((u) => u.isOnline).length}
+        userCount={hospitalsLive ? hospitals.reduce((n, h) => n + h.staffCount, 0) : users.length}
+        onlineCount={liveOnline ?? (mockFallbackEnabled() ? users.filter((u) => u.isOnline).length : 0)}
         selectedHospitalName={selectedHospital?.name}
         onBackToHospitals={handleBackToHospitals}
       />

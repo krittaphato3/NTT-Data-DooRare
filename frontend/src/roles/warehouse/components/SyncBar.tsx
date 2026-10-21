@@ -16,7 +16,7 @@ export function SyncBar({ online, queued, onSync }: SyncBarProps) {
   } else if (queued > 0) {
     v = { title: 'ออนไลน์', text: 'มีรายการที่บันทึกตอนไม่มีสัญญาณยังไม่ถูกส่งขึ้นระบบ (รูปขึ้นรถ TR-2026-000341 ถ่าย 16:29)', icon: 'sync', bg: '#FFFFFF', border: '#E2E8F0', fg: '#1D4ED8', n: queued, btn: 'ซิงก์ตอนนี้', can: true };
   } else {
-    v = { title: 'ซิงก์ครบแล้ว', text: 'ทุกขั้นตอนและรูปถ่ายอยู่บนระบบ · ซิงก์ล่าสุด 19:12 น.', icon: 'checkc', bg: '#F0FDF4', border: '#BBF7D0', fg: '#166534', n: 0, btn: 'ซิงก์อีกครั้ง', can: true };
+    v = { title: 'ซิงก์ครบแล้ว', text: 'ทุกขั้นตอนและรูปถ่ายอยู่บนระบบ', icon: 'checkc', bg: '#F0FDF4', border: '#BBF7D0', fg: '#166534', n: 0, btn: 'ซิงก์อีกครั้ง', can: true };
   }
   return (
     <section role="status" aria-live="polite" className="syncbar" style={{ background: v.bg, borderColor: v.border }}>

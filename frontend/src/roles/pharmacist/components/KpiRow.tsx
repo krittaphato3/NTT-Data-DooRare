@@ -62,7 +62,7 @@ export function KpiRow() {
         </div>
         <div className="num kpi-num" style={{ color: '#0F2A5C' }}>{v(t?.nearExpiry.detected)}</div>
         <div style={{ fontSize: 12, lineHeight: '16px', color: '#475569' }}>
-          ล็อตในคลังที่หมดอายุภายใน 90 วัน <span className="num">{v(t?.inventory.expiringWithin90Days)}</span> · ในคลังกลาง <span className="num">{v(t?.nearExpiry.inPool)}</span>
+          ล็อตที่จะหมดอายุใน 90 วัน <span className="num">{v(t?.inventory.expiringWithin90Days)}</span> · หมดอายุแล้วแต่ยังมีของ <span className="num">{v(t?.inventory.expired)}</span> · ในคลังกลาง <span className="num">{v(t?.nearExpiry.inPool)}</span>
         </div>
       </div>
       <div className="card kpi-card">

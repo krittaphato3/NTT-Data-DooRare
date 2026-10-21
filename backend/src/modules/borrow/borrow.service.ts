@@ -44,16 +44,18 @@ const DETAIL_SELECT = `
   SELECT br.id, br.request_no, br.status::text AS status, br.context::text AS context, br.urgency::text AS urgency, br.reason, br.version,
          br.borrower_hospital_id, COALESCE(bh.name_th, bh.name_en) AS borrower_name, bh.code AS borrower_code,
          br.stock_alert_id, br.first_round_qty::float8 AS first_round_qty, br.stop_threshold::float8 AS stop_threshold, br.ladder,
-         br.created_at, br.updated_at, br.approved_at, cu.display_name AS created_by_name, au.display_name AS approved_by_name,
+         br.created_at, br.updated_at, br.approved_at, COALESCE(cu.display_name, 'ระบบ') AS created_by_name, au.display_name AS approved_by_name,
          i.id AS item_id, i.drug_master_id, i.qty_requested::float8 AS qty_requested, i.qty_fulfilled::float8 AS qty_fulfilled, i.r_value::float8 AS r_value,
-         concat_ws(' ', dm.generic_name, dm.strength, dm.dosage_form) AS drug_name, dm.base_unit, COALESCE(dm.is_cold_chain, false) AS cold_chain,
+         i.kind::text AS item_kind, (SELECT count(*) - 1 FROM borrow_request_item y WHERE y.request_id = br.id)::int AS extra_items,
+         COALESCE(NULLIF(concat_ws(' ', dm.generic_name, dm.strength, dm.dosage_form), ''), kt.name) AS drug_name, COALESCE(dm.base_unit, 'ชุด') AS base_unit, COALESCE(dm.is_cold_chain, kt.needs_cold_chain, false) AS cold_chain,
          (SELECT hd.ved::text FROM hospital_drug hd WHERE hd.hospital_id = br.borrower_hospital_id AND hd.drug_master_id = i.drug_master_id LIMIT 1) AS ved
     FROM borrow_request br
     JOIN hospital bh ON bh.id = br.borrower_hospital_id
-    JOIN app_user cu ON cu.id = br.created_by
+    LEFT JOIN app_user cu ON cu.id = br.created_by
     LEFT JOIN app_user au ON au.id = br.approved_by
-    JOIN borrow_request_item i ON i.request_id = br.id
-    JOIN drug_master dm ON dm.id = i.drug_master_id`;
+    JOIN LATERAL (SELECT x.* FROM borrow_request_item x WHERE x.request_id = br.id ORDER BY x.id LIMIT 1) i ON true
+    LEFT JOIN drug_master dm ON dm.id = i.drug_master_id
+    LEFT JOIN kit_type kt ON kt.id = i.kit_type_id`;
 
 const legView = (l: Record<string, any>, now = Date.now()) => ({
   id: l.id,
@@ -99,7 +101,7 @@ export async function requestView(db: Db, row: Record<string, any>, viewer: Auth
     reason: row.reason,
     version: Number(row.version),
     borrower: { id: row.borrower_hospital_id, code: row.borrower_code, name: row.borrower_name },
-    drug: { id: row.drug_master_id, name: row.drug_name, baseUnit: row.base_unit, ved: row.ved, coldChain: row.cold_chain },
+    drug: { id: row.drug_master_id, kind: row.item_kind, extraItems: Number(row.extra_items), name: row.drug_name, baseUnit: row.base_unit, ved: row.ved, coldChain: row.cold_chain },
     qtyRequested: row.qty_requested,
     qtyFulfilled: row.qty_fulfilled,
     rValue: row.r_value,
@@ -137,6 +139,12 @@ async function loadDetail(db: Db, id: string): Promise<Record<string, any>> {
   const row = (await db.query(`${DETAIL_SELECT} WHERE br.id = $1`, [id])).rows[0];
   if (!row) throw new HttpError(404, 'NOT_FOUND', 'ไม่พบคำขอยืม');
   return row;
+}
+
+/** Kit requests (F3) have no drug item: the ranked-lender flow does not apply to them. */
+function drugOf(r: { drug_master_id: string | null }): string {
+  if (!r.drug_master_id) throw new HttpError(422, 'NOT_SUPPORTED', 'คำขอชุดยา (F3) ใช้ขั้นตอนนี้ไม่ได้');
+  return r.drug_master_id;
 }
 
 function assertBorrower(user: AuthSessionUser, row: { borrower_hospital_id: string } | null | undefined): asserts row is { borrower_hospital_id: string } {
@@ -257,7 +265,7 @@ export class BorrowService {
       const r = request!;
       const cfg = await loadBorrowConfig(client, hospitalId);
       const ctx = (await client.query(`SELECT context::text AS context FROM borrow_request WHERE id = $1`, [id])).rows[0].context;
-      const need = await loadNeed(client, cfg, hospitalId, r.drug_master_id, ctx === 'MANUAL' ? r.qty_requested : undefined);
+      const need = await loadNeed(client, cfg, hospitalId, drugOf(r), ctx === 'MANUAL' ? r.qty_requested : undefined);
       if (need.borrow <= 0) {
         await setRequestStatus(client, r, 'CANCELLED', auditContext(req), 'REQ_NO_NEED', { reason: 'NO_NEED' });
         if (r.stock_alert_id) await client.query(`UPDATE stock_alert SET status = 'ACKNOWLEDGED', updated_at = now(), version = version + 1 WHERE id = $1 AND status = 'LINKED_TO_REQUEST'`, [r.stock_alert_id]);
@@ -443,7 +451,7 @@ export class BorrowService {
       if (lenderId === r.borrower_hospital_id) throw new HttpError(422, 'VALIDATION', 'เลือกโรงพยาบาลตัวเองไม่ได้');
       const lender = (await client.query(`SELECT id, active, agent_participation, COALESCE(name_th, name_en) AS name, code FROM hospital WHERE id = $1`, [lenderId])).rows[0];
       if (!lender || !lender.active) throw new HttpError(404, 'NOT_FOUND', 'ไม่พบโรงพยาบาลผู้ให้ยืม');
-      const listing = await findListing(client, lenderId, r.drug_master_id);
+      const listing = await findListing(client, lenderId, drugOf(r));
       if (!listing || !listing.mapped) throw new HttpError(422, 'MAPPING_NOT_VERIFIED', 'โรงพยาบาลนั้นไม่มีรายการยานี้ที่จับคู่รหัสแล้ว');
       const legs = await loadLegs(client, id);
       const remaining = Math.max(0, Math.ceil(r.qty_requested - effectiveQty(legs) - 1e-9));

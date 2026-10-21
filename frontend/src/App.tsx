@@ -180,7 +180,7 @@ function withLinks(items: ShellNavEntry[], role: string): ShellNavEntry[] {
 function liveBadges(t: ApiDashboard['tiles'], role: string): Record<string, string> {
   const n = (v: number) => (v > 0 ? String(v) : '');
   if (role === 'DRIVER') return { transport: n(t.driver?.assignedTasks ?? 0) };
-  if (role === 'WAREHOUSE_OFFICER') return { inbox: n(t.transport.waitingDispatch + t.transport.toReceive), transport: n(t.transport.waitingDispatch + t.transport.outInFlight + t.transport.inOnTheWay + t.transport.toReceive), kit: n(t.incidents.open) };
+  if (role === 'WAREHOUSE_OFFICER') return { transport: n(t.transport.waitingDispatch + t.transport.outInFlight + t.transport.inOnTheWay + t.transport.toReceive), kit: n(t.incidents.open) };
   if (role === 'ER_STAFF') return { track: n(t.incidents.open) };
   return {
     alerts: n(t.stockAlerts.active),

@@ -1,4 +1,4 @@
-import { apiJson } from './apiFetch';
+import { apiJson, apiJsonAll } from './apiFetch';
 
 export type ApiReturnStatus = 'OPEN' | 'REMINDED' | 'RETURNED' | 'OVERDUE' | 'WAIVED';
 
@@ -27,7 +27,7 @@ export function listReturnObligations(params: { direction?: 'all' | 'owe' | 'owe
   const q = new URLSearchParams({ limit: String(params.limit ?? 200) });
   if (params.direction) q.set('direction', params.direction);
   if (params.status) q.set('status', params.status);
-  return apiJson<{ ok: true; items: ApiReturnObligation[]; nextCursor: string | null }>(`/return-obligations?${q}`);
+  return apiJsonAll<{ ok: true; items: ApiReturnObligation[]; nextCursor: string | null }>(`/return-obligations?${q}`);
 }
 
 /** API-XC-004: record (part of) a return in kind; stock moves FEFO from the debtor to the creditor. */

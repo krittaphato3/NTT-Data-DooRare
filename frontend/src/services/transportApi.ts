@@ -1,4 +1,4 @@
-import { apiJson } from './apiFetch';
+import { apiJson, apiJsonAll } from './apiFetch';
 
 export type ApiTransportStatus = 'WAITING_DISPATCH' | 'LOADED' | 'IN_TRANSIT' | 'ARRIVED' | 'RECEIVED' | 'CANCELLED';
 
@@ -77,7 +77,7 @@ export function getTransportTasks(params: { direction?: 'all' | 'in' | 'out'; ac
   q.set('limit', String(params.limit ?? 200));
   if (params.direction) q.set('direction', params.direction);
   if (params.active !== undefined) q.set('active', String(params.active));
-  return apiJson<{ ok: true; items: ApiTransportTask[]; nextCursor: string | null }>(`/transport-tasks?${q}`);
+  return apiJsonAll<{ ok: true; items: ApiTransportTask[]; nextCursor: string | null }>(`/transport-tasks?${q}`);
 }
 
 export function getVehicles() {

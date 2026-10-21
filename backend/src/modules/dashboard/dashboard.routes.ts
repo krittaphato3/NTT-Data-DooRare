@@ -32,7 +32,8 @@ dashboardRouter.get('/', requireAuth, asyncHandler(async (req, res) => {
            FROM transport_task WHERE status NOT IN ('RECEIVED','CANCELLED') AND ($1::uuid IS NULL OR from_hospital_id = $1 OR to_hospital_id = $1)`),
     one(`SELECT count(*)::int AS open, count(*) FILTER (WHERE due_date < current_date)::int AS overdue
            FROM return_obligation WHERE status IN ('OPEN','REMINDED','OVERDUE') AND ($1::uuid IS NULL OR debtor_hospital_id = $1)`),
-    one(`SELECT count(*) FILTER (WHERE qty_on_hand > 0)::int AS lots, count(*) FILTER (WHERE qty_on_hand > 0 AND expiry_date <= current_date + 90)::int AS expiring_90d
+    one(`SELECT count(*) FILTER (WHERE qty_on_hand > 0)::int AS lots, count(*) FILTER (WHERE qty_on_hand > 0 AND expiry_date > current_date AND expiry_date <= current_date + 90)::int AS expiring_90d,
+                count(*) FILTER (WHERE qty_on_hand > 0 AND expiry_date <= current_date)::int AS expired
            FROM stock_lot WHERE ($1::uuid IS NULL OR hospital_id = $1)`),
     user.role === 'DRIVER'
       ? one(`SELECT count(*)::int AS assigned FROM transport_task WHERE driver_id = $1 AND status NOT IN ('RECEIVED','CANCELLED')`, [user.id])
@@ -51,7 +52,7 @@ dashboardRouter.get('/', requireAuth, asyncHandler(async (req, res) => {
       incidents: { open: incidents.open },
       transport: { waitingDispatch: transport.waiting_dispatch, outInFlight: transport.out_in_flight, inOnTheWay: transport.in_on_the_way, toReceive: transport.to_receive },
       returns: { open: returns.open, overdue: returns.overdue },
-      inventory: { lotsInStock: stock.lots, expiringWithin90Days: stock.expiring_90d },
+      inventory: { lotsInStock: stock.lots, expiringWithin90Days: stock.expiring_90d, expired: stock.expired },
       ...(driver ? { driver: { assignedTasks: driver.assigned } } : {}),
     },
   });

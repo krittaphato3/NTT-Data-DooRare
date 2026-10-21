@@ -154,7 +154,8 @@ export function BorrowRequestsPage({ role = 'PHARMACIST' }: { role?: RoleCode })
 
   const obligationCountList = useMemo(() => obligationCounts(obligations), [obligations]);
   const overdueCount = obligationCountList.OVERDUE;
-  const obligationRows = stateFilter ? obligations.filter((o) => o.state === stateFilter) : obligations;
+  // Default = still owed; a state tile shows the settled ones (returned / waived).
+  const obligationRows = stateFilter ? obligations.filter((o) => o.state === stateFilter) : obligations.filter((o) => !['RETURNED', 'WAIVED'].includes(o.state));
 
   const needle = q.trim().toLowerCase();
   const rows = inPeriod
@@ -323,7 +324,7 @@ export function BorrowRequestsPage({ role = 'PHARMACIST' }: { role?: RoleCode })
               <span className="dir-th">ภาระการคืน</span>
               <span className="dir-en">เราเป็นผู้ยืม · SM-7 · API-XC-003</span>
             </span>
-            <span className="num dir-count">{obligations.length}</span>
+            <span className="num dir-count">{obligations.filter((o) => !["RETURNED", "WAIVED"].includes(o.state)).length}</span>
             {overdueCount > 0 && (
               <span className="badge t-red" style={{ fontWeight: 600 }}>
                 เกินกำหนด {overdueCount}

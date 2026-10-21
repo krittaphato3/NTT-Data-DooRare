@@ -56,6 +56,13 @@
     "date": "2026-10-21"
   },
   {
+    "path": "sessions/2026-10-21-claude-live-pages-qa-sweep.md",
+    "title": "QA sweep of every API-backed page - bugs found and fixed",
+    "summary": "Opened every API-backed screen per role against the main (seed) DB and…",
+    "tags": "session, qa, frontend, backend, borrow, dashboard, detailed",
+    "date": "2026-10-21"
+  },
+  {
     "path": "sessions/2026-10-20-buffy-f1-quantile-phase5.md",
     "title": "F1 quantile forecast module (Phase 5 — monthly quantile model)",
     "summary": "MONTH model (7 quantiles, 167 series); gate passes vs all 3 baselines…",

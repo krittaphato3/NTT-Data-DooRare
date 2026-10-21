@@ -11,8 +11,8 @@ export function WhActivityPanel({ history }: { history?: HistoryRow[] }) {
         กิจกรรมล่าสุด <span style={{ fontSize: 14, fontWeight: 400, color: '#94A3B8' }}>/ Recent activity</span>
       </h2>
       <div style={{ marginTop: 8 }}>
-        {rows.slice(0, 8).map((h) => (
-          <div key={h.code + h.t} className="wh-act">
+        {rows.slice(0, 8).map((h, i) => (
+          <div key={`${i}-${h.code}-${h.t}`} className="wh-act">
             <span className="num" style={{ fontSize: 12, color: '#0F2A5C' }}>{h.t}</span>
             <span style={{ minWidth: 0 }}>
               <span style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6 }}>

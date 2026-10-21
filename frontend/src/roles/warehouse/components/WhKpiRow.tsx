@@ -77,7 +77,7 @@ export function WhKpiRow({ urgentLeft, shipments }: { urgentLeft: string; shipme
         <div className="num kpi-num" style={{ color: '#B91C1C' }}>{t.inbox.newTotal}</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, lineHeight: '16px', color: '#B91C1C' }}>
           <Icon name="clock" className="ic14" />
-          เหลือ <span className="wh-timer">{urgentLeft}</span> · F3 ฝั่งผู้ให้
+          {t.inbox.newTotal > 0 ? <>เหลือ <span className="wh-timer">{urgentLeft}</span> · F3 ฝั่งผู้ให้</> : 'ไม่มีคำขอเร่งด่วนค้างอยู่'}
         </div>
       </div>
     </section>

@@ -53,7 +53,8 @@ export function WhStockPage() {
   const tabs: { id: Tab; label: string; n: number; hint: string }[] = [
     { id: 'stock', label: 'สต็อกและผลทำนาย', n: ALL_ROWS.length, hint: 'คงเหลือ · Predict (P50) / Total Target (P90–P95) · วิธีพยากรณ์' },
     { id: 'alerts', label: 'การแจ้งเตือน', n: QUEUE.length, hint: 'แจ้งเตือนสต็อกต่ำ/เกิน · เภสัชกรเป็นผู้รับทราบและสร้างคำขอ' },
-    { id: 'agent', label: 'แผนและสรุปของ Agent', n: 2, hint: 'Agent เสนอเท่านั้น · เภสัชกรอนุมัติ' },
+    // The Agent summary/plan are fixtures (no agent is connected yet): demo mode only.
+    ...(demo ? [{ id: 'agent' as Tab, label: 'แผนและสรุปของ Agent', n: 2, hint: 'Agent เสนอเท่านั้น · เภสัชกรอนุมัติ' }] : []),
   ];
   const active = tabs.find((t) => t.id === tab)!;
 

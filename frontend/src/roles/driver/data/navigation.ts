@@ -16,7 +16,7 @@ interface DriverNavDef {
 
 const DRIVER_ITEMS: DriverNavDef[] = [
   { page: 'transport', th: 'งานขนส่งของฉัน', en: 'My Deliveries · PWA', ui: 'UI-14', icon: 'truck', badge: '2', badgeTone: 'red' },
-  { page: 'sync', th: 'คิวออฟไลน์ & รถขนส่ง', en: 'Offline Queue & Vehicle', ui: 'NFR-011', icon: 'sync', badge: '1' },
+  { page: 'sync', th: 'คิวออฟไลน์ & รถขนส่ง', en: 'Offline Queue & Vehicle', ui: 'NFR-011', icon: 'sync' },
   { page: 'docs', th: 'เอกสารใบนำส่ง', en: 'Transport Slips', ui: 'UI-15', icon: 'printer' },
 ];
 

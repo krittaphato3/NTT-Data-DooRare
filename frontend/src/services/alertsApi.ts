@@ -1,4 +1,4 @@
-import { apiJson } from './apiFetch';
+import { apiJson, apiJsonAll } from './apiFetch';
 
 export type ApiAlertType = 'LOW_STOCK' | 'OVERSTOCK' | 'DATA_STALE' | 'LOW_CONFIDENCE' | 'ORDER_AHEAD' | 'ORDER_EARLIER' | 'MIN_MAX';
 export type ApiAlertStatus = 'OPEN' | 'ACKNOWLEDGED' | 'LINKED_TO_REQUEST' | 'SNOOZED' | 'RESOLVED' | 'AUTO_CLOSED';
@@ -33,7 +33,7 @@ export interface ApiAlertList {
   meta: { active: number; byStatus: Record<string, number>; bySeverity: Record<string, number> };
 }
 
-export const getAlerts = (limit = 200) => apiJson<ApiAlertList>(`/alerts?limit=${limit}`);
+export const getAlerts = (limit = 200) => apiJsonAll<ApiAlertList>(`/alerts?limit=${limit}`);
 
 export const ackAlert = (id: string, version?: number) =>
   apiJson<{ ok: true; id: string; version: number; data: ApiAlert }>(`/alerts/${id}/ack`, { method: 'POST', body: JSON.stringify(version === undefined ? {} : { version }) });
@@ -51,7 +51,7 @@ export interface ApiInventorySummary {
   nearestExpiry: string | null;
 }
 
-export const getInventorySummary = (limit = 200) => apiJson<{ ok: true; items: ApiInventorySummary[]; nextCursor: string | null }>(`/inventory?view=summary&limit=${limit}`);
+export const getInventorySummary = (limit = 200) => apiJsonAll<{ ok: true; items: ApiInventorySummary[]; nextCursor: string | null }>(`/inventory?view=summary&limit=${limit}`);
 
 /** API-F1a-004: VED / expiry threshold of one of the hospital's drug listings. */
 export const classifyHospitalDrug = (id: string, body: { ved?: 'V' | 'E' | 'D'; expiryThresholdDays?: number | null; reason?: string }) =>
