@@ -30,8 +30,8 @@
   {
     "path": "sessions/2026-10-21-claude-backend-step4-stock-alerts.md",
     "title": "Backend step 4 - stock alerts, forecast loader, classification",
-    "summary": "Alerts evaluated from usable stock vs forecasts; PH and WH stock pages…",
-    "tags": "session, backend, alerts, forecast, f1a",
+    "summary": "Alerts evaluated from usable stock vs forecasts; forecast JSON loader; PH and…",
+    "tags": "session, backend, alerts, forecast, f1a, frontend, detailed",
     "date": "2026-10-21"
   },
   {
