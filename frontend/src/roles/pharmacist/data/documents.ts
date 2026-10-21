@@ -21,6 +21,8 @@ export interface DocLine {
 
 export interface TransferDoc {
   id: string;
+  /** Live data: the document uuid (used by `?doc=`). */
+  uuid?: string;
   version: number;
   /** "13 ต.ค. 15:10" — list column 1 */
   at: string;
@@ -78,7 +80,7 @@ const ADDR_BPL = 'ถนนบางพลี-ลาดกระบอง ต.�
 const HOSP_BKB = 'รพ.บางบ่อ';
 const ADDR_BKB = 'ถนนเทียนดัด ต.บางบ่อ อ.บางบ่อ จ.สมุทรปราการ 10560';
 
-const DEFAULT_TERMS = [
+export const DEFAULT_TERMS = [
   'คืนเป็นชนิดเดียวกัน จำนวนเท่ากันตามหน่วยฐาน (F-30) · ไม่รับคืนเป็นเงิน',
   'กำหนดคืน 30 วันหลังได้รับของ · ระบบแจ้งเตือนก่อน 7 วัน, 1 วัน และรายวันเมื่อค้างคืน (ASM-24)',
   'ล็อตที่คืนต้องเป็นล็อตเดียวกับที่ยืม · ต่างล็อตต้องได้รับอนุมัติจากผู้ให้ยืมก่อน',

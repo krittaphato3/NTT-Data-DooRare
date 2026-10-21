@@ -45,7 +45,7 @@ export function DocumentDrawer({ doc, onOpenDoc, onClose, mayPrint = true }: Doc
         </div>
 
         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
-          <button className="btn btn-p btn-sm" disabled={!mayPrint} title={mayPrint ? undefined : noPrintHint}>
+          <button className="btn btn-p btn-sm" disabled={!mayPrint} title={mayPrint ? undefined : noPrintHint} onClick={() => window.print()}>
             <Icon name="printer" /> พิมพ์
           </button>
           <button className="btn btn-s btn-sm" disabled={!mayPrint} title={mayPrint ? undefined : noPrintHint}>

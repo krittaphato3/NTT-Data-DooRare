@@ -4,7 +4,8 @@ import { homeHrefFor } from '../../../data/navigation';
 import { mayActFor, requiredRoleHint } from '../../../lib/rbac';
 import type { RoleCode } from '../../../lib/rbac';
 import { DocumentDrawer } from '../components/DocumentDrawer';
-import { DOC_TABS, DOC_TYPE_META, DOCUMENTS } from '../data/documents';
+import { DOC_TABS, DOC_TYPE_META } from '../data/documents';
+import { useDocuments } from '../data/useDocuments';
 import type { TransferDoc } from '../data/documents';
 import '../documents.css';
 
@@ -25,6 +26,8 @@ export function DocumentsPage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
   const [q, setQ] = useState('');
   const [selId, setSelId] = useState('');
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const store = useDocuments();
+  const DOCUMENTS = store.docs;
   /* Printing a borrow / transfer document belongs to the pharmacist and the warehouse (§4.1/§4.2). */
   const mayPrint = mayActFor(role, 'PHARMACIST', 'printDocuments');
   const printHint = requiredRoleHint('printDocuments');
@@ -44,7 +47,7 @@ export function DocumentsPage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
       Object.fromEntries(
         DOC_TABS.map((t) => [t.id, t.types ? DOCUMENTS.filter((d) => t.types?.includes(d.type)).length : DOCUMENTS.length]),
       ) as Record<string, number>,
-    [],
+    [DOCUMENTS],
   );
 
   const rows = useMemo(() => {
@@ -56,7 +59,19 @@ export function DocumentsPage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
           !needle ||
           [d.id, d.drug, d.code, d.ref, d.partyA.name, d.partyB.name].some((t) => t.toLowerCase().includes(needle)),
       );
-  }, [tabDef, status, q]);
+  }, [DOCUMENTS, tabDef, status, q]);
+
+  // `?doc=<uuid>` (from the transport screen's "print slip") opens that document once the list is loaded.
+  useEffect(() => {
+    const wanted = new URLSearchParams(window.location.search).get('doc');
+    if (!wanted) return;
+    const found = DOCUMENTS.find((d) => d.uuid === wanted);
+    if (found) {
+      setTab('all');
+      setSelId(found.id);
+      setDrawerOpen(true);
+    }
+  }, [DOCUMENTS]);
 
   const open = (id: string) => {
     setSelId(id);
@@ -90,6 +105,12 @@ export function DocumentsPage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
           </button>
         </div>
       </section>
+
+      {store.source === 'mock' && (
+        <section role="status" className="syncbar" style={{ background: '#FFFBEB', borderColor: '#FDE68A' }}>
+          <span className="syncbar-text">โหลดเอกสารจริงไม่ได้ ({store.error}) · กำลังแสดงข้อมูลตัวอย่าง</span>
+        </section>
+      )}
 
       <section className="card" style={{ padding: 0 }}>
         <div className="tr-card-head">

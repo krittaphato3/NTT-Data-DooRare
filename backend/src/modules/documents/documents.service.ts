@@ -46,6 +46,8 @@ interface Draft {
   lines: DraftLine[];
   deliveryColdChain: boolean;
   returnDueDate?: string;
+  /** `BR-2026-000126 · รอบ 1` / `AP-2026-000041 · บรรทัด 2` — what the slip refers to. */
+  refLabel: string | null;
   note?: string;
 }
 
@@ -67,7 +69,7 @@ async function hospitalParty(db: Db, id: string): Promise<Party> {
 async function draftBorrowSlip(db: Db, legId: string): Promise<Draft> {
   const leg = (
     await db.query(
-      `SELECT bl.id, bl.status::text AS status, bl.lender_hospital_id, br.borrower_hospital_id,
+      `SELECT bl.id, bl.status::text AS status, bl.lender_hospital_id, br.borrower_hospital_id, br.request_no, bl.round_no,
               COALESCE(bl.qty_received, bl.qty_accepted)::float8 AS qty, bl.request_item_id, bl.request_id
          FROM borrow_leg bl JOIN borrow_request br ON br.id = bl.request_id WHERE bl.id = $1`,
       [legId],
@@ -102,13 +104,15 @@ async function draftBorrowSlip(db: Db, legId: string): Promise<Draft> {
     lines: lines.map(toLine),
     deliveryColdChain: lines.some((l) => l.cold_chain),
     returnDueDate: due,
+    refLabel: `${leg.request_no} · รอบ ${leg.round_no}`,
   };
 }
 
 async function draftTransferSlip(db: Db, lineId: string): Promise<Draft> {
   const row = (
     await db.query(
-      `SELECT al.receiver_hospital_id, al.qty::float8 AS qty, al.cold_chain AS line_cold, sl.hospital_id AS sender_id,
+      `SELECT al.receiver_hospital_id, al.qty::float8 AS qty, al.cold_chain AS line_cold, sl.hospital_id AS sender_id, ap.plan_no,
+              (SELECT count(*) FROM allocation_line x WHERE x.plan_id = al.plan_id AND x.id <= al.id) AS line_no,
               ${DRUG_NAME} AS drug_name, hd.local_code AS code, dm.base_unit, dm.is_cold_chain AS cold_chain, sl.lot_no, sl.expiry_date::text AS expiry_date
          FROM allocation_line al
          JOIN allocation_plan ap ON ap.id = al.plan_id
@@ -127,16 +131,19 @@ async function draftTransferSlip(db: Db, lineId: string): Promise<Draft> {
     counterparty: await hospitalParty(db, row.receiver_hospital_id),
     lines: [toLine(row)],
     deliveryColdChain: Boolean(row.line_cold || row.cold_chain),
+    refLabel: `${row.plan_no} · บรรทัด ${row.line_no}`,
   };
 }
 
 async function draftReturnSlip(db: Db, receiptId: string): Promise<Draft> {
   const row = (
     await db.query(
-      `SELECT ro.debtor_hospital_id, ro.creditor_hospital_id, rr.qty_base::float8 AS qty, ${DRUG_NAME} AS drug_name, dm.base_unit,
+      `SELECT ro.debtor_hospital_id, ro.creditor_hospital_id, br.request_no, rr.qty_base::float8 AS qty, ${DRUG_NAME} AS drug_name, dm.base_unit,
               dm.is_cold_chain AS cold_chain, sl.lot_no, sl.expiry_date::text AS expiry_date, NULL::text AS code
          FROM return_receipt rr
          JOIN return_obligation ro ON ro.id = rr.obligation_id
+         JOIN borrow_leg bl ON bl.id = ro.leg_id
+         JOIN borrow_request br ON br.id = bl.request_id
          JOIN drug_master dm ON dm.id = rr.drug_master_id
          LEFT JOIN stock_lot sl ON sl.id = rr.lot_id
         WHERE rr.id = $1`,
@@ -149,6 +156,7 @@ async function draftReturnSlip(db: Db, receiptId: string): Promise<Draft> {
     counterparty: await hospitalParty(db, row.creditor_hospital_id),
     lines: [toLine(row)],
     deliveryColdChain: Boolean(row.cold_chain),
+    refLabel: `${row.request_no} · คืนยา`,
   };
 }
 
@@ -264,6 +272,7 @@ export class DocumentsService {
         docNo,
         kind,
         issuedAt,
+        refLabel: d.refLabel,
         partyA: d.issuer,
         partyB: d.counterparty,
         lines: d.lines,

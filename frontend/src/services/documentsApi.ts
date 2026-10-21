@@ -23,6 +23,7 @@ export interface ApiDocPayload {
   docNo: string;
   kind: ApiDocKind;
   issuedAt: string;
+  refLabel: string | null;
   partyA: ApiDocParty;
   partyB: ApiDocParty;
   lines: ApiDocLine[];
