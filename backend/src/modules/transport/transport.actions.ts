@@ -35,6 +35,7 @@ export async function advanceStatus(req: Request, rawId: string) {
       photoKeys: optionalStringArray(body.photoKeys, 'photoKeys', 10),
       temperatureC: optionalNumber(body.temperatureC, 'temperatureC', { min: -50, max: 60 }),
       qtyReceived: optionalNumber(body.qtyReceived, 'qtyReceived', { min: 0.001 }),
+      reason: typeof body.reason === 'string' && body.reason.trim() ? body.reason.trim().slice(0, 500) : undefined,
     });
     return loadTaskView(client, id, user);
   });

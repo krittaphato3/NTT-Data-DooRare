@@ -46,6 +46,8 @@ export interface TransitionInput {
   temperatureC?: number | null;
   /** RECEIVED only: quantity actually received (default = shipped). */
   qtyReceived?: number;
+  /** Why the step was recorded (e.g. a warehouse officer acting for a driver); goes into the audit log. */
+  reason?: string;
   /** A pharmacist may confirm receipt through `POST /borrow-legs/{id}/receive`. */
   allowPharmacistReceive?: boolean;
 }
@@ -293,6 +295,7 @@ export async function applyTransition(client: pg.PoolClient, ctx: AuditContext, 
     entityId: task.id,
     before: { status: task.status, version: Number(task.version) },
     after: { status: input.toStatus, photos: photoKeys.length, ...(received !== undefined ? { qtyReceived: received } : {}) },
+    reason: input.reason ?? null,
   });
 }
 

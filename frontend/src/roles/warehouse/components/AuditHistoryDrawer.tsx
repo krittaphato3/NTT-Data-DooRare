@@ -1,8 +1,17 @@
 import { Icon } from '../../../components/common/icons';
 import { AUDIT_HISTORY } from '../data/transport';
 
+interface HistoryItemView {
+  t: string;
+  who: string;
+  role: string;
+  tone: string;
+  text: string;
+  code: string;
+}
+
 /** Audit history drawer (spec §15: every screen). */
-export function AuditHistoryDrawer({ onClose }: { onClose: () => void }) {
+export function AuditHistoryDrawer({ onClose, items = AUDIT_HISTORY }: { onClose: () => void; items?: HistoryItemView[] }) {
   return (
     <aside className="tr-drawer tr-drawer-hist" aria-label="ประวัติการเปลี่ยนแปลง">
       <div style={{ padding: '16px 20px', borderBottom: '1px solid #E2E8F0', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
@@ -20,8 +29,9 @@ export function AuditHistoryDrawer({ onClose }: { onClose: () => void }) {
         <Icon name="lock" className="ic14" style={{ marginTop: 2 }} />
         <span>บันทึกแบบ hash-chain แก้ไขหรือลบไม่ได้ · บทบาทแสดงตามที่ผู้ใช้ถือในเวลานั้น</span>
       </div>
+      {items.length === 0 && <div className="hist-note">ยังไม่มีการเปลี่ยนแปลงสถานะ</div>}
       <ol className="hist-list">
-        {AUDIT_HISTORY.map((h) => (
+        {items.map((h) => (
           <li key={h.code + h.t}>
             <span className="num" style={{ fontSize: 12, color: '#0F2A5C' }}>{h.t}</span>
             <span style={{ minWidth: 0 }}>

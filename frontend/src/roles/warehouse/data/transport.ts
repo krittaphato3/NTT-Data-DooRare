@@ -33,6 +33,13 @@ export interface TransportPhoto {
 
 export interface Shipment {
   id: string;
+  /** Live data only: the transport_task uuid, its version (optimistic lock) and what it carries. */
+  taskId?: string;
+  version?: number;
+  refType?: 'BORROW_LEG' | 'ALLOCATION_LINE';
+  refId?: string;
+  /** Live data: direction relative to the signed-in hospital (replaces the mock HOME_HOSPITAL rule). */
+  outbound?: boolean;
   kind: ShipmentKind;
   ref: string;
   drug: string;
@@ -131,5 +138,5 @@ export const AUDIT_HISTORY = [
   { t: '16:30', who: 'คุณประเสริฐ ใจงาม', role: 'WAREHOUSE_OFFICER', tone: 'blue' as Tone, text: 'TR-2026-000341 ขึ้นรถ + รูป 2 (1 รอซิงก์) · ตัดสต็อก 20 VIAL', code: 'TRANSPORT_LOADED' },
 ];
 
-export const isOutbound = (s: Shipment) => s.from === HOME_HOSPITAL;
+export const isOutbound = (s: Shipment) => s.outbound ?? s.from === HOME_HOSPITAL;
 export const fmtQty = (n: number) => n.toLocaleString('en-US');

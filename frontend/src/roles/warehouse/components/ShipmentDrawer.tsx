@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import { Icon } from '../../../components/common/icons';
 import { fmtQty, HOSPITALS, isOutbound, STEP_ORDER, STEPS } from '../data/transport';
 import type { Shipment, TransportStatus } from '../data/transport';
@@ -34,6 +35,15 @@ interface ShipmentDrawerProps {
   isDriver?: boolean;
   onDepart?: (id: string) => void;
   onArrive?: (id: string) => void;
+  /** Live mode: actions go to the API (`onAdvance`), photos are uploaded first (`onAddPhoto`). */
+  live?: boolean;
+  busy?: boolean;
+  error?: string | null;
+  /** Keys of photos uploaded for this task and not yet attached to a status change. */
+  pendingPhotos?: string[];
+  onAddPhoto?: (file: File) => void;
+  onAdvance?: (to: 'LOADED' | 'IN_TRANSIT' | 'ARRIVED' | 'RECEIVED', extra?: { qtyReceived?: number }) => void;
+  onSlip?: () => void;
 }
 
 function returnNote(s: Shipment): string {
@@ -47,22 +57,24 @@ function returnNote(s: Shipment): string {
 
 export function ShipmentDrawer(p: ShipmentDrawerProps) {
   const { shipment: s, status } = p;
+  const fileRef = useRef<HTMLInputElement>(null);
+  const pendingCount = p.pendingPhotos?.length ?? 0;
   const out = isOutbound(s);
   const idx = status === 'CANCELLED' ? -1 : STEP_ORDER.indexOf(status);
   const cancelReq = s.cancelRequest;
   const op = p.canOperate;
   const showReceipt = op && !out && status === 'ARRIVED' && p.receipt === 'open';
-  const canPhoto = op && ['WAITING_DISPATCH', 'LOADED', 'IN_TRANSIT'].includes(status) && s.photos.length < 10;
+  const canPhoto = op && ['WAITING_DISPATCH', 'LOADED', 'IN_TRANSIT'].includes(status) && s.photos.length + pendingCount < 10;
   const primary = !op
     ? null
     : p.isDriver
       ? status === 'LOADED'
-        ? { label: 'ออกเดินทาง', onClick: () => p.onDepart?.(s.id) }
+        ? { label: 'ออกเดินทาง', onClick: () => (p.live ? p.onAdvance?.('IN_TRANSIT') : p.onDepart?.(s.id)) }
         : status === 'IN_TRANSIT'
-          ? { label: 'ถึงปลายทาง + ถ่ายรูป', onClick: () => p.onArrive?.(s.id) }
+          ? { label: 'ถึงปลายทาง + ถ่ายรูป', onClick: () => (p.live ? p.onAdvance?.('ARRIVED') : p.onArrive?.(s.id)) }
           : null
       : status === 'WAITING_DISPATCH' && out && !cancelReq
-        ? { label: 'ยืนยันขึ้นรถ + ถ่ายรูป', onClick: undefined as (() => void) | undefined }
+        ? { label: 'ยืนยันขึ้นรถ + ถ่ายรูป', onClick: (p.live ? () => p.onAdvance?.('LOADED') : undefined) as (() => void) | undefined }
         : status === 'ARRIVED' && !out && !showReceipt
           ? { label: 'ยืนยันรับของ', onClick: p.onOpenReceipt }
           : null;
@@ -205,8 +217,8 @@ export function ShipmentDrawer(p: ShipmentDrawerProps) {
           </div>
         ))}
 
-        {showReceipt && <ReceiptForm shipment={s} counted={p.counted} onCounted={p.onCounted} onConfirm={p.onConfirmReceipt} />}
-        {op && !out && p.receipt === 'done' && (
+        {showReceipt && <ReceiptForm shipment={s} counted={p.counted} onCounted={p.onCounted} onConfirm={p.live ? () => p.onAdvance?.('RECEIVED', { qtyReceived: Number(p.counted) }) : p.onConfirmReceipt} />}
+        {op && !out && p.receipt === 'done' && !p.live && (
           <div role="status" className="receipt-done">
             <Icon name="checkc" style={{ marginTop: 2 }} />
             <span style={{ flex: 1 }}>
@@ -239,16 +251,39 @@ export function ShipmentDrawer(p: ShipmentDrawerProps) {
                 </div>
               );
             })}
+            {p.pendingPhotos?.map((key) => (
+              <div key={key} className="ph" role="img" aria-label="รูปที่อัปโหลดแล้ว รอแนบกับขั้นถัดไป">
+                <Icon name="camera" className="ic20" />
+                <span className="code" style={{ fontSize: 10 }}>พร้อมแนบ</span>
+              </div>
+            ))}
             {canPhoto && (
-              <button className="ph ph-add" aria-label="ถ่ายหรือเพิ่มรูป">
-                <Icon name="plus" className="ic20" />
-                <span>เพิ่มรูป</span>
-              </button>
+              <>
+                {p.live && (
+                  <input
+                    ref={fileRef}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    hidden
+                    data-testid="photo-input"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) p.onAddPhoto?.(file);
+                      e.target.value = '';
+                    }}
+                  />
+                )}
+                <button className="ph ph-add" aria-label="ถ่ายหรือเพิ่มรูป" disabled={p.busy} onClick={() => fileRef.current?.click()}>
+                  <Icon name="plus" className="ic20" />
+                  <span>เพิ่มรูป</span>
+                </button>
+              </>
             )}
           </div>
         </div>
 
-        {op && p.pending && (
+        {op && p.pending && !p.live && (
           <div className="queue-box">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
               <span style={{ fontSize: 13, fontWeight: 600, color: '#0F2A5C' }}>คิวในเครื่อง · รอซิงก์ 1 รายการ</span>
@@ -262,13 +297,19 @@ export function ShipmentDrawer(p: ShipmentDrawerProps) {
           </div>
         )}
 
+        {p.error && (
+          <div role="alert" className="receipt-warn">
+            <Icon name="tri" className="ic14" style={{ marginTop: 2 }} />
+            {p.error}
+          </div>
+        )}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
           {primary && (
-            <button className="btn btn-p" onClick={primary.onClick}>
-              {primary.label}
+            <button className="btn btn-p" onClick={primary.onClick} disabled={p.busy}>
+              {p.busy ? 'กำลังบันทึก…' : primary.label}
             </button>
           )}
-          <button className="btn btn-s">
+          <button className="btn btn-s" onClick={p.onSlip} disabled={p.busy}>
             <Icon name="printer" />
             {s.kind === 'F1' ? 'ใบยืม BORROW_SLIP' : 'ใบโอน TRANSFER_SLIP'}
           </button>

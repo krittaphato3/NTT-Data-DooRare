@@ -12,9 +12,13 @@ import { ShipmentTable } from '../components/ShipmentTable';
 import type { ShipmentRowState } from '../components/ShipmentTable';
 import { StatusTiles } from '../components/StatusTiles';
 import { SyncBar } from '../components/SyncBar';
-import { DRIVERS, isOutbound, SHIPMENTS, TILE_ORDER } from '../data/transport';
+import { isOutbound, TILE_ORDER } from '../data/transport';
 import type { Shipment, ShipmentKind, TransportStatus } from '../data/transport';
+import { useTransport } from '../data/useTransport';
+import { createDocument } from '../../../services/documentsApi';
 import '../transport.css';
+
+const MOCK_DRIVER = 'คุณสมชาย แก้วกล้า';
 
 function useOnline(): boolean {
   const [online, setOnline] = useState(() => (typeof navigator === 'undefined' ? true : navigator.onLine));
@@ -46,7 +50,10 @@ export function TransportTrackingPage({ role = 'WAREHOUSE_OFFICER' }: { role?: T
   const canOperate = can(role, 'transportStatus');
   const isDriver = role === 'DRIVER';
   // Only the pharmacist answers / requests a cancellation (RBAC §4.4); the warehouse never does.
-  const canCancel = role === 'PHARMACIST';
+  const tr = useTransport();
+  const live = tr.source === 'live';
+  // The cancel-with-consent flow has no API yet, so it stays a mock-only control.
+  const canCancel = role === 'PHARMACIST' && !live;
   const online = useOnline();
   const [dir, setDir] = useState<Direction>('out');
   const [status, setStatus] = useState<TransportStatus | null>(null);
@@ -61,7 +68,10 @@ export function TransportTrackingPage({ role = 'WAREHOUSE_OFFICER' }: { role?: T
   const [proxy, setProxy] = useState<Record<string, ProxyEntry[]>>({});
   const [q, setQ] = useState('');
   const [kind, setKind] = useState<'all' | ShipmentKind>('all');
-  const [driver, setDriver] = useState(isDriver ? 'คุณสมชาย แก้วกล้า' : 'all');
+  const [driver, setDriver] = useState('all');
+  const [busy, setBusy] = useState(false);
+  const [actError, setActError] = useState<string | null>(null);
+  const [photoKeys, setPhotoKeys] = useState<Record<string, string[]>>({});
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -74,6 +84,9 @@ export function TransportTrackingPage({ role = 'WAREHOUSE_OFFICER' }: { role?: T
   }, [histOpen]);
 
   const effective = (s: Shipment): ShipmentRowState => {
+    if (live) {
+      return { shipment: s, status: s.status, pending: canOperate && !!s.pending, cancelRequested: !!s.cancelRequest && s.status === 'WAITING_DISPATCH' };
+    }
     let st = s.status;
     const px = proxy[s.id];
     if (px?.length) st = px[px.length - 1].to;
@@ -82,7 +95,8 @@ export function TransportTrackingPage({ role = 'WAREHOUSE_OFFICER' }: { role?: T
     return { shipment: s, status: st, pending: canOperate && !!s.pending && !synced, cancelRequested: !!s.cancelRequest && st === 'WAITING_DISPATCH' && cancel[s.id] !== 'no' };
   };
 
-  const all = useMemo(() => SHIPMENTS.map(effective), [receipt, cancel, synced, proxy]); // eslint-disable-line react-hooks/exhaustive-deps
+  const all = useMemo(() => tr.shipments.map(effective), [tr.shipments, live, receipt, cancel, synced, proxy]); // eslint-disable-line react-hooks/exhaustive-deps
+  const drivers = useMemo(() => [...new Set(tr.shipments.map((s) => s.driver).filter((d): d is string => !!d))].sort(), [tr.shipments]);
   const queued = all.filter((r) => r.pending).length;
 
   const byDir = all.filter((r) => (dir === 'out' ? isOutbound(r.shipment) : !isOutbound(r.shipment)));
@@ -93,6 +107,7 @@ export function TransportTrackingPage({ role = 'WAREHOUSE_OFFICER' }: { role?: T
     .filter((r) => !status || r.status === status)
     .filter((r) => kind === 'all' || r.shipment.kind === kind)
     .filter((r) => driver === 'all' || r.shipment.driver === driver)
+    .filter((r) => live || !isDriver || r.shipment.driver === MOCK_DRIVER)
     .filter((r) => !needle || [r.shipment.id, r.shipment.ref, r.shipment.drug].some((t) => t.toLowerCase().includes(needle)));
 
   const outAll = all.filter((r) => isOutbound(r.shipment));
@@ -121,12 +136,57 @@ export function TransportTrackingPage({ role = 'WAREHOUSE_OFFICER' }: { role?: T
     setDrawerOpen(true);
   };
   const onAction = (r: ShipmentRowState) => {
+    setActError(null);
     if (r.status === 'ARRIVED' && !isOutbound(r.shipment) && receipt[r.shipment.id] !== 'done') setReceipt((m) => ({ ...m, [r.shipment.id]: 'open' }));
     if (r.status === 'LOADED' && r.pending) setSynced(true);
     open(r.shipment.id);
   };
 
   const sel = selId ? all.find((r) => r.shipment.id === selId) : undefined;
+
+  /** Live actions: upload a photo for the open task, or advance its status (attaching the uploaded photos). */
+  const addPhoto = async (s: Shipment, file: File) => {
+    setBusy(true);
+    setActError(null);
+    try {
+      const key = await tr.addPhoto(s, file);
+      setPhotoKeys((m) => ({ ...m, [s.id]: [...(m[s.id] ?? []), key] }));
+    } catch (e) {
+      setActError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  const advance = async (s: Shipment, to: 'LOADED' | 'IN_TRANSIT' | 'ARRIVED' | 'RECEIVED', extra: { qtyReceived?: number; reason?: string } = {}) => {
+    setBusy(true);
+    setActError(null);
+    try {
+      const keys = to === 'LOADED' || to === 'ARRIVED' ? photoKeys[s.id] ?? [] : [];
+      await tr.advance(s, to, { ...extra, ...(keys.length ? { photoKeys: keys } : {}) });
+      setPhotoKeys((m) => ({ ...m, [s.id]: [] }));
+      setReceipt((m) => ({ ...m, [s.id]: undefined }));
+    } catch (e) {
+      setActError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  /** Issue (or open the existing) borrow / transfer slip, then go to the documents screen. */
+  const openSlip = async (s: Shipment) => {
+    if (!live || !s.refId) return;
+    setBusy(true);
+    setActError(null);
+    try {
+      const res = await createDocument(s.kind === 'F1' ? 'BORROW_SLIP' : 'TRANSFER_SLIP', s.refId);
+      const url = new URL(window.location.href);
+      url.searchParams.set('page', role === 'ER_STAFF' ? 'documents' : 'docs');
+      url.searchParams.set('doc', res.id);
+      window.location.href = url.toString();
+    } catch (e) {
+      setActError((e as Error).message);
+      setBusy(false);
+    }
+  };
   const countedFor = (s: Shipment) => counted[s.id] ?? String(s.qty);
 
   return (
@@ -172,6 +232,14 @@ export function TransportTrackingPage({ role = 'WAREHOUSE_OFFICER' }: { role?: T
         </section>
       )}
 
+      {tr.source === 'mock' && (
+        <section role="status" className="syncbar" style={{ background: '#FFFBEB', borderColor: '#FDE68A' }}>
+          <span className="syncbar-text">
+            โหลดข้อมูลงานขนส่งจริงไม่ได้ ({tr.error}) · กำลังแสดงข้อมูลตัวอย่าง
+          </span>
+        </section>
+      )}
+
       <section className="card" style={{ padding: 0 }}>
         <div className="tr-card-head">
           <DirectionTabs
@@ -206,7 +274,7 @@ export function TransportTrackingPage({ role = 'WAREHOUSE_OFFICER' }: { role?: T
           </select>
           <select className={`sel ${driver !== 'all' ? 'sel-on' : ''}`} aria-label="คนขับ" value={driver} onChange={(e) => setDriver(e.target.value)}>
             <option value="all">คนขับ: ทั้งหมด</option>
-            {DRIVERS.map((d) => (
+            {drivers.map((d) => (
               <option key={d} value={d}>{d}</option>
             ))}
           </select>
@@ -235,8 +303,15 @@ export function TransportTrackingPage({ role = 'WAREHOUSE_OFFICER' }: { role?: T
           canOperate={canOperate}
           canCancel={canCancel}
           proxies={proxy[sel.shipment.id] ?? []}
-          onProxy={(to, reason) => setProxy((m) => ({ ...m, [sel.shipment.id]: [...(m[sel.shipment.id] ?? []), { to, reason }] }))}
+          onProxy={(to, reason) => (live ? void advance(sel.shipment, to, { reason }) : setProxy((m) => ({ ...m, [sel.shipment.id]: [...(m[sel.shipment.id] ?? []), { to, reason }] })))}
           isDriver={isDriver}
+          live={live}
+          busy={busy}
+          error={actError}
+          pendingPhotos={photoKeys[sel.shipment.id]}
+          onAddPhoto={(file) => void addPhoto(sel.shipment, file)}
+          onAdvance={(to, extra) => void advance(sel.shipment, to, extra)}
+          onSlip={() => void openSlip(sel.shipment)}
           onDepart={(id) => {
             setProxy((m) => ({ ...m, [id]: [...(m[id] ?? []), { to: 'IN_TRANSIT', reason: 'คนขับยืนยันออกเดินทาง' }] }));
           }}
@@ -245,7 +320,7 @@ export function TransportTrackingPage({ role = 'WAREHOUSE_OFFICER' }: { role?: T
           }}
         />
       )}
-      {histOpen && <AuditHistoryDrawer onClose={() => setHistOpen(false)} />}
+      {histOpen && <AuditHistoryDrawer onClose={() => setHistOpen(false)} items={tr.history} />}
     </>
   );
 }
