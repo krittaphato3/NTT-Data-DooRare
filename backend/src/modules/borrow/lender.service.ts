@@ -62,7 +62,7 @@ const QUEUE_SELECT = `
          tt.id AS task_id, tt.task_no, tt.status::text AS task_status
     FROM borrow_leg bl
     JOIN borrow_request br ON br.id = bl.request_id
-    JOIN borrow_request_item i ON i.id = bl.request_item_id
+    JOIN borrow_request_item i ON i.request_id = bl.request_id AND (bl.request_item_id IS NULL OR i.id = bl.request_item_id)
     JOIN drug_master dm ON dm.id = i.drug_master_id
     JOIN hospital bh ON bh.id = br.borrower_hospital_id
     LEFT JOIN transport_task tt ON tt.ref_type = 'BORROW_LEG' AND tt.ref_id = bl.id AND tt.status <> 'CANCELLED'`;
@@ -138,7 +138,7 @@ export class LenderService {
           `SELECT bl.id, bl.request_id, bl.status::text AS status, bl.qty_asked::float8 AS qty_asked, bl.lender_hospital_id, bl.sent_at, bl.deadline_at, bl.window_max_days,
                   br.borrower_hospital_id, br.request_no, br.status::text AS request_status, i.drug_master_id, dm.base_unit,
                   concat_ws(' ', dm.generic_name, dm.strength, dm.dosage_form) AS drug_name, COALESCE(dm.is_cold_chain, false) AS cold_chain
-             FROM borrow_leg bl JOIN borrow_request br ON br.id = bl.request_id JOIN borrow_request_item i ON i.id = bl.request_item_id JOIN drug_master dm ON dm.id = i.drug_master_id
+             FROM borrow_leg bl JOIN borrow_request br ON br.id = bl.request_id JOIN borrow_request_item i ON i.request_id = bl.request_id AND (bl.request_item_id IS NULL OR i.id = bl.request_item_id) JOIN drug_master dm ON dm.id = i.drug_master_id
             WHERE bl.id = $1 FOR UPDATE OF bl`,
           [legId],
         )

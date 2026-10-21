@@ -72,6 +72,10 @@ export function BorrowRequestsPage({ role = 'PHARMACIST' }: { role?: RoleCode })
   const [decision, setDecision] = useState<Record<string, Decision>>({});
   const live = useBorrowRequests();
   const lender = useLenderQueue();
+  // Live data includes years of history, so the default period must not hide it (the 90-day default is for the mock fixtures).
+  useEffect(() => {
+    if (live.source === 'live') setDays(36500);
+  }, [live.source]);
   const lenderTotal = lender.source === 'live' ? lender.requests.length : LENDER_QUEUE.total;
   const lenderToAnswer = lender.source === 'live' ? lender.requests.filter((r) => r.status === 'waiting').length : LENDER_QUEUE.toAnswer;
   const isLive = live.source === 'live';
@@ -402,6 +406,7 @@ export function BorrowRequestsPage({ role = 'PHARMACIST' }: { role?: RoleCode })
               <option value="MANUAL">MANUAL · สร้างเอง</option>
             </select>
             <select className={`sel ${days !== 90 ? 'sel-on' : ''}`} aria-label="ช่วงเวลา" value={days} onChange={(e) => setDays(Number(e.target.value))}>
+              <option value={36500}>ทั้งหมด</option>
               <option value={90}>90 วันล่าสุด</option>
               <option value={30}>30 วันล่าสุด</option>
               <option value={7}>7 วันล่าสุด</option>

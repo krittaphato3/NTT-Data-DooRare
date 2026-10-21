@@ -78,3 +78,9 @@ summary: Borrow request lifecycle (create, propose, approve, respond, next round
 - Agent (Task 3 messages, Task 5 re-rank) is not connected; `agent_run` rows are SKIPPED.
 - Notification bell, EMERGENCY context (F3), kit legs still pending; step 6 per the plan order.
 - Remember: after any backend restart sessions are dropped; log in again in the browser. Backend runs on 3001 against the main DB.
+
+## Follow-up fixes (user screenshots showed empty pages on the main DB)
+
+- Lender queue returned 0 for every hospital: 164+ seed legs have `request_item_id = NULL` and the queue/respond queries inner-joined on it. Now joined by `request_id` (and the item id when set). Not caught by the tests because test legs are created by the API.
+- Requests page showed 100 requests but all tiles 0: seed requests are older than the default 90-day period filter. In live mode the period defaults to "ทั้งหมด" (option added).
+- Lesson: run the new screens against the main (seed) DB too, not only against API-created rows. Lender tile "ตอบรับแล้ว" counts RECEIVED legs as well (history).
