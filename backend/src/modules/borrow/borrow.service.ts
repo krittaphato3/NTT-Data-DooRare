@@ -19,7 +19,7 @@ import type { Db } from '../../db/tx.js';
 import { HttpError } from '../../middleware/httpError.js';
 import type { AuthSessionUser } from '../auth/auth.types.js';
 import { loadBorrowConfig } from './borrow.config.js';
-import { advanceRequest, draftMessage, effectiveQty, loadLegs, loadRequest, sendLegs, setRequestStatus } from './borrow.flow.js';
+import { advanceRequest, asStoredLadder, draftMessage, effectiveQty, loadLegs, loadRequest, sendLegs, setRequestStatus } from './borrow.flow.js';
 import type { StoredLadder } from './borrow.flow.js';
 import { findListing, loadNeed, usableStock } from './borrow.inputs.js';
 import { buildLadder } from './borrow.ladder.js';
@@ -89,7 +89,7 @@ export async function requestView(db: Db, row: Record<string, any>, viewer: Auth
   const isBorrower = viewer.hospitalId === row.borrower_hospital_id || !viewer.hospitalId;
   const visibleLegs = isBorrower ? legs : legs.filter((l) => l.lender_hospital_id === viewer.hospitalId);
   const effective = effectiveQty(legs.map((l) => ({ status: l.status, qty_accepted: l.qty_accepted, qty_received: l.qty_received })));
-  const stored = row.ladder as StoredLadder | null;
+  const stored = asStoredLadder(row.ladder);
   return {
     id: row.id,
     requestNo: row.request_no,

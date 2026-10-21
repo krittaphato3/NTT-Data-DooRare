@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Icon } from '../../../components/common/icons';
 import { homeHrefFor } from '../../../data/navigation';
 import type { RoleCode } from '../../../lib/rbac';
+import { createBorrowRequest, proposeBorrowRequest } from '../../../services/borrowApi';
 import { StockAlertSummary } from '../components/StockAlertSummary';
 import { StockAlertTable } from '../components/StockAlertTable';
 import type { RowActionCond } from '../components/StockAlertTable';
@@ -137,7 +138,15 @@ export function StockAlertsPage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
         setSnoozeReason('');
         setSnoozeHours(24);
         setSnoozeTarget(row);
-      } else if (cond === 'create') setNotice('การสร้างคำขอยืมจากแจ้งเตือนจะเปิดใช้เมื่อมี API คำขอยืม (F1b)');
+      } else if (cond === 'create' && row.alert) {
+        // API-F1b-001 then -004: the request is created and its lender ladder proposed; approval happens on the requests page.
+        void runAction(async () => {
+          const created = await createBorrowRequest({ stockAlertId: row.alert!.alertId });
+          const proposed = await proposeBorrowRequest(created.id);
+          await sa.reload();
+          setNotice(`สร้างคำขอ ${proposed.data.requestNo} แล้ว (${proposed.data.status === 'ESCALATED' ? 'ไม่พบผู้ให้ยืมที่เหมาะสม' : 'รออนุมัติที่หน้า “คำขอยืม”'})`);
+        });
+      }
       else setSelected(row.id);
       return;
     }

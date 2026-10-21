@@ -30,6 +30,9 @@ export interface BorrowLeg {
 
 export interface BorrowRequest {
   id: string;
+  /** Set when the row came from the API (request uuid + row version). */
+  uuid?: string;
+  version?: number;
   context: BorrowContext;
   createdAt: string;
   /** Age in days on 14 ต.ค. — drives the period filter. */

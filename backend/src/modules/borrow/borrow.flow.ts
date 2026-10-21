@@ -25,6 +25,12 @@ export interface StoredLadder {
   builtAt: string;
 }
 
+/** The ladder frozen by this module; seed rows written before F1b hold an older array shape and count as "no ladder". */
+export function asStoredLadder(value: unknown): StoredLadder | null {
+  const v = value as StoredLadder | null;
+  return v && !Array.isArray(v) && typeof v === 'object' && Array.isArray(v.ladder) ? v : null;
+}
+
 export const urgencyTh = (u: string) => (u === 'VERY_URGENT' ? 'เร่งด่วนมาก' : u === 'URGENT' ? 'เร่งด่วน' : 'ปกติ');
 
 /** Rule-based message draft (the agent's Task 3 template; used as is while no agent is connected). */
@@ -67,7 +73,7 @@ async function loadRequest(client: pg.PoolClient, id: string): Promise<RequestRo
       [id],
     )
   ).rows[0];
-  return r ?? null;
+  return r ? { ...r, ladder: asStoredLadder(r.ladder) } : null;
 }
 
 /** Legs of a request with the numbers the flow needs. */

@@ -12,7 +12,9 @@ import {
   LOTS,
   SM1B,
 } from '../data/lender';
-import type { BorrowRequest, BRStatus, LotOption } from '../data/lender';
+import type { BorrowRequest, BRStatus, LendableStock, LotOption } from '../data/lender';
+import { useLenderQueue } from '../data/useLenderQueue';
+import { respondToLeg } from '../../../services/borrowApi';
 
 const UG_ICON: Record<string, IconName> = {
   critical: 'tri',
@@ -273,9 +275,16 @@ function DetailPanel({
   req,
   onClose,
   role = 'PHARMACIST',
+  liveLots,
+  liveStock,
+  onResponded,
 }: {
   req: BorrowRequest;
   onClose: () => void;
+  /** Set when the row came from the API: FEFO lots and lendable stock of that leg, and the refresh after answering. */
+  liveLots?: LotOption[];
+  liveStock?: LendableStock | null;
+  onResponded?: () => void;
   /** Role viewing the panel; the lender response is gated through `lib/rbac.ts`. */
   role?: RoleCode;
 }) {
@@ -284,17 +293,21 @@ function DetailPanel({
   const respondHint = requiredRoleHint('confirmLend');
   const [phase, setPhase] = useState<ResponsePhase>('idle');
   const [kind, setKind] = useState<ResponseKind>('full');
+  const live = Boolean(req.legId);
+  const [declineReason, setDeclineReason] = useState('');
+  const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
   const [selectedLots, setSelectedLots] = useState<Record<string, boolean>>(() => {
-    const lots = LOTS[req.drug] ?? [];
+    const lots = liveLots ?? LOTS[req.drug] ?? [];
     return Object.fromEntries(lots.filter((l) => l.fefoEligible).map((l) => [l.lotId, true]));
   });
   const [lotQtys, setLotQtys] = useState<Record<string, number>>(() => {
-    const lots = LOTS[req.drug] ?? [];
+    const lots = liveLots ?? LOTS[req.drug] ?? [];
     return Object.fromEntries(lots.map((l) => [l.lotId, l.qty]));
   });
 
-  const lots = LOTS[req.drug] ?? [];
-  const stock = LENDABLE_STOCK[req.drug];
+  const lots = liveLots ?? LOTS[req.drug] ?? [];
+  const stock = live ? (liveStock ?? undefined) : LENDABLE_STOCK[req.drug];
   const urgencyMeta = BR_URGENCY_META[req.urgency];
 
   const totalLotQty = lots
@@ -761,6 +774,10 @@ function DetailPanel({
               >
                 ยืนยัน: {confirmLabel}?
               </div>
+              {live && kind === 'decline' && (
+                <input className="sel" aria-label="เหตุผลที่ปฏิเสธ" placeholder="เหตุผลที่ปฏิเสธ (จำเป็น)" value={declineReason} onChange={(e) => setDeclineReason(e.target.value)} />
+              )}
+              {sendError && <div role="alert" style={{ fontSize: 12.5, color: '#b91c1c' }}>{sendError}</div>}
               <div style={{ display: 'flex', gap: 8 }}>
                 <button
                   className="btn btn-g btn-sm"
@@ -776,7 +793,19 @@ function DetailPanel({
                     background: kind === 'decline' ? '#b91c1c' : undefined,
                     color: kind === 'decline' ? '#fff' : undefined,
                   }}
-                  onClick={() => setPhase('done')}
+                  disabled={sending || (live && kind === 'decline' && declineReason.trim().length < 3)}
+                  onClick={() => {
+                    if (!live) return setPhase('done');
+                    // API-F1b-009: full = ACCEPT (server picks FEFO lots >= 180 days), partial = PARTIAL with the chosen lots, decline needs a reason.
+                    const chosen = lots.filter((l) => selectedLots[l.lotId] && l.fefoEligible && l.uuid).map((l) => ({ lotId: l.uuid!, qty: lotQtys[l.lotId] ?? l.qty }));
+                    const body = kind === 'full' ? { decision: 'ACCEPT' as const } : kind === 'partial' ? { decision: 'PARTIAL' as const, qty: totalLotQty, lots: chosen } : { decision: 'REJECT' as const, reason: declineReason.trim() };
+                    setSending(true);
+                    setSendError(null);
+                    respondToLeg(req.legId!, body)
+                      .then(() => { setPhase('done'); onResponded?.(); })
+                      .catch((e: Error) => setSendError(e.message))
+                      .finally(() => setSending(false));
+                  }}
                 >
                   {kind === 'decline' ? 'ยืนยันปฏิเสธ' : 'ยืนยัน'}
                 </button>
@@ -810,11 +839,18 @@ export function LenderQueuePage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
   const [urgency, setUrgency] = useState('');
   const [trigger, setTrigger] = useState('');
   const [statusFilter, setStatusFilter] = useState<'' | BRStatus>('');
+  const lq = useLenderQueue();
+  const isLive = lq.source === 'live';
+  const data = isLive ? lq.requests : BORROW_REQUESTS;
   const [selected, setSelected] = useState<BorrowRequest | null>(BORROW_REQUESTS[0]);
   const panelRef = useRef<HTMLDivElement>(null);
+  // A mock row must not stay selected once the live queue has loaded (and vice versa).
+  useEffect(() => {
+    if (lq.source === 'live') setSelected((cur) => (cur && cur.legId ? (data.find((r) => r.legId === cur.legId) ?? null) : null));
+  }, [lq.source, data]);
 
   const q = query.trim().toLowerCase();
-  const rows = BORROW_REQUESTS.filter((r) => {
+  const rows = data.filter((r) => {
     if (urgency && r.urgency !== urgency) return false;
     if (trigger && r.trigger !== trigger) return false;
     if (statusFilter && r.status !== statusFilter) return false;
@@ -1007,21 +1043,21 @@ export function LenderQueuePage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
           <SummaryTile
-            count={SM1B.sent}
+            count={isLive ? data.filter((r) => r.status === 'waiting').length : SM1B.sent}
             badgeText="รอเราตอบ"
             badgeCls="st-pending"
             icon="hourglass"
             en="SENT"
           />
           <SummaryTile
-            count={SM1B.accepted}
+            count={isLive ? data.filter((r) => r.status === 'accepted' || r.status === 'partial').length : SM1B.accepted}
             badgeText="ตอบรับแล้ว"
             badgeCls="st-approved"
             icon="checkc"
             en="ACCEPTED · PARTIAL"
           />
           <SummaryTile
-            count={SM1B.loaded}
+            count={isLive ? data.filter((r) => r.status === 'loaded' || r.status === 'in_transit').length : SM1B.loaded}
             badgeText="กำลังส่ง"
             badgeCls="st-transit"
             icon="truck"
@@ -1233,7 +1269,7 @@ export function LenderQueuePage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
               boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05)',
             }}
           >
-            <DetailPanel req={selected} role={role} onClose={() => setSelected(null)} />
+            <DetailPanel key={selected.legId ?? selected.id} req={selected} role={role} onClose={() => setSelected(null)} {...(selected.legId ? { liveLots: lq.lots[selected.legId] ?? [], liveStock: lq.stock[selected.legId] ?? null, onResponded: () => void lq.reload() } : {})} />
           </div>
         )}
       </div>

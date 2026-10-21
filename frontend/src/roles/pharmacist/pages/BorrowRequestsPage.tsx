@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Icon } from '../../../components/common/icons';
-import { homeHrefFor } from '../../../data/navigation';
+import { homeHrefFor, withRole } from '../../../data/navigation';
+import { useLenderQueue } from '../data/useLenderQueue';
 import { USER } from '../../../data/session';
 import { can, HOSPITAL_ADMIN_ROLE, mayActFor } from '../../../lib/rbac';
 import type { RoleCode } from '../../../lib/rbac';
@@ -14,6 +15,10 @@ import { BorrowStatusTiles } from '../components/BorrowStatusTiles';
 import { BorrowTable } from '../components/BorrowTable';
 import { ObligationTable, ObligationTiles } from '../components/ObligationTable';
 import { BORROW_REQUESTS, GROUPS, groupOf, LENDER_QUEUE } from '../data/borrow';
+import { useBorrowRequests } from '../data/useBorrowRequests';
+import { approveBorrowRequest, escalateManual as escalateManualApi, rejectBorrowRequest } from '../../../services/borrowApi';
+import { getHospitals } from '../../../services/catalogApi';
+import type { ApiHospital } from '../../../services/catalogApi';
 import type { BorrowContext, BorrowRequest, StatusGroup, Urgency } from '../data/borrow';
 import { dueLabel, obligationCounts, obligationFromApi, outstandingOf, RETURN_OBLIGATIONS } from '../data/obligations';
 import { listReturnObligations, waiveReturn } from '../../../services/returnsApi';
@@ -65,6 +70,16 @@ export function BorrowRequestsPage({ role = 'PHARMACIST' }: { role?: RoleCode })
   // Detail drawer stays closed until a request is opened from the table.
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [decision, setDecision] = useState<Record<string, Decision>>({});
+  const live = useBorrowRequests();
+  const lender = useLenderQueue();
+  const lenderTotal = lender.source === 'live' ? lender.requests.length : LENDER_QUEUE.total;
+  const lenderToAnswer = lender.source === 'live' ? lender.requests.filter((r) => r.status === 'waiting').length : LENDER_QUEUE.toAnswer;
+  const isLive = live.source === 'live';
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [rejectTarget, setRejectTarget] = useState<BorrowRequest | null>(null);
+  const [hospitals, setHospitals] = useState<ApiHospital[]>([]);
+  const [escLender, setEscLender] = useState('');
+  const [escQty, setEscQty] = useState('');
   const [q, setQ] = useState('');
   const [urgency, setUrgency] = useState<'all' | Urgency>('all');
   const [context, setContext] = useState<'all' | BorrowContext>('all');
@@ -102,6 +117,13 @@ export function BorrowRequestsPage({ role = 'PHARMACIST' }: { role?: RoleCode })
   const actor = role === 'HOSPITAL_ADMIN' ? HOSPITAL_ADMIN_USER.name : USER.name;
 
   useEffect(() => {
+    if (!escalateTarget || !isLive) return;
+    setEscLender('');
+    setEscQty('');
+    getHospitals({ active: true }).then((res) => setHospitals(res.items)).catch(() => setHospitals([]));
+  }, [escalateTarget, isLive]);
+
+  useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setDrawerOpen(false);
     };
@@ -110,8 +132,8 @@ export function BorrowRequestsPage({ role = 'PHARMACIST' }: { role?: RoleCode })
   }, []);
 
   const all = useMemo(
-    () => BORROW_REQUESTS.map((r) => withEscalation(withDecision(r, decision[r.id]), escalations)),
-    [decision, escalations],
+    () => (isLive ? live.requests : BORROW_REQUESTS.map((r) => withEscalation(withDecision(r, decision[r.id]), escalations))),
+    [isLive, live.requests, decision, escalations],
   );
   const inPeriod = all.filter((r) => r.daysAgo <= days);
   const counts = Object.fromEntries(GROUPS.map((g) => [g.id, inPeriod.filter((r) => groupOf(r.status) === g.id).length])) as Record<StatusGroup, number>;
@@ -133,6 +155,18 @@ export function BorrowRequestsPage({ role = 'PHARMACIST' }: { role?: RoleCode })
     setDrawerOpen(true);
   };
   const sel = all.find((r) => r.id === selId) ?? all[0];
+
+  /** Live: approve (API-F1b-005) sends the first round; reject asks for a reason first (API-F1b-006). */
+  const decide = (d: 'approve' | 'reject') => {
+    if (!isLive || !sel?.uuid) return setDecision((m) => ({ ...m, [sel.id]: d }));
+    setActionError(null);
+    if (d === 'reject') return setRejectTarget(sel);
+    approveBorrowRequest(sel.uuid, sel.version).then(() => live.reload()).catch((e: Error) => setActionError(e.message));
+  };
+  const confirmReject = (reason: string) => {
+    if (!rejectTarget?.uuid) return;
+    rejectBorrowRequest(rejectTarget.uuid, reason).then(() => { setRejectTarget(null); return live.reload(); }).catch((e: Error) => { setActionError(e.message); setRejectTarget(null); });
+  };
 
   /**
    * Confirm a waive (API-XC-005). SM-7 makes it a state change to WAIVED with a reason, so the row
@@ -175,6 +209,14 @@ export function BorrowRequestsPage({ role = 'PHARMACIST' }: { role?: RoleCode })
   /** Confirm an escalate-manual (API-F1b-012): one manual leg after escalation, plus an audit row. */
   const confirmEscalate = (reason: string) => {
     if (!escalateTarget) return;
+    if (isLive && escalateTarget.uuid) {
+      const target = escalateTarget;
+      setActionError(null);
+      escalateManualApi(target.uuid!, { lenderHospitalId: escLender, qty: Number(escQty), reason })
+        .then(() => { setEscalateTarget(null); return live.reload(); })
+        .catch((e: Error) => { setActionError(e.message); setEscalateTarget(null); });
+      return;
+    }
     const entry = appendAuditEntry({
       action: 'UPDATE',
       entityType: 'borrow_request',
@@ -215,7 +257,6 @@ export function BorrowRequestsPage({ role = 'PHARMACIST' }: { role?: RoleCode })
         </div>
       </section>
 
-      {/* UI-06 (lender queue) is not built yet, so its tab is inert for now. */}
       <section aria-label="มุมมองคำขอยืม" className="dirs">
         <button
           type="button"
@@ -237,7 +278,7 @@ export function BorrowRequestsPage({ role = 'PHARMACIST' }: { role?: RoleCode })
             </span>
           )}
         </button>
-        <button className="dir" aria-pressed="false" title="UI-06 คิวตอบคำขอ (ยังไม่เปิดในเวอร์ชันนี้)">
+        <button className="dir" aria-pressed="false" title="UI-06 คิวตอบคำขอ" onClick={() => { window.location.search = withRole('?page=lend', role); }}>
           <span className="dir-icon" style={{ background: '#FFF7ED', color: '#9A3412' }}>
             <Icon name="hand" className="ic20" />
           </span>
@@ -245,9 +286,9 @@ export function BorrowRequestsPage({ role = 'PHARMACIST' }: { role?: RoleCode })
             <span className="dir-th">คิวตอบคำขอ</span>
             <span className="dir-en">เราเป็นผู้ให้ยืม · UI-06</span>
           </span>
-          <span className="num dir-count">{LENDER_QUEUE.total}</span>
+          <span className="num dir-count">{lenderTotal}</span>
           <span className="badge t-amber" style={{ fontWeight: 600 }}>
-            รอเราตอบ {LENDER_QUEUE.toAnswer}
+            รอเราตอบ {lenderToAnswer}
           </span>
         </button>
         {/* Return obligations (SM-7, API-XC-003): Hospital Admin only — own-hospital scope. */}
@@ -275,6 +316,10 @@ export function BorrowRequestsPage({ role = 'PHARMACIST' }: { role?: RoleCode })
           </button>
         )}
       </section>
+
+      {actionError && (
+        <div role="alert" className="card" style={{ padding: '10px 16px', color: '#B91C1C', fontSize: 13 }}>ดำเนินการไม่สำเร็จ: {actionError}</div>
+      )}
 
       {showObligations ? (
         <section className="card" style={{ padding: 0 }} data-part="obligations-card">
@@ -373,8 +418,8 @@ export function BorrowRequestsPage({ role = 'PHARMACIST' }: { role?: RoleCode })
           key={sel.id}
           request={sel}
           tick={tick}
-          decision={decision[sel.id]}
-          onDecide={(d) => setDecision((m) => ({ ...m, [sel.id]: d }))}
+          decision={isLive ? undefined : decision[sel.id]}
+          onDecide={decide}
           onEscalate={setEscalateTarget}
           onClose={() => setDrawerOpen(false)}
           role={role}
@@ -412,6 +457,16 @@ export function BorrowRequestsPage({ role = 'PHARMACIST' }: { role?: RoleCode })
         />
       )}
 
+      {rejectTarget && (
+        <ReasonDialog
+          title="ไม่อนุมัติคำขอยืม · reject (API-F1b-006)"
+          detail={<div><b className="code">{rejectTarget.id}</b> · {rejectTarget.drug} · {rejectTarget.qty} {rejectTarget.unit}<div style={{ marginTop: 8 }}>คำขอจะถูกยกเลิก (CANCELLED) และแจ้งเตือนสต็อกที่เชื่อมอยู่จะกลับเป็นรับทราบ</div></div>}
+          confirmLabel="ยืนยันไม่อนุมัติ"
+          onConfirm={confirmReject}
+          onClose={() => setRejectTarget(null)}
+        />
+      )}
+
       {/* escalate-manual (API-F1b-012): only reachable from an ESCALATED request. */}
       {escalateTarget && (
         <ReasonDialog
@@ -426,6 +481,15 @@ export function BorrowRequestsPage({ role = 'PHARMACIST' }: { role?: RoleCode })
                 สถานะ <b>{escalateTarget.status}</b> — ลำดับผู้ให้ยืมของระบบหมดแล้ว จึงเพิ่มผู้ให้ยืมนอกลำดับได้
                 (FR-F1b-011, SM-1) · ระบบจะเพิ่มรอบใหม่และบันทึกไว้ใน audit log
               </div>
+              {isLive && (
+                <div style={{ marginTop: 10, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  <select className="sel" aria-label="ผู้ให้ยืม" value={escLender} onChange={(e) => setEscLender(e.target.value)}>
+                    <option value="">เลือกโรงพยาบาลผู้ให้ยืม</option>
+                    {hospitals.map((h) => <option key={h.id} value={h.id}>{h.code} · {h.nameTh}</option>)}
+                  </select>
+                  <input className="sel" type="number" min={1} aria-label="จำนวนที่ขอ" placeholder="จำนวน" value={escQty} onChange={(e) => setEscQty(e.target.value)} style={{ width: 110 }} />
+                </div>
+              )}
             </>
           }
           confirmLabel="ยืนยันเพิ่มผู้ให้ยืม"

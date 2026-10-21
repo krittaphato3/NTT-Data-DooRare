@@ -8,6 +8,8 @@ export type BRUrgency = 'critical' | 'urgent' | 'normal';
 
 export interface LotOption {
   lotId: string;
+  /** stock_lot id when the row came from the API. */
+  uuid?: string;
   expDate: string;
   daysLeft: number;
   qty: number;
@@ -17,6 +19,8 @@ export interface LotOption {
 
 export interface BorrowRequest {
   id: string;
+  /** borrow_leg id when the row came from the API (needed to answer it). */
+  legId?: string;
   drug: string;
   ved: 'V' | 'E' | 'D';
   vedLabel: string;

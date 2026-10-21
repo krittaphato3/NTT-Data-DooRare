@@ -208,7 +208,7 @@ async function settleBorrowLeg(client: pg.PoolClient, task: Record<string, any>,
   ).rows[0];
   // The request reacts to the receipt (F-20 stop rule, next lender, FULFILLED / PARTIALLY_FULFILLED) in the F1b flow.
   // Requests without a frozen ladder (created before F1b existed, e.g. seed data) keep the plain "all items fulfilled" rule.
-  const legacy = (await client.query(`SELECT ladder IS NULL AS legacy FROM borrow_request WHERE id = $1`, [leg.request_id])).rows[0]?.legacy;
+  const legacy = (await client.query(`SELECT jsonb_typeof(ladder) IS DISTINCT FROM 'object' AS legacy FROM borrow_request WHERE id = $1`, [leg.request_id])).rows[0]?.legacy;
   if (legacy) {
     await client.query(
       `UPDATE borrow_request r SET updated_at = now(), version = version + 1,

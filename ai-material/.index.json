@@ -35,6 +35,13 @@
     "date": "2026-10-21"
   },
   {
+    "path": "sessions/2026-10-21-claude-backend-step5-borrow.md",
+    "title": "Backend step 5 - F1b borrow requests, lender queue, stop rule, timers",
+    "summary": "Borrow request lifecycle (create, propose, approve, respond, next round, escalation, timers) on…",
+    "tags": "session, backend, borrow, f1b, lender, frontend, detailed",
+    "date": "2026-10-21"
+  },
+  {
     "path": "sessions/2026-10-21-claude-backend-transport.md",
     "title": "Backend step 2 - transport, legs, documents, return obligations",
     "summary": "SM-6 workflow with stock moves, offline sync, slips, returns; 93 integration checks…",
