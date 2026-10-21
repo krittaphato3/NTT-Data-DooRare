@@ -8,6 +8,11 @@ import { authController } from './modules/auth/auth.controller.js';
 import { healthRouter } from './modules/health/health.routes.js';
 import { documentsRouter } from './modules/documents/documents.routes.js';
 import { returnsRouter } from './modules/returns/returns.routes.js';
+import { dashboardRouter } from './modules/dashboard/dashboard.routes.js';
+import { hospitalsRouter } from './modules/hospitals/hospitals.routes.js';
+import { inventoryRouter } from './modules/inventory/inventory.routes.js';
+import { notificationsRouter } from './modules/notifications/notifications.routes.js';
+import { centralItemsRouter, drugMasterRouter, hospitalDrugsRouter, kitTypesRouter } from './modules/catalog/catalog.routes.js';
 import { forecastsRouter } from './modules/forecasts/forecasts.routes.js';
 import { borrowLegsRouter } from './modules/borrow-legs/borrow-legs.routes.js';
 import { transportRouter, vehiclesRouter } from './modules/transport/transport.routes.js';
@@ -27,6 +32,14 @@ app.use('/api/v1/vehicles', vehiclesRouter);
 app.use('/api/v1/return-obligations', returnsRouter); // API-XC-003 / -004 / -005
 app.use('/api/v1/documents', documentsRouter); // API-XC-001 / API-XC-002
 app.use('/api/v1/borrow-legs', borrowLegsRouter); // API-F1b-010 / API-F1b-011
+app.use('/api/v1/hospitals', hospitalsRouter); // API-PL-002 / -003 (+ admin create/update)
+app.use('/api/v1/drug-master', drugMasterRouter); // API-F2b-006
+app.use('/api/v1/central-items', centralItemsRouter); // API-F2b-007 (read)
+app.use('/api/v1/hospital-drugs', hospitalDrugsRouter);
+app.use('/api/v1/kit-types', kitTypesRouter); // API-F3-016
+app.use('/api/v1/inventory', inventoryRouter);
+app.use('/api/v1/notifications', notificationsRouter); // API-PL-004 / -005
+app.use('/api/v1/dashboard', dashboardRouter); // API-PL-006
 app.get('/api/v1/me', authController.getMe); // API-PL-001
 
 // Global error handler
