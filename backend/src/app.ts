@@ -16,6 +16,7 @@ import { notificationsRouter } from './modules/notifications/notifications.route
 import { centralItemsRouter, drugMasterRouter, hospitalDrugsRouter, kitTypesRouter } from './modules/catalog/catalog.routes.js';
 import { forecastsRouter } from './modules/forecasts/forecasts.routes.js';
 import { borrowLegsRouter } from './modules/borrow-legs/borrow-legs.routes.js';
+import { borrowJobsRouter, borrowRequestsRouter, lenderQueueRouter } from './modules/borrow/borrow.routes.js';
 import { transportRouter, vehiclesRouter } from './modules/transport/transport.routes.js';
 
 export const app = express();
@@ -32,7 +33,10 @@ app.use('/api/v1/transport-tasks', transportRouter); // API-F2a-012
 app.use('/api/v1/vehicles', vehiclesRouter);
 app.use('/api/v1/return-obligations', returnsRouter); // API-XC-003 / -004 / -005
 app.use('/api/v1/documents', documentsRouter); // API-XC-001 / API-XC-002
-app.use('/api/v1/borrow-legs', borrowLegsRouter); // API-F1b-010 / API-F1b-011
+app.use('/api/v1/borrow-legs', borrowLegsRouter); // API-F1b-009 / -010 / -011
+app.use('/api/v1/borrow-requests', borrowRequestsRouter); // API-F1b-001..007, -012, -013
+app.use('/api/v1/lender-queue', lenderQueueRouter); // API-F1b-008
+app.use('/api/v1/jobs', borrowJobsRouter); // JOB-04 trigger
 app.use('/api/v1/hospitals', hospitalsRouter); // API-PL-002 / -003 (+ admin create/update)
 app.use('/api/v1/drug-master', drugMasterRouter); // API-F2b-006
 app.use('/api/v1/central-items', centralItemsRouter); // API-F2b-007 (read)

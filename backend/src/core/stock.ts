@@ -188,16 +188,17 @@ export interface FefoPick {
 
 /**
  * First-expiry-first-out picks of a drug's free stock (on hand minus reserved, not yet expired) at one hospital.
- * Locks the chosen lots; throws 409 INSUFFICIENT_STOCK when the hospital cannot cover `qty`.
+ * `minRemainingDays` keeps out lots closer to expiry (lending uses 180, BR-F1b-013). Locks the chosen lots; throws 409
+ * INSUFFICIENT_STOCK when the hospital cannot cover `qty`.
  */
-export async function pickFefo(client: pg.PoolClient, hospitalId: string, drugMasterId: string, qty: number): Promise<FefoPick[]> {
+export async function pickFefo(client: pg.PoolClient, hospitalId: string, drugMasterId: string, qty: number, minRemainingDays = 0): Promise<FefoPick[]> {
   const lots = await client.query(
     `SELECT sl.id, sl.lot_no, sl.expiry_date::text AS expiry_date, sl.manufacturer, (sl.qty_on_hand - sl.qty_held)::float8 AS free
        FROM stock_lot sl JOIN hospital_drug hd ON hd.id = sl.hospital_drug_id
-      WHERE sl.hospital_id = $1 AND hd.drug_master_id = $2 AND sl.expiry_date > current_date AND sl.qty_on_hand > sl.qty_held
+      WHERE sl.hospital_id = $1 AND hd.drug_master_id = $2 AND sl.expiry_date > current_date + $3::int AND sl.qty_on_hand > sl.qty_held
       ORDER BY sl.expiry_date, sl.lot_no
         FOR UPDATE OF sl`,
-    [hospitalId, drugMasterId],
+    [hospitalId, drugMasterId, minRemainingDays],
   );
   const picks: FefoPick[] = [];
   let remaining = qty;

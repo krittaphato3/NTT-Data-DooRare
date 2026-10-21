@@ -8,13 +8,14 @@ import { asyncHandler } from '../../middleware/asyncHandler.js';
 import { requireAuth, requireRole } from '../../middleware/auth.js';
 import { HttpError } from '../../middleware/httpError.js';
 import { idempotent } from '../../middleware/idempotency.js';
+import { lenderService } from '../borrow/lender.service.js';
 import { applyTransition, loadTaskView } from '../transport/transport.workflow.js';
 import type { MoveStatus } from '../transport/transport.workflow.js';
 
 /**
  * Leg-side entry points of the transport workflow (API-F1b-010 / API-F1b-011). A leg has one transport task;
  * these endpoints find it and apply the same transition as `POST /transport-tasks/{id}/status`.
- * (`respond` / create-leg belong to the F1b borrow-request module.)
+ * (`respond` is the lender's answer, API-F1b-009.)
  */
 export const borrowLegsRouter = Router();
 
@@ -66,4 +67,11 @@ borrowLegsRouter.post(
   requireRole('WAREHOUSE_OFFICER', 'PHARMACIST'),
   idempotent(),
   asyncHandler((req, res) => viaLeg(req, res, 'RECEIVED', true)),
+);
+borrowLegsRouter.post(
+  '/:legId/respond',
+  requireAuth,
+  requireRole('PHARMACIST'),
+  idempotent(),
+  asyncHandler(async (req, res) => res.json(await lenderService.respond(req, req.params.legId))),
 );

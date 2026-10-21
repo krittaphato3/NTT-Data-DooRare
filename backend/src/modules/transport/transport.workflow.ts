@@ -8,6 +8,7 @@
  *
  * Everything for one transition (task row, event, photos, stock, leg, audit) runs in the caller's transaction.
  */
+import { advanceRequest } from '../borrow/borrow.flow.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import type pg from 'pg';
@@ -205,14 +206,20 @@ async function settleBorrowLeg(client: pg.PoolClient, task: Record<string, any>,
       [leg.request_id, leg.request_item_id, received],
     )
   ).rows[0];
-  // Provisional progress rule; the F-20 stop rule (V >= 90 %, E >= 100 %) replaces it when F1b is built.
-  await client.query(
-    `UPDATE borrow_request r SET updated_at = now(), version = version + 1,
-            status = CASE WHEN NOT EXISTS (SELECT 1 FROM borrow_request_item i WHERE i.request_id = r.id AND i.qty_fulfilled < i.qty_requested)
-                          THEN 'FULFILLED'::request_status ELSE 'PARTIALLY_FULFILLED'::request_status END
-      WHERE r.id = $1 AND r.status IN ('IN_PROGRESS', 'PARTIALLY_FULFILLED')`,
-    [leg.request_id],
-  );
+  // The request reacts to the receipt (F-20 stop rule, next lender, FULFILLED / PARTIALLY_FULFILLED) in the F1b flow.
+  // Requests without a frozen ladder (created before F1b existed, e.g. seed data) keep the plain "all items fulfilled" rule.
+  const legacy = (await client.query(`SELECT ladder IS NULL AS legacy FROM borrow_request WHERE id = $1`, [leg.request_id])).rows[0]?.legacy;
+  if (legacy) {
+    await client.query(
+      `UPDATE borrow_request r SET updated_at = now(), version = version + 1,
+              status = CASE WHEN NOT EXISTS (SELECT 1 FROM borrow_request_item i WHERE i.request_id = r.id AND i.qty_fulfilled < i.qty_requested)
+                            THEN 'FULFILLED'::request_status ELSE 'PARTIALLY_FULFILLED'::request_status END
+        WHERE r.id = $1 AND r.status IN ('IN_PROGRESS', 'PARTIALLY_FULFILLED')`,
+      [leg.request_id],
+    );
+  } else {
+    await advanceRequest(client, leg.request_id);
+  }
   if (!item) return;
   const days = await getSetting<number>(client, 'return.default_days', 30);
   const blood = item.drug_master_id
