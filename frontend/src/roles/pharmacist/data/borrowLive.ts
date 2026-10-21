@@ -1,7 +1,8 @@
 /** Maps `GET /borrow-requests` onto the BorrowRequest shape the UI-05 screen renders. */
 import { fmtThaiTime } from '../../warehouse/data/transportLive';
 import type { ApiBorrowLeg, ApiBorrowRequest, ApiUrgency } from '../../../services/borrowApi';
-import type { BorrowLeg, BorrowRequest, LegState, Urgency } from './borrow';
+import type { ApiReturnObligation } from '../../../services/returnsApi';
+import type { BorrowLeg, BorrowRequest, LegState, ReturnState, Urgency } from './borrow';
 
 const URGENCY: Record<ApiUrgency, Urgency> = { VERY_URGENT: 'CRITICAL', URGENT: 'URGENT', NORMAL: 'NORMAL' };
 const LEG: Record<ApiBorrowLeg['status'], LegState> = {
@@ -42,7 +43,16 @@ function banner(r: ApiBorrowRequest, waiting: ApiBorrowLeg | undefined): { title
   }
 }
 
-export function borrowRequestToView(r: ApiBorrowRequest, now = Date.now()): BorrowRequest {
+/** Return state of a request from the obligations we owe for it (SM-7): overdue beats pending, all settled = returned. */
+export function returnStateOf(requestNo: string, obligations: ApiReturnObligation[]): ReturnState | undefined {
+  const mine = obligations.filter((o) => o.requestNo === requestNo);
+  if (mine.length === 0) return undefined;
+  if (mine.some((o) => o.status === 'OVERDUE' || (o.pastDue && ['OPEN', 'REMINDED'].includes(o.status)))) return 'OVERDUE';
+  if (mine.every((o) => o.status === 'RETURNED' || o.status === 'WAIVED')) return 'RETURNED';
+  return 'PENDING';
+}
+
+export function borrowRequestToView(r: ApiBorrowRequest, now = Date.now(), returnState?: ReturnState): BorrowRequest {
   const unit = r.drug.baseUnit;
   const activeLegs = r.legs.filter((l) => l.status !== 'CANCELLED');
   const waiting = r.legs.find((l) => l.status === 'SENT');
@@ -86,6 +96,7 @@ export function borrowRequestToView(r: ApiBorrowRequest, now = Date.now()): Borr
     lender,
     urgency: URGENCY[r.urgency],
     status: r.status,
+    ...(returnState ? { returnState } : {}),
     ...(waiting?.remainingSec != null ? { countdownSec: waiting.remainingSec } : {}),
     ...(stop ? { stop } : {}),
     note: waiting ? `รอ ${waiting.lender.name} · ${legDetail(waiting, unit).split(' · ').slice(-1)[0]}` : r.status === 'ESCALATED' ? `ยังขาด ${n(r.stop?.remaining ?? 0)} · แจ้งผู้ดูแลแล้ว` : r.status === 'PENDING_APPROVAL' ? 'ร่างข้อความแล้ว · รออนุมัติ' : r.status === 'FULFILLED' ? `ครบ ${n(r.qtyFulfilled)}` : r.status === 'CANCELLED' ? (r.reason ?? 'ยกเลิก') : 'กำลังดำเนินการ',

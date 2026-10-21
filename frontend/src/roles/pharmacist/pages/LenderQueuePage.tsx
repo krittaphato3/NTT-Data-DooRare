@@ -40,6 +40,7 @@ const STATUS_FILTER: { value: '' | BRStatus; label: string }[] = [
   { value: 'waiting', label: 'รอตอบกลับ' },
   { value: 'accepted', label: 'ตอบรับแล้ว' },
   { value: 'loaded', label: 'กำลังส่ง' },
+  { value: 'received', label: 'ผู้ยืมรับแล้ว' },
   { value: 'declined', label: 'ปฏิเสธ' },
 ];
 

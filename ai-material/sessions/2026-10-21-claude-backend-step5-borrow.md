@@ -91,3 +91,12 @@ summary: Borrow request lifecycle (create, propose, approve, respond, next round
 - WH requests page (`WhBorrowPage`) now reads `useBorrowRequests` (read-only); verified with warehouse_officer1.hc (68 rows).
 - Lender queue API returns `context` and the borrower's `ved`; the UI no longer hard-codes `E` / `STOCK_ALERT`. Page subtitles use the signed-in hospital name instead of the fixed "รพ.สมุทรปราการ" text.
 - Still not live: cancel after approval (no API), `returnState` chips, EMERGENCY context filter, "ประวัติ" button, sidebar badges, lender tile "ตอบรับแล้ว" includes RECEIVED history.
+
+## Follow-up 3: remaining mock bits connected
+
+- Sidebar counters (shared + hospital-admin shells) come from `GET /dashboard` tiles (`App.tsx liveBadges`): alerts = active, requests = pending approval + escalated, lender queue = waiting, near-expiry = detected, pool = inPool, transport = waiting + out + in-flight + to receive. Zero hides the badge. WH / driver / ER sidebars keep their own static badges (not changed).
+- Return chips on live requests: `returnStateOf` from `GET /return-obligations?direction=owe` (OVERDUE > PENDING > RETURNED, WAIVED counts as settled).
+- Lender queue: new status `received` ("ผู้ยืมรับแล้ว") so the "ตอบรับแล้ว" tile counts only ACCEPTED/PARTIAL.
+- "ประวัติ" button toggles a finished-requests-only filter (fulfilled + closed/cancelled).
+- Verified on the main DB with pharmacist1.ha (badges 1/2/5/4, 125 returned chips, history filter 140 -> 119 rows).
+- Still not live: cancel after approval (needs an API), EMERGENCY context (F3), WH/driver/ER sidebar badges.

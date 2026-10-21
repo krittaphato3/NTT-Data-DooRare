@@ -83,6 +83,7 @@ export function BorrowRequestsPage({ role = 'PHARMACIST' }: { role?: RoleCode })
   const lenderToAnswer = lender.source === 'live' ? lender.requests.filter((r) => r.status === 'waiting').length : LENDER_QUEUE.toAnswer;
   const isLive = live.source === 'live';
   const [actionError, setActionError] = useState<string | null>(null);
+  const [historyOnly, setHistoryOnly] = useState(false);
   const [manualOpen, setManualOpen] = useState(false);
   const [createdNotice, setCreatedNotice] = useState<string | null>(null);
   const [rejectTarget, setRejectTarget] = useState<BorrowRequest | null>(null);
@@ -155,6 +156,7 @@ export function BorrowRequestsPage({ role = 'PHARMACIST' }: { role?: RoleCode })
   const needle = q.trim().toLowerCase();
   const rows = inPeriod
     .filter((r) => !group || groupOf(r.status) === group)
+    .filter((r) => !historyOnly || ['fulfilled', 'closed'].includes(groupOf(r.status)))
     .filter((r) => urgency === 'all' || r.urgency === urgency)
     .filter((r) => context === 'all' || r.context === context)
     .filter((r) => !needle || [r.id, r.drug, ...r.lender, ...r.legs.map((l) => l.hospital)].some((t) => t.toLowerCase().includes(needle)));
@@ -253,9 +255,9 @@ export function BorrowRequestsPage({ role = 'PHARMACIST' }: { role?: RoleCode })
           <div style={{ fontSize: 13 }}>{user?.hospitalName ?? 'รพ.สมุทรปราการ'} · ข้อมูล ณ {new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น. · ทุกคำขอต้องให้เภสัชกรอนุมัติก่อนส่ง · ไม่ตอบในเวลา = ส่งต่อผู้ให้ยืมถัดไปอัตโนมัติ</div>
         </div>
         <div className="pagehead-actions">
-          <button className="btn btn-s">
+          <button className="btn btn-s" aria-pressed={historyOnly} onClick={() => setHistoryOnly((v) => !v)} title="แสดงเฉพาะคำขอที่จบแล้ว (ได้ครบ · ปิด · ยกเลิก)">
             <Icon name="history" />
-            ประวัติ
+            ประวัติ{historyOnly ? ' ✓' : ''}
           </button>
           {mayCreate && (
             <button className="btn btn-p" disabled={!isLive} title={isLive ? undefined : 'ต้องเชื่อมต่อ API'} onClick={() => setManualOpen(true)}>

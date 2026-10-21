@@ -4,7 +4,7 @@ import type { ApiLenderItem, ApiLegStatus, ApiUrgency } from '../../../services/
 import type { BorrowRequest, BRStatus, BRUrgency, LendableStock, LotOption } from './lender';
 
 const STATUS: Record<ApiLegStatus, BRStatus> = {
-  PENDING: 'waiting', SENT: 'waiting', ACCEPTED: 'accepted', PARTIAL: 'partial', LOADED: 'loaded', IN_TRANSIT: 'in_transit', RECEIVED: 'accepted',
+  PENDING: 'waiting', SENT: 'waiting', ACCEPTED: 'accepted', PARTIAL: 'partial', LOADED: 'loaded', IN_TRANSIT: 'in_transit', RECEIVED: 'received',
   REJECTED: 'declined', TIMED_OUT: 'timeout', CANCELLED: 'declined',
 };
 const URGENCY: Record<ApiUrgency, { key: BRUrgency; label: string }> = {

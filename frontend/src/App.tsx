@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { getDashboard } from './services/catalogApi';
+import type { ApiDashboard } from './services/catalogApi';
 import { Footer } from './components/layout/Footer';
 import { Sidebar } from './components/layout/Sidebar';
 import { TopBar } from './components/layout/TopBar';
@@ -171,6 +173,19 @@ function withLinks(items: ShellNavEntry[], role: string): ShellNavEntry[] {
   return resolved.map((e) => ('kind' in e ? e : { ...e, href: withRole(e.href, role) }));
 }
 
+/** Sidebar counters from `GET /dashboard` (own-hospital tiles); entries without a live counter keep their static value. */
+function liveBadges(t: ApiDashboard['tiles']): Record<string, string> {
+  const n = (v: number) => (v > 0 ? String(v) : '');
+  return {
+    alerts: n(t.stockAlerts.active),
+    req: n(t.borrowRequests.pendingApproval + t.borrowRequests.escalated),
+    lend: n(t.lenderQueue.waiting),
+    exp: n(t.nearExpiry.detected),
+    pool: n(t.nearExpiry.inPool),
+    tr: n(t.transport.waitingDispatch + t.transport.outInFlight + t.transport.inOnTheWay + t.transport.toReceive),
+  };
+}
+
 function initialRole(): boolean {
   try {
     const q = new URLSearchParams(window.location.search);
@@ -257,6 +272,13 @@ function AppRoot() {
 
 function AuthenticatedShell() {
   const { user, activeRole } = useAuth();
+  const [badges, setBadges] = useState<Record<string, string>>({});
+  useEffect(() => {
+    if (!user) return;
+    getDashboard()
+      .then((d) => setBadges(liveBadges(d.tiles)))
+      .catch(() => setBadges({}));
+  }, [user, window.location.search]);
 
   const [query, setQuery] = useState('');
   const [collapsed, setCollapsed] = useState(false);
@@ -364,7 +386,7 @@ function AuthenticatedShell() {
       ? getWarehouseNav(onTransport ? 'transport' : onInbox ? 'inbox' : onKit ? 'kit' : onDocs ? 'docs' : onStock || onAlerts ? 'stock' : onRequests ? 'requests' : onExpiry ? 'expiry' : onDrugs ? 'drugs' : 'dashboard')
       : isEr
         ? getErNav(erPage)
-        : withLinks(getNavForRole(navRole, activeKey), navRole);
+        : withLinks(getNavForRole(navRole, activeKey), navRole).map((e) => ('kind' in e || !(e.key in badges) ? e : { ...e, badge: badges[e.key] }));
 
   const mayManageUsers = can(navRole, 'manageUsers');
   const mayViewAudit = can(navRole, 'viewAudit');

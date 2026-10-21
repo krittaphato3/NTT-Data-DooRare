@@ -3,7 +3,7 @@
  * must respond to. Ground truth: Mockups/Dashboard - Pharmacist Hospital (2).
  */
 
-export type BRStatus = 'waiting' | 'accepted' | 'partial' | 'loaded' | 'in_transit' | 'declined' | 'timeout';
+export type BRStatus = 'waiting' | 'accepted' | 'partial' | 'loaded' | 'in_transit' | 'received' | 'declined' | 'timeout';
 export type BRUrgency = 'critical' | 'urgent' | 'normal';
 
 export interface LotOption {
@@ -54,6 +54,7 @@ export const BR_STATUS_META: Record<BRStatus, { th: string; en: string; cls: str
   partial:    { th: 'ตอบรับบางส่วน', en: 'Partial',   cls: 'st-transit' },
   loaded:     { th: 'กำลังส่ง',    en: 'Loaded',      cls: 'st-transit' },
   in_transit: { th: 'อยู่ระหว่างส่ง', en: 'In Transit', cls: 'st-transit' },
+  received:   { th: 'ผู้ยืมรับแล้ว', en: 'Received', cls: 'st-approved' },
   declined:   { th: 'ปฏิเสธ',     en: 'Declined',    cls: 'st-rejected' },
   timeout:    { th: 'หมดเวลา',    en: 'Timeout',     cls: 'st-timeout' },
 };
