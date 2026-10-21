@@ -1,5 +1,5 @@
 -- Test data for the transport API: four in-flight borrow shipments (the mock data has only RECEIVED tasks).
--- Safe to re-run (skips when BR-2026-900001 already exists). Does not touch schema.sql or the mock CSVs.
+-- Safe to re-run (skips when the first seeded request already exists). Numbers continue the real sequences (BR-/TR-<year>-<next>). Does not touch schema.sql or the mock CSVs.
 --   docker compose exec -T db psql -U doorare -d doorare -v ON_ERROR_STOP=1 < db/seed/transport_pending.sql
 --
 --   #  lender -> borrower  task status        leg status   stock effect (matches the state)
@@ -16,11 +16,16 @@ DECLARE
   qty numeric := 10;
   tstat transport_status; lstat leg_status;
   n int := 0;
+  yr text := to_char(current_date, 'YYYY');
+  req_base int; task_base int;
 BEGIN
-  IF EXISTS (SELECT 1 FROM borrow_request WHERE request_no = 'BR-2026-900001') THEN
+  IF EXISTS (SELECT 1 FROM borrow_request WHERE id = md5('seed-transport-req-1')::uuid) THEN
     RAISE NOTICE 'transport seed already present - skipped';
     RETURN;
   END IF;
+
+  SELECT COALESCE(max(substring(request_no FROM '[0-9]+$')::int), 0) INTO req_base  FROM borrow_request WHERE request_no LIKE 'BR-' || yr || '-%';
+  SELECT COALESCE(max(substring(task_no    FROM '[0-9]+$')::int), 0) INTO task_base FROM transport_task  WHERE task_no    LIKE 'TR-' || yr || '-%';
 
   FOR sc IN SELECT * FROM (VALUES
       (1, 'HA', 'HB', 'WAITING_DISPATCH', 'ACCEPTED'),
@@ -53,7 +58,7 @@ BEGIN
     task := md5('seed-transport-task-' || n)::uuid;
 
     INSERT INTO borrow_request (id, request_no, borrower_hospital_id, context, status, urgency, reason, created_by, approved_by, approved_at, created_at, updated_at)
-    VALUES (req, 'BR-2026-90000' || n, borrower, 'MANUAL', 'IN_PROGRESS', 'NORMAL', 'seed: transport test', pharm, pharm, now() - interval '3 hours', now() - interval '4 hours', now());
+    VALUES (req, 'BR-' || yr || '-' || lpad((req_base + n)::text, 6, '0'), borrower, 'MANUAL', 'IN_PROGRESS', 'NORMAL', 'seed: transport test', pharm, pharm, now() - interval '3 hours', now() - interval '4 hours', now());
     INSERT INTO borrow_request_item (id, request_id, kind, drug_master_id, qty_requested) VALUES (item, req, 'DRUG', drug, qty);
     INSERT INTO borrow_leg (id, request_id, request_item_id, lender_hospital_id, round_no, rank_in_ladder, status, qty_asked, qty_accepted, sent_at, responded_at, responded_by)
     VALUES (leg, req, item, lender, 1, 1, lstat, qty, qty, now() - interval '3 hours', now() - interval '2 hours', pharm);
@@ -61,7 +66,7 @@ BEGIN
 
     INSERT INTO transport_task (id, ref_type, ref_id, from_hospital_id, to_hospital_id, status, driver_id, vehicle_id, task_no, eta_at,
                                 loaded_at, departed_at, arrived_at, created_at, updated_at)
-    VALUES (task, 'BORROW_LEG', leg, lender, borrower, tstat, drv, veh, 'TR-2026-90000' || n, now() + interval '2 hours',
+    VALUES (task, 'BORROW_LEG', leg, lender, borrower, tstat, drv, veh, 'TR-' || yr || '-' || lpad((task_base + n)::text, 6, '0'), now() + interval '2 hours',
             CASE WHEN tstat <> 'WAITING_DISPATCH' THEN now() - interval '90 minutes' END,
             CASE WHEN tstat IN ('IN_TRANSIT', 'ARRIVED') THEN now() - interval '75 minutes' END,
             CASE WHEN tstat = 'ARRIVED' THEN now() - interval '10 minutes' END,
