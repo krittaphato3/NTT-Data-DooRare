@@ -3,7 +3,7 @@
  *  usable = floor((daysLeft − 1) × usagePerDay); releasable = qty − usable (F-22).
  */
 
-export type NearExpiryStatus = 'PENDING' | 'RELEASED' | 'ALLOCATED' | 'KEPT' | 'EXPIRED';
+export type NearExpiryStatus = 'PENDING' | 'RELEASED' | 'ALLOCATED' | 'KEPT' | 'EXPIRED' | 'TRANSFERRED' | 'DISMISSED';
 export type RepeatFlag = 'WATCH' | 'RECOMMEND';
 
 export interface ExpiryHistoryEntry {
@@ -13,6 +13,12 @@ export interface ExpiryHistoryEntry {
 
 export interface NearExpiryItem {
   id: string;
+  /** Live rows only: near_expiry_item uuid, row version, whether a plan is active and the pharmacist's note. */
+  uuid?: string;
+  version?: number;
+  planActive?: boolean;
+  note?: string | null;
+  reviewAfter?: string | null;
   ved: 'V' | 'E' | 'D';
   drug: string;
   lot: string;

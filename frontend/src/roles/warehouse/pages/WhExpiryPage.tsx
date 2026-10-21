@@ -17,6 +17,8 @@ const STATUS: Record<NearExpiryStatus, { label: string; tone: string }> = {
   ALLOCATED: { label: 'อยู่ในแผนจัดสรร', tone: 't-blue' },
   KEPT: { label: 'เก็บไว้ใช้เอง', tone: 't-grey' },
   EXPIRED: { label: 'หมดอายุ', tone: 't-red' },
+  TRANSFERRED: { label: 'โอนให้ รพ.อื่นแล้ว', tone: 't-green' },
+  DISMISSED: { label: 'ปิดรายการ', tone: 't-grey' },
 };
 const REPEAT = { WATCH: { label: 'เฝ้าระวัง', tone: 't-amber' }, RECOMMEND: { label: 'แนะนำลดสั่ง', tone: 't-red' } } as const;
 const baht = (n: number) => `฿${n.toLocaleString('en-US')}`;

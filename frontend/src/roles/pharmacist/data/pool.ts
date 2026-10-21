@@ -23,7 +23,10 @@ export type PlanStatus =
   | 'AWAITING_APPROVAL'
   | 'APPROVED'
   | 'AUTO_APPROVED'
-  | 'NEEDS_DISCUSSION';
+  | 'NEEDS_DISCUSSION'
+  | 'TRANSPORTING'
+  | 'COMPLETED'
+  | 'CANCELLED';
 
 export interface PlanApproval {
   hospital: string;
@@ -40,6 +43,17 @@ export interface UneconomicalOption {
 
 export interface AllocationPlan {
   id: string;
+  /** Live rows only: plan uuid, who I am in it and what the API offers (options, lines). */
+  live?: {
+    uuid: string;
+    myDecision: 'PENDING' | 'APPROVED' | 'REJECTED' | null;
+    isOrigin: boolean;
+    option: string | null;
+    options: { id: string; label: string }[];
+    cancelRequestedBy: string | null;
+    lines: { receiver: string; qty: number; km: number; cost: number; taskNo: string | null }[];
+    openForApproval: boolean;
+  };
   version: number;
   status: PlanStatus;
   drug: string;
@@ -74,6 +88,9 @@ const PLAN_STATUS_META: Record<PlanStatus, { label: string; tone: string }> = {
   APPROVED: { label: 'อนุมัติแล้ว · รอเอกสาร', tone: 't-green' },
   AUTO_APPROVED: { label: 'อนุมัติอัตโนมัติ (เครือข่ายเดียว)', tone: 't-teal' },
   NEEDS_DISCUSSION: { label: 'ต้องหารือ · แก้แผน', tone: 't-red' },
+  TRANSPORTING: { label: 'อนุมัติแล้ว · กำลังขนส่ง', tone: 't-green' },
+  COMPLETED: { label: 'ส่งมอบครบแล้ว', tone: 't-green' },
+  CANCELLED: { label: 'ยกเลิก', tone: 't-grey' },
 };
 
 export function planStatusMeta(s: PlanStatus): { label: string; tone: string } {

@@ -7,14 +7,19 @@ import type { NearExpiryItem, NearExpiryStatus } from '../data/nearExpiry';
 
 interface NearExpiryDrawerProps {
   item: NearExpiryItem;
-  onDecide: (status: NearExpiryStatus, qty?: number) => void;
+  /** `status` RELEASED / KEPT (the two decisions of the mock) plus DISMISSED / PENDING (= withdraw from the pool) on live rows. */
+  onDecide: (status: NearExpiryStatus, qty?: number, reason?: string) => void;
+  /** Live rows: the API is called, so keep / dismiss / withdraw need a reason of 3+ characters. */
+  live?: boolean;
+  busy?: boolean;
+  error?: string | null;
   onClose: () => void;
   /** Role viewing the drawer; the release/keep decision is gated through `lib/rbac.ts`. */
   role?: RoleCode;
 }
 
 /** UI-07 detail drawer — FEFO math (F-22) and the release/keep decision (FR-F2a-002). */
-export function NearExpiryDrawer({ item: i, onDecide, onClose, role = 'PHARMACIST' }: NearExpiryDrawerProps) {
+export function NearExpiryDrawer({ item: i, onDecide, onClose, live = false, busy = false, error = null, role = 'PHARMACIST' }: NearExpiryDrawerProps) {
   /* Releasing a lot to the central pool is the owner hospital's decision (§4.2). */
   const mayRelease = mayActFor(role, 'PHARMACIST', 'releaseNearExpiry');
   const releaseHint = requiredRoleHint('releaseNearExpiry');
@@ -23,6 +28,7 @@ export function NearExpiryDrawer({ item: i, onDecide, onClose, role = 'PHARMACIS
   const [qty, setQty] = useState(canRelease);
   const [reason, setReason] = useState('');
   const decided = i.status !== 'PENDING';
+  const reasonOk = reason.trim().length >= 3;
 
   return (
     <aside className="tr-drawer" aria-label="รายละเอียดยาใกล้หมดอายุ">
@@ -48,6 +54,8 @@ export function NearExpiryDrawer({ item: i, onDecide, onClose, role = 'PHARMACIS
           {i.status === 'RELEASED' && <span className="badge t-green">ปล่อยเข้าคลังกลางแล้ว</span>}
           {i.status === 'ALLOCATED' && <span className="badge t-teal">อยู่ในแผน {i.planId}</span>}
           {i.status === 'EXPIRED' && <span className="badge t-grey">หมดอายุแล้ว · รอตัดบัญชี</span>}
+          {i.status === 'TRANSFERRED' && <span className="badge t-green">โอนให้ รพ.อื่นแล้ว</span>}
+          {i.status === 'DISMISSED' && <span className="badge t-grey">ปิดรายการ</span>}
         </div>
       </div>
 
@@ -91,6 +99,7 @@ export function NearExpiryDrawer({ item: i, onDecide, onClose, role = 'PHARMACIS
         </div>
 
         {decided ? (
+          <>
           <div className="ne-done" role="status">
             <Icon name="checkc" className="ic20" style={{ color: '#166534' }} />
             <span>
@@ -103,13 +112,38 @@ export function NearExpiryDrawer({ item: i, onDecide, onClose, role = 'PHARMACIS
               {i.status === 'KEPT' && <>เก็บไว้ใช้เอง · {i.keptReason}</>}
               {i.status === 'ALLOCATED' && <>อยู่ในแผน {i.planId} · รอเอกสารและขนส่ง (UI-14)</>}
               {i.status === 'EXPIRED' && <>หมดอายุจริง · ระบบบันทึกตัดบัญชีและนับเป็นเหตุการณ์ F2b</>}
+              {i.status === 'TRANSFERRED' && <>โอนให้ รพ.อื่นแล้ว{i.planId ? ` · แผน ${i.planId}` : ''} · นับเป็นมูลค่าที่เลี่ยงการหมดอายุ</>}
+              {i.status === 'DISMISSED' && <>ปิดรายการ · {i.note ?? ''}</>}
             </span>
           </div>
+          {live && (i.status === 'RELEASED' || i.status === 'KEPT') && (
+            <div className="ne-decide">
+              {error && <div role="alert" style={{ color: '#B91C1C', fontSize: 12.5 }}>{error}</div>}
+              <textarea className="ne-reason" placeholder="เหตุผล (อย่างน้อย 3 ตัวอักษร)" value={reason} onChange={(e) => setReason(e.target.value)} />
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {i.status === 'RELEASED' && (
+                  <button className="btn btn-g" disabled={!mayRelease || busy || !reasonOk} title={reasonOk ? undefined : 'ระบุเหตุผลก่อน'} onClick={() => onDecide('PENDING', undefined, reason)}>
+                    ถอนออกจากคลังกลาง
+                  </button>
+                )}
+                {i.status === 'KEPT' && (
+                  <button className="btn btn-g" disabled={!mayRelease || busy || !reasonOk} title={reasonOk ? undefined : 'ระบุเหตุผลก่อน'} onClick={() => onDecide('DISMISSED', undefined, reason)}>
+                    ปิดรายการ
+                  </button>
+                )}
+              </div>
+              <div className="sub">
+                {i.status === 'RELEASED' ? 'ถอนได้เฉพาะเมื่อยังไม่มีแผนจัดสรรที่ดำเนินการอยู่ (ถ้ามีต้องยกเลิกแผนก่อน)' : i.reviewAfter ? `จะกลับมาให้ตัดสินใจใหม่วันที่ ${i.reviewAfter}` : ''}
+              </div>
+            </div>
+          )}
+          </>
         ) : (
           <div className="ne-decide">
             <h3 className="tr-h3">
               ตัดสินใจ <span className="en">FR-F2a-002</span>
             </h3>
+            {error && <div role="alert" style={{ color: '#B91C1C', fontSize: 12.5 }}>{error}</div>}
             <label className="ne-qtyrow">
               <span>จำนวนที่จะปล่อย (≤ {canRelease} {i.unit})</span>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
@@ -134,21 +168,26 @@ export function NearExpiryDrawer({ item: i, onDecide, onClose, role = 'PHARMACIS
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
               <button
                 className="btn btn-p"
-                disabled={!mayRelease || qty <= 0}
+                disabled={!mayRelease || qty <= 0 || busy}
                 title={mayRelease ? undefined : releaseHint}
-                onClick={() => onDecide('RELEASED', qty)}
+                onClick={() => onDecide('RELEASED', qty, reason)}
               >
                 <Icon name="pkg" />
                 ปล่อยเข้าคลังกลาง {qty} {i.unit}
               </button>
               <button
                 className="btn btn-g"
-                disabled={!mayRelease}
-                title={mayRelease ? undefined : releaseHint}
-                onClick={() => onDecide('KEPT')}
+                disabled={!mayRelease || busy || (live && !reasonOk)}
+                title={mayRelease ? (live && !reasonOk ? 'ระบุเหตุผลอย่างน้อย 3 ตัวอักษรก่อน' : undefined) : releaseHint}
+                onClick={() => onDecide('KEPT', undefined, reason)}
               >
                 เก็บไว้ใช้เอง
               </button>
+              {live && (
+                <button className="btn btn-g" disabled={!mayRelease || busy || !reasonOk} title={reasonOk ? undefined : 'ระบุเหตุผลอย่างน้อย 3 ตัวอักษรก่อน'} onClick={() => onDecide('DISMISSED', undefined, reason)}>
+                  ไม่ดำเนินการ (ปิดรายการ)
+                </button>
+              )}
             </div>
             <div className="sub" style={{ marginTop: 2 }}>
               ปล่อยแล้วเป็นการจองข้อมูล (held) · สินค้าจริงยังอยู่ที่ รพ.สมุทรปราการ จนกว่าแผนจัดสรรจะอนุมัติ
