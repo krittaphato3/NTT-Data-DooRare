@@ -177,3 +177,38 @@ export async function releaseHeld(client: pg.PoolClient, hospitalId: string, lot
   if (release > 0) await holdStock(client, hospitalId, lotId, -release);
   return release;
 }
+
+export interface FefoPick {
+  lotId: string;
+  lotNo: string;
+  expiryDate: string;
+  manufacturer: string | null;
+  qty: number;
+}
+
+/**
+ * First-expiry-first-out picks of a drug's free stock (on hand minus reserved, not yet expired) at one hospital.
+ * Locks the chosen lots; throws 409 INSUFFICIENT_STOCK when the hospital cannot cover `qty`.
+ */
+export async function pickFefo(client: pg.PoolClient, hospitalId: string, drugMasterId: string, qty: number): Promise<FefoPick[]> {
+  const lots = await client.query(
+    `SELECT sl.id, sl.lot_no, sl.expiry_date::text AS expiry_date, sl.manufacturer, (sl.qty_on_hand - sl.qty_held)::float8 AS free
+       FROM stock_lot sl JOIN hospital_drug hd ON hd.id = sl.hospital_drug_id
+      WHERE sl.hospital_id = $1 AND hd.drug_master_id = $2 AND sl.expiry_date > current_date AND sl.qty_on_hand > sl.qty_held
+      ORDER BY sl.expiry_date, sl.lot_no
+        FOR UPDATE OF sl`,
+    [hospitalId, drugMasterId],
+  );
+  const picks: FefoPick[] = [];
+  let remaining = qty;
+  for (const lot of lots.rows) {
+    if (remaining <= 1e-9) break;
+    const take = Math.min(Number(lot.free), remaining);
+    picks.push({ lotId: lot.id, lotNo: lot.lot_no, expiryDate: lot.expiry_date, manufacturer: lot.manufacturer, qty: take });
+    remaining -= take;
+  }
+  if (remaining > 1e-9) {
+    throw new HttpError(409, 'INSUFFICIENT_STOCK', 'สต็อกที่ใช้ได้ไม่พอ', { drugMasterId, requested: qty, short: Math.round(remaining * 1000) / 1000 });
+  }
+  return picks;
+}
