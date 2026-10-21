@@ -5,6 +5,7 @@ import {
   ALERT_ROWS, ALERT_STATUS_META, ALERT_SUMMARY, ALERT_TYPE_META, NOTE_TONE_COLOR, PHARMACY_CONTEXT, QUEUE_ROWS, SEVERITY_META,
 } from '../../pharmacist/data/stockAlerts';
 import type { Severity, StockAlertRow } from '../../pharmacist/data/stockAlerts';
+import { useStockAlerts } from '../../pharmacist/data/useStockAlerts';
 import { ViewOnlyNote } from '../components/ViewOnlyNote';
 import { whHref } from '../data/routes';
 import '../transport.css';
@@ -35,17 +36,22 @@ function Target({ r }: { r: StockAlertRow }) {
 
 /** WH stock, forecast & Agent view (RBAC 👁): the same numbers the pharmacist sees, without any action. */
 export function WhStockPage() {
+  const sa = useStockAlerts();
+  const live = sa.source === 'live';
+  const ALL_ROWS = live ? sa.rows : ALERT_ROWS;
+  const QUEUE = live ? sa.rows.filter((r) => r.alert) : QUEUE_ROWS;
+  const CARDS = live && sa.cards ? sa.cards : ALERT_SUMMARY;
   const [tab, setTab] = useState<Tab>('stock');
   const [q, setQ] = useState('');
   const [alertOnly, setAlertOnly] = useState<'all' | 'alert' | 'none'>('all');
   const [ved, setVed] = useState<'all' | 'V' | 'E' | 'D'>('all');
 
   const needle = q.trim().toLowerCase();
-  const rows = ALERT_ROWS.filter((r) => (ved === 'all' || r.ved === ved) && (alertOnly === 'all' || (alertOnly === 'alert') === (r.alert !== null)) && (!needle || [r.drug, r.code].some((t) => t.toLowerCase().includes(needle))));
-  const queue = [...QUEUE_ROWS].sort((a, b) => SEVERITY_ORDER[a.alert!.severity] - SEVERITY_ORDER[b.alert!.severity]);
+  const rows = ALL_ROWS.filter((r) => (ved === 'all' || r.ved === ved) && (alertOnly === 'all' || (alertOnly === 'alert') === (r.alert !== null)) && (!needle || [r.drug, r.code].some((t) => t.toLowerCase().includes(needle))));
+  const queue = [...QUEUE].sort((a, b) => SEVERITY_ORDER[a.alert!.severity] - SEVERITY_ORDER[b.alert!.severity]);
   const tabs: { id: Tab; label: string; n: number; hint: string }[] = [
-    { id: 'stock', label: 'สต็อกและผลทำนาย', n: ALERT_ROWS.length, hint: 'คงเหลือ · Predict (P50) / Total Target (P90–P95) · วิธีพยากรณ์' },
-    { id: 'alerts', label: 'การแจ้งเตือน', n: QUEUE_ROWS.length, hint: 'แจ้งเตือนสต็อกต่ำ/เกิน · เภสัชกรเป็นผู้รับทราบและสร้างคำขอ' },
+    { id: 'stock', label: 'สต็อกและผลทำนาย', n: ALL_ROWS.length, hint: 'คงเหลือ · Predict (P50) / Total Target (P90–P95) · วิธีพยากรณ์' },
+    { id: 'alerts', label: 'การแจ้งเตือน', n: QUEUE.length, hint: 'แจ้งเตือนสต็อกต่ำ/เกิน · เภสัชกรเป็นผู้รับทราบและสร้างคำขอ' },
     { id: 'agent', label: 'แผนและสรุปของ Agent', n: 2, hint: 'Agent เสนอเท่านั้น · เภสัชกรอนุมัติ' },
   ];
   const active = tabs.find((t) => t.id === tab)!;
@@ -66,7 +72,7 @@ export function WhStockPage() {
       </section>
 
       <section className="ib-kpis" aria-label="สรุปแจ้งเตือน">
-        {ALERT_SUMMARY.slice(0, 4).map((c) => (
+        {CARDS.slice(0, 4).map((c) => (
           <div key={c.key} className={`ib-kpi ${KPI_CLS[c.tone]}`}>
             <div className="ib-kpi-label">{c.labelTh} {c.code && <span className="en">{c.code}</span>}</div>
             <div className="ib-kpi-val num">{c.count} รายการ</div>

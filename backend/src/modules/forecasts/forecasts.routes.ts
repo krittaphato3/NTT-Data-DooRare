@@ -15,14 +15,14 @@ export const forecastsRouter = Router();
 forecastsRouter.get(
   '/',
   requireAuth,
-  requireRole('PHARMACIST', 'PROCUREMENT_OFFICER', 'HOSPITAL_ADMIN', 'REGION_ADMIN'),
+  requireRole('PHARMACIST', 'PROCUREMENT_OFFICER', 'HOSPITAL_ADMIN', 'REGION_ADMIN', 'WAREHOUSE_OFFICER'),
   forecastsController.list,
 );
 
 forecastsRouter.get(
   '/:hospitalDrugId',
   requireAuth,
-  requireRole('PHARMACIST', 'PROCUREMENT_OFFICER', 'HOSPITAL_ADMIN'),
+  requireRole('PHARMACIST', 'PROCUREMENT_OFFICER', 'HOSPITAL_ADMIN', 'WAREHOUSE_OFFICER'),
   forecastsController.detail,
 );
 

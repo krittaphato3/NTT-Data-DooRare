@@ -11,7 +11,7 @@
 import type { IconName } from '../../../components/common/icons';
 
 export type Severity = 'critical' | 'urgent' | 'normal';
-export type AlertType = 'LOW_STOCK' | 'OVERSTOCK' | 'LOW_CONFIDENCE' | 'DATA_STALE';
+export type AlertType = 'LOW_STOCK' | 'OVERSTOCK' | 'LOW_CONFIDENCE' | 'DATA_STALE' | 'ORDER_AHEAD' | 'ORDER_EARLIER' | 'MIN_MAX';
 export type AlertStatus = 'open' | 'acknowledged' | 'linked' | 'snoozed';
 export type Ved = 'V' | 'E' | 'D';
 export type Abc = 'A' | 'B' | 'C' | 'D' | 'E' | 'V' | '–';
@@ -61,6 +61,9 @@ export const ALERT_TYPE_META: Record<AlertType, AlertTypeMeta> = {
   OVERSTOCK: { th: 'สต็อกเกิน', en: 'Overstock', cls: 't-blue', icon: 'pkg' },
   LOW_CONFIDENCE: { th: 'พยากรณ์ไม่มั่นใจ', en: 'Low-confidence forecast', cls: 't-red', icon: 'alertc' },
   DATA_STALE: { th: 'ข้อมูลเก่า', en: 'Stale data', cls: 't-grey', icon: 'clock' },
+  ORDER_AHEAD: { th: 'เตรียมสั่งล่วงหน้า', en: 'Order ahead', cls: 't-amber', icon: 'clock' },
+  ORDER_EARLIER: { th: 'ควรสั่งซื้อให้เร็วขึ้น', en: 'Order earlier', cls: 't-amber', icon: 'clock' },
+  MIN_MAX: { th: 'ต่ำกว่า Min', en: 'Below min', cls: 't-red', icon: 'tri' },
 };
 
 /** Status text under the Predict/Total-Target bar. */

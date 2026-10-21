@@ -28,6 +28,13 @@
     "date": "2026-10-21"
   },
   {
+    "path": "sessions/2026-10-21-claude-backend-step4-stock-alerts.md",
+    "title": "Backend step 4 - stock alerts, forecast loader, classification",
+    "summary": "Alerts evaluated from usable stock vs forecasts; PH and WH stock pages…",
+    "tags": "session, backend, alerts, forecast, f1a",
+    "date": "2026-10-21"
+  },
+  {
     "path": "sessions/2026-10-21-claude-backend-transport.md",
     "title": "Backend step 2 - transport, legs, documents, return obligations",
     "summary": "SM-6 workflow with stock moves, offline sync, slips, returns; 93 integration checks…",

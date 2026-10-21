@@ -1,4 +1,5 @@
 import { ALERT_SUMMARY, SUMMARY_ACCENT } from '../data/stockAlerts';
+import type { SummaryCard } from '../data/stockAlerts';
 
 /**
  * Five summary cards above the queue: the four `alert_type` counts plus the
@@ -8,10 +9,10 @@ import { ALERT_SUMMARY, SUMMARY_ACCENT } from '../data/stockAlerts';
  * (rendered as two elements so they never touch), and a left accent border
  * instead of an icon tile. No English gloss is rendered on screen.
  */
-export function StockAlertSummary() {
+export function StockAlertSummary({ cards = ALERT_SUMMARY }: { cards?: SummaryCard[] }) {
   return (
     <section aria-label="สรุปการแจ้งเตือน" className="sa-cards" data-part="stock-alert-summary">
-      {ALERT_SUMMARY.map((c) => {
+      {cards.map((c) => {
         const body = (
           <>
             <div className="sa-card-head">

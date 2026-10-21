@@ -17,9 +17,7 @@ import {
   sortAlertRows,
 } from '../data/stockAlerts';
 import type { Severity, SortMode, StockAlertRow, Ved } from '../data/stockAlerts';
-import { forecastToRow } from '../data/forecastRows';
-import { getForecasts } from '../../../services/forecastApi';
-import type { ForecastMeta } from '../../../services/forecastApi';
+import { useStockAlerts } from '../data/useStockAlerts';
 
 /** Small modal shell (mirrors PageHeader's dialog): scrim click and Escape close it. */
 function Modal({ label, onClose, children }: { label: string; onClose: () => void; children: React.ReactNode }) {
@@ -80,28 +78,24 @@ export function StockAlertsPage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
   const [selected, setSelected] = useState<string | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
 
-  // Live forecast rows (GET /forecasts). The "all" tab uses them; the alert queue stays mock until GET /alerts exists.
-  const [live, setLive] = useState<{ rows: StockAlertRow[]; meta: ForecastMeta } | null>(null);
-  const [liveError, setLiveError] = useState<string | null>(null);
+  // Live data: alerts + forecasts + usable stock from the API; mock rows when the alert API cannot be reached.
+  const sa = useStockAlerts();
+  const live = sa.source === 'live';
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [snoozeTarget, setSnoozeTarget] = useState<StockAlertRow | null>(null);
+  const [snoozeReason, setSnoozeReason] = useState('');
+  const [snoozeHours, setSnoozeHours] = useState(24);
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
   useEffect(() => {
-    let cancelled = false;
-    getForecasts('WEEK')
-      .then((res) => {
-        if (cancelled) return;
-        setLive({ rows: res.items.map(forecastToRow), meta: res.meta });
-        setTab('all');
-      })
-      .catch((err: Error) => {
-        if (!cancelled) setLiveError(err.message);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    if (sa.source === 'live') setTab(sa.rows.some((r) => r.alert) ? 'queue' : 'all');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sa.source]);
 
-  const allRows = live ? live.rows : ALERT_ROWS;
-  const base = tab === 'queue' ? QUEUE_ROWS : allRows;
-  const tabCounts = { queue: QUEUE_ROWS.length, all: allRows.length };
+  const allRows = live ? sa.rows : ALERT_ROWS;
+  const queueRows = live ? sa.rows.filter((r) => r.alert) : QUEUE_ROWS;
+  const base = tab === 'queue' ? queueRows : allRows;
+  const tabCounts = { queue: queueRows.length, all: allRows.length };
 
   const severityCounts = useMemo(() => {
     const c: Record<'all' | Severity, number> = { all: base.length, critical: 0, urgent: 0, normal: 0 };
@@ -123,7 +117,30 @@ export function StockAlertsPage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
   const selectedRow = selected ? ([...allRows, ...ALERT_ROWS].find((r) => r.id === selected) ?? null) : null;
   const justCreated = selectedRow ? created.has(selectedRow.id) : false;
 
+  const runAction = async (fn: () => Promise<void>) => {
+    setBusy(true);
+    setActionError(null);
+    try {
+      await fn();
+    } catch (e) {
+      setActionError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const handleAction = (row: StockAlertRow, cond: RowActionCond) => {
+    if (live) {
+      // Live: the server owns the alert state (SM-8). Creating a borrow request waits for the F1b API.
+      if (cond === 'ack' && row.alert) void runAction(() => sa.ack(row.alert!.alertId));
+      else if (cond === 'snooze') {
+        setSnoozeReason('');
+        setSnoozeHours(24);
+        setSnoozeTarget(row);
+      } else if (cond === 'create') setNotice('การสร้างคำขอยืมจากแจ้งเตือนจะเปิดใช้เมื่อมี API คำขอยืม (F1b)');
+      else setSelected(row.id);
+      return;
+    }
     if (cond === 'ack') setAcked((prev) => new Set(prev).add(row.id));
     else if (cond === 'snooze') setSnoozed((prev) => new Set(prev).add(row.id));
     else if (cond === 'create') {
@@ -134,7 +151,7 @@ export function StockAlertsPage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
 
   /** Status after the pharmacist's local ack / snooze / create actions (same rule the table uses). */
   const effectiveStatus = (r: StockAlertRow) =>
-    snoozed.has(r.id) ? 'snoozed' : acked.has(r.id) ? 'acknowledged' : created.has(r.id) ? 'linked' : (r.alert?.status ?? 'open');
+    live ? (r.alert?.status ?? 'open') : snoozed.has(r.id) ? 'snoozed' : acked.has(r.id) ? 'acknowledged' : created.has(r.id) ? 'linked' : (r.alert?.status ?? 'open');
 
   /** Client-side CSV of the currently filtered rows (mock "ส่งออก"). */
   const exportCsv = () => {
@@ -182,18 +199,22 @@ export function StockAlertsPage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
         </div>
       </section>
 
-      <StockAlertSummary />
+      <StockAlertSummary cards={live ? sa.cards ?? undefined : undefined} />
 
-      {(live || liveError) && (
+      {sa.source === 'mock' && (
         <div className="card" role="status" style={{ padding: '10px 16px', fontSize: 13, color: '#0F2A5C' }}>
-          {live ? (
-            <>
-              แท็บ "ทั้งหมด" แสดงผลพยากรณ์จากโมเดลจริง ({live.meta.modelVersion ?? '—'}, รอบ {live.meta.originUsed ?? '—'}
-              {live.meta.mockData ? ' · ข้อมูลสมมติ' : ''}) · คิวแจ้งเตือนยังเป็นข้อมูลตัวอย่าง เพราะยังไม่มี API แจ้งเตือน
-            </>
-          ) : (
-            <>โหลดผลพยากรณ์ไม่ได้ ({liveError}) · แสดงข้อมูลตัวอย่างแทน</>
-          )}
+          โหลดแจ้งเตือนจริงไม่ได้ ({sa.error}) · แสดงข้อมูลตัวอย่างแทน
+        </div>
+      )}
+      {live && (
+        <div className="card" role="status" style={{ padding: '10px 16px', fontSize: 13, color: '#0F2A5C' }}>
+          แจ้งเตือนมาจากระบบจริง (ประเมินจากสต็อกที่ใช้ได้เทียบผลพยากรณ์)
+          {sa.forecastMeta ? ` · โมเดล ${sa.forecastMeta.modelVersion ?? '—'}${sa.forecastMeta.originUsed ? ` รอบ ${sa.forecastMeta.originUsed}` : ''}${sa.forecastMeta.mockData ? ' · ข้อมูลสมมติ' : ''}` : ' · ยังไม่มีผลพยากรณ์ (ผู้ดูแลระบบต้องสั่งรัน)'}
+        </div>
+      )}
+      {(notice || actionError) && (
+        <div className="card" role={actionError ? 'alert' : 'status'} style={{ padding: '10px 16px', fontSize: 13, color: actionError ? '#B91C1C' : '#0F2A5C' }}>
+          {actionError ?? notice}
         </div>
       )}
 
@@ -217,6 +238,39 @@ export function StockAlertsPage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
           แสดง {rows.length} จาก {base.length} รายการ
         </div>
       </section>
+
+      {snoozeTarget && (
+        <Modal label={`เลื่อนเตือน ${snoozeTarget.drug}`} onClose={() => setSnoozeTarget(null)}>
+          <h2 style={{ margin: 0, fontSize: 18, color: '#0F2A5C' }}>เลื่อนเตือน · {snoozeTarget.drug}</h2>
+          <div style={{ display: 'grid', gap: 10, marginTop: 12 }}>
+            <label style={{ fontSize: 13 }}>
+              เลื่อนไป (ชั่วโมง, สูงสุด 168)
+              <input className="inp num" type="number" min={1} max={168} value={snoozeHours} onChange={(e) => setSnoozeHours(Number(e.target.value))} style={{ display: 'block', marginTop: 4 }} />
+            </label>
+            <label style={{ fontSize: 13 }}>
+              เหตุผล (บังคับ · บันทึกใน audit)
+              <textarea className="inp" rows={2} value={snoozeReason} onChange={(e) => setSnoozeReason(e.target.value)} style={{ display: 'block', width: '100%', marginTop: 4 }} />
+            </label>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 14 }}>
+            <button className="btn btn-s btn-sm" onClick={() => setSnoozeTarget(null)}>ยกเลิก</button>
+            <button
+              className="btn btn-p btn-sm"
+              disabled={busy || snoozeReason.trim().length < 3 || snoozeHours < 1 || snoozeHours > 168}
+              onClick={() => {
+                const target = snoozeTarget;
+                if (!target.alert) return;
+                void runAction(async () => {
+                  await sa.snooze(target.alert!.alertId, snoozeReason.trim(), snoozeHours);
+                  setSnoozeTarget(null);
+                });
+              }}
+            >
+              {busy ? 'กำลังบันทึก…' : 'ยืนยันเลื่อนเตือน'}
+            </button>
+          </div>
+        </Modal>
+      )}
 
       {historyOpen && (
         <Modal label="ประวัติการแจ้งเตือน / Alert history" onClose={() => setHistoryOpen(false)}>

@@ -35,6 +35,7 @@ export class InventoryService {
         `SELECT hd.id, hd.local_code, hd.local_name, hd.local_unit, hd.ved::text AS ved, hd.abc::text AS abc,
                 hd.min_level::float8 AS min_level, hd.max_level::float8 AS max_level, ${DRUG_NAME} AS drug_name, dm.base_unit, dm.is_cold_chain,
                 sum(sl.qty_on_hand)::float8 AS on_hand, sum(sl.qty_held)::float8 AS held, count(*)::int AS lots,
+                COALESCE(sum(sl.qty_on_hand - sl.qty_held) FILTER (WHERE sl.expiry_date > current_date), 0)::float8 AS usable,
                 min(sl.expiry_date) FILTER (WHERE sl.qty_on_hand > 0)::text AS nearest_expiry
            ${join} GROUP BY hd.id, dm.id ORDER BY hd.local_code ${limit}`,
         params,
@@ -56,6 +57,8 @@ export class InventoryService {
           onHand: r.on_hand,
           held: r.held,
           free: Math.round((r.on_hand - r.held) * 1000) / 1000,
+          /** Not expired and not held: the stock the forecast comparison uses (BR-F1a-019). */
+          usable: Math.round(r.usable * 1000) / 1000,
           lots: r.lots,
           nearestExpiry: r.nearest_expiry,
           minLevel: r.min_level,
