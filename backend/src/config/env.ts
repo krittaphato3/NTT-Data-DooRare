@@ -37,6 +37,11 @@ export const config = {
     demoOtp: process.env.DEMO_OTP || '123456',
     idleTimeoutMinutes: 30, // SEC-001
   },
+  uploads: {
+    /** Local disk store for transport photos (the spec uses S3 presigned URLs; there is no S3 in this stack). */
+    dir: process.env.UPLOAD_DIR || path.resolve(process.cwd(), 'uploads'),
+    maxPhotoBytes: 1.5 * 1024 * 1024, // spec UI-14: compressed to <= 1.5 MB
+  },
   forecasts: {
     /** JSON fallback source; the DB is always tried first. */
     dir: resolveForecastsDir(),

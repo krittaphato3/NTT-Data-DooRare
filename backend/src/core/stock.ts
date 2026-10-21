@@ -139,3 +139,41 @@ export async function getLot(client: pg.PoolClient, hospitalId: string, lotId: s
   const result = await client.query(`SELECT ${LOT_COLUMNS} FROM stock_lot WHERE id = $1 AND hospital_id = $2`, [lotId, hospitalId]);
   return result.rowCount ? toState(result.rows[0]) : null;
 }
+
+/**
+ * Finds (or creates with zero stock) the lot `lotNo` of a hospital's own listing, so goods arriving from another
+ * hospital (BORROW_IN, POOL_TRANSFER_IN, RETURN_IN) can be booked with `adjustStock`.
+ */
+export async function ensureLot(
+  client: pg.PoolClient,
+  hospitalId: string,
+  hospitalDrugId: string,
+  lot: { lotNo: string; expiryDate: string; manufacturer?: string | null },
+): Promise<string> {
+  const found = await client.query(
+    `INSERT INTO stock_lot (hospital_id, hospital_drug_id, lot_no, expiry_date, manufacturer, qty_on_hand)
+     VALUES ($1, $2, $3, $4::date, $5, 0)
+     ON CONFLICT (hospital_id, hospital_drug_id, lot_no) DO UPDATE SET lot_no = EXCLUDED.lot_no
+     RETURNING id`,
+    [hospitalId, hospitalDrugId, lot.lotNo, lot.expiryDate, lot.manufacturer ?? null],
+  );
+  return found.rows[0].id;
+}
+
+/** The hospital's own listing of a central drug (needed before it can hold that drug's stock). */
+export async function findHospitalDrug(client: pg.PoolClient, hospitalId: string, drugMasterId: string): Promise<string | null> {
+  const result = await client.query(
+    `SELECT id FROM hospital_drug WHERE hospital_id = $1 AND drug_master_id = $2 AND active ORDER BY local_code LIMIT 1`,
+    [hospitalId, drugMasterId],
+  );
+  return result.rows[0]?.id ?? null;
+}
+
+/** Releases up to `qty` of a lot's reservation (never below zero) and returns how much was released. */
+export async function releaseHeld(client: pg.PoolClient, hospitalId: string, lotId: string, qty: number): Promise<number> {
+  const lot = await getLot(client, hospitalId, lotId);
+  if (!lot) throw new HttpError(404, 'NOT_FOUND', 'ไม่พบล็อตสต็อก');
+  const release = Math.min(Number(lot.qtyHeld), qty);
+  if (release > 0) await holdStock(client, hospitalId, lotId, -release);
+  return release;
+}
