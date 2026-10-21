@@ -17,6 +17,9 @@ import {
   sortAlertRows,
 } from '../data/stockAlerts';
 import type { Severity, SortMode, StockAlertRow, Ved } from '../data/stockAlerts';
+import { forecastToRow } from '../data/forecastRows';
+import { getForecasts } from '../../../services/forecastApi';
+import type { ForecastMeta } from '../../../services/forecastApi';
 
 /** Small modal shell (mirrors PageHeader's dialog): scrim click and Escape close it. */
 function Modal({ label, onClose, children }: { label: string; onClose: () => void; children: React.ReactNode }) {
@@ -77,8 +80,28 @@ export function StockAlertsPage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
   const [selected, setSelected] = useState<string | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
 
-  const base = tab === 'queue' ? QUEUE_ROWS : ALERT_ROWS;
-  const tabCounts = { queue: QUEUE_ROWS.length, all: ALERT_ROWS.length };
+  // Live forecast rows (GET /forecasts). The "all" tab uses them; the alert queue stays mock until GET /alerts exists.
+  const [live, setLive] = useState<{ rows: StockAlertRow[]; meta: ForecastMeta } | null>(null);
+  const [liveError, setLiveError] = useState<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    getForecasts('WEEK')
+      .then((res) => {
+        if (cancelled) return;
+        setLive({ rows: res.items.map(forecastToRow), meta: res.meta });
+        setTab('all');
+      })
+      .catch((err: Error) => {
+        if (!cancelled) setLiveError(err.message);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const allRows = live ? live.rows : ALERT_ROWS;
+  const base = tab === 'queue' ? QUEUE_ROWS : allRows;
+  const tabCounts = { queue: QUEUE_ROWS.length, all: allRows.length };
 
   const severityCounts = useMemo(() => {
     const c: Record<'all' | Severity, number> = { all: base.length, critical: 0, urgent: 0, normal: 0 };
@@ -97,7 +120,7 @@ export function StockAlertsPage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
     return sortAlertRows(filtered, sort);
   }, [base, severity, ved, search, sort]);
 
-  const selectedRow = selected ? (ALERT_ROWS.find((r) => r.id === selected) ?? null) : null;
+  const selectedRow = selected ? ([...allRows, ...ALERT_ROWS].find((r) => r.id === selected) ?? null) : null;
   const justCreated = selectedRow ? created.has(selectedRow.id) : false;
 
   const handleAction = (row: StockAlertRow, cond: RowActionCond) => {
@@ -160,6 +183,19 @@ export function StockAlertsPage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
       </section>
 
       <StockAlertSummary />
+
+      {(live || liveError) && (
+        <div className="card" role="status" style={{ padding: '10px 16px', fontSize: 13, color: '#0F2A5C' }}>
+          {live ? (
+            <>
+              แท็บ "ทั้งหมด" แสดงผลพยากรณ์จากโมเดลจริง ({live.meta.modelVersion ?? '—'}, รอบ {live.meta.originUsed ?? '—'}
+              {live.meta.mockData ? ' · ข้อมูลสมมติ' : ''}) · คิวแจ้งเตือนยังเป็นข้อมูลตัวอย่าง เพราะยังไม่มี API แจ้งเตือน
+            </>
+          ) : (
+            <>โหลดผลพยากรณ์ไม่ได้ ({liveError}) · แสดงข้อมูลตัวอย่างแทน</>
+          )}
+        </div>
+      )}
 
       <section className="card" data-part="stock-alert-toolbar" style={{ padding: '16px 20px 8px' }}>
         <StockAlertToolbar
