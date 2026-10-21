@@ -1,80 +1,143 @@
 [
   {
-    "path": "sessions\\2026-10-18-claude-db-schema-v15.md",
+    "path": "context/current-task.md",
+    "title": "Current Task",
+    "summary": "Current Task",
+    "tags": "session",
+    "date": "2026-10-21"
+  },
+  {
+    "path": "sessions/2026-10-21-buffy-f1-quantile-phase8.md",
+    "title": "F1 quantile forecast module (Phase 8 — closing, scripts + docs only)",
+    "summary": "run_all.sh (no training) green; README completed; DoD checklist and API evidence printed",
+    "tags": "session, ml, forecast, quantile, docs, scripts, verification, backend",
+    "date": "2026-10-21"
+  },
+  {
+    "path": "sessions/2026-10-20-buffy-f1-quantile-phase5.md",
+    "title": "F1 quantile forecast module (Phase 5 — monthly quantile model)",
+    "summary": "MONTH model (7 quantiles, 167 series); gate passes vs all 3 baselines…",
+    "tags": "session, ml, forecast, quantile, lightgbm, monthly, model, backend",
+    "date": "2026-10-20"
+  },
+  {
+    "path": "sessions/2026-10-20-buffy-f1-quantile-phase6a.md",
+    "title": "F1 quantile forecast module (Phase 6a — evaluation report and diagnostics)",
+    "summary": "Common-row slices, concentration, TT impact, crossings, gain importance for WEEK + MONTH",
+    "tags": "session, ml, forecast, quantile, evaluation, slices, diagnostics, backend",
+    "date": "2026-10-20"
+  },
+  {
+    "path": "sessions/2026-10-20-buffy-f1-quantile-phase6b.md",
+    "title": "F1 quantile forecast module (Phase 6b — series diagnostics + conformal calibration)",
+    "summary": "Per-series win rates, scale-free/TT/tercile diagnostics; WEEK global conformal enabled, MONTH disabled",
+    "tags": "session, ml, forecast, quantile, calibration, conformal, diagnostics, backend",
+    "date": "2026-10-20"
+  },
+  {
+    "path": "sessions/2026-10-20-buffy-f1-quantile-phase7a.md",
+    "title": "F1 quantile forecast module (Phase 7a — inference CLI + JSON contract)",
+    "summary": "predict --granularity WEEK|MONTH writes 173 rows per granularity (167 model + 6…",
+    "tags": "session, ml, forecast, quantile, inference, json, backend",
+    "date": "2026-10-20"
+  },
+  {
+    "path": "sessions/2026-10-20-buffy-f1-quantile-phase7b.md",
+    "title": "F1 quantile forecast module (Phase 7a Step 0 + Phase 7b read API)",
+    "summary": "JSON contract text fixed for per-granularity scaling; Node read API for forecasts…",
+    "tags": "session, ml, forecast, api, backend, json, express",
+    "date": "2026-10-20"
+  },
+  {
+    "path": "sessions/2026-10-19-buffy-f1-quantile-forecast.md",
+    "title": "F1 quantile forecast module (Phase 0 + Phase 1)",
+    "summary": "backend/models Python module; config + read-only data validation (13 checks, 18 tests)",
+    "tags": "session, ml, forecast, quantile, lightgbm, data-quality, backend",
+    "date": "2026-10-19"
+  },
+  {
+    "path": "sessions/2026-10-19-buffy-f1-quantile-phase2.md",
+    "title": "F1 quantile forecast module (Phase 2 — baselines, backtest, metrics)",
+    "summary": "WEEK baselines + walk-forward harness + F-24 metrics; MA/ES P90 coverage 0.911",
+    "tags": "session, ml, forecast, quantile, baselines, backtest, metrics, backend",
+    "date": "2026-10-19"
+  },
+  {
+    "path": "sessions/2026-10-19-buffy-f1-quantile-phase3.md",
+    "title": "F1 quantile forecast module (Phase 3 — feature matrices)",
+    "summary": "Weekly rebuild exact; monthly 17,763 rows; causal ctx flags; monthly baselines",
+    "tags": "session, ml, forecast, quantile, features, monthly, no-lookahead, backend",
+    "date": "2026-10-19"
+  },
+  {
+    "path": "sessions/2026-10-19-buffy-f1-quantile-phase4.md",
+    "title": "F1 quantile forecast module (Phase 4/4b — weekly quantile model)",
+    "summary": "WEEK model with all 7 quantiles, isotonic bands, 5k trees; beats all…",
+    "tags": "session, ml, forecast, quantile, lightgbm, model, artifacts, isotonic, backend",
+    "date": "2026-10-19"
+  },
+  {
+    "path": "sessions/2026-10-18-claude-db-schema-v15.md",
     "title": "DB schema v1.5 (UI data gaps, multi-role, login history)",
     "summary": "schema v1.5 + enrich_v15.py mock; v_transport_item view; several roles per user",
     "tags": "session, database, schema, postgres, mock",
     "date": "2026-10-18"
   },
   {
-    "path": "sessions\\2026-10-18-zcode-database-backed-login-panel.md",
+    "path": "sessions/2026-10-18-zcode-database-backed-login-panel.md",
     "title": "Real Database-Backed Login Panel & Architecture Separation (backend/ and frontend/)",
     "summary": "Separated clean backend/ service from frontend/, PostgreSQL connection pool, Nginx reverse proxy,…",
     "tags": "session, frontend, backend, architecture, auth, login, database, postgres, docker",
     "date": "2026-10-18"
   },
   {
-    "path": "context\\current-task.md",
-    "title": "Current Task",
-    "summary": "Current Task",
-    "tags": "session",
-    "date": "2026-10-17"
-  },
-  {
-    "path": "sessions\\2026-10-17-claude-er-incident-console.md",
+    "path": "sessions/2026-10-17-claude-er-incident-console.md",
     "title": "ER role on incident console",
     "summary": "ER_STAFF shell plus role-aware incident console on team RBAC",
     "tags": "session, frontend, er, incident, rbac",
     "date": "2026-10-17"
   },
   {
-    "path": "sessions\\2026-10-17-claude-er-structure-fix.md",
+    "path": "sessions/2026-10-17-claude-er-structure-fix.md",
     "title": "ER role structure moved out of pharmacist",
     "summary": "Incident console page/data moved to roles/er; ER owns its sidebar like warehouse/driver",
     "tags": "session, frontend, er, structure",
     "date": "2026-10-17"
   },
   {
-    "path": "sessions\\2026-10-17-driver-role-transport-pwa.md",
+    "path": "sessions/2026-10-17-driver-role-transport-pwa.md",
     "title": "Driver role and UI-14 Transport Tracking PWA implementation",
     "summary": "Implemented the DRIVER role with UI-14 offline PWA console, vehicle/queue monitoring, and…",
     "tags": "session, frontend, driver, transport, pwa, offline, rbac",
     "date": "2026-10-17"
   },
   {
-    "path": "sessions\\2026-10-16-1628-buffy-phase2c-return-obligations-waive.md",
+    "path": "context/runbook.md",
+    "title": "Runbook",
+    "summary": "Runbook",
+    "tags": "session",
+    "date": "2026-10-16"
+  },
+  {
+    "path": "sessions/2026-10-16-1628-buffy-phase2c-return-obligations-waive.md",
     "title": "Return obligations + Waive (Phase 2C)",
     "summary": "HOSPITAL_ADMIN gets a read-only ภาระการคืน sub-tab on Borrow requests plus the API-XC-005…",
     "tags": "session, frontend, hospital-admin, borrow-requests, return-obligations, rbac, audit",
     "date": "2026-10-16"
   },
   {
-    "path": "sessions\\2026-10-16-2350-gemini-admin-console-crud-hospitals.md",
+    "path": "sessions/2026-10-16-2350-gemini-admin-console-crud-hospitals.md",
     "title": "System Admin Console (ADM-01) with Hospital Details and Account CRUD",
     "summary": "Built Admin Console with Dashboard KPIs, Hospital breakdown, and Account CRUD.",
     "tags": "session, admin, dashboard, hospitals, account-crud, docker",
     "date": "2026-10-16"
   },
   {
-    "path": "sessions\\2026-10-16-buffy-phase2b-hospital-admin-readonly.md",
+    "path": "sessions/2026-10-16-buffy-phase2b-hospital-admin-readonly.md",
     "title": "Hospital Admin read-only adaptations (Phase 2B)",
     "summary": "HOSPITAL_ADMIN opens the pharmacist/warehouse screens read-only via an optional role prop and…",
     "tags": "session, frontend, hospital-admin, rbac, read-only",
     "date": "2026-10-16"
-  },
-  {
-    "path": "context\\runbook.md",
-    "title": "Runbook",
-    "summary": "Runbook",
-    "tags": "session",
-    "date": "2026-10-15"
-  },
-  {
-    "path": "GUIDELINES.md",
-    "title": "Guidelines",
-    "summary": "Guidelines",
-    "tags": "session",
-    "date": "2026-10-14"
   },
   {
     "path": "README.md",
@@ -84,105 +147,112 @@
     "date": "2026-10-14"
   },
   {
-    "path": "context\\architecture.md",
-    "title": "Architecture",
-    "summary": "Architecture",
-    "tags": "session",
-    "date": "2026-10-14"
-  },
-  {
-    "path": "context\\conventions.md",
+    "path": "context/conventions.md",
     "title": "Conventions",
     "summary": "Conventions",
     "tags": "session",
     "date": "2026-10-14"
   },
   {
-    "path": "context\\current-status.md",
-    "title": "Current Status",
-    "summary": "Current Status",
-    "tags": "session",
-    "date": "2026-10-14"
-  },
-  {
-    "path": "context\\quality-checklist.md",
-    "title": "Quality Checklist",
-    "summary": "Quality Checklist",
-    "tags": "session",
-    "date": "2026-10-14"
-  },
-  {
-    "path": "decisions\\0002-role-based-frontend-structure.md",
+    "path": "decisions/0002-role-based-frontend-structure.md",
     "title": "Role-based frontend structure",
     "summary": "Organize frontend by role with shared layout; responsive via CSS breakpoints.",
     "tags": "decision, frontend, structure, responsive",
     "date": "2026-10-14"
   },
   {
-    "path": "sessions\\2026-10-14-1953-claude-db-schema-v14.md",
+    "path": "sessions/2026-10-14-1953-claude-db-schema-v14.md",
     "title": "DB schema v1.4 (spec gaps fixed)",
     "summary": "Spec schema.sql patched to v1.4 in db/, tested on PG16 with mock…",
     "tags": "session, database, schema, postgres",
     "date": "2026-10-14"
   },
   {
-    "path": "sessions\\2026-10-14-2039-claude-borrow-requests-ui05.md",
+    "path": "sessions/2026-10-14-2039-claude-borrow-requests-ui05.md",
     "title": "Borrow requests UI-05",
     "summary": "UI-only Borrow requests page with detail drawer for pharmacist",
     "tags": "session, frontend, borrow-requests, pharmacist",
     "date": "2026-10-14"
   },
   {
-    "path": "sessions\\2026-10-14-2141-zcode-resolve-merge-conflicts.md",
+    "path": "sessions/2026-10-14-2141-zcode-resolve-merge-conflicts.md",
     "title": "Resolve Merge Conflicts",
     "summary": "Resolve merge conflict markers in App.tsx and regenerate ai-material index.",
     "tags": "session, git, merge-conflict, frontend",
     "date": "2026-10-14"
   },
   {
-    "path": "sessions\\2026-10-14-incident-console-ui.md",
+    "path": "sessions/2026-10-14-incident-console-ui.md",
     "title": "Incident console UI-11 - UI-13",
     "summary": "Built UI-11 to UI-13 Incident Console matching 4 mockup screens with 4…",
     "tags": "session, frontend, incident, kits, mockup",
     "date": "2026-10-14"
   },
   {
-    "path": "sessions\\2026-10-14-reports-value-ui.md",
+    "path": "sessions/2026-10-14-reports-value-ui.md",
     "title": "Reports and Value UI (UI-19, RPT-01 to RPT-08)",
     "summary": "Built Reports and Value UI (UI-19) matching 4 mockup screenshots across all…",
     "tags": "session, frontend, reports, value, pharmacist",
     "date": "2026-10-14"
   },
   {
-    "path": "sessions\\2026-10-14-stock-alert-queue-ui02.md",
+    "path": "sessions/2026-10-14-stock-alert-queue-ui02.md",
     "title": "Stock alert queue UI (UI-02)",
     "summary": "UI-only Stock alert queue page (pharmacist role) at ?page=alerts",
     "tags": "session, frontend, alerts, forecast, pharmacist",
     "date": "2026-10-14"
   },
   {
-    "path": "sessions\\2026-10-14-transport-tracking-ui.md",
+    "path": "sessions/2026-10-14-transport-tracking-ui.md",
     "title": "Transport tracking UI (UI-14)",
     "summary": "UI-only Transport tracking page (warehouse role) on feature/dashboard-transport-tracking",
     "tags": "session, frontend, transport, warehouse",
     "date": "2026-10-14"
   },
   {
-    "path": "skills\\README.md",
+    "path": "skills/README.md",
     "title": "Curated agent skills",
     "summary": "Which agent skills this repo keeps, why, and how to add more.",
     "tags": "skill, workflow, context",
     "date": "2026-10-14"
   },
   {
-    "path": "decisions\\0001-shared-ai-context.md",
+    "path": "GUIDELINES.md",
+    "title": "Guidelines",
+    "summary": "Guidelines",
+    "tags": "session",
+    "date": "2026-10-13"
+  },
+  {
+    "path": "context/architecture.md",
+    "title": "Architecture",
+    "summary": "Architecture",
+    "tags": "session",
+    "date": "2026-10-13"
+  },
+  {
+    "path": "context/current-status.md",
+    "title": "Current Status",
+    "summary": "Current Status",
+    "tags": "session",
+    "date": "2026-10-13"
+  },
+  {
+    "path": "context/quality-checklist.md",
+    "title": "Quality Checklist",
+    "summary": "Quality Checklist",
+    "tags": "session",
+    "date": "2026-10-13"
+  },
+  {
+    "path": "decisions/0001-shared-ai-context.md",
     "title": "Shared AI context system",
     "summary": "Use ai-material as shared AI memory.",
     "tags": "decision, context, workflow",
     "date": "2026-10-09"
   },
   {
-    "path": "prompts\\bootstrap.md",
+    "path": "prompts/bootstrap.md",
     "title": "bootstrap setup",
     "summary": "Reusable setup prompt starter.",
     "tags": "session, setup",
