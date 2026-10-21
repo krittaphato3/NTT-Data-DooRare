@@ -47,6 +47,9 @@ export interface LendableStock {
   explanation: string;
 }
 
+/** Legs still open for us (the tab counters leave out received, declined, timed-out ones). */
+export const isOpenLeg = (s: BRStatus) => ['waiting', 'accepted', 'partial', 'loaded', 'in_transit'].includes(s);
+
 // ─── Status meta ────────────────────────────────────────────────────
 export const BR_STATUS_META: Record<BRStatus, { th: string; en: string; cls: string }> = {
   waiting:    { th: 'รอตอบกลับ',   en: 'Sent',        cls: 'st-pending' },

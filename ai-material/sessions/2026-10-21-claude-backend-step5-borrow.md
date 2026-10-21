@@ -102,3 +102,5 @@ summary: Borrow request lifecycle (create, propose, approve, respond, next round
 - Still not live: cancel after approval (needs an API), EMERGENCY context (F3), WH/driver/ER sidebar badges.
 
 - Lender page tab cards had hard-coded counts (9 / รออนุมัติ 1 / 2 / รอเราตอบ 2) while the requests page used the lender-queue mock (6); both now come from the same hooks (live: 100 / 148 for HE; mock: 9 / 6).
+
+- Follow-up 4 (branch fix/borrow-tabs-count-active-only): the two tab cards (our requests / lender queue) count only open items (`isOpenRequest`, `isOpenLeg`): HE shows 4 and 6 instead of 100 and 148, matching the DB. Finished ones stay in the lists and status tiles.

@@ -223,5 +223,8 @@ export const ACTION_LABEL: Record<RowAction, string> = {
   recordReturn: 'บันทึกการคืน',
 };
 
+/** Requests still being worked on (the tab counters leave out finished ones: fulfilled, closed, cancelled). */
+export const isOpenRequest = (s: BorrowStatus) => !['FULFILLED', 'CLOSED_UNFULFILLED', 'CANCELLED'].includes(s);
+
 export const groupOf = (s: BorrowStatus) => STATUS_META[s].group;
 export const groupMeta = (g: StatusGroup) => GROUPS.find((x) => x.id === g)!;

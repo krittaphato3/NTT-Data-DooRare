@@ -16,7 +16,8 @@ import type { Decision } from '../components/BorrowDrawer';
 import { BorrowStatusTiles } from '../components/BorrowStatusTiles';
 import { BorrowTable } from '../components/BorrowTable';
 import { ObligationTable, ObligationTiles } from '../components/ObligationTable';
-import { BORROW_REQUESTS, GROUPS, groupOf, LENDER_QUEUE } from '../data/borrow';
+import { BORROW_REQUESTS, GROUPS, groupOf, isOpenRequest, LENDER_QUEUE } from '../data/borrow';
+import { isOpenLeg } from '../data/lender';
 import { useBorrowRequests } from '../data/useBorrowRequests';
 import { approveBorrowRequest, escalateManual as escalateManualApi, rejectBorrowRequest } from '../../../services/borrowApi';
 import { mockFallbackEnabled } from '../../../services/dataSource';
@@ -81,7 +82,7 @@ export function BorrowRequestsPage({ role = 'PHARMACIST' }: { role?: RoleCode })
     if (live.source === 'live') setDays(36500);
   }, [live.source]);
   const lenderDemo = lender.source === 'mock';
-  const lenderTotal = lenderDemo ? LENDER_QUEUE.total : lender.requests.length;
+  const lenderTotal = lenderDemo ? LENDER_QUEUE.total : lender.requests.filter((r) => isOpenLeg(r.status)).length;
   const lenderToAnswer = lenderDemo ? LENDER_QUEUE.toAnswer : lender.requests.filter((r) => r.status === 'waiting').length;
   const isLive = live.source === 'live';
   const [actionError, setActionError] = useState<string | null>(null);
@@ -284,7 +285,7 @@ export function BorrowRequestsPage({ role = 'PHARMACIST' }: { role?: RoleCode })
             <span className="dir-th">คำขอของเรา</span>
             <span className="dir-en">เราเป็นผู้ยืม · UI-05</span>
           </span>
-          <span className="num dir-count">{all.length}</span>
+          <span className="num dir-count">{all.filter((r) => isOpenRequest(r.status)).length}</span>
           {pendingAll > 0 && (
             <span className="badge t-amber" style={{ fontWeight: 600 }}>
               รออนุมัติ {pendingAll}

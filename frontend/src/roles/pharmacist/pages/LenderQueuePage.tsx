@@ -9,11 +9,13 @@ import { fmtTime, useTick } from '../../../lib/time';
 import {
   BORROW_REQUESTS,
   BR_URGENCY_META,
+  isOpenLeg,
   LENDABLE_STOCK,
   LOTS,
   SM1B,
 } from '../data/lender';
 import type { BorrowRequest, BRStatus, LendableStock, LotOption } from '../data/lender';
+import { isOpenRequest } from '../data/borrow';
 import { mockFallbackEnabled } from '../../../services/dataSource';
 import { useLenderQueue } from '../data/useLenderQueue';
 import { useBorrowRequests } from '../data/useBorrowRequests';
@@ -971,7 +973,7 @@ export function LenderQueuePage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
                 fontFamily: 'Inter, sans-serif',
               }}
             >
-              {mine.requests.length}
+              {mine.requests.filter((r) => isOpenRequest(r.status)).length}
             </span>
             <span className="badge st-pending">
               รออนุมัติ {minePending}
@@ -1026,7 +1028,7 @@ export function LenderQueuePage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
                 fontFamily: 'Inter, sans-serif',
               }}
             >
-              {data.length}
+              {data.filter((r) => isOpenLeg(r.status)).length}
             </span>
             <span className="badge st-pending">
               <Icon name="hourglass" className="ic12" />
