@@ -1,13 +1,14 @@
 import { Icon } from '../../../components/common/icons';
 import { transportStats } from '../data/dashboard';
+import type { Shipment } from '../data/transport';
 
 const labelStyle = { fontSize: 13, lineHeight: '18px', color: '#0F2A5C', fontWeight: 500 } as const;
 const headStyle = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 } as const;
 const subStyle = { fontSize: 12, lineHeight: '16px', color: '#475569' } as const;
 
 /** Five at-a-glance counters for the warehouse officer (no Value/model metrics: not in the WH role). */
-export function WhKpiRow({ urgentLeft }: { urgentLeft: string }) {
-  const t = transportStats();
+export function WhKpiRow({ urgentLeft, shipments }: { urgentLeft: string; shipments?: Shipment[] }) {
+  const t = transportStats(shipments);
   return (
     <section aria-label="สรุปงานคลัง" className="kpi-row" data-part="kpi-row">
       <div className="card kpi-card">

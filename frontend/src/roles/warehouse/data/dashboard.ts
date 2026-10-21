@@ -3,6 +3,7 @@ import type { IconName } from '../../../components/common/icons';
 import { KIT_DEFS, PACK_TASKS } from './f3';
 import { FEATURE_META, INBOUND_TASKS, OUTBOUND_TASKS, outboundStats, REQUESTS, URGENT_SECONDS as INBOX_URGENT_SECONDS, inboxStats } from './inbox';
 import { fmtQty, HOSPITALS, isOutbound, SHIPMENTS, STATUS_META } from './transport';
+import type { Shipment } from './transport';
 import type { Tone, TransportStatus } from './transport';
 import type { WarehousePage } from './routes';
 
@@ -137,8 +138,8 @@ export const TODO_TABS: { key: 'all' | TodoGroup; label: string }[] = [
 ];
 
 /** Transport counts for the KPI cards and the status panel (own hospital only). */
-export function transportStats() {
-  const count = (pred: (s: (typeof SHIPMENTS)[number]) => boolean) => SHIPMENTS.filter(pred).length;
+export function transportStats(shipments: Shipment[] = SHIPMENTS) {
+  const count = (pred: (s: Shipment) => boolean) => shipments.filter(pred).length;
   const byStatus = (st: TransportStatus) => count((s) => s.status === st);
   return {
     waiting: count((s) => s.status === 'WAITING_DISPATCH' && isOutbound(s)),
@@ -148,7 +149,7 @@ export function transportStats() {
     inTransit: byStatus('IN_TRANSIT'),
     onTheWay: byStatus('LOADED') + byStatus('IN_TRANSIT'),
     pendingSync: count((s) => !!s.pending),
-    total: SHIPMENTS.length,
+    total: shipments.length,
     byStatus,
     inbox: inboxStats(),
     box: outboundStats(),

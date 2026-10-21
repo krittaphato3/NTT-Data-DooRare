@@ -6,6 +6,7 @@ import { WhPageHeader } from '../components/WhPageHeader';
 import { WhTodoPanel } from '../components/WhTodoPanel';
 import { WhTransportPanel } from '../components/WhTransportPanel';
 import { URGENT_SECONDS } from '../data/dashboard';
+import { useTransport } from '../data/useTransport';
 import '../dashboard.css';
 
 /** mm:ss countdown for the urgent lender request. */
@@ -18,14 +19,15 @@ function mmss(s: number): string {
 /** UI-01 Dashboard for WAREHOUSE_OFFICER: today's warehouse work at a glance (own hospital only). */
 export function WarehouseDashboardPage() {
   const tick = useTick();
+  const tr = useTransport();
   const urgentLeft = mmss(URGENT_SECONDS - tick);
   return (
     <>
       <WhPageHeader />
-      <WhKpiRow urgentLeft={urgentLeft} />
+      <WhKpiRow urgentLeft={urgentLeft} shipments={tr.source === 'live' ? tr.shipments : undefined} />
       <section className="rowcards">
         <WhTodoPanel urgentLeft={urgentLeft} />
-        <WhTransportPanel />
+        <WhTransportPanel shipments={tr.source === 'live' ? tr.shipments : undefined} />
       </section>
       <section className="rowcards">
         <WhKitStockPanel />

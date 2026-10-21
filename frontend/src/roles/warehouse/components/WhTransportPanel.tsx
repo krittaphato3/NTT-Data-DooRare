@@ -1,11 +1,12 @@
 import { Icon } from '../../../components/common/icons';
 import { STATUS_ROWS, transportStats } from '../data/dashboard';
+import type { Shipment } from '../data/transport';
 import { TONE_COLORS } from '../data/tones';
 import { WhCta } from './WhCta';
 
 /** Transport status (SM-6) breakdown for the last 7 days. */
-export function WhTransportPanel() {
-  const t = transportStats();
+export function WhTransportPanel({ shipments }: { shipments?: Shipment[] }) {
+  const t = transportStats(shipments);
   return (
     <div className="card cardpad" data-part="transport-status" style={{ flex: '2 1 340px', minWidth: 0 }}>
       <h2 style={{ margin: 0, fontSize: 20, lineHeight: '30px', fontWeight: 600, color: '#0F2A5C' }}>

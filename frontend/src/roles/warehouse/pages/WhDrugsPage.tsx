@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Icon } from '../../../components/common/icons';
-import { DRUGS, TYPE_META } from '../data/drugs';
+import { TYPE_META } from '../data/drugs';
+import { useHospitalDrugs } from '../data/useHospitalDrugs';
+import { useAuth } from '../../../context/AuthContext';
 import type { DrugRow, ItemType } from '../data/drugs';
 import { ViewOnlyNote } from '../components/ViewOnlyNote';
 import { whHref } from '../data/routes';
@@ -13,6 +15,8 @@ const nameOf = (d: DrugRow) => (d.master ? `${d.master.name} ${d.master.strength
 
 /** WH view of the drug master (RBAC 👁). Editing drug data / code mapping is the pharmacist's, so mapping is not shown here. */
 export function WhDrugsPage({ homeHref = whHref('dashboard') }: { homeHref?: string }) {
+  const { drugs: DRUGS, source, error } = useHospitalDrugs();
+  const { user } = useAuth();
   const [q, setQ] = useState('');
   const [type, setType] = useState<'all' | ItemType>('all');
   const [flag, setFlag] = useState<'all' | 'cold' | 'critical' | 'high'>('all');
@@ -52,9 +56,15 @@ export function WhDrugsPage({ homeHref = whHref('dashboard') }: { homeHref?: str
           <h1 className="tr-title">
             ข้อมูลยา <span>/ Drug master · ดูอย่างเดียว</span>
           </h1>
-          <div style={{ fontSize: 13 }}>รพ.สมุทรปราการ · รายการยา/เวชภัณฑ์/เลือดจาก HIS · ชื่อ รหัส หน่วย และ flag ที่ต้องรู้ตอนเตรียมของ</div>
+          <div style={{ fontSize: 13 }}>{user?.hospitalName ?? 'รพ.สมุทรปราการ'} · รายการยา/เวชภัณฑ์/เลือดจาก HIS · ชื่อ รหัส หน่วย และ flag ที่ต้องรู้ตอนเตรียมของ</div>
         </div>
       </section>
+
+      {source === 'mock' && (
+        <section role="status" className="syncbar" style={{ background: '#FFFBEB', borderColor: '#FDE68A' }}>
+          <span className="syncbar-text">โหลดข้อมูลยาจริงไม่ได้ ({error}) · กำลังแสดงข้อมูลตัวอย่าง</span>
+        </section>
+      )}
 
       <section className="ib-kpis" aria-label="สรุปข้อมูลยา">
         {kpi('รายการทั้งหมด', 'ITEMS', `${DRUGS.length} รายการ`, `ยา ${n((d) => typeOf(d) === 'DRUG')} · เวชภัณฑ์ ${n((d) => typeOf(d) === 'SUPPLY')} · เลือด ${n((d) => typeOf(d) === 'BLOOD')}`)}
