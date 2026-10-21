@@ -23,14 +23,18 @@ const SELECT = `
          ro.debtor_hospital_id, d.code AS debtor_code, d.name_th AS debtor_name,
          ro.creditor_hospital_id, c.code AS creditor_code, c.name_th AS creditor_name,
          ro.drug_master_id, COALESCE(${DRUG_NAME}, kt.name) AS drug_name, COALESCE(dm.base_unit, 'ชุด') AS base_unit,
-         br.request_no, (ro.due_date < current_date AND ro.status IN ('OPEN', 'REMINDED', 'OVERDUE')) AS past_due
+         br.request_no, bl.round_no, wu.display_name AS waived_by_name,
+         (SELECT a.occurred_at FROM audit_log a WHERE a.entity_type = 'return_obligation' AND a.entity_id = ro.id AND a.action = 'RETURN_WAIVED' ORDER BY a.id DESC LIMIT 1) AS waived_at,
+         (SELECT hd.ved::text FROM hospital_drug hd WHERE hd.hospital_id = ro.debtor_hospital_id AND hd.drug_master_id = ro.drug_master_id ORDER BY hd.local_code LIMIT 1) AS ved,
+         (ro.due_date < current_date AND ro.status IN ('OPEN', 'REMINDED', 'OVERDUE')) AS past_due
     FROM return_obligation ro
     JOIN hospital d ON d.id = ro.debtor_hospital_id
     JOIN hospital c ON c.id = ro.creditor_hospital_id
     JOIN borrow_leg bl ON bl.id = ro.leg_id
     JOIN borrow_request br ON br.id = bl.request_id
     LEFT JOIN drug_master dm ON dm.id = ro.drug_master_id
-    LEFT JOIN kit_type kt ON kt.id = ro.kit_type_id`;
+    LEFT JOIN kit_type kt ON kt.id = ro.kit_type_id
+    LEFT JOIN app_user wu ON wu.id = ro.waived_by`;
 
 function view(row: Record<string, any>, user: AuthSessionUser, receipts: any[] = []) {
   const mine = user.hospitalId;
@@ -38,18 +42,19 @@ function view(row: Record<string, any>, user: AuthSessionUser, receipts: any[] =
     id: row.id,
     legId: row.leg_id,
     requestNo: row.request_no,
+    roundNo: row.round_no === null ? null : Number(row.round_no),
     status: row.status,
     returnMode: row.return_mode,
     /** From the caller's hospital: OWE = we must return, OWED = we are waiting for a return; null for region-wide users. */
     direction: !mine ? null : row.debtor_hospital_id === mine ? 'OWE' : row.creditor_hospital_id === mine ? 'OWED' : null,
-    drug: { id: row.drug_master_id, name: row.drug_name, baseUnit: row.base_unit },
+    drug: { id: row.drug_master_id, name: row.drug_name, baseUnit: row.base_unit, ved: row.ved ?? null },
     qty: row.qty,
     qtyReturned: row.qty_returned,
     qtyRemaining: ROUND(row.qty - row.qty_returned),
     dueDate: row.due_date,
     pastDue: Boolean(row.past_due),
     returnedAt: row.returned_at ? new Date(row.returned_at).toISOString() : null,
-    waived: row.status === 'WAIVED' ? { reason: row.waived_reason, by: row.waived_by } : null,
+    waived: row.status === 'WAIVED' ? { reason: row.waived_reason, by: row.waived_by, byName: row.waived_by_name ?? null, at: row.waived_at ? new Date(row.waived_at).toISOString() : null } : null,
     debtor: { id: row.debtor_hospital_id, code: row.debtor_code, name: row.debtor_name },
     creditor: { id: row.creditor_hospital_id, code: row.creditor_code, name: row.creditor_name },
     receipts,
@@ -146,7 +151,10 @@ export class ReturnsService {
     });
   }
 
-  /** API-XC-005: the creditor's hospital admin forgives the remaining quantity (reason is audited). */
+  /**
+   * API-XC-005: a hospital admin of either party waives the remaining quantity (spec says only "HOSPITAL_ADMIN with reason";
+   * the pharmacist screen has the debtor's admin do it). Allowed from OPEN or OVERDUE only (SM-7). The reason is audited.
+   */
   async waive(req: Request, rawId: string) {
     const id = uuidParam(rawId, 'id');
     const body = bodyObject(req.body);
@@ -157,15 +165,14 @@ export class ReturnsService {
       const ob = (await client.query(`${SELECT} WHERE ro.id = $1 FOR UPDATE OF ro`, [id])).rows[0];
       const mine = user.hospitalId;
       if (!ob || !mine || (ob.debtor_hospital_id !== mine && ob.creditor_hospital_id !== mine)) throw new HttpError(404, 'NOT_FOUND', 'ไม่พบภาระการคืน');
-      if (ob.creditor_hospital_id !== mine) throw new HttpError(403, 'FORBIDDEN', 'เฉพาะโรงพยาบาลผู้ให้ยืมเท่านั้นที่ยกเว้นได้');
-      if (!['OPEN', 'REMINDED', 'OVERDUE'].includes(ob.status)) throw new HttpError(409, 'ALREADY_DECIDED', `ภาระการคืนนี้ปิดแล้ว (${ob.status})`);
+      if (!['OPEN', 'OVERDUE'].includes(ob.status)) throw new HttpError(409, 'ALREADY_DECIDED', `ยกเว้นไม่ได้ในสถานะ ${ob.status}`);
       await client.query(`UPDATE return_obligation SET status = 'WAIVED', waived_reason = $2, waived_by = $3 WHERE id = $1`, [id, reason, user.id]);
       await writeAudit(client, auditContext(req), {
         action: 'RETURN_WAIVED',
         entityType: 'return_obligation',
         entityId: id,
         before: { status: ob.status, qtyReturned: ob.qty_returned },
-        after: { status: 'WAIVED', qtyRemaining: ROUND(ob.qty - ob.qty_returned) },
+        after: { status: 'WAIVED', qtyRemaining: ROUND(ob.qty - ob.qty_returned), side: ob.creditor_hospital_id === mine ? 'CREDITOR' : 'DEBTOR' },
         reason,
       });
       const row = (await client.query(`${SELECT} WHERE ro.id = $1`, [id])).rows[0];

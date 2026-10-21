@@ -35,6 +35,8 @@ export type ObligationTone = Tone | 'teal' | 'orange';
 export interface ReturnObligation {
   /** `RO-…` obligation number (`return_obligation.id`). */
   id: string;
+  /** Live data: the obligation uuid used by the API. */
+  uuid?: string;
   /** The borrow request this obligation came from — our own request, always. */
   requestId: string;
   /** Which round/lender leg produced it (`return_obligation.leg_id` → `borrow_leg`). */
@@ -165,4 +167,37 @@ export function obligationCounts(rows: ReturnObligation[]): Record<ObligationSta
     (acc, s) => ({ ...acc, [s]: rows.filter((r) => r.state === s).length }),
     {} as Record<ObligationState, number>,
   );
+}
+
+/* ── live data (API-XC-003) ───────────────────────────────────────────────── */
+
+const SHORT_MONTHS = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+const shortThai = (iso: string) => {
+  const [y, m, d] = iso.slice(0, 10).split('-').map(Number);
+  return `${d} ${SHORT_MONTHS[m - 1]} ${String((y + 543) % 100).padStart(2, '0')}`;
+};
+
+/** Maps an API obligation (we are the debtor) onto the row the Hospital Admin tab renders. */
+export function obligationFromApi(o: import('../../../services/returnsApi').ApiReturnObligation, today = new Date()): ReturnObligation {
+  const daysLeft = Math.round((new Date(`${o.dueDate.slice(0, 10)}T00:00:00`).getTime() - new Date(today.toDateString()).getTime()) / 86400000);
+  // The server only flips OPEN -> OVERDUE in a job; a passed due date is shown as overdue meanwhile.
+  const state: ObligationState = o.status === 'OPEN' && o.pastDue ? 'OVERDUE' : o.status;
+  return {
+    id: `RO-${o.id.slice(0, 8).toUpperCase()}`,
+    requestId: o.requestNo,
+    leg: `รอบ ${o.roundNo ?? 1} · ${o.creditor.name}`,
+    creditor: o.creditor.name,
+    drug: o.drug.name ?? '–',
+    ved: o.drug.ved ?? 'D',
+    qty: o.qty,
+    qtyReturned: o.qtyReturned,
+    unit: o.drug.baseUnit ?? '',
+    mode: o.returnMode,
+    dueDate: shortThai(o.dueDate),
+    daysLeft,
+    state,
+    ...(o.returnedAt ? { returnedAt: shortThai(o.returnedAt) } : {}),
+    ...(o.waived ? { waivedBy: o.waived.byName ?? 'ผู้ดูแล รพ.', waivedReason: o.waived.reason ?? '–', waivedAt: o.waived.at ? `${shortThai(o.waived.at)} ${new Date(o.waived.at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}` : '–' } : {}),
+    uuid: o.id,
+  };
 }

@@ -34,8 +34,10 @@ backend/src/{modules/transport,borrow-legs,documents,returns}, core/{stock,setti
 - Partial receipt: the unreceived remainder has no discrepancy record. Cancel flow, document void and PDF are not built.
 - Blood and kit returns return 422; kit-leg stock lives in kit_stock (F3).
 - BR-F2a-023 (shelf life vs transit time) not checked. RLS is on but bypassed (superuser); scope is enforced in code.
-- Frontend pages (WH transport, driver, documents) still use mock data.
+- Frontend wired: WH/PH/HA/ER transport page, driver pages (IndexedDB offline queue + events:sync), documents page, HA return-obligation tab. Not wired: WH inbox, WH returns tab, cancel-with-consent flow (no API), document void.
+- Waive: either party's hospital admin may waive (spec silent; the HA screen has the debtor do it); OPEN/OVERDUE only (SM-7). Revisit if the creditor alone should decide.
+- Server restarts drop in-memory sessions; the app then silently shows mock data until re-login.
 
 ## Next steps
 
-- Wire WH/driver/document pages to these APIs, then step 3 (inventory, hospitals, drug-master, dashboard).
+- Step 3: inventory, hospitals, drug-master, dashboard; then wire WH stock/drug pages and the WH inbox.

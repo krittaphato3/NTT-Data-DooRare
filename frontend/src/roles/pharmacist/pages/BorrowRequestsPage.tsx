@@ -15,7 +15,8 @@ import { BorrowTable } from '../components/BorrowTable';
 import { ObligationTable, ObligationTiles } from '../components/ObligationTable';
 import { BORROW_REQUESTS, GROUPS, groupOf, LENDER_QUEUE } from '../data/borrow';
 import type { BorrowContext, BorrowRequest, StatusGroup, Urgency } from '../data/borrow';
-import { dueLabel, obligationCounts, outstandingOf, RETURN_OBLIGATIONS } from '../data/obligations';
+import { dueLabel, obligationCounts, obligationFromApi, outstandingOf, RETURN_OBLIGATIONS } from '../data/obligations';
+import { listReturnObligations, waiveReturn } from '../../../services/returnsApi';
 import type { ObligationState, ReturnObligation } from '../data/obligations';
 import '../borrow.css';
 
@@ -77,6 +78,19 @@ export function BorrowRequestsPage({ role = 'PHARMACIST' }: { role?: RoleCode })
   const maySeeObligations = role === 'HOSPITAL_ADMIN';
   const [view, setView] = useState<'requests' | 'obligations'>('requests');
   const [obligations, setObligations] = useState<ReturnObligation[]>(RETURN_OBLIGATIONS);
+  const [obligationsLive, setObligationsLive] = useState(false);
+  const [waiveError, setWaiveError] = useState<string | null>(null);
+  const reloadObligations = () =>
+    listReturnObligations({ direction: 'owe' })
+      .then((res) => {
+        setObligations(res.items.map((o) => obligationFromApi(o)));
+        setObligationsLive(true);
+      })
+      .catch(() => setObligationsLive(false));
+  useEffect(() => {
+    if (role === 'HOSPITAL_ADMIN') void reloadObligations();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [role]);
   const [stateFilter, setStateFilter] = useState<ObligationState | null>(null);
   const [waiveTarget, setWaiveTarget] = useState<ReturnObligation | null>(null);
   const [waiveBanner, setWaiveBanner] = useState<{ id: string; at: string; auditId: string } | null>(null);
@@ -127,6 +141,18 @@ export function BorrowRequestsPage({ role = 'PHARMACIST' }: { role?: RoleCode })
    */
   const confirmWaive = (reason: string) => {
     if (!waiveTarget) return;
+    if (obligationsLive && waiveTarget.uuid) {
+      const target = waiveTarget;
+      setWaiveError(null);
+      waiveReturn(target.uuid!, reason)
+        .then(async () => {
+          await reloadObligations();
+          setWaiveBanner({ id: target.id, at: new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }), auditId: 'audit_log' });
+          setWaiveTarget(null);
+        })
+        .catch((e: Error) => setWaiveError(e.message));
+      return;
+    }
     const entry = appendAuditEntry({
       action: 'WAIVE',
       entityType: 'return_obligation',
@@ -265,6 +291,11 @@ export function BorrowRequestsPage({ role = 'PHARMACIST' }: { role?: RoleCode })
             </div>
             <ObligationTiles counts={obligationCountList} active={stateFilter} onPick={setStateFilter} />
           </div>
+          {waiveError && (
+            <div role="alert" className="card" style={{ padding: '10px 16px', color: '#B91C1C', fontSize: 13 }}>
+              ยกเว้นไม่สำเร็จ: {waiveError}
+            </div>
+          )}
           {waiveBanner && (
             <div
               role="status"
