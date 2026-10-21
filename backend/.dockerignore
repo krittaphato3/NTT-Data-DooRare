@@ -1,0 +1,9 @@
+# The Node image only needs src/ and the TS/npm files. The Python ML module (backend/models/:
+# code, datasets, trained models, virtualenv) is never used inside this container - inference runs
+# as an offline batch CLI and the API reads its output records.
+models/
+node_modules
+dist
+.env
+.env.*
+*.log
