@@ -77,7 +77,8 @@ export function AlertsPanel({ query, hospital, role = 'PHARMACIST' }: AlertsPane
       ]
     : ALERT_TABS;
   const q = query.trim().toLowerCase();
-  const h = hospital !== ALL_HOSPITALS ? hospital : '';
+  // Live alerts are already scoped to the signed-in hospital by the API; the name filter only makes sense on the multi-hospital mock.
+  const h = live || hospital === ALL_HOSPITALS ? '' : hospital;
 
   const filtered = allAlerts.filter((a) => {
     if (tab !== 'all' && a.type !== tab) return false;

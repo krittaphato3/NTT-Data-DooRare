@@ -104,3 +104,5 @@ summary: Borrow request lifecycle (create, propose, approve, respond, next round
 - Lender page tab cards had hard-coded counts (9 / รออนุมัติ 1 / 2 / รอเราตอบ 2) while the requests page used the lender-queue mock (6); both now come from the same hooks (live: 100 / 148 for HE; mock: 9 / 6).
 
 - Follow-up 4 (branch fix/borrow-tabs-count-active-only): the two tab cards (our requests / lender queue) count only open items (`isOpenRequest`, `isOpenLeg`): HE shows 4 and 6 instead of 100 and 148, matching the DB. Finished ones stay in the lists and status tiles.
+
+- Follow-up 5: dashboard alerts/requests panels filtered live rows by the hospital-name selector text, so the one real alert (tab count 1) was hidden ("ไม่มีการแจ้งเตือนในหมวดนี้"). The name filter now applies to mock rows only; live rows are already scoped by the API.

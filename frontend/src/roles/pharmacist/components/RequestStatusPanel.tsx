@@ -54,7 +54,6 @@ export function RequestStatusPanel({ query, hospital, role = 'PHARMACIST' }: Req
   };
   const tick = useTick();
   const q = query.trim().toLowerCase();
-  const h = hospital !== ALL_HOSPITALS ? hospital : '';
 
   const { user } = useAuth();
   const me = user?.hospitalName ?? '';
@@ -64,6 +63,7 @@ export function RequestStatusPanel({ query, hospital, role = 'PHARMACIST' }: Req
   const incoming = demo ? INCOMING : own.requests.slice(0, 60).map((r) => ownRequestToRow(r, me));
   const lending = demo ? LENDING : lend.requests.slice(0, 60).map((r) => lenderRowToRow(r, me));
   const list = reqTab === 'in' ? incoming : lending;
+  const h = !demo || hospital === ALL_HOSPITALS ? '' : hospital;
   const rows = list.filter((r) => {
     if (status !== null && r.st !== status) return false;
     if (h !== '' && r.from !== h && r.to !== h) return false;
