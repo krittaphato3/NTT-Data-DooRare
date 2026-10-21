@@ -1,0 +1,2217 @@
+{
+  "generated_at": "2026-10-19T08:54:37+00:00",
+  "granularity": "WEEK",
+  "model_version": "f1-WEEK-2026-09-14-f455e37770dc",
+  "feature_hash": "f455e37770dc",
+  "features": [
+    "lag_1w",
+    "lag_2w",
+    "lag_3w",
+    "lag_4w",
+    "lag_8w",
+    "lag_13w",
+    "lag_26w",
+    "lag_52w",
+    "roll_mean_4w",
+    "roll_std_4w",
+    "roll_mean_13w",
+    "roll_std_13w",
+    "roll_mean_26w",
+    "roll_std_26w",
+    "roll_zero_share_13",
+    "weeks_since_last_nonzero",
+    "stockout_days_4w",
+    "item_te_mean",
+    "woy_sin",
+    "woy_cos",
+    "month_sin",
+    "month_cos",
+    "is_songkran_week",
+    "is_newyear_week",
+    "long_weekend_days",
+    "ctx_covid",
+    "ctx_flu_peak",
+    "ctx_dengue_peak",
+    "ctx_pm25",
+    "ctx_fiscal_year_end",
+    "ctx_flood",
+    "ctx_seven_dangerous_days",
+    "price_tier",
+    "ved",
+    "abc",
+    "item_type",
+    "hospital_tier",
+    "is_cold_chain",
+    "log_unit_price",
+    "is_seasonal"
+  ],
+  "dropped_constant_features": [],
+  "categorical_features": [
+    "price_tier",
+    "ved",
+    "abc",
+    "item_type",
+    "hospital_tier"
+  ],
+  "quantiles": [
+    0.05,
+    0.1,
+    0.25,
+    0.5,
+    0.75,
+    0.9,
+    0.95
+  ],
+  "train_window": {
+    "variant": "all_history",
+    "origin_min": "2017-09-25",
+    "origin_max": "2025-08-04",
+    "rows": 68226
+  },
+  "postprocess": "isotonic",
+  "postprocess_comparison": {
+    "rule": {
+      "split": "valid",
+      "coverage_tolerance": 0.05,
+      "max_width_ratio": 1.05,
+      "requires": "coverage inside tolerance, strictly better coverage score, width ratio <= max_width_ratio"
+    },
+    "variants": {
+      "sort": {
+        "coverage_0.9": 0.8881,
+        "coverage_0.95": 0.9445,
+        "coverage_score": 0.0174,
+        "width_p95_p05": 189.5364,
+        "pinball_0.5": 22.1126,
+        "pinball_0.9": 10.4671,
+        "pinball_0.95": 6.6056,
+        "crossing_rate_raw": 0.1566,
+        "crossing_rate_fixed": 0.0
+      },
+      "isotonic": {
+        "coverage_0.9": 0.8886,
+        "coverage_0.95": 0.9445,
+        "coverage_score": 0.0169,
+        "width_p95_p05": 187.6604,
+        "pinball_0.5": 22.1065,
+        "pinball_0.9": 10.5113,
+        "pinball_0.95": 6.6022,
+        "crossing_rate_raw": 0.1566,
+        "crossing_rate_fixed": 0.0
+      }
+    },
+    "width_ratio": 0.9901,
+    "isotonic_conditions": {
+      "coverage_within_tolerance": true,
+      "strictly_better_coverage": true,
+      "width_ok": true
+    },
+    "chosen": "isotonic"
+  },
+  "variant_scores": {
+    "last_24_months": 102.2204,
+    "all_history": 92.5613
+  },
+  "grid": {
+    "learning_rate": [
+      0.03,
+      0.05
+    ],
+    "num_leaves": [
+      15,
+      31,
+      63
+    ],
+    "min_child_samples": [
+      20,
+      50
+    ]
+  },
+  "grid_results": [
+    {
+      "variant": "last_24_months",
+      "quantile": 0.05,
+      "learning_rate": 0.03,
+      "num_leaves": 15,
+      "min_child_samples": 20,
+      "valid_pinball": 8.5341,
+      "best_iteration": 976,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.1,
+      "learning_rate": 0.03,
+      "num_leaves": 15,
+      "min_child_samples": 20,
+      "valid_pinball": 11.6379,
+      "best_iteration": 944,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.25,
+      "learning_rate": 0.03,
+      "num_leaves": 15,
+      "min_child_samples": 20,
+      "valid_pinball": 19.8096,
+      "best_iteration": 640,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.5,
+      "learning_rate": 0.03,
+      "num_leaves": 15,
+      "min_child_samples": 20,
+      "valid_pinball": 25.8254,
+      "best_iteration": 1156,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.75,
+      "learning_rate": 0.03,
+      "num_leaves": 15,
+      "min_child_samples": 20,
+      "valid_pinball": 20.443,
+      "best_iteration": 615,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.9,
+      "learning_rate": 0.03,
+      "num_leaves": 15,
+      "min_child_samples": 20,
+      "valid_pinball": 11.6181,
+      "best_iteration": 1068,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.95,
+      "learning_rate": 0.03,
+      "num_leaves": 15,
+      "min_child_samples": 20,
+      "valid_pinball": 7.1441,
+      "best_iteration": 937,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.05,
+      "learning_rate": 0.03,
+      "num_leaves": 15,
+      "min_child_samples": 50,
+      "valid_pinball": 8.3428,
+      "best_iteration": 916,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.1,
+      "learning_rate": 0.03,
+      "num_leaves": 15,
+      "min_child_samples": 50,
+      "valid_pinball": 12.1337,
+      "best_iteration": 819,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.25,
+      "learning_rate": 0.03,
+      "num_leaves": 15,
+      "min_child_samples": 50,
+      "valid_pinball": 20.1285,
+      "best_iteration": 548,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.5,
+      "learning_rate": 0.03,
+      "num_leaves": 15,
+      "min_child_samples": 50,
+      "valid_pinball": 24.1799,
+      "best_iteration": 1244,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.75,
+      "learning_rate": 0.03,
+      "num_leaves": 15,
+      "min_child_samples": 50,
+      "valid_pinball": 20.3202,
+      "best_iteration": 793,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.9,
+      "learning_rate": 0.03,
+      "num_leaves": 15,
+      "min_child_samples": 50,
+      "valid_pinball": 11.6631,
+      "best_iteration": 852,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.95,
+      "learning_rate": 0.03,
+      "num_leaves": 15,
+      "min_child_samples": 50,
+      "valid_pinball": 7.1876,
+      "best_iteration": 1032,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.05,
+      "learning_rate": 0.03,
+      "num_leaves": 31,
+      "min_child_samples": 20,
+      "valid_pinball": 8.8576,
+      "best_iteration": 794,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.1,
+      "learning_rate": 0.03,
+      "num_leaves": 31,
+      "min_child_samples": 20,
+      "valid_pinball": 13.2126,
+      "best_iteration": 700,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.25,
+      "learning_rate": 0.03,
+      "num_leaves": 31,
+      "min_child_samples": 20,
+      "valid_pinball": 19.7095,
+      "best_iteration": 503,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.5,
+      "learning_rate": 0.03,
+      "num_leaves": 31,
+      "min_child_samples": 20,
+      "valid_pinball": 25.3061,
+      "best_iteration": 355,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.75,
+      "learning_rate": 0.03,
+      "num_leaves": 31,
+      "min_child_samples": 20,
+      "valid_pinball": 20.0674,
+      "best_iteration": 349,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.9,
+      "learning_rate": 0.03,
+      "num_leaves": 31,
+      "min_child_samples": 20,
+      "valid_pinball": 11.6247,
+      "best_iteration": 678,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.95,
+      "learning_rate": 0.03,
+      "num_leaves": 31,
+      "min_child_samples": 20,
+      "valid_pinball": 7.3252,
+      "best_iteration": 849,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.05,
+      "learning_rate": 0.03,
+      "num_leaves": 31,
+      "min_child_samples": 50,
+      "valid_pinball": 8.6993,
+      "best_iteration": 807,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.1,
+      "learning_rate": 0.03,
+      "num_leaves": 31,
+      "min_child_samples": 50,
+      "valid_pinball": 13.3075,
+      "best_iteration": 672,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.25,
+      "learning_rate": 0.03,
+      "num_leaves": 31,
+      "min_child_samples": 50,
+      "valid_pinball": 20.1881,
+      "best_iteration": 488,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.5,
+      "learning_rate": 0.03,
+      "num_leaves": 31,
+      "min_child_samples": 50,
+      "valid_pinball": 25.0343,
+      "best_iteration": 526,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.75,
+      "learning_rate": 0.03,
+      "num_leaves": 31,
+      "min_child_samples": 50,
+      "valid_pinball": 20.3945,
+      "best_iteration": 529,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.9,
+      "learning_rate": 0.03,
+      "num_leaves": 31,
+      "min_child_samples": 50,
+      "valid_pinball": 11.6398,
+      "best_iteration": 631,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.95,
+      "learning_rate": 0.03,
+      "num_leaves": 31,
+      "min_child_samples": 50,
+      "valid_pinball": 7.1025,
+      "best_iteration": 619,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.05,
+      "learning_rate": 0.03,
+      "num_leaves": 63,
+      "min_child_samples": 20,
+      "valid_pinball": 9.5541,
+      "best_iteration": 714,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.1,
+      "learning_rate": 0.03,
+      "num_leaves": 63,
+      "min_child_samples": 20,
+      "valid_pinball": 14.0412,
+      "best_iteration": 637,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.25,
+      "learning_rate": 0.03,
+      "num_leaves": 63,
+      "min_child_samples": 20,
+      "valid_pinball": 20.5603,
+      "best_iteration": 459,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.5,
+      "learning_rate": 0.03,
+      "num_leaves": 63,
+      "min_child_samples": 20,
+      "valid_pinball": 24.4332,
+      "best_iteration": 301,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.75,
+      "learning_rate": 0.03,
+      "num_leaves": 63,
+      "min_child_samples": 20,
+      "valid_pinball": 20.741,
+      "best_iteration": 346,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.9,
+      "learning_rate": 0.03,
+      "num_leaves": 63,
+      "min_child_samples": 20,
+      "valid_pinball": 11.6293,
+      "best_iteration": 446,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.95,
+      "learning_rate": 0.03,
+      "num_leaves": 63,
+      "min_child_samples": 20,
+      "valid_pinball": 7.2458,
+      "best_iteration": 579,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.05,
+      "learning_rate": 0.03,
+      "num_leaves": 63,
+      "min_child_samples": 50,
+      "valid_pinball": 8.5591,
+      "best_iteration": 794,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.1,
+      "learning_rate": 0.03,
+      "num_leaves": 63,
+      "min_child_samples": 50,
+      "valid_pinball": 14.4436,
+      "best_iteration": 615,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.25,
+      "learning_rate": 0.03,
+      "num_leaves": 63,
+      "min_child_samples": 50,
+      "valid_pinball": 21.0156,
+      "best_iteration": 458,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.5,
+      "learning_rate": 0.03,
+      "num_leaves": 63,
+      "min_child_samples": 50,
+      "valid_pinball": 24.7035,
+      "best_iteration": 575,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.75,
+      "learning_rate": 0.03,
+      "num_leaves": 63,
+      "min_child_samples": 50,
+      "valid_pinball": 20.3223,
+      "best_iteration": 461,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.9,
+      "learning_rate": 0.03,
+      "num_leaves": 63,
+      "min_child_samples": 50,
+      "valid_pinball": 11.5969,
+      "best_iteration": 494,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.95,
+      "learning_rate": 0.03,
+      "num_leaves": 63,
+      "min_child_samples": 50,
+      "valid_pinball": 7.1587,
+      "best_iteration": 631,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.05,
+      "learning_rate": 0.05,
+      "num_leaves": 15,
+      "min_child_samples": 20,
+      "valid_pinball": 8.6696,
+      "best_iteration": 533,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.1,
+      "learning_rate": 0.05,
+      "num_leaves": 15,
+      "min_child_samples": 20,
+      "valid_pinball": 12.1091,
+      "best_iteration": 534,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.25,
+      "learning_rate": 0.05,
+      "num_leaves": 15,
+      "min_child_samples": 20,
+      "valid_pinball": 19.9935,
+      "best_iteration": 370,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.5,
+      "learning_rate": 0.05,
+      "num_leaves": 15,
+      "min_child_samples": 20,
+      "valid_pinball": 25.5035,
+      "best_iteration": 840,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.75,
+      "learning_rate": 0.05,
+      "num_leaves": 15,
+      "min_child_samples": 20,
+      "valid_pinball": 21.0553,
+      "best_iteration": 291,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.9,
+      "learning_rate": 0.05,
+      "num_leaves": 15,
+      "min_child_samples": 20,
+      "valid_pinball": 11.7169,
+      "best_iteration": 450,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.95,
+      "learning_rate": 0.05,
+      "num_leaves": 15,
+      "min_child_samples": 20,
+      "valid_pinball": 7.3451,
+      "best_iteration": 618,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.05,
+      "learning_rate": 0.05,
+      "num_leaves": 15,
+      "min_child_samples": 50,
+      "valid_pinball": 7.9263,
+      "best_iteration": 610,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.1,
+      "learning_rate": 0.05,
+      "num_leaves": 15,
+      "min_child_samples": 50,
+      "valid_pinball": 12.2025,
+      "best_iteration": 498,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.25,
+      "learning_rate": 0.05,
+      "num_leaves": 15,
+      "min_child_samples": 50,
+      "valid_pinball": 19.8734,
+      "best_iteration": 334,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.5,
+      "learning_rate": 0.05,
+      "num_leaves": 15,
+      "min_child_samples": 50,
+      "valid_pinball": 24.3205,
+      "best_iteration": 974,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.75,
+      "learning_rate": 0.05,
+      "num_leaves": 15,
+      "min_child_samples": 50,
+      "valid_pinball": 21.1406,
+      "best_iteration": 469,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.9,
+      "learning_rate": 0.05,
+      "num_leaves": 15,
+      "min_child_samples": 50,
+      "valid_pinball": 12.1804,
+      "best_iteration": 657,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.95,
+      "learning_rate": 0.05,
+      "num_leaves": 15,
+      "min_child_samples": 50,
+      "valid_pinball": 7.3282,
+      "best_iteration": 566,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.05,
+      "learning_rate": 0.05,
+      "num_leaves": 31,
+      "min_child_samples": 20,
+      "valid_pinball": 8.7314,
+      "best_iteration": 493,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.1,
+      "learning_rate": 0.05,
+      "num_leaves": 31,
+      "min_child_samples": 20,
+      "valid_pinball": 12.2895,
+      "best_iteration": 458,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.25,
+      "learning_rate": 0.05,
+      "num_leaves": 31,
+      "min_child_samples": 20,
+      "valid_pinball": 20.7753,
+      "best_iteration": 274,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.5,
+      "learning_rate": 0.05,
+      "num_leaves": 31,
+      "min_child_samples": 20,
+      "valid_pinball": 25.3198,
+      "best_iteration": 223,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.75,
+      "learning_rate": 0.05,
+      "num_leaves": 31,
+      "min_child_samples": 20,
+      "valid_pinball": 20.8091,
+      "best_iteration": 373,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.9,
+      "learning_rate": 0.05,
+      "num_leaves": 31,
+      "min_child_samples": 20,
+      "valid_pinball": 11.834,
+      "best_iteration": 362,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.95,
+      "learning_rate": 0.05,
+      "num_leaves": 31,
+      "min_child_samples": 20,
+      "valid_pinball": 7.5662,
+      "best_iteration": 452,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.05,
+      "learning_rate": 0.05,
+      "num_leaves": 31,
+      "min_child_samples": 50,
+      "valid_pinball": 8.6118,
+      "best_iteration": 481,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.1,
+      "learning_rate": 0.05,
+      "num_leaves": 31,
+      "min_child_samples": 50,
+      "valid_pinball": 12.8098,
+      "best_iteration": 421,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.25,
+      "learning_rate": 0.05,
+      "num_leaves": 31,
+      "min_child_samples": 50,
+      "valid_pinball": 20.7283,
+      "best_iteration": 283,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.5,
+      "learning_rate": 0.05,
+      "num_leaves": 31,
+      "min_child_samples": 50,
+      "valid_pinball": 24.678,
+      "best_iteration": 416,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.75,
+      "learning_rate": 0.05,
+      "num_leaves": 31,
+      "min_child_samples": 50,
+      "valid_pinball": 20.5765,
+      "best_iteration": 320,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.9,
+      "learning_rate": 0.05,
+      "num_leaves": 31,
+      "min_child_samples": 50,
+      "valid_pinball": 12.3381,
+      "best_iteration": 412,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.95,
+      "learning_rate": 0.05,
+      "num_leaves": 31,
+      "min_child_samples": 50,
+      "valid_pinball": 7.2809,
+      "best_iteration": 407,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.05,
+      "learning_rate": 0.05,
+      "num_leaves": 63,
+      "min_child_samples": 20,
+      "valid_pinball": 11.5716,
+      "best_iteration": 382,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.1,
+      "learning_rate": 0.05,
+      "num_leaves": 63,
+      "min_child_samples": 20,
+      "valid_pinball": 14.1846,
+      "best_iteration": 379,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.25,
+      "learning_rate": 0.05,
+      "num_leaves": 63,
+      "min_child_samples": 20,
+      "valid_pinball": 19.9047,
+      "best_iteration": 278,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.5,
+      "learning_rate": 0.05,
+      "num_leaves": 63,
+      "min_child_samples": 20,
+      "valid_pinball": 24.9712,
+      "best_iteration": 245,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.75,
+      "learning_rate": 0.05,
+      "num_leaves": 63,
+      "min_child_samples": 20,
+      "valid_pinball": 20.6702,
+      "best_iteration": 274,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.9,
+      "learning_rate": 0.05,
+      "num_leaves": 63,
+      "min_child_samples": 20,
+      "valid_pinball": 11.6644,
+      "best_iteration": 255,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.95,
+      "learning_rate": 0.05,
+      "num_leaves": 63,
+      "min_child_samples": 20,
+      "valid_pinball": 7.801,
+      "best_iteration": 334,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.05,
+      "learning_rate": 0.05,
+      "num_leaves": 63,
+      "min_child_samples": 50,
+      "valid_pinball": 10.5924,
+      "best_iteration": 374,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.1,
+      "learning_rate": 0.05,
+      "num_leaves": 63,
+      "min_child_samples": 50,
+      "valid_pinball": 13.7172,
+      "best_iteration": 393,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.25,
+      "learning_rate": 0.05,
+      "num_leaves": 63,
+      "min_child_samples": 50,
+      "valid_pinball": 20.7519,
+      "best_iteration": 264,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.5,
+      "learning_rate": 0.05,
+      "num_leaves": 63,
+      "min_child_samples": 50,
+      "valid_pinball": 24.7993,
+      "best_iteration": 304,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.75,
+      "learning_rate": 0.05,
+      "num_leaves": 63,
+      "min_child_samples": 50,
+      "valid_pinball": 20.4423,
+      "best_iteration": 306,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.9,
+      "learning_rate": 0.05,
+      "num_leaves": 63,
+      "min_child_samples": 50,
+      "valid_pinball": 12.267,
+      "best_iteration": 279,
+      "train_rows": 17098
+    },
+    {
+      "variant": "last_24_months",
+      "quantile": 0.95,
+      "learning_rate": 0.05,
+      "num_leaves": 63,
+      "min_child_samples": 50,
+      "valid_pinball": 7.3535,
+      "best_iteration": 367,
+      "train_rows": 17098
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.05,
+      "learning_rate": 0.03,
+      "num_leaves": 15,
+      "min_child_samples": 20,
+      "valid_pinball": 6.2211,
+      "best_iteration": 1954,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.1,
+      "learning_rate": 0.03,
+      "num_leaves": 15,
+      "min_child_samples": 20,
+      "valid_pinball": 10.536,
+      "best_iteration": 1983,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.25,
+      "learning_rate": 0.03,
+      "num_leaves": 15,
+      "min_child_samples": 20,
+      "valid_pinball": 18.1916,
+      "best_iteration": 3976,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.5,
+      "learning_rate": 0.03,
+      "num_leaves": 15,
+      "min_child_samples": 20,
+      "valid_pinball": 22.426,
+      "best_iteration": 3189,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.75,
+      "learning_rate": 0.03,
+      "num_leaves": 15,
+      "min_child_samples": 20,
+      "valid_pinball": 18.8416,
+      "best_iteration": 2111,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.9,
+      "learning_rate": 0.03,
+      "num_leaves": 15,
+      "min_child_samples": 20,
+      "valid_pinball": 11.2282,
+      "best_iteration": 822,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.95,
+      "learning_rate": 0.03,
+      "num_leaves": 15,
+      "min_child_samples": 20,
+      "valid_pinball": 6.6197,
+      "best_iteration": 1302,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.05,
+      "learning_rate": 0.03,
+      "num_leaves": 15,
+      "min_child_samples": 50,
+      "valid_pinball": 6.52,
+      "best_iteration": 995,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.1,
+      "learning_rate": 0.03,
+      "num_leaves": 15,
+      "min_child_samples": 50,
+      "valid_pinball": 10.5067,
+      "best_iteration": 2484,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.25,
+      "learning_rate": 0.03,
+      "num_leaves": 15,
+      "min_child_samples": 50,
+      "valid_pinball": 18.4795,
+      "best_iteration": 3233,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.5,
+      "learning_rate": 0.03,
+      "num_leaves": 15,
+      "min_child_samples": 50,
+      "valid_pinball": 22.4605,
+      "best_iteration": 3547,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.75,
+      "learning_rate": 0.03,
+      "num_leaves": 15,
+      "min_child_samples": 50,
+      "valid_pinball": 18.5069,
+      "best_iteration": 2952,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.9,
+      "learning_rate": 0.03,
+      "num_leaves": 15,
+      "min_child_samples": 50,
+      "valid_pinball": 11.2679,
+      "best_iteration": 1308,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.95,
+      "learning_rate": 0.03,
+      "num_leaves": 15,
+      "min_child_samples": 50,
+      "valid_pinball": 6.8199,
+      "best_iteration": 1688,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.05,
+      "learning_rate": 0.03,
+      "num_leaves": 31,
+      "min_child_samples": 20,
+      "valid_pinball": 6.5389,
+      "best_iteration": 856,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.1,
+      "learning_rate": 0.03,
+      "num_leaves": 31,
+      "min_child_samples": 20,
+      "valid_pinball": 10.5697,
+      "best_iteration": 1164,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.25,
+      "learning_rate": 0.03,
+      "num_leaves": 31,
+      "min_child_samples": 20,
+      "valid_pinball": 18.5255,
+      "best_iteration": 1695,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.5,
+      "learning_rate": 0.03,
+      "num_leaves": 31,
+      "min_child_samples": 20,
+      "valid_pinball": 22.2298,
+      "best_iteration": 1596,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.75,
+      "learning_rate": 0.03,
+      "num_leaves": 31,
+      "min_child_samples": 20,
+      "valid_pinball": 18.5712,
+      "best_iteration": 1159,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.9,
+      "learning_rate": 0.03,
+      "num_leaves": 31,
+      "min_child_samples": 20,
+      "valid_pinball": 10.7253,
+      "best_iteration": 530,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.95,
+      "learning_rate": 0.03,
+      "num_leaves": 31,
+      "min_child_samples": 20,
+      "valid_pinball": 6.8488,
+      "best_iteration": 1082,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.05,
+      "learning_rate": 0.03,
+      "num_leaves": 31,
+      "min_child_samples": 50,
+      "valid_pinball": 6.5115,
+      "best_iteration": 924,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.1,
+      "learning_rate": 0.03,
+      "num_leaves": 31,
+      "min_child_samples": 50,
+      "valid_pinball": 10.5913,
+      "best_iteration": 1096,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.25,
+      "learning_rate": 0.03,
+      "num_leaves": 31,
+      "min_child_samples": 50,
+      "valid_pinball": 18.5489,
+      "best_iteration": 1340,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.5,
+      "learning_rate": 0.03,
+      "num_leaves": 31,
+      "min_child_samples": 50,
+      "valid_pinball": 22.1105,
+      "best_iteration": 1959,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.75,
+      "learning_rate": 0.03,
+      "num_leaves": 31,
+      "min_child_samples": 50,
+      "valid_pinball": 18.5968,
+      "best_iteration": 1916,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.9,
+      "learning_rate": 0.03,
+      "num_leaves": 31,
+      "min_child_samples": 50,
+      "valid_pinball": 11.1074,
+      "best_iteration": 648,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.95,
+      "learning_rate": 0.03,
+      "num_leaves": 31,
+      "min_child_samples": 50,
+      "valid_pinball": 6.99,
+      "best_iteration": 1231,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.05,
+      "learning_rate": 0.03,
+      "num_leaves": 63,
+      "min_child_samples": 20,
+      "valid_pinball": 6.9556,
+      "best_iteration": 764,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.1,
+      "learning_rate": 0.03,
+      "num_leaves": 63,
+      "min_child_samples": 20,
+      "valid_pinball": 11.2588,
+      "best_iteration": 661,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.25,
+      "learning_rate": 0.03,
+      "num_leaves": 63,
+      "min_child_samples": 20,
+      "valid_pinball": 18.431,
+      "best_iteration": 1226,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.5,
+      "learning_rate": 0.03,
+      "num_leaves": 63,
+      "min_child_samples": 20,
+      "valid_pinball": 22.59,
+      "best_iteration": 957,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.75,
+      "learning_rate": 0.03,
+      "num_leaves": 63,
+      "min_child_samples": 20,
+      "valid_pinball": 18.8945,
+      "best_iteration": 318,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.9,
+      "learning_rate": 0.03,
+      "num_leaves": 63,
+      "min_child_samples": 20,
+      "valid_pinball": 10.9783,
+      "best_iteration": 568,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.95,
+      "learning_rate": 0.03,
+      "num_leaves": 63,
+      "min_child_samples": 20,
+      "valid_pinball": 6.9655,
+      "best_iteration": 829,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.05,
+      "learning_rate": 0.03,
+      "num_leaves": 63,
+      "min_child_samples": 50,
+      "valid_pinball": 6.8435,
+      "best_iteration": 736,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.1,
+      "learning_rate": 0.03,
+      "num_leaves": 63,
+      "min_child_samples": 50,
+      "valid_pinball": 11.0074,
+      "best_iteration": 665,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.25,
+      "learning_rate": 0.03,
+      "num_leaves": 63,
+      "min_child_samples": 50,
+      "valid_pinball": 18.4152,
+      "best_iteration": 1354,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.5,
+      "learning_rate": 0.03,
+      "num_leaves": 63,
+      "min_child_samples": 50,
+      "valid_pinball": 22.6163,
+      "best_iteration": 754,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.75,
+      "learning_rate": 0.03,
+      "num_leaves": 63,
+      "min_child_samples": 50,
+      "valid_pinball": 18.8959,
+      "best_iteration": 882,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.9,
+      "learning_rate": 0.03,
+      "num_leaves": 63,
+      "min_child_samples": 50,
+      "valid_pinball": 11.1372,
+      "best_iteration": 720,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.95,
+      "learning_rate": 0.03,
+      "num_leaves": 63,
+      "min_child_samples": 50,
+      "valid_pinball": 6.9655,
+      "best_iteration": 687,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.05,
+      "learning_rate": 0.05,
+      "num_leaves": 15,
+      "min_child_samples": 20,
+      "valid_pinball": 6.0399,
+      "best_iteration": 1090,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.1,
+      "learning_rate": 0.05,
+      "num_leaves": 15,
+      "min_child_samples": 20,
+      "valid_pinball": 10.6977,
+      "best_iteration": 1521,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.25,
+      "learning_rate": 0.05,
+      "num_leaves": 15,
+      "min_child_samples": 20,
+      "valid_pinball": 18.6836,
+      "best_iteration": 1639,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.5,
+      "learning_rate": 0.05,
+      "num_leaves": 15,
+      "min_child_samples": 20,
+      "valid_pinball": 22.2993,
+      "best_iteration": 2724,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.75,
+      "learning_rate": 0.05,
+      "num_leaves": 15,
+      "min_child_samples": 20,
+      "valid_pinball": 18.7809,
+      "best_iteration": 1498,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.9,
+      "learning_rate": 0.05,
+      "num_leaves": 15,
+      "min_child_samples": 20,
+      "valid_pinball": 10.586,
+      "best_iteration": 1350,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.95,
+      "learning_rate": 0.05,
+      "num_leaves": 15,
+      "min_child_samples": 20,
+      "valid_pinball": 6.9055,
+      "best_iteration": 1484,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.05,
+      "learning_rate": 0.05,
+      "num_leaves": 15,
+      "min_child_samples": 50,
+      "valid_pinball": 6.4308,
+      "best_iteration": 661,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.1,
+      "learning_rate": 0.05,
+      "num_leaves": 15,
+      "min_child_samples": 50,
+      "valid_pinball": 10.5588,
+      "best_iteration": 1103,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.25,
+      "learning_rate": 0.05,
+      "num_leaves": 15,
+      "min_child_samples": 50,
+      "valid_pinball": 18.3534,
+      "best_iteration": 1968,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.5,
+      "learning_rate": 0.05,
+      "num_leaves": 15,
+      "min_child_samples": 50,
+      "valid_pinball": 22.3284,
+      "best_iteration": 1979,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.75,
+      "learning_rate": 0.05,
+      "num_leaves": 15,
+      "min_child_samples": 50,
+      "valid_pinball": 18.6362,
+      "best_iteration": 1646,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.9,
+      "learning_rate": 0.05,
+      "num_leaves": 15,
+      "min_child_samples": 50,
+      "valid_pinball": 11.3286,
+      "best_iteration": 695,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.95,
+      "learning_rate": 0.05,
+      "num_leaves": 15,
+      "min_child_samples": 50,
+      "valid_pinball": 7.1459,
+      "best_iteration": 1482,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.05,
+      "learning_rate": 0.05,
+      "num_leaves": 31,
+      "min_child_samples": 20,
+      "valid_pinball": 6.6619,
+      "best_iteration": 541,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.1,
+      "learning_rate": 0.05,
+      "num_leaves": 31,
+      "min_child_samples": 20,
+      "valid_pinball": 10.8775,
+      "best_iteration": 759,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.25,
+      "learning_rate": 0.05,
+      "num_leaves": 31,
+      "min_child_samples": 20,
+      "valid_pinball": 18.4759,
+      "best_iteration": 1275,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.5,
+      "learning_rate": 0.05,
+      "num_leaves": 31,
+      "min_child_samples": 20,
+      "valid_pinball": 22.6678,
+      "best_iteration": 794,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.75,
+      "learning_rate": 0.05,
+      "num_leaves": 31,
+      "min_child_samples": 20,
+      "valid_pinball": 19.0675,
+      "best_iteration": 814,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.9,
+      "learning_rate": 0.05,
+      "num_leaves": 31,
+      "min_child_samples": 20,
+      "valid_pinball": 10.92,
+      "best_iteration": 339,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.95,
+      "learning_rate": 0.05,
+      "num_leaves": 31,
+      "min_child_samples": 20,
+      "valid_pinball": 6.7864,
+      "best_iteration": 791,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.05,
+      "learning_rate": 0.05,
+      "num_leaves": 31,
+      "min_child_samples": 50,
+      "valid_pinball": 6.264,
+      "best_iteration": 610,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.1,
+      "learning_rate": 0.05,
+      "num_leaves": 31,
+      "min_child_samples": 50,
+      "valid_pinball": 10.6685,
+      "best_iteration": 811,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.25,
+      "learning_rate": 0.05,
+      "num_leaves": 31,
+      "min_child_samples": 50,
+      "valid_pinball": 18.2937,
+      "best_iteration": 1876,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.5,
+      "learning_rate": 0.05,
+      "num_leaves": 31,
+      "min_child_samples": 50,
+      "valid_pinball": 22.5434,
+      "best_iteration": 841,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.75,
+      "learning_rate": 0.05,
+      "num_leaves": 31,
+      "min_child_samples": 50,
+      "valid_pinball": 19.068,
+      "best_iteration": 531,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.9,
+      "learning_rate": 0.05,
+      "num_leaves": 31,
+      "min_child_samples": 50,
+      "valid_pinball": 11.4499,
+      "best_iteration": 309,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.95,
+      "learning_rate": 0.05,
+      "num_leaves": 31,
+      "min_child_samples": 50,
+      "valid_pinball": 6.8758,
+      "best_iteration": 579,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.05,
+      "learning_rate": 0.05,
+      "num_leaves": 63,
+      "min_child_samples": 20,
+      "valid_pinball": 6.5943,
+      "best_iteration": 483,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.1,
+      "learning_rate": 0.05,
+      "num_leaves": 63,
+      "min_child_samples": 20,
+      "valid_pinball": 10.8882,
+      "best_iteration": 423,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.25,
+      "learning_rate": 0.05,
+      "num_leaves": 63,
+      "min_child_samples": 20,
+      "valid_pinball": 18.6858,
+      "best_iteration": 494,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.5,
+      "learning_rate": 0.05,
+      "num_leaves": 63,
+      "min_child_samples": 20,
+      "valid_pinball": 22.6453,
+      "best_iteration": 770,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.75,
+      "learning_rate": 0.05,
+      "num_leaves": 63,
+      "min_child_samples": 20,
+      "valid_pinball": 18.5093,
+      "best_iteration": 616,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.9,
+      "learning_rate": 0.05,
+      "num_leaves": 63,
+      "min_child_samples": 20,
+      "valid_pinball": 10.9259,
+      "best_iteration": 270,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.95,
+      "learning_rate": 0.05,
+      "num_leaves": 63,
+      "min_child_samples": 20,
+      "valid_pinball": 7.0291,
+      "best_iteration": 446,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.05,
+      "learning_rate": 0.05,
+      "num_leaves": 63,
+      "min_child_samples": 50,
+      "valid_pinball": 6.7379,
+      "best_iteration": 464,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.1,
+      "learning_rate": 0.05,
+      "num_leaves": 63,
+      "min_child_samples": 50,
+      "valid_pinball": 11.1871,
+      "best_iteration": 389,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.25,
+      "learning_rate": 0.05,
+      "num_leaves": 63,
+      "min_child_samples": 50,
+      "valid_pinball": 18.3356,
+      "best_iteration": 888,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.5,
+      "learning_rate": 0.05,
+      "num_leaves": 63,
+      "min_child_samples": 50,
+      "valid_pinball": 22.6764,
+      "best_iteration": 523,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.75,
+      "learning_rate": 0.05,
+      "num_leaves": 63,
+      "min_child_samples": 50,
+      "valid_pinball": 19.1059,
+      "best_iteration": 550,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.9,
+      "learning_rate": 0.05,
+      "num_leaves": 63,
+      "min_child_samples": 50,
+      "valid_pinball": 11.2591,
+      "best_iteration": 459,
+      "train_rows": 68226
+    },
+    {
+      "variant": "all_history",
+      "quantile": 0.95,
+      "learning_rate": 0.05,
+      "num_leaves": 63,
+      "min_child_samples": 50,
+      "valid_pinball": 7.0531,
+      "best_iteration": 369,
+      "train_rows": 68226
+    }
+  ],
+  "selected": {
+    "0.05": {
+      "variant": "all_history",
+      "quantile": 0.05,
+      "learning_rate": 0.05,
+      "num_leaves": 15,
+      "min_child_samples": 20,
+      "valid_pinball": 6.0399,
+      "best_iteration": 1090,
+      "train_rows": 68226,
+      "params": {
+        "learning_rate": 0.05,
+        "num_leaves": 15,
+        "min_child_samples": 20,
+        "colsample_bytree": 0.8,
+        "subsample": 0.8,
+        "subsample_freq": 1,
+        "reg_lambda": 1.0,
+        "n_estimators": 5000,
+        "random_state": 42,
+        "deterministic": true,
+        "verbosity": -1
+      }
+    },
+    "0.1": {
+      "variant": "all_history",
+      "quantile": 0.1,
+      "learning_rate": 0.03,
+      "num_leaves": 15,
+      "min_child_samples": 50,
+      "valid_pinball": 10.5067,
+      "best_iteration": 2484,
+      "train_rows": 68226,
+      "params": {
+        "learning_rate": 0.03,
+        "num_leaves": 15,
+        "min_child_samples": 50,
+        "colsample_bytree": 0.8,
+        "subsample": 0.8,
+        "subsample_freq": 1,
+        "reg_lambda": 1.0,
+        "n_estimators": 5000,
+        "random_state": 42,
+        "deterministic": true,
+        "verbosity": -1
+      }
+    },
+    "0.25": {
+      "variant": "all_history",
+      "quantile": 0.25,
+      "learning_rate": 0.03,
+      "num_leaves": 15,
+      "min_child_samples": 20,
+      "valid_pinball": 18.1916,
+      "best_iteration": 3976,
+      "train_rows": 68226,
+      "params": {
+        "learning_rate": 0.03,
+        "num_leaves": 15,
+        "min_child_samples": 20,
+        "colsample_bytree": 0.8,
+        "subsample": 0.8,
+        "subsample_freq": 1,
+        "reg_lambda": 1.0,
+        "n_estimators": 5000,
+        "random_state": 42,
+        "deterministic": true,
+        "verbosity": -1
+      }
+    },
+    "0.5": {
+      "variant": "all_history",
+      "quantile": 0.5,
+      "learning_rate": 0.03,
+      "num_leaves": 31,
+      "min_child_samples": 50,
+      "valid_pinball": 22.1105,
+      "best_iteration": 1959,
+      "train_rows": 68226,
+      "params": {
+        "learning_rate": 0.03,
+        "num_leaves": 31,
+        "min_child_samples": 50,
+        "colsample_bytree": 0.8,
+        "subsample": 0.8,
+        "subsample_freq": 1,
+        "reg_lambda": 1.0,
+        "n_estimators": 5000,
+        "random_state": 42,
+        "deterministic": true,
+        "verbosity": -1
+      }
+    },
+    "0.75": {
+      "variant": "all_history",
+      "quantile": 0.75,
+      "learning_rate": 0.03,
+      "num_leaves": 15,
+      "min_child_samples": 50,
+      "valid_pinball": 18.5069,
+      "best_iteration": 2952,
+      "train_rows": 68226,
+      "params": {
+        "learning_rate": 0.03,
+        "num_leaves": 15,
+        "min_child_samples": 50,
+        "colsample_bytree": 0.8,
+        "subsample": 0.8,
+        "subsample_freq": 1,
+        "reg_lambda": 1.0,
+        "n_estimators": 5000,
+        "random_state": 42,
+        "deterministic": true,
+        "verbosity": -1
+      }
+    },
+    "0.9": {
+      "variant": "all_history",
+      "quantile": 0.9,
+      "learning_rate": 0.05,
+      "num_leaves": 15,
+      "min_child_samples": 20,
+      "valid_pinball": 10.586,
+      "best_iteration": 1350,
+      "train_rows": 68226,
+      "params": {
+        "learning_rate": 0.05,
+        "num_leaves": 15,
+        "min_child_samples": 20,
+        "colsample_bytree": 0.8,
+        "subsample": 0.8,
+        "subsample_freq": 1,
+        "reg_lambda": 1.0,
+        "n_estimators": 5000,
+        "random_state": 42,
+        "deterministic": true,
+        "verbosity": -1
+      }
+    },
+    "0.95": {
+      "variant": "all_history",
+      "quantile": 0.95,
+      "learning_rate": 0.03,
+      "num_leaves": 15,
+      "min_child_samples": 20,
+      "valid_pinball": 6.6197,
+      "best_iteration": 1302,
+      "train_rows": 68226,
+      "params": {
+        "learning_rate": 0.03,
+        "num_leaves": 15,
+        "min_child_samples": 20,
+        "colsample_bytree": 0.8,
+        "subsample": 0.8,
+        "subsample_freq": 1,
+        "reg_lambda": 1.0,
+        "n_estimators": 5000,
+        "random_state": 42,
+        "deterministic": true,
+        "verbosity": -1
+      }
+    }
+  },
+  "valid": {
+    "filters": {
+      "all_rows": {
+        "valid": {
+          "lgbm_quantile_wk": {
+            "rows": 4648,
+            "series": 166,
+            "periods": 28,
+            "zero_actual_rows": 272,
+            "pinball": {
+              "0.05": 6.0401,
+              "0.1": 10.4162,
+              "0.25": 18.1723,
+              "0.5": 22.1065,
+              "0.75": 18.4872,
+              "0.9": 10.5113,
+              "0.95": 6.6022
+            },
+            "coverage": {
+              "0.05": 0.1089,
+              "0.1": 0.1599,
+              "0.25": 0.2864,
+              "0.5": 0.5239,
+              "0.75": 0.7528,
+              "0.9": 0.8886,
+              "0.95": 0.9445
+            },
+            "mae_p50": 44.213,
+            "wape_p50": 0.0658,
+            "width_p95_p05": 187.6604,
+            "crossing_rate": 0.0,
+            "stockout_rate_vs_tt": 0.0856,
+            "overstock_rate_vs_tt": 0.7438,
+            "total_target_rows": 4368,
+            "under_thb": 172389.73,
+            "over_thb": 237113.77,
+            "crossing_rate_raw": 0.1566,
+            "crossing_pairs_raw": {
+              "q05>q10": 0.0721,
+              "q10>q25": 0.0286,
+              "q25>q50": 0.0174,
+              "q50>q75": 0.0123,
+              "q75>q90": 0.0129,
+              "q90>q95": 0.0467
+            },
+            "crossing_rate_fixed": 0.0
+          }
+        }
+      },
+      "no_stockout_rows": {
+        "valid": {
+          "lgbm_quantile_wk": {
+            "rows": 4604,
+            "series": 166,
+            "periods": 28,
+            "zero_actual_rows": 266,
+            "pinball": {
+              "0.05": 6.063,
+              "0.1": 10.4593,
+              "0.25": 18.2622,
+              "0.5": 22.2418,
+              "0.75": 18.6024,
+              "0.9": 10.5683,
+              "0.95": 6.6419
+            },
+            "coverage": {
+              "0.05": 0.1077,
+              "0.1": 0.1588,
+              "0.25": 0.2854,
+              "0.5": 0.5235,
+              "0.75": 0.7528,
+              "0.9": 0.8886,
+              "0.95": 0.9444
+            },
+            "mae_p50": 44.4837,
+            "wape_p50": 0.0658,
+            "width_p95_p05": 188.6152,
+            "crossing_rate": 0.0,
+            "stockout_rate_vs_tt": 0.086,
+            "overstock_rate_vs_tt": 0.7506,
+            "total_target_rows": 4327,
+            "under_thb": 171153.94,
+            "over_thb": 238467.95,
+            "crossing_rate_raw": 0.1566,
+            "crossing_pairs_raw": {
+              "q05>q10": 0.0723,
+              "q10>q25": 0.0282,
+              "q25>q50": 0.0176,
+              "q50>q75": 0.0124,
+              "q75>q90": 0.0126,
+              "q90>q95": 0.0469
+            },
+            "crossing_rate_fixed": 0.0
+          }
+        }
+      }
+    },
+    "per_series": {
+      "all_rows": {
+        "valid": {
+          "lgbm_quantile_wk": "                                series_id  ...  coverage_0.95\n0    01a291b6-eef4-448a-8ec8-98c7b0224ffa  ...         0.9286\n1    02c8ceb7-07ed-49d8-b5d4-ce5d7f7a2d1e  ...         0.9643\n2    039b8787-6e38-491b-928a-173780d719c2  ...         1.0000\n3    045defc9-1aaa-46c7-9d0e-28d9b7f362bb  ...         0.9286\n4    06c366dd-5e0d-4d91-b249-afcef2ad3797  ...         0.9286\n..                                    ...  ...            ...\n161  f8676b6d-82f3-478c-8042-a220922cce5c  ...         0.9286\n162  fa88959a-95b6-4761-8a5e-902c7d58914f  ...         0.8929\n163  fd01f924-8adc-4794-9501-af3fecd26dbe  ...         0.9286\n164  fd87257b-d0fb-4cfd-98bc-c768ae789768  ...         0.9643\n165  fda05a52-a455-456a-bc51-e0a6dec8871e  ...         1.0000\n\n[166 rows x 12 columns]"
+        }
+      },
+      "no_stockout_rows": {
+        "valid": {
+          "lgbm_quantile_wk": "                                series_id  ...  coverage_0.95\n0    01a291b6-eef4-448a-8ec8-98c7b0224ffa  ...         0.9286\n1    02c8ceb7-07ed-49d8-b5d4-ce5d7f7a2d1e  ...         0.9643\n2    039b8787-6e38-491b-928a-173780d719c2  ...         1.0000\n3    045defc9-1aaa-46c7-9d0e-28d9b7f362bb  ...         0.9286\n4    06c366dd-5e0d-4d91-b249-afcef2ad3797  ...         0.9286\n..                                    ...  ...            ...\n161  f8676b6d-82f3-478c-8042-a220922cce5c  ...         0.9259\n162  fa88959a-95b6-4761-8a5e-902c7d58914f  ...         0.8929\n163  fd01f924-8adc-4794-9501-af3fecd26dbe  ...         0.9286\n164  fd87257b-d0fb-4cfd-98bc-c768ae789768  ...         0.9643\n165  fda05a52-a455-456a-bc51-e0a6dec8871e  ...         1.0000\n\n[166 rows x 12 columns]"
+        }
+      }
+    },
+    "gates": {
+      "lgbm_quantile_wk": {
+        "valid": {
+          "all_rows": {
+            "series_total": 166,
+            "series_low_n": 0,
+            "series_all_zero": 1,
+            "series_judged": 165,
+            "low_n_threshold": 26,
+            "coverage_tolerance": 0.05,
+            "coverage_pass_rate_0.9": 0.703,
+            "coverage_median_0.9": 0.8929,
+            "coverage_pass_rate_0.95": 0.6121,
+            "coverage_median_0.95": 0.9643
+          },
+          "no_stockout_rows": {
+            "series_total": 166,
+            "series_low_n": 2,
+            "series_all_zero": 1,
+            "series_judged": 163,
+            "low_n_threshold": 26,
+            "coverage_tolerance": 0.05,
+            "coverage_pass_rate_0.9": 0.7055,
+            "coverage_median_0.9": 0.8929,
+            "coverage_pass_rate_0.95": 0.6196,
+            "coverage_median_0.95": 0.963
+          }
+        }
+      }
+    },
+    "coverage_tolerance": 0.05,
+    "quantiles": [
+      0.05,
+      0.1,
+      0.25,
+      0.5,
+      0.75,
+      0.9,
+      0.95
+    ]
+  },
+  "gate": {
+    "split": "valid",
+    "must_beat": [
+      "seasonal_naive",
+      "ma_es_residual_quantile"
+    ],
+    "quantiles": [
+      0.5,
+      0.9,
+      0.95
+    ],
+    "checks": {
+      "all_rows": {
+        "seasonal_naive": {
+          "model_pinball": {
+            "0.5": 22.1065,
+            "0.9": 10.5113,
+            "0.95": 6.6022
+          },
+          "baseline_pinball": {
+            "0.5": 40.7644,
+            "0.9": 33.6248,
+            "0.95": 27.8882
+          },
+          "delta": {
+            "0.5": -18.6579,
+            "0.9": -23.1135,
+            "0.95": -21.286
+          },
+          "beats": true
+        },
+        "ma_es_residual_quantile": {
+          "model_pinball": {
+            "0.5": 22.1065,
+            "0.9": 10.5113,
+            "0.95": 6.6022
+          },
+          "baseline_pinball": {
+            "0.5": 37.3563,
+            "0.9": 15.8459,
+            "0.95": 10.291
+          },
+          "delta": {
+            "0.5": -15.2498,
+            "0.9": -5.3346,
+            "0.95": -3.6888
+          },
+          "beats": true
+        }
+      },
+      "no_stockout_rows": {
+        "seasonal_naive": {
+          "model_pinball": {
+            "0.5": 22.2418,
+            "0.9": 10.5683,
+            "0.95": 6.6419
+          },
+          "baseline_pinball": {
+            "0.5": 40.9847,
+            "0.9": 33.7137,
+            "0.95": 27.9293
+          },
+          "delta": {
+            "0.5": -18.7429,
+            "0.9": -23.1454,
+            "0.95": -21.2874
+          },
+          "beats": true
+        },
+        "ma_es_residual_quantile": {
+          "model_pinball": {
+            "0.5": 22.2418,
+            "0.9": 10.5683,
+            "0.95": 6.6419
+          },
+          "baseline_pinball": {
+            "0.5": 37.5864,
+            "0.9": 15.9219,
+            "0.95": 10.3303
+          },
+          "delta": {
+            "0.5": -15.3446,
+            "0.9": -5.3536,
+            "0.95": -3.6884
+          },
+          "beats": true
+        }
+      }
+    },
+    "passed": true
+  },
+  "artifact": "/Users/sun/Documents/ntt-data/NTT-Data-DooRare/backend/models/artifacts/f1-WEEK-2026-09-14-f455e37770dc"
+}

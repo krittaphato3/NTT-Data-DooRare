@@ -1,0 +1,956 @@
+{
+  "generated_at": "2026-10-21T00:02:36+00:00",
+  "weekly": {
+    "rows": 77565,
+    "series": 173,
+    "splits": {
+      "train": 68226,
+      "test": 4691,
+      "valid": 4648
+    },
+    "origin_range": [
+      "2017-09-25",
+      "2026-09-14"
+    ],
+    "context_rule": "known_at_origin",
+    "reconciliation": {
+      "rows_committed": 77565,
+      "rows_rebuilt": 77565,
+      "rows_joined": 77565,
+      "rows_only_committed": 0,
+      "rows_only_rebuilt": 0,
+      "only_committed_examples": [],
+      "only_rebuilt_examples": [],
+      "columns_total": 44,
+      "columns_exact": 44,
+      "total_mismatches": 0,
+      "columns": {
+        "hospital_code": {
+          "mismatches": 0,
+          "share": 0.0,
+          "max_abs_diff": null
+        },
+        "item_code": {
+          "mismatches": 0,
+          "share": 0.0,
+          "max_abs_diff": null
+        },
+        "y_target": {
+          "mismatches": 0,
+          "share": 0.0,
+          "max_abs_diff": 0.0
+        },
+        "split": {
+          "mismatches": 0,
+          "share": 0.0,
+          "max_abs_diff": null
+        },
+        "lag_1w": {
+          "mismatches": 0,
+          "share": 0.0,
+          "max_abs_diff": 0.0
+        },
+        "lag_2w": {
+          "mismatches": 0,
+          "share": 0.0,
+          "max_abs_diff": 0.0
+        },
+        "lag_3w": {
+          "mismatches": 0,
+          "share": 0.0,
+          "max_abs_diff": 0.0
+        },
+        "lag_4w": {
+          "mismatches": 0,
+          "share": 0.0,
+          "max_abs_diff": 0.0
+        },
+        "lag_8w": {
+          "mismatches": 0,
+          "share": 0.0,
+          "max_abs_diff": 0.0
+        },
+        "lag_13w": {
+          "mismatches": 0,
+          "share": 0.0,
+          "max_abs_diff": 0.0
+        },
+        "lag_26w": {
+          "mismatches": 0,
+          "share": 0.0,
+          "max_abs_diff": 0.0
+        },
+        "lag_52w": {
+          "mismatches": 0,
+          "share": 0.0,
+          "max_abs_diff": 0.0
+        },
+        "roll_mean_4w": {
+          "mismatches": 0,
+          "share": 0.0,
+          "max_abs_diff": 0.0
+        },
+        "roll_std_4w": {
+          "mismatches": 0,
+          "share": 0.0,
+          "max_abs_diff": 5.25e-10
+        },
+        "roll_mean_13w": {
+          "mismatches": 0,
+          "share": 0.0,
+          "max_abs_diff": 4e-12
+        },
+        "roll_std_13w": {
+          "mismatches": 0,
+          "share": 0.0,
+          "max_abs_diff": 7.5e-11
+        },
+        "roll_mean_26w": {
+          "mismatches": 0,
+          "share": 0.0,
+          "max_abs_diff": 4e-12
+        },
+        "roll_std_26w": {
+          "mismatches": 0,
+          "share": 0.0,
+          "max_abs_diff": 5.3e-11
+        },
+        "roll_zero_share_13": {
+          "mismatches": 0,
+          "share": 0.0,
+          "max_abs_diff": 0.0
+        },
+        "weeks_since_last_nonzero": {
+          "mismatches": 0,
+          "share": 0.0,
+          "max_abs_diff": 0.0
+        },
+        "stockout_days_4w": {
+          "mismatches": 0,
+          "share": 0.0,
+          "max_abs_diff": 0.0
+        },
+        "item_te_mean": {
+          "mismatches": 0,
+          "share": 0.0,
+          "max_abs_diff": 2e-12
+        },
+        "woy_sin": {
+          "mismatches": 0,
+          "share": 0.0,
+          "max_abs_diff": 0.0
+        },
+        "woy_cos": {
+          "mismatches": 0,
+          "share": 0.0,
+          "max_abs_diff": 0.0
+        },
+        "month_sin": {
+          "mismatches": 0,
+          "share": 0.0,
+          "max_abs_diff": 0.0
+        },
+        "month_cos": {
+          "mismatches": 0,
+          "share": 0.0,
+          "max_abs_diff": 0.0
+        },
+        "is_songkran_week": {
+          "mismatches": 0,
+          "share": 0.0,
+          "max_abs_diff": 0.0
+        },
+        "is_newyear_week": {
+          "mismatches": 0,
+          "share": 0.0,
+          "max_abs_diff": 0.0
+        },
+        "long_weekend_days": {
+          "mismatches": 0,
+          "share": 0.0,
+          "max_abs_diff": 0.0
+        },
+        "ctx_covid": {
+          "mismatches": 0,
+          "share": 0.0,
+          "max_abs_diff": 0.0
+        },
+        "ctx_flu_peak": {
+          "mismatches": 0,
+          "share": 0.0,
+          "max_abs_diff": 0.0
+        },
+        "ctx_dengue_peak": {
+          "mismatches": 0,
+          "share": 0.0,
+          "max_abs_diff": 0.0
+        },
+        "ctx_pm25": {
+          "mismatches": 0,
+          "share": 0.0,
+          "max_abs_diff": 0.0
+        },
+        "ctx_fiscal_year_end": {
+          "mismatches": 0,
+          "share": 0.0,
+          "max_abs_diff": 0.0
+        },
+        "ctx_flood": {
+          "mismatches": 0,
+          "share": 0.0,
+          "max_abs_diff": 0.0
+        },
+        "ctx_seven_dangerous_days": {
+          "mismatches": 0,
+          "share": 0.0,
+          "max_abs_diff": 0.0
+        },
+        "price_tier": {
+          "mismatches": 0,
+          "share": 0.0,
+          "max_abs_diff": null
+        },
+        "ved": {
+          "mismatches": 0,
+          "share": 0.0,
+          "max_abs_diff": null
+        },
+        "abc": {
+          "mismatches": 0,
+          "share": 0.0,
+          "max_abs_diff": null
+        },
+        "item_type": {
+          "mismatches": 0,
+          "share": 0.0,
+          "max_abs_diff": null
+        },
+        "hospital_tier": {
+          "mismatches": 0,
+          "share": 0.0,
+          "max_abs_diff": null
+        },
+        "is_cold_chain": {
+          "mismatches": 0,
+          "share": 0.0,
+          "max_abs_diff": 0.0
+        },
+        "log_unit_price": {
+          "mismatches": 0,
+          "share": 0.0,
+          "max_abs_diff": 0.0
+        },
+        "is_seasonal": {
+          "mismatches": 0,
+          "share": 0.0,
+          "max_abs_diff": 0.0
+        }
+      }
+    },
+    "context_comparison": {
+      "rule": "known_at_origin",
+      "flags": {
+        "ctx_covid": {
+          "rows": 77565,
+          "committed_positive": 57645,
+          "rebuilt_positive": 57147,
+          "disagreements": 498,
+          "disagreement_share": 0.00642,
+          "leak_rows_committed_only": 498,
+          "rebuilt_only": 0,
+          "by_split": {
+            "test": {
+              "rows": 4691,
+              "disagreements": 0,
+              "disagreement_share": 0.0
+            },
+            "train": {
+              "rows": 68226,
+              "disagreements": 498,
+              "disagreement_share": 0.007299
+            },
+            "valid": {
+              "rows": 4648,
+              "disagreements": 0,
+              "disagreement_share": 0.0
+            }
+          }
+        },
+        "ctx_flu_peak": {
+          "rows": 77565,
+          "committed_positive": 7166,
+          "rebuilt_positive": 5333,
+          "disagreements": 1833,
+          "disagreement_share": 0.023632,
+          "leak_rows_committed_only": 1833,
+          "rebuilt_only": 0,
+          "by_split": {
+            "test": {
+              "rows": 4691,
+              "disagreements": 173,
+              "disagreement_share": 0.036879
+            },
+            "train": {
+              "rows": 68226,
+              "disagreements": 1494,
+              "disagreement_share": 0.021898
+            },
+            "valid": {
+              "rows": 4648,
+              "disagreements": 166,
+              "disagreement_share": 0.035714
+            }
+          }
+        },
+        "ctx_dengue_peak": {
+          "rows": 77565,
+          "committed_positive": 7138,
+          "rebuilt_positive": 5478,
+          "disagreements": 1660,
+          "disagreement_share": 0.021401,
+          "leak_rows_committed_only": 1660,
+          "rebuilt_only": 0,
+          "by_split": {
+            "test": {
+              "rows": 4691,
+              "disagreements": 166,
+              "disagreement_share": 0.035387
+            },
+            "train": {
+              "rows": 68226,
+              "disagreements": 1494,
+              "disagreement_share": 0.021898
+            },
+            "valid": {
+              "rows": 4648,
+              "disagreements": 0,
+              "disagreement_share": 0.0
+            }
+          }
+        },
+        "ctx_pm25": {
+          "rows": 77565,
+          "committed_positive": 20252,
+          "rebuilt_positive": 18592,
+          "disagreements": 1660,
+          "disagreement_share": 0.021401,
+          "leak_rows_committed_only": 1660,
+          "rebuilt_only": 0,
+          "by_split": {
+            "test": {
+              "rows": 4691,
+              "disagreements": 0,
+              "disagreement_share": 0.0
+            },
+            "train": {
+              "rows": 68226,
+              "disagreements": 1494,
+              "disagreement_share": 0.021898
+            },
+            "valid": {
+              "rows": 4648,
+              "disagreements": 166,
+              "disagreement_share": 0.035714
+            }
+          }
+        },
+        "ctx_fiscal_year_end": {
+          "rows": 77565,
+          "committed_positive": 14153,
+          "rebuilt_positive": 12493,
+          "disagreements": 1660,
+          "disagreement_share": 0.021401,
+          "leak_rows_committed_only": 1660,
+          "rebuilt_only": 0,
+          "by_split": {
+            "test": {
+              "rows": 4691,
+              "disagreements": 166,
+              "disagreement_share": 0.035387
+            },
+            "train": {
+              "rows": 68226,
+              "disagreements": 1494,
+              "disagreement_share": 0.021898
+            },
+            "valid": {
+              "rows": 4648,
+              "disagreements": 0,
+              "disagreement_share": 0.0
+            }
+          }
+        },
+        "ctx_flood": {
+          "rows": 77565,
+          "committed_positive": 3486,
+          "rebuilt_positive": 2988,
+          "disagreements": 498,
+          "disagreement_share": 0.00642,
+          "leak_rows_committed_only": 498,
+          "rebuilt_only": 0,
+          "by_split": {
+            "test": {
+              "rows": 4691,
+              "disagreements": 0,
+              "disagreement_share": 0.0
+            },
+            "train": {
+              "rows": 68226,
+              "disagreements": 498,
+              "disagreement_share": 0.007299
+            },
+            "valid": {
+              "rows": 4648,
+              "disagreements": 0,
+              "disagreement_share": 0.0
+            }
+          }
+        },
+        "ctx_seven_dangerous_days": {
+          "rows": 77565,
+          "committed_positive": 5644,
+          "rebuilt_positive": 2158,
+          "disagreements": 3486,
+          "disagreement_share": 0.044943,
+          "leak_rows_committed_only": 3486,
+          "rebuilt_only": 0,
+          "by_split": {
+            "test": {
+              "rows": 4691,
+              "disagreements": 166,
+              "disagreement_share": 0.035387
+            },
+            "train": {
+              "rows": 68226,
+              "disagreements": 3154,
+              "disagreement_share": 0.046229
+            },
+            "valid": {
+              "rows": 4648,
+              "disagreements": 166,
+              "disagreement_share": 0.035714
+            }
+          }
+        }
+      },
+      "rows_compared": 77565
+    },
+    "context_comparison_origin_active": {
+      "rule": "known_at_origin",
+      "flags": {
+        "ctx_covid": {
+          "rows": 77565,
+          "committed_positive": 57645,
+          "rebuilt_positive": 57479,
+          "disagreements": 166,
+          "disagreement_share": 0.00214,
+          "leak_rows_committed_only": 166,
+          "rebuilt_only": 0,
+          "by_split": {
+            "test": {
+              "rows": 4691,
+              "disagreements": 0,
+              "disagreement_share": 0.0
+            },
+            "train": {
+              "rows": 68226,
+              "disagreements": 166,
+              "disagreement_share": 0.002433
+            },
+            "valid": {
+              "rows": 4648,
+              "disagreements": 0,
+              "disagreement_share": 0.0
+            }
+          }
+        },
+        "ctx_flu_peak": {
+          "rows": 77565,
+          "committed_positive": 7166,
+          "rebuilt_positive": 6827,
+          "disagreements": 3327,
+          "disagreement_share": 0.042893,
+          "leak_rows_committed_only": 1833,
+          "rebuilt_only": 1494,
+          "by_split": {
+            "test": {
+              "rows": 4691,
+              "disagreements": 173,
+              "disagreement_share": 0.036879
+            },
+            "train": {
+              "rows": 68226,
+              "disagreements": 2822,
+              "disagreement_share": 0.041363
+            },
+            "valid": {
+              "rows": 4648,
+              "disagreements": 332,
+              "disagreement_share": 0.071429
+            }
+          }
+        },
+        "ctx_dengue_peak": {
+          "rows": 77565,
+          "committed_positive": 7138,
+          "rebuilt_positive": 6973,
+          "disagreements": 3155,
+          "disagreement_share": 0.040676,
+          "leak_rows_committed_only": 1660,
+          "rebuilt_only": 1495,
+          "by_split": {
+            "test": {
+              "rows": 4691,
+              "disagreements": 333,
+              "disagreement_share": 0.070987
+            },
+            "train": {
+              "rows": 68226,
+              "disagreements": 2822,
+              "disagreement_share": 0.041363
+            },
+            "valid": {
+              "rows": 4648,
+              "disagreements": 0,
+              "disagreement_share": 0.0
+            }
+          }
+        },
+        "ctx_pm25": {
+          "rows": 77565,
+          "committed_positive": 20252,
+          "rebuilt_positive": 20086,
+          "disagreements": 3154,
+          "disagreement_share": 0.040663,
+          "leak_rows_committed_only": 1660,
+          "rebuilt_only": 1494,
+          "by_split": {
+            "test": {
+              "rows": 4691,
+              "disagreements": 166,
+              "disagreement_share": 0.035387
+            },
+            "train": {
+              "rows": 68226,
+              "disagreements": 2822,
+              "disagreement_share": 0.041363
+            },
+            "valid": {
+              "rows": 4648,
+              "disagreements": 166,
+              "disagreement_share": 0.035714
+            }
+          }
+        },
+        "ctx_fiscal_year_end": {
+          "rows": 77565,
+          "committed_positive": 14153,
+          "rebuilt_positive": 13987,
+          "disagreements": 3154,
+          "disagreement_share": 0.040663,
+          "leak_rows_committed_only": 1660,
+          "rebuilt_only": 1494,
+          "by_split": {
+            "test": {
+              "rows": 4691,
+              "disagreements": 166,
+              "disagreement_share": 0.035387
+            },
+            "train": {
+              "rows": 68226,
+              "disagreements": 2822,
+              "disagreement_share": 0.041363
+            },
+            "valid": {
+              "rows": 4648,
+              "disagreements": 166,
+              "disagreement_share": 0.035714
+            }
+          }
+        },
+        "ctx_flood": {
+          "rows": 77565,
+          "committed_positive": 3486,
+          "rebuilt_positive": 3486,
+          "disagreements": 996,
+          "disagreement_share": 0.012841,
+          "leak_rows_committed_only": 498,
+          "rebuilt_only": 498,
+          "by_split": {
+            "test": {
+              "rows": 4691,
+              "disagreements": 0,
+              "disagreement_share": 0.0
+            },
+            "train": {
+              "rows": 68226,
+              "disagreements": 996,
+              "disagreement_share": 0.014599
+            },
+            "valid": {
+              "rows": 4648,
+              "disagreements": 0,
+              "disagreement_share": 0.0
+            }
+          }
+        },
+        "ctx_seven_dangerous_days": {
+          "rows": 77565,
+          "committed_positive": 5644,
+          "rebuilt_positive": 5146,
+          "disagreements": 6474,
+          "disagreement_share": 0.083465,
+          "leak_rows_committed_only": 3486,
+          "rebuilt_only": 2988,
+          "by_split": {
+            "test": {
+              "rows": 4691,
+              "disagreements": 332,
+              "disagreement_share": 0.070774
+            },
+            "train": {
+              "rows": 68226,
+              "disagreements": 5810,
+              "disagreement_share": 0.085158
+            },
+            "valid": {
+              "rows": 4648,
+              "disagreements": 332,
+              "disagreement_share": 0.071429
+            }
+          }
+        }
+      },
+      "rows_compared": 77565
+    }
+  },
+  "monthly": {
+    "rows": 17763,
+    "series_in_scope": 173,
+    "series_with_rows": 167,
+    "series_without_rows": 6,
+    "series_without_rows_reason": "single complete month (2026-09) -> no target month after dropping the last month; kept in scope for the weekly model",
+    "splits": {
+      "embargo": {
+        "rows": 332,
+        "series": 166,
+        "origin_month_min": "2024-07-01",
+        "origin_month_max": "2025-08-01"
+      },
+      "test": {
+        "rows": 1993,
+        "series": 167,
+        "origin_month_min": "2025-09-01",
+        "origin_month_max": "2026-08-01"
+      },
+      "train": {
+        "rows": 13446,
+        "series": 166,
+        "origin_month_min": "2017-10-01",
+        "origin_month_max": "2024-06-01"
+      },
+      "valid": {
+        "rows": 1992,
+        "series": 166,
+        "origin_month_min": "2024-08-01",
+        "origin_month_max": "2025-07-01"
+      }
+    },
+    "origin_range": [
+      "2017-10-01",
+      "2026-08-01"
+    ],
+    "context_rule": "known_at_origin",
+    "context_comparison": {
+      "rule": "known_at_origin",
+      "flags": {
+        "ctx_covid": {
+          "rows": 17763,
+          "committed_positive": 13447,
+          "rebuilt_positive": 12285,
+          "disagreements": 1162,
+          "disagreement_share": 0.065417,
+          "leak_rows_committed_only": 1162,
+          "rebuilt_only": 0,
+          "by_split": {
+            "embargo": {
+              "rows": 332,
+              "disagreements": 0,
+              "disagreement_share": 0.0
+            },
+            "test": {
+              "rows": 1993,
+              "disagreements": 0,
+              "disagreement_share": 0.0
+            },
+            "train": {
+              "rows": 13446,
+              "disagreements": 1162,
+              "disagreement_share": 0.08642
+            },
+            "valid": {
+              "rows": 1992,
+              "disagreements": 0,
+              "disagreement_share": 0.0
+            }
+          }
+        },
+        "ctx_flu_peak": {
+          "rows": 17763,
+          "committed_positive": 1495,
+          "rebuilt_positive": 0,
+          "disagreements": 1495,
+          "disagreement_share": 0.084164,
+          "leak_rows_committed_only": 1495,
+          "rebuilt_only": 0,
+          "by_split": {
+            "embargo": {
+              "rows": 332,
+              "disagreements": 166,
+              "disagreement_share": 0.5
+            },
+            "test": {
+              "rows": 1993,
+              "disagreements": 167,
+              "disagreement_share": 0.083793
+            },
+            "train": {
+              "rows": 13446,
+              "disagreements": 996,
+              "disagreement_share": 0.074074
+            },
+            "valid": {
+              "rows": 1992,
+              "disagreements": 166,
+              "disagreement_share": 0.083333
+            }
+          }
+        },
+        "ctx_dengue_peak": {
+          "rows": 17763,
+          "committed_positive": 1494,
+          "rebuilt_positive": 0,
+          "disagreements": 1494,
+          "disagreement_share": 0.084107,
+          "leak_rows_committed_only": 1494,
+          "rebuilt_only": 0,
+          "by_split": {
+            "embargo": {
+              "rows": 332,
+              "disagreements": 0,
+              "disagreement_share": 0.0
+            },
+            "test": {
+              "rows": 1993,
+              "disagreements": 166,
+              "disagreement_share": 0.083292
+            },
+            "train": {
+              "rows": 13446,
+              "disagreements": 1162,
+              "disagreement_share": 0.08642
+            },
+            "valid": {
+              "rows": 1992,
+              "disagreements": 166,
+              "disagreement_share": 0.083333
+            }
+          }
+        },
+        "ctx_pm25": {
+          "rows": 17763,
+          "committed_positive": 4482,
+          "rebuilt_positive": 2988,
+          "disagreements": 1494,
+          "disagreement_share": 0.084107,
+          "leak_rows_committed_only": 1494,
+          "rebuilt_only": 0,
+          "by_split": {
+            "embargo": {
+              "rows": 332,
+              "disagreements": 0,
+              "disagreement_share": 0.0
+            },
+            "test": {
+              "rows": 1993,
+              "disagreements": 166,
+              "disagreement_share": 0.083292
+            },
+            "train": {
+              "rows": 13446,
+              "disagreements": 1162,
+              "disagreement_share": 0.08642
+            },
+            "valid": {
+              "rows": 1992,
+              "disagreements": 166,
+              "disagreement_share": 0.083333
+            }
+          }
+        },
+        "ctx_fiscal_year_end": {
+          "rows": 17763,
+          "committed_positive": 2989,
+          "rebuilt_positive": 1495,
+          "disagreements": 1494,
+          "disagreement_share": 0.084107,
+          "leak_rows_committed_only": 1494,
+          "rebuilt_only": 0,
+          "by_split": {
+            "embargo": {
+              "rows": 332,
+              "disagreements": 166,
+              "disagreement_share": 0.5
+            },
+            "test": {
+              "rows": 1993,
+              "disagreements": 166,
+              "disagreement_share": 0.083292
+            },
+            "train": {
+              "rows": 13446,
+              "disagreements": 996,
+              "disagreement_share": 0.074074
+            },
+            "valid": {
+              "rows": 1992,
+              "disagreements": 166,
+              "disagreement_share": 0.083333
+            }
+          }
+        },
+        "ctx_flood": {
+          "rows": 17763,
+          "committed_positive": 996,
+          "rebuilt_positive": 498,
+          "disagreements": 498,
+          "disagreement_share": 0.028036,
+          "leak_rows_committed_only": 498,
+          "rebuilt_only": 0,
+          "by_split": {
+            "embargo": {
+              "rows": 332,
+              "disagreements": 0,
+              "disagreement_share": 0.0
+            },
+            "test": {
+              "rows": 1993,
+              "disagreements": 0,
+              "disagreement_share": 0.0
+            },
+            "train": {
+              "rows": 13446,
+              "disagreements": 332,
+              "disagreement_share": 0.024691
+            },
+            "valid": {
+              "rows": 1992,
+              "disagreements": 166,
+              "disagreement_share": 0.083333
+            }
+          }
+        },
+        "ctx_seven_dangerous_days": {
+          "rows": 17763,
+          "committed_positive": 4482,
+          "rebuilt_positive": 1494,
+          "disagreements": 2988,
+          "disagreement_share": 0.168215,
+          "leak_rows_committed_only": 2988,
+          "rebuilt_only": 0,
+          "by_split": {
+            "embargo": {
+              "rows": 332,
+              "disagreements": 0,
+              "disagreement_share": 0.0
+            },
+            "test": {
+              "rows": 1993,
+              "disagreements": 332,
+              "disagreement_share": 0.166583
+            },
+            "train": {
+              "rows": 13446,
+              "disagreements": 2324,
+              "disagreement_share": 0.17284
+            },
+            "valid": {
+              "rows": 1992,
+              "disagreements": 332,
+              "disagreement_share": 0.166667
+            }
+          }
+        }
+      },
+      "rows_compared": 17763
+    }
+  },
+  "expectations": {
+    "weekly_rows": {
+      "passed": true,
+      "actual": 77565,
+      "expected": 77565
+    },
+    "weekly_split_counts": {
+      "passed": true,
+      "actual": {
+        "train": 68226,
+        "test": 4691,
+        "valid": 4648
+      },
+      "expected": {
+        "train": 68226,
+        "valid": 4648,
+        "test": 4691
+      }
+    },
+    "weekly_reconciliation_exact": {
+      "passed": true,
+      "actual": {
+        "mismatches": 0,
+        "joined": 77565
+      },
+      "expected": {
+        "mismatches": 0,
+        "joined": 77565
+      }
+    },
+    "monthly_rows": {
+      "passed": true,
+      "actual": 17763,
+      "expected": 17763
+    },
+    "monthly_series_in_scope": {
+      "passed": true,
+      "actual": 173,
+      "expected": 173
+    },
+    "monthly_origin_range": {
+      "passed": true,
+      "actual": [
+        "2017-10-01",
+        "2026-08-01"
+      ],
+      "expected": [
+        "2017-10-01",
+        "2026-08-01"
+      ]
+    },
+    "monthly_split_months": {
+      "passed": true,
+      "actual": [
+        "2024-07",
+        "2025-08"
+      ],
+      "expected": [
+        "2024-07",
+        "2025-08"
+      ]
+    }
+  },
+  "all_passed": true,
+  "paths": {
+    "weekly": "/Users/sun/Documents/ntt-data/NTT-Data-DooRare/backend/models/data/weekly_features.parquet",
+    "monthly": "/Users/sun/Documents/ntt-data/NTT-Data-DooRare/backend/models/data/monthly_features.parquet"
+  }
+}

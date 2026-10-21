@@ -1,0 +1,240 @@
+# F1 quantile demand-forecasting module — single source of truth for paths, splits,
+# quantiles, hyper-parameters and gates. Nothing in the code may hard-code these values.
+#
+# Confirmed scope: 173 series (non-blood, non-Min-Max), target = forward dispensed usage,
+# horizon = 1 week / 1 month ahead, metrics on the raw scale after expm1.
+
+version: 1
+
+paths:
+  # Repo root is resolved automatically (f1_forecast/config.py); all paths below are relative to it.
+  # Override the root with the DOORARE_ROOT environment variable if needed.
+  raw:
+    daily_joined: data/f1_daily.csv                                   # hospital x item x day (usage + snapshot joined)
+    weekly_features: data/f1_weekly_features4.csv                     # committed weekly matrix (split reference)
+    pack_csv_dir: data/DooRare-F1-Monthly-Pack/csv                    # monthly source pack (authoritative raw tables)
+    pack_files:                                                       # file names inside pack_csv_dir
+      usage_daily: usage_daily.csv
+      stock_snapshot: stock_snapshot.csv
+      hospital_drug: hospital_drug.csv
+      drug_master: drug_master.csv
+      hospital: hospital.csv
+      context_signal: context_signal.csv
+  derived: backend/models/data                                        # generated feature tables (gitignored)
+  artifacts: backend/models/artifacts                                 # models + meta.json (gitignored)
+  forecasts: backend/models/artifacts/forecasts                       # Phase 7 inference output (gitignored)
+  reports: backend/models/reports                                     # small committed reports
+
+target:
+  column: y_target            # forward usage over the horizon (week/month after the origin period)
+  units: base dispensing units
+  transform: log1p            # train on log1p(y); invert with expm1
+  metrics_scale: raw          # all reported metrics are computed after expm1
+  horizon_steps: 1            # 1 week / 1 month ahead (code is parameterised for more)
+
+quantiles: [0.05, 0.10, 0.25, 0.50, 0.75, 0.90, 0.95]
+quantiles_persisted: [0.50, 0.90, 0.95]   # only these have forecast_result columns p50/p90/p95
+
+granularities:
+  WEEK:
+    period_anchor: monday
+    split_source: file        # the committed weekly matrix already carries `split` (train/valid/test)
+    split:                    # same rule as the reference build_features.py; used to rebuild and verify it
+      mode: tail_periods      # test = the last N origin weeks, then 1 embargo week, valid = N weeks, 1 embargo
+      eval_periods: 28
+      embargo_periods: 1
+      min_history_periods: 52 # warm-up cut for series long enough to support lag_52w
+    lags: [1, 2, 3, 4, 8, 13, 26, 52]
+    rolling_windows: [4, 13, 26]
+    zero_window: 13
+    cold_start_history_days: 90
+    min_eval_periods: 26      # LOW_N when a series has fewer evaluation periods
+    model:
+      num_leaves: 31
+      min_child_samples: 50
+      learning_rate: 0.05
+      colsample_bytree: 0.8
+      subsample: 0.8
+      subsample_freq: 1
+      reg_lambda: 1.0
+      n_estimators: 5000           # Phase 4b: 2000 truncated the P50 model (best iter 1959)
+      early_stopping_rounds: 100
+    grid:                     # small fixed grid, selected on valid only (no Optuna)
+      learning_rate: [0.03, 0.05]
+      num_leaves: [15, 31, 63]
+      min_child_samples: [20, 50]
+    train_window_variants: [last_24_months, all_history]   # spec 5.1; pick the better on valid
+
+  MONTH:
+    period_anchor: calendar_month
+    split_source: config      # monthly splits are defined below (symmetric 1-month embargo)
+    split:
+      train_end: "2024-06"
+      embargo: ["2024-07"]
+      valid: ["2024-08", "2025-07"]
+      embargo_2: ["2025-08"]
+      test: ["2025-09", "2026-08"]
+    lags: [1, 2, 3, 6, 12]
+    rolling_windows: [3, 6, 12]
+    zero_window: 6
+    cold_start_history_days: 90
+    min_eval_periods: 26
+    model:
+      num_leaves: 15
+      min_child_samples: 20
+      learning_rate: 0.05
+      colsample_bytree: 0.8
+      subsample: 0.8
+      subsample_freq: 1
+      reg_lambda: 1.0
+      n_estimators: 5000           # Phase 5: high cap, early stopping stops training; recorded in meta.json
+      early_stopping_rounds: 100
+    grid:
+      learning_rate: [0.03, 0.05]
+      num_leaves: [7, 15, 31]
+      min_child_samples: [10, 20]
+    train_window_variants: [all_history]
+
+seed: 42
+deterministic: true
+# Phase 5: revision bumped so new artifacts (monthly first) never collide with the frozen WEEK one.
+model_version_revision: 2
+model_version_template: "f1-{granularity}-{data_end}-{feature_hash}-r{revision}"
+
+series_scope:
+  exclude_blood_products: true
+  exclude_min_max: true                     # VED = D and low price -> Min-Max rule (F-02), never modelled here
+  min_max_price_threshold_thb: 50           # forecast.price_low_thb (specification/config-defaults.yaml)
+  price_low_thb: 50                         # F-01 price_tier LOW  <= 50 THB
+  price_high_thb: 1000                      # F-01 price_tier HIGH >= 1000 THB
+  cold_start_max_history_days: 68          # observed 46-68 days
+  cold_start_max_history_weeks: 10         # weekly equivalent used for slicing the evaluation panel
+  cold_start_max_history_months: 2         # monthly equivalent (~68 days) for the monthly panel
+
+# Confirmed facts measured from the data pack. Phase 1 validation compares the live files against
+# these numbers; a mismatch is a hard failure, never a silent adjustment.
+expectations:
+  hospital_drug_rows: 191
+  blood_series: 3
+  min_max_series: 15
+  non_blood_series: 188
+  modelled_series: 173
+  cold_start_series: 7
+  drug_master_rows: 41
+  hospital_rows: 5
+  usage_daily_rows: 672367
+  stock_snapshot_rows: 672367
+  daily_joined_rows: 661411
+  context_signal_rows: 73
+  weekly_rows: 77565
+  weekly_split_counts: {train: 68226, valid: 4648, test: 4691}
+  monthly_rows: 17763
+  monthly_origin_month_min: "2017-10-01"
+  monthly_origin_month_max: "2026-08-01"
+
+censoring:
+  keep_stockout_rows: true                  # stock-out-censored target rows stay in training
+  report_all_and_no_stockout: true          # every metric is reported twice
+
+context_flags:
+  # Canonical: the target-period event flags, but only from windows whose record existed (created_at <= end
+  # of the origin period) and was approved by then. `origin_active` (window active at the origin) and the
+  # committed `target_period_all` variant are built too, so Phase 3 reports all three.
+  rule: known_at_origin
+  compare_variants: [target_period_all, origin_active]
+  signals:
+    COVID_PERIOD: ctx_covid
+    INFLUENZA_PEAK: ctx_flu_peak
+    DENGUE_PEAK: ctx_dengue_peak
+    PM25_SEASON: ctx_pm25
+    FISCAL_YEAR_END_ORDERING: ctx_fiscal_year_end
+    FLOOD: ctx_flood
+    SEVEN_DANGEROUS_DAYS: ctx_seven_dangerous_days
+
+calendar:
+  # Thai public holidays that fall on the same date every year (approximation, matches the
+  # reference builder build_features.py: no substitution days, no lunar holidays).
+  fixed_holidays_mmdd: ["01-01", "04-06", "04-13", "04-14", "04-15", "05-01", "05-04",
+                        "06-03", "07-28", "08-12", "10-13", "10-23", "12-05", "12-10", "12-31"]
+  songkran_mmdd: ["04-13", "04-14", "04-15"]
+  newyear_period: {from_mmdd: "12-29", to_mmdd: "01-02"}
+
+baselines:
+  seasonal_naive:
+    weekly_lag: 52
+    monthly_lag: 12
+    min_history_periods_for_seasonality: {WEEK: 52, MONTH: 12}   # >= 12 months before a seasonal index is used
+  ma_es:
+    ma_n: 26
+    alpha_grid: [0.1, 0.2, 0.3, 0.4, 0.5]
+    seasonal_index_clip: [0.5, 2.0]
+    min_residuals: 26                 # F-04: fewer residuals -> z * std(e) fallback
+    winsorise_p99: true               # F1a edge case 3: outliers winsorised at P99 when training MA/ES
+    refit: weekly                     # F-24 retraining table: MA/ES parameters weekly, quantile models monthly
+    z:                                # standard-normal quantiles; 0.90/0.95 match F-04's 1.28 / 1.65
+      0.05: -1.6449
+      0.10: -1.2816
+      0.25: -0.6745
+      0.50: 0.0
+      0.75: 0.6745
+      0.90: 1.2816
+      0.95: 1.6449
+  empirical_quantile: {weekly_window: 52, monthly_window: 12, min_periods: 4}
+
+backtest:
+  evaluated_splits: [valid, test]     # train is never scored
+  walk_forward_blocks: monthly        # one block per calendar month inside the evaluated split
+  save_predictions: true              # write data/baseline_predictions_<granularity>.parquet (gitignored)
+
+ved:
+  z: {V: 1.65, E: 1.28, D: 0.0}
+  quantile: {V: 0.95, E: 0.90}              # Total Target quantile per VED class (F-06)
+
+totals:
+  rosterp_min_floor_units: null             # [OPEN] V-item minimum Total Target floor: not defined in the data
+
+evaluation:
+  coverage_tolerance: 0.05
+  low_n_threshold: 26
+  overstock_multiple: 2                     # F-24: stock > 2 x TT => overstock day
+  gate:
+    must_beat_baselines: [seasonal_naive, ma_es_residual_quantile, empirical_quantile]
+    gate_quantiles: [0.50, 0.90, 0.95]
+    require_coverage_within_tolerance: [0.90, 0.95]
+
+# Phase 6b: split-conformal offsets on log1p(q_tau), fitted on valid only. The decision used the valid
+# check half (later half, one-period gap); test was never used to choose or tune anything. Parameters live
+# in backend/models/artifacts/calibration/<model_version>/calibration.json (gitignored).
+calibration:
+  method: split_conformal_cqr
+  scale: log1p
+  decision_split: valid
+  max_width_inflation: 0.10
+  max_pinball_increase: {0.50: 0.01, 0.90: 0.03, 0.95: 0.03}
+  tercile_relative_gain: 0.20
+  min_bucket_rows: 500                      # a tercile variant needs >= 500 calibration rows per bucket
+  decided_on: "2026-10-20 (Phase 6b, valid check half)"
+  WEEK:
+    enabled: true                           # coverage error 0.0145 -> 0.0024, width x1.093, pinball +1.2% at P90
+    variant: "global"
+  MONTH:
+    enabled: false                          # global raised the coverage error (0.0139 -> 0.0151); tercile infeasible
+    variant: "off"                          # quoted: YAML would read bare off/on as booleans
+
+# Phase 7a inference: which frozen model each granularity serves, how stale the input may be, where the
+# JSON lands. `model_versions` pins the exact artifact (use "latest" to follow the newest glob instead).
+inference:
+  model_versions:
+    WEEK: f1-WEEK-2026-09-14-f455e37770dc
+    MONTH: f1-MONTH-2026-08-01-8f70f4a87d1e-r2
+  stale_after_days: 30                      # data end older than this => STALE_INPUT (FR-F1a-013 uses 7 days
+                                            # for alert suppression; the CLI default is looser because the
+                                            # frozen mock pack ends 2026-09-30)
+  min_history_periods: 26                   # fewer periods => LOW_CONFIDENCE (WEEK cold start)
+  write_csv: false                          # also write a flat CSV next to the JSON
+  projected_on_hand_quantiles: [0.50, 0.90, 0.95]
+
+stockout:
+  stockout_days_feature_windows: [4]        # weeks / months of trailing stock-out days
+  stockout_flag_on_hand_column: qty_on_hand
+  stockout_threshold: 0                     # on hand <= 0 counts as a stock-out day

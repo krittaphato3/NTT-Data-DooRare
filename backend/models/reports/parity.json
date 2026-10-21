@@ -1,0 +1,72 @@
+{
+  "WEEK": {
+    "granularity": "WEEK",
+    "modelVersion": "f1-WEEK-2026-09-14-f455e37770dc",
+    "split": "valid",
+    "origins": [
+      "2026-02-16",
+      "2026-02-23"
+    ],
+    "rows": 332,
+    "uncalibrated_max_abs_diff": {
+      "raw_q05": 0.0,
+      "raw_q10": 0.0,
+      "raw_q25": 0.0,
+      "raw_q50": 0.0,
+      "raw_q75": 0.0,
+      "raw_q90": 0.0,
+      "raw_q95": 0.0,
+      "q05": 0.0,
+      "q10": 0.0,
+      "q25": 0.0,
+      "q50": 0.0,
+      "q75": 0.0,
+      "q90": 0.0,
+      "q95": 0.0
+    },
+    "uncalibrated_max": 0.0,
+    "calibrated": {
+      "rows": 332,
+      "max_abs_diff": {
+        "q05": 0.0,
+        "q10": 0.0,
+        "q25": 0.0,
+        "q50": 0.0,
+        "q75": 0.0,
+        "q90": 0.0,
+        "q95": 0.0
+      },
+      "max": 0.0,
+      "variant": "global"
+    }
+  },
+  "MONTH": {
+    "granularity": "MONTH",
+    "modelVersion": "f1-MONTH-2026-08-01-8f70f4a87d1e-r2",
+    "split": "valid",
+    "origins": [
+      "2025-06-01",
+      "2025-07-01"
+    ],
+    "rows": 332,
+    "uncalibrated_max_abs_diff": {
+      "raw_q05": 0.0,
+      "raw_q10": 0.0,
+      "raw_q25": 0.0,
+      "raw_q50": 0.0,
+      "raw_q75": 0.0,
+      "raw_q90": 0.0,
+      "raw_q95": 0.0,
+      "q05": 0.0,
+      "q10": 0.0,
+      "q25": 0.0,
+      "q50": 0.0,
+      "q75": 0.0,
+      "q90": 0.0,
+      "q95": 0.0
+    },
+    "uncalibrated_max": 0.0,
+    "calibrated": null
+  },
+  "generated_at": "2026-10-20T03:26:04+00:00"
+}

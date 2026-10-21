@@ -22,3 +22,6 @@ db/mock/csv/
 __pycache__/
 *.pyc
 
+
+# F1 modelling data pack (not committed)
+/data/

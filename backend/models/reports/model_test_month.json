@@ -1,0 +1,646 @@
+{
+  "generated_at": "2026-10-20T02:03:30+00:00",
+  "granularity": "MONTH",
+  "split": "test",
+  "model_version": "f1-MONTH-2026-08-01-8f70f4a87d1e-r2",
+  "artifact": "/Users/sun/Documents/ntt-data/NTT-Data-DooRare/backend/models/artifacts/f1-MONTH-2026-08-01-8f70f4a87d1e-r2",
+  "feature_hash": "8f70f4a87d1e",
+  "features": [
+    "lag_1m",
+    "lag_2m",
+    "lag_3m",
+    "lag_6m",
+    "lag_12m",
+    "roll_mean_3m",
+    "roll_std_3m",
+    "roll_mean_6m",
+    "roll_std_6m",
+    "roll_mean_12m",
+    "roll_std_12m",
+    "roll_zero_share_6m",
+    "months_since_last_nonzero",
+    "stockout_days_1m",
+    "item_te_mean",
+    "month_sin",
+    "month_cos",
+    "is_songkran_month",
+    "is_newyear_month",
+    "long_weekend_days",
+    "ctx_covid",
+    "ctx_pm25",
+    "ctx_fiscal_year_end",
+    "ctx_flood",
+    "ctx_seven_dangerous_days",
+    "price_tier",
+    "ved",
+    "abc",
+    "item_type",
+    "hospital_tier",
+    "is_cold_chain",
+    "log_unit_price",
+    "is_seasonal"
+  ],
+  "dropped_constant_features": [
+    "ctx_flu_peak",
+    "ctx_dengue_peak"
+  ],
+  "train_window": {
+    "variant": "all_history",
+    "origin_min": "2017-10-01",
+    "origin_max": "2024-06-01",
+    "rows": 13446,
+    "valid_start": "2024-08-01"
+  },
+  "postprocess": "sort",
+  "evaluation_number": 1,
+  "rows": 1993,
+  "series": 167,
+  "series_without_rows": 6,
+  "crossing_rate_raw": 0.3653,
+  "metrics": {
+    "filters": {
+      "all_rows": {
+        "test": {
+          "lgbm_quantile_mo": {
+            "rows": 1993,
+            "series": 167,
+            "periods": 12,
+            "zero_actual_rows": 60,
+            "pinball": {
+              "0.05": 24.7509,
+              "0.1": 38.2553,
+              "0.25": 61.6996,
+              "0.5": 84.0882,
+              "0.75": 67.1376,
+              "0.9": 37.5302,
+              "0.95": 21.8117
+            },
+            "coverage": {
+              "0.05": 0.0858,
+              "0.1": 0.1365,
+              "0.25": 0.2805,
+              "0.5": 0.5008,
+              "0.75": 0.726,
+              "0.9": 0.8776,
+              "0.95": 0.9453
+            },
+            "mae_p50": 168.1763,
+            "wape_p50": 0.0575,
+            "width_p95_p05": 748.2805,
+            "crossing_rate": 0.0,
+            "stockout_rate_vs_tt": 0.0902,
+            "overstock_rate_vs_tt": 0.15,
+            "total_target_rows": 1873,
+            "under_thb": 239929.65,
+            "over_thb": 24464.47,
+            "crossing_rate_raw": 0.3653,
+            "crossing_pairs_raw": {
+              "q05>q10": 0.1084,
+              "q10>q25": 0.0577,
+              "q25>q50": 0.0396,
+              "q50>q75": 0.0647,
+              "q75>q90": 0.0632,
+              "q90>q95": 0.1129
+            },
+            "crossing_rate_fixed": 0.0
+          }
+        }
+      },
+      "no_stockout_rows": {
+        "test": {
+          "lgbm_quantile_mo": {
+            "rows": 1899,
+            "series": 167,
+            "periods": 12,
+            "zero_actual_rows": 58,
+            "pinball": {
+              "0.05": 25.3112,
+              "0.1": 38.8932,
+              "0.25": 62.3113,
+              "0.5": 85.6949,
+              "0.75": 68.6042,
+              "0.9": 38.3028,
+              "0.95": 22.194
+            },
+            "coverage": {
+              "0.05": 0.0853,
+              "0.1": 0.1364,
+              "0.25": 0.2823,
+              "0.5": 0.5066,
+              "0.75": 0.732,
+              "0.9": 0.8805,
+              "0.95": 0.9458
+            },
+            "mae_p50": 171.3897,
+            "wape_p50": 0.0571,
+            "width_p95_p05": 769.3303,
+            "crossing_rate": 0.0,
+            "stockout_rate_vs_tt": 0.088,
+            "overstock_rate_vs_tt": 0.1547,
+            "total_target_rows": 1784,
+            "under_thb": 188732.43,
+            "over_thb": 22317.79,
+            "crossing_rate_raw": 0.3649,
+            "crossing_pairs_raw": {
+              "q05>q10": 0.1101,
+              "q10>q25": 0.059,
+              "q25>q50": 0.0384,
+              "q50>q75": 0.0637,
+              "q75>q90": 0.0616,
+              "q90>q95": 0.1127
+            },
+            "crossing_rate_fixed": 0.0
+          }
+        }
+      }
+    },
+    "per_series": {
+      "all_rows": {
+        "test": {
+          "lgbm_quantile_mo": "                                series_id  ...  coverage_0.95\n0    01a291b6-eef4-448a-8ec8-98c7b0224ffa  ...         0.9167\n1    02c8ceb7-07ed-49d8-b5d4-ce5d7f7a2d1e  ...         1.0000\n2    039b8787-6e38-491b-928a-173780d719c2  ...         1.0000\n3    045defc9-1aaa-46c7-9d0e-28d9b7f362bb  ...         1.0000\n4    06c366dd-5e0d-4d91-b249-afcef2ad3797  ...         1.0000\n..                                    ...  ...            ...\n162  f8676b6d-82f3-478c-8042-a220922cce5c  ...         1.0000\n163  fa88959a-95b6-4761-8a5e-902c7d58914f  ...         0.8333\n164  fd01f924-8adc-4794-9501-af3fecd26dbe  ...         0.8333\n165  fd87257b-d0fb-4cfd-98bc-c768ae789768  ...         0.9167\n166  fda05a52-a455-456a-bc51-e0a6dec8871e  ...         1.0000\n\n[167 rows x 12 columns]"
+        }
+      },
+      "no_stockout_rows": {
+        "test": {
+          "lgbm_quantile_mo": "                                series_id  ...  coverage_0.95\n0    01a291b6-eef4-448a-8ec8-98c7b0224ffa  ...         0.9167\n1    02c8ceb7-07ed-49d8-b5d4-ce5d7f7a2d1e  ...         1.0000\n2    039b8787-6e38-491b-928a-173780d719c2  ...         1.0000\n3    045defc9-1aaa-46c7-9d0e-28d9b7f362bb  ...         1.0000\n4    06c366dd-5e0d-4d91-b249-afcef2ad3797  ...         1.0000\n..                                    ...  ...            ...\n162  f8676b6d-82f3-478c-8042-a220922cce5c  ...         1.0000\n163  fa88959a-95b6-4761-8a5e-902c7d58914f  ...         0.8333\n164  fd01f924-8adc-4794-9501-af3fecd26dbe  ...         0.8333\n165  fd87257b-d0fb-4cfd-98bc-c768ae789768  ...         0.9167\n166  fda05a52-a455-456a-bc51-e0a6dec8871e  ...         1.0000\n\n[167 rows x 12 columns]"
+        }
+      }
+    },
+    "gates": {
+      "lgbm_quantile_mo": {
+        "test": {
+          "all_rows": {
+            "series_total": 167,
+            "series_low_n": 167,
+            "series_all_zero": 0,
+            "series_judged": 0,
+            "low_n_threshold": 26,
+            "coverage_tolerance": 0.05,
+            "coverage_pass_rate_0.9": null,
+            "coverage_median_0.9": null,
+            "coverage_pass_rate_0.95": null,
+            "coverage_median_0.95": null
+          },
+          "no_stockout_rows": {
+            "series_total": 167,
+            "series_low_n": 167,
+            "series_all_zero": 0,
+            "series_judged": 0,
+            "low_n_threshold": 26,
+            "coverage_tolerance": 0.05,
+            "coverage_pass_rate_0.9": null,
+            "coverage_median_0.9": null,
+            "coverage_pass_rate_0.95": null,
+            "coverage_median_0.95": null
+          }
+        }
+      }
+    },
+    "coverage_tolerance": 0.05,
+    "quantiles": [
+      0.05,
+      0.1,
+      0.25,
+      0.5,
+      0.75,
+      0.9,
+      0.95
+    ]
+  },
+  "gate": {
+    "split": "test",
+    "scope": "common row set",
+    "must_beat": [
+      "seasonal_naive",
+      "ma_es_residual_quantile",
+      "empirical_quantile"
+    ],
+    "quantiles": [
+      0.5,
+      0.9,
+      0.95
+    ],
+    "rows_model": 1993,
+    "checks": {
+      "all_rows": {
+        "seasonal_naive": {
+          "rows": 1992,
+          "model_pinball": {
+            "0.5": 84.0792,
+            "0.9": 37.4751,
+            "0.95": 21.7661
+          },
+          "baseline_pinball": {
+            "0.5": 98.2284,
+            "0.9": 120.4445,
+            "0.95": 102.1542
+          },
+          "delta": {
+            "0.5": -14.1492,
+            "0.9": -82.9694,
+            "0.95": -80.3881
+          },
+          "model_coverage": {
+            "0.9": 0.878,
+            "0.95": 0.9458
+          },
+          "baseline_coverage": {
+            "0.9": 0.9438,
+            "0.95": 0.9709
+          },
+          "model_wape_p50": 0.0574,
+          "baseline_wape_p50": 0.0671,
+          "beats": true
+        },
+        "ma_es_residual_quantile": {
+          "rows": 1992,
+          "model_pinball": {
+            "0.5": 84.0792,
+            "0.9": 37.4751,
+            "0.95": 21.7661
+          },
+          "baseline_pinball": {
+            "0.5": 161.9219,
+            "0.9": 65.0946,
+            "0.95": 38.2179
+          },
+          "delta": {
+            "0.5": -77.8427,
+            "0.9": -27.6195,
+            "0.95": -16.4518
+          },
+          "model_coverage": {
+            "0.9": 0.878,
+            "0.95": 0.9458
+          },
+          "baseline_coverage": {
+            "0.9": 0.9071,
+            "0.95": 0.9608
+          },
+          "model_wape_p50": 0.0574,
+          "baseline_wape_p50": 0.1106,
+          "beats": true
+        },
+        "empirical_quantile": {
+          "rows": 1992,
+          "model_pinball": {
+            "0.5": 84.0792,
+            "0.9": 37.4751,
+            "0.95": 21.7661
+          },
+          "baseline_pinball": {
+            "0.5": 118.8368,
+            "0.9": 48.9947,
+            "0.95": 28.8585
+          },
+          "delta": {
+            "0.5": -34.7576,
+            "0.9": -11.5196,
+            "0.95": -7.0924
+          },
+          "model_coverage": {
+            "0.9": 0.878,
+            "0.95": 0.9458
+          },
+          "baseline_coverage": {
+            "0.9": 0.8399,
+            "0.95": 0.8876
+          },
+          "model_wape_p50": 0.0574,
+          "baseline_wape_p50": 0.0812,
+          "beats": true
+        }
+      },
+      "no_stockout_rows": {
+        "seasonal_naive": {
+          "rows": 1898,
+          "model_pinball": {
+            "0.5": 85.6863,
+            "0.9": 38.2454,
+            "0.95": 22.1463
+          },
+          "baseline_pinball": {
+            "0.5": 100.4989,
+            "0.9": 122.5361,
+            "0.95": 103.6926
+          },
+          "delta": {
+            "0.5": -14.8126,
+            "0.9": -84.2907,
+            "0.95": -81.5463
+          },
+          "model_coverage": {
+            "0.9": 0.8809,
+            "0.95": 0.9463
+          },
+          "baseline_coverage": {
+            "0.9": 0.9442,
+            "0.95": 0.9715
+          },
+          "model_wape_p50": 0.057,
+          "baseline_wape_p50": 0.0669,
+          "beats": true
+        },
+        "ma_es_residual_quantile": {
+          "rows": 1898,
+          "model_pinball": {
+            "0.5": 85.6863,
+            "0.9": 38.2454,
+            "0.95": 22.1463
+          },
+          "baseline_pinball": {
+            "0.5": 165.7952,
+            "0.9": 66.416,
+            "0.95": 39.1027
+          },
+          "delta": {
+            "0.5": -80.1089,
+            "0.9": -28.1706,
+            "0.95": -16.9564
+          },
+          "model_coverage": {
+            "0.9": 0.8809,
+            "0.95": 0.9463
+          },
+          "baseline_coverage": {
+            "0.9": 0.9099,
+            "0.95": 0.9626
+          },
+          "model_wape_p50": 0.057,
+          "baseline_wape_p50": 0.1103,
+          "beats": true
+        },
+        "empirical_quantile": {
+          "rows": 1898,
+          "model_pinball": {
+            "0.5": 85.6863,
+            "0.9": 38.2454,
+            "0.95": 22.1463
+          },
+          "baseline_pinball": {
+            "0.5": 121.6616,
+            "0.9": 50.2869,
+            "0.95": 29.6998
+          },
+          "delta": {
+            "0.5": -35.9753,
+            "0.9": -12.0415,
+            "0.95": -7.5535
+          },
+          "model_coverage": {
+            "0.9": 0.8809,
+            "0.95": 0.9463
+          },
+          "baseline_coverage": {
+            "0.9": 0.8435,
+            "0.95": 0.8872
+          },
+          "model_wape_p50": 0.057,
+          "baseline_wape_p50": 0.081,
+          "beats": true
+        }
+      }
+    },
+    "passed": true,
+    "rows_common": 1992,
+    "rows_excluded": 1,
+    "excluded": {
+      "rows": 1,
+      "series": 1,
+      "reason": "no baseline forecast exists for these rows (no 12-month lag and no residual fallback)",
+      "cold_start_rows": 1,
+      "history_periods": [
+        2,
+        2
+      ]
+    },
+    "baseline_rows": {
+      "seasonal_naive": 1992,
+      "ma_es_residual_quantile": 1992,
+      "empirical_quantile": 1992
+    },
+    "pooled_common": {
+      "all_rows": {
+        "lgbm_quantile_mo": {
+          "rows": 1992,
+          "pinball": {
+            "0.05": 24.7577,
+            "0.1": 38.2632,
+            "0.25": 61.7036,
+            "0.5": 84.0792,
+            "0.75": 67.1076,
+            "0.9": 37.4751,
+            "0.95": 21.7661
+          },
+          "coverage": {
+            "0.05": 0.0858,
+            "0.1": 0.1365,
+            "0.25": 0.2806,
+            "0.5": 0.501,
+            "0.75": 0.7264,
+            "0.9": 0.878,
+            "0.95": 0.9458
+          },
+          "mae_p50": 168.1584,
+          "wape_p50": 0.0574,
+          "width_p95_p05": 748.6022,
+          "crossing_rate": 0.0
+        },
+        "seasonal_naive": {
+          "rows": 1992,
+          "pinball": {
+            "0.05": 42.0876,
+            "0.1": 65.427,
+            "0.25": 79.8446,
+            "0.5": 98.2284,
+            "0.75": 92.1817,
+            "0.9": 120.4445,
+            "0.95": 102.1542
+          },
+          "coverage": {
+            "0.05": 0.0698,
+            "0.1": 0.0999,
+            "0.25": 0.2505,
+            "0.5": 0.5477,
+            "0.75": 0.8027,
+            "0.9": 0.9438,
+            "0.95": 0.9709
+          },
+          "mae_p50": 196.4568,
+          "wape_p50": 0.0671,
+          "width_p95_p05": 2802.7746,
+          "crossing_rate": 0.0
+        },
+        "ma_es_residual_quantile": {
+          "rows": 1992,
+          "pinball": {
+            "0.05": 40.6975,
+            "0.1": 68.2253,
+            "0.25": 125.2957,
+            "0.5": 161.9219,
+            "0.75": 130.13,
+            "0.9": 65.0946,
+            "0.95": 38.2179
+          },
+          "coverage": {
+            "0.05": 0.0693,
+            "0.1": 0.1145,
+            "0.25": 0.2485,
+            "0.5": 0.5095,
+            "0.75": 0.7515,
+            "0.9": 0.9071,
+            "0.95": 0.9608
+          },
+          "mae_p50": 323.8439,
+          "wape_p50": 0.1106,
+          "width_p95_p05": 1478.6765,
+          "crossing_rate": 0.0
+        },
+        "empirical_quantile": {
+          "rows": 1992,
+          "pinball": {
+            "0.05": 25.638,
+            "0.1": 44.7655,
+            "0.25": 83.8948,
+            "0.5": 118.8368,
+            "0.75": 92.5215,
+            "0.9": 48.9947,
+            "0.95": 28.8585
+          },
+          "coverage": {
+            "0.05": 0.1391,
+            "0.1": 0.1958,
+            "0.25": 0.3117,
+            "0.5": 0.5141,
+            "0.75": 0.7139,
+            "0.9": 0.8399,
+            "0.95": 0.8876
+          },
+          "mae_p50": 237.6737,
+          "wape_p50": 0.0812,
+          "width_p95_p05": 710.0596,
+          "crossing_rate": 0.0
+        }
+      },
+      "no_stockout_rows": {
+        "lgbm_quantile_mo": {
+          "rows": 1898,
+          "pinball": {
+            "0.05": 25.3186,
+            "0.1": 38.9018,
+            "0.25": 62.3159,
+            "0.5": 85.6863,
+            "0.75": 68.5734,
+            "0.9": 38.2454,
+            "0.95": 22.1463
+          },
+          "coverage": {
+            "0.05": 0.0854,
+            "0.1": 0.1365,
+            "0.25": 0.2824,
+            "0.5": 0.5068,
+            "0.75": 0.7323,
+            "0.9": 0.8809,
+            "0.95": 0.9463
+          },
+          "mae_p50": 171.3726,
+          "wape_p50": 0.057,
+          "width_p95_p05": 769.6791,
+          "crossing_rate": 0.0
+        },
+        "seasonal_naive": {
+          "rows": 1898,
+          "pinball": {
+            "0.05": 42.7018,
+            "0.1": 66.3584,
+            "0.25": 81.2532,
+            "0.5": 100.4989,
+            "0.75": 94.8663,
+            "0.9": 122.5361,
+            "0.95": 103.6926
+          },
+          "coverage": {
+            "0.05": 0.0706,
+            "0.1": 0.0985,
+            "0.25": 0.2476,
+            "0.5": 0.5458,
+            "0.75": 0.8035,
+            "0.9": 0.9442,
+            "0.95": 0.9715
+          },
+          "mae_p50": 200.9979,
+          "wape_p50": 0.0669,
+          "width_p95_p05": 2858.6109,
+          "crossing_rate": 0.0
+        },
+        "ma_es_residual_quantile": {
+          "rows": 1898,
+          "pinball": {
+            "0.05": 41.433,
+            "0.1": 69.5652,
+            "0.25": 128.2267,
+            "0.5": 165.7952,
+            "0.75": 132.9717,
+            "0.9": 66.416,
+            "0.95": 39.1027
+          },
+          "coverage": {
+            "0.05": 0.0701,
+            "0.1": 0.1164,
+            "0.25": 0.2524,
+            "0.5": 0.5148,
+            "0.75": 0.7576,
+            "0.9": 0.9099,
+            "0.95": 0.9626
+          },
+          "mae_p50": 331.5903,
+          "wape_p50": 0.1103,
+          "width_p95_p05": 1518.2148,
+          "crossing_rate": 0.0
+        },
+        "empirical_quantile": {
+          "rows": 1898,
+          "pinball": {
+            "0.05": 25.6459,
+            "0.1": 45.2228,
+            "0.25": 85.3512,
+            "0.5": 121.6616,
+            "0.75": 94.8486,
+            "0.9": 50.2869,
+            "0.95": 29.6998
+          },
+          "coverage": {
+            "0.05": 0.1391,
+            "0.1": 0.197,
+            "0.25": 0.314,
+            "0.5": 0.5216,
+            "0.75": 0.7202,
+            "0.9": 0.8435,
+            "0.95": 0.8872
+          },
+          "mae_p50": 243.3232,
+          "wape_p50": 0.081,
+          "width_p95_p05": 729.2256,
+          "crossing_rate": 0.0
+        }
+      }
+    }
+  },
+  "per_series_info": {
+    "series_total": 167,
+    "series_low_n": 167,
+    "series_all_zero": 0,
+    "series_judged": 0,
+    "low_n_threshold": 26,
+    "coverage_tolerance": 0.05,
+    "coverage_pass_rate_0.9": null,
+    "coverage_median_0.9": null,
+    "coverage_pass_rate_0.95": null,
+    "coverage_median_0.95": null
+  },
+  "all_series_low_n": true,
+  "cold_start": {
+    "series": 0,
+    "note": "monthly evaluation covers only 12 periods per series, so every series is LOW_N"
+  }
+}
