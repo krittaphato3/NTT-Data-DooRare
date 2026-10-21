@@ -14,6 +14,13 @@
     "date": "2026-10-21"
   },
   {
+    "path": "sessions/2026-10-21-claude-backend-foundation.md",
+    "title": "Backend foundation (stock ledger, audit, idempotency) on feature/backend-api",
+    "summary": "Shared core for all write endpoints; 24 integration checks pass; known gaps…",
+    "tags": "session, backend, foundation, stock, audit, idempotency",
+    "date": "2026-10-21"
+  },
+  {
     "path": "sessions/2026-10-20-buffy-f1-quantile-phase5.md",
     "title": "F1 quantile forecast module (Phase 5 — monthly quantile model)",
     "summary": "MONTH model (7 quantiles, 167 series); gate passes vs all 3 baselines…",
@@ -112,13 +119,6 @@
     "date": "2026-10-17"
   },
   {
-    "path": "context/runbook.md",
-    "title": "Runbook",
-    "summary": "Runbook",
-    "tags": "session",
-    "date": "2026-10-16"
-  },
-  {
     "path": "sessions/2026-10-16-1628-buffy-phase2c-return-obligations-waive.md",
     "title": "Return obligations + Waive (Phase 2C)",
     "summary": "HOSPITAL_ADMIN gets a read-only ภาระการคืน sub-tab on Borrow requests plus the API-XC-005…",
@@ -144,14 +144,21 @@
     "title": "ai-material",
     "summary": "ai-material",
     "tags": "session",
-    "date": "2026-10-14"
+    "date": "2026-10-15"
   },
   {
     "path": "context/conventions.md",
     "title": "Conventions",
     "summary": "Conventions",
     "tags": "session",
-    "date": "2026-10-14"
+    "date": "2026-10-15"
+  },
+  {
+    "path": "context/runbook.md",
+    "title": "Runbook",
+    "summary": "Runbook",
+    "tags": "session",
+    "date": "2026-10-15"
   },
   {
     "path": "decisions/0002-role-based-frontend-structure.md",
