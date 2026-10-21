@@ -109,3 +109,30 @@ overridden for lists and another hospital's series returns 404 (not 403, to avoi
 `MOCK DATA - the F1 pack is synthetic; do not read these numbers as real accuracy`.
 
 Writes are out of scope: this module performs SELECTs only and no schema/compose changes were made.
+
+## Shared foundation (use these, do not re-implement)
+
+| Piece | File | Use |
+|---|---|---|
+| Transaction | `src/db/tx.ts` — `withTransaction(fn)` | one client for the change + its stock moves + its audit row |
+| Stock | `src/core/stock.ts` — `adjustStock`, `holdStock`, `getLot` | the only code that changes `stock_lot`; writes `stock_ledger`; errors `INSUFFICIENT_STOCK` / `LOT_HELD` (409) |
+| Audit | `src/core/audit.ts` — `writeAudit(db, auditContext(req), entry)` | one `audit_log` row per state change, same transaction; hash chain is made by the DB trigger |
+| Idempotency | `src/middleware/idempotency.ts` — `idempotent()` | for POSTs marked `Idem = Y`; mount after `requireAuth` |
+| Async routes | `src/middleware/asyncHandler.ts` | wrap async handlers so errors reach `errorHandler` |
+| DB errors | `src/middleware/errorHandler.ts` | unique/FK/CHECK violations become 409/422 instead of 500 |
+
+```ts
+router.post('/:id/load', requireAuth, requireRole('WAREHOUSE_OFFICER'), idempotent(), asyncHandler(async (req, res) => {
+  const result = await withTransaction(async (client) => {
+    await adjustStock(client, scopeHospitalId(req)!, { lotId, delta: -qty, reason: 'LEND_OUT', refType: 'borrow_leg', refId: legId, actorId: req.user!.id });
+    await writeAudit(client, auditContext(req), { action: 'LEG_LOADED', entityType: 'borrow_leg', entityId: legId, after: { qty } });
+    return { ok: true };
+  });
+  res.status(200).json(result);
+}));
+```
+
+`Idempotency-Key` rules: missing → 400, same key + same request → stored 2xx replayed (`Idempotent-Replay: true`),
+same key + different request → 422 `IDEMPOTENCY_KEY_REUSED`, same key in flight → 409 `REQUEST_IN_PROGRESS`.
+Only 2xx responses are stored; a 4xx/5xx releases the key so the client can retry with a fixed request.
+Not done yet: expiry of old `idempotency_key` rows (add a cleanup job), Postgres RLS session variables.
