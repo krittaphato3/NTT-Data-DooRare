@@ -17,6 +17,8 @@ import { centralItemsRouter, drugMasterRouter, hospitalDrugsRouter, kitTypesRout
 import { forecastsRouter } from './modules/forecasts/forecasts.routes.js';
 import { borrowLegsRouter } from './modules/borrow-legs/borrow-legs.routes.js';
 import { borrowJobsRouter, borrowRequestsRouter, lenderQueueRouter } from './modules/borrow/borrow.routes.js';
+import { allocationPlansRouter, expiryJobsRouter, nearExpiryRouter, poolRouter, repeatExpiryRouter } from './modules/expiry/expiry.routes.js';
+import { reportsRouter, valueRouter } from './modules/value/value.routes.js';
 import { transportRouter, vehiclesRouter } from './modules/transport/transport.routes.js';
 
 export const app = express();
@@ -37,6 +39,13 @@ app.use('/api/v1/borrow-legs', borrowLegsRouter); // API-F1b-009 / -010 / -011
 app.use('/api/v1/borrow-requests', borrowRequestsRouter); // API-F1b-001..007, -012, -013
 app.use('/api/v1/lender-queue', lenderQueueRouter); // API-F1b-008
 app.use('/api/v1/jobs', borrowJobsRouter); // JOB-04 trigger
+app.use('/api/v1/jobs', expiryJobsRouter); // JOB-05..07 trigger
+app.use('/api/v1/near-expiry', nearExpiryRouter); // API-F2a-001..005
+app.use('/api/v1/pool', poolRouter); // API-F2a-006
+app.use('/api/v1/allocation-plans', allocationPlansRouter); // API-F2a-007..011
+app.use('/api/v1/repeat-expiry', repeatExpiryRouter); // API-F2a-015 / -016
+app.use('/api/v1/value', valueRouter); // API-XC-006
+app.use('/api/v1/reports', reportsRouter); // API-AD-005
 app.use('/api/v1/hospitals', hospitalsRouter); // API-PL-002 / -003 (+ admin create/update)
 app.use('/api/v1/drug-master', drugMasterRouter); // API-F2b-006
 app.use('/api/v1/central-items', centralItemsRouter); // API-F2b-007 (read)

@@ -35,3 +35,10 @@ export async function createTransportTask(client: pg.PoolClient, input: NewTrans
   );
   return { id: inserted.rows[0].id, taskNo };
 }
+
+/** The sender's default vehicle (with a cold box when needed) and driver; both optional when the hospital has none. */
+export async function defaultCarrier(client: pg.PoolClient, hospitalId: string, coldChain: boolean): Promise<{ vehicleId: string | null; driverId: string | null }> {
+  const vehicle = (await client.query(`SELECT id FROM vehicle WHERE hospital_id = $1 AND active AND ($2::boolean = false OR has_cold_box) ORDER BY has_cold_box DESC, plate LIMIT 1`, [hospitalId, coldChain])).rows[0];
+  const driver = (await client.query(`SELECT id FROM app_user WHERE hospital_id = $1 AND role = 'DRIVER' AND active ORDER BY display_name LIMIT 1`, [hospitalId])).rows[0];
+  return { vehicleId: vehicle?.id ?? null, driverId: driver?.id ?? null };
+}

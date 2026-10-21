@@ -8,6 +8,7 @@
  *
  * Everything for one transition (task row, event, photos, stock, leg, audit) runs in the caller's transaction.
  */
+import { notifyRoles } from '../../core/notify.js';
 import { advanceRequest } from '../borrow/borrow.flow.js';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -233,6 +234,38 @@ async function settleBorrowLeg(client: pg.PoolClient, task: Record<string, any>,
   );
 }
 
+/** F2 bookkeeping once a line's goods are received: when every line of the plan arrived the plan is COMPLETED, the lot TRANSFERRED and the transfer value counted (F2b). */
+async function settleAllocationLine(client: pg.PoolClient, task: Record<string, any>): Promise<void> {
+  const plan = (
+    await client.query(
+      `SELECT ap.id, ap.plan_no, ap.pool_entry_id, pe.qty_available::float8 AS pool_left, ne.id AS item_id, ne.hospital_id AS origin_id
+         FROM allocation_line al JOIN allocation_plan ap ON ap.id = al.plan_id JOIN pool_entry pe ON pe.id = ap.pool_entry_id JOIN near_expiry_item ne ON ne.id = pe.near_expiry_item_id
+        WHERE al.id = $1 FOR UPDATE OF ap`,
+      [task.ref_id],
+    )
+  ).rows[0];
+  if (!plan) return;
+  const open = (
+    await client.query(
+      `SELECT count(*)::int AS n FROM allocation_line al LEFT JOIN transport_task tt ON tt.ref_type = 'ALLOCATION_LINE' AND tt.ref_id = al.id AND tt.status <> 'CANCELLED'
+        WHERE al.plan_id = $1 AND (tt.id IS NULL OR tt.status <> 'RECEIVED')`,
+      [plan.id],
+    )
+  ).rows[0].n;
+  if (open > 0) return;
+  await client.query(`UPDATE allocation_plan SET status = 'COMPLETED', updated_at = now(), version = version + 1 WHERE id = $1 AND status <> 'COMPLETED'`, [plan.id]);
+  // goods left at the origin: the pool lot is TRANSFERRED unless a remainder is still waiting for another plan
+  await client.query(`UPDATE near_expiry_item SET status = $2::expiry_status, updated_at = now(), version = version + 1 WHERE id = $1`, [plan.item_id, plan.pool_left > 0 ? 'RELEASED_TO_POOL' : 'TRANSFERRED']);
+  await client.query(
+    `INSERT INTO value_record (hospital_id, region_id, metric, period, value_thb, value_qty, ref_type, ref_id)
+     SELECT $1::uuid, h.region_id, 'F2_TRANSFER_THB', date_trunc('month', now())::date, COALESCE(sum(al.value_thb), 0), sum(al.qty), 'allocation_plan', $2::uuid
+       FROM hospital h, allocation_line al
+      WHERE h.id = $1::uuid AND al.plan_id = $2::uuid GROUP BY h.region_id`,
+    [plan.origin_id, plan.id],
+  );
+  await notifyRoles(client, plan.origin_id, ['PHARMACIST'], { kind: 'PLAN_COMPLETED', title: `แผนจัดสรร ${plan.plan_no} ส่งมอบครบแล้ว`, refType: 'allocation_plan', refId: plan.id });
+}
+
 /** Applies one SM-6 transition. Throws HttpError (404/403/400/409) without leaving partial writes (caller rolls back). */
 export async function applyTransition(client: pg.PoolClient, ctx: AuditContext, user: AuthSessionUser, input: TransitionInput): Promise<void> {
   const task = await transportRepository.getById(client, input.taskId, true);
@@ -289,6 +322,7 @@ export async function applyTransition(client: pg.PoolClient, ctx: AuditContext, 
       );
     }
   }
+  if (task.ref_type === 'ALLOCATION_LINE' && input.toStatus === 'RECEIVED') await settleAllocationLine(client, task);
   if (task.ref_type === 'BORROW_LEG') {
     if (input.toStatus === 'LOADED' || input.toStatus === 'IN_TRANSIT') {
       await client.query(`UPDATE borrow_leg SET status = $2::leg_status WHERE id = $1`, [task.ref_id, input.toStatus]);

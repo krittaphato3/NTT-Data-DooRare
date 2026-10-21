@@ -10,7 +10,7 @@ import { notifyRoles } from '../../core/notify.js';
 import { oneOf, parsePage, toPage } from '../../core/pagination.js';
 import { holdStock, pickFefo } from '../../core/stock.js';
 import type { FefoPick } from '../../core/stock.js';
-import { createTransportTask } from '../../core/transportTask.js';
+import { createTransportTask, defaultCarrier } from '../../core/transportTask.js';
 import { bodyObject, optionalNumber, uuidParam } from '../../core/validate.js';
 import { pool, query } from '../../db/client.js';
 import { withTransaction } from '../../db/tx.js';
@@ -213,9 +213,8 @@ export class LenderService {
       const status = decision === 'ACCEPT' ? 'ACCEPTED' : 'PARTIAL';
       await client.query(`UPDATE borrow_leg SET status = $2::leg_status, qty_accepted = $3, responded_at = now(), responded_by = $4 WHERE id = $1`, [legId, status, qty, user.id]);
 
-      const vehicle = (await client.query(`SELECT id FROM vehicle WHERE hospital_id = $1 AND active AND ($2::boolean = false OR has_cold_box) ORDER BY has_cold_box DESC, plate LIMIT 1`, [hospitalId, leg.cold_chain])).rows[0];
-      const driver = (await client.query(`SELECT id FROM app_user WHERE hospital_id = $1 AND role = 'DRIVER' AND active ORDER BY display_name LIMIT 1`, [hospitalId])).rows[0];
-      const task = await createTransportTask(client, { refType: 'BORROW_LEG', refId: legId, fromHospitalId: hospitalId, toHospitalId: leg.borrower_hospital_id, vehicleId: vehicle?.id ?? null, driverId: driver?.id ?? null });
+      const carrier = await defaultCarrier(client, hospitalId, leg.cold_chain);
+      const task = await createTransportTask(client, { refType: 'BORROW_LEG', refId: legId, fromHospitalId: hospitalId, toHospitalId: leg.borrower_hospital_id, vehicleId: carrier.vehicleId, driverId: carrier.driverId });
 
       await writeAudit(client, ctx, { action: decision === 'ACCEPT' ? 'LEG_ACCEPTED' : 'LEG_PARTIAL', entityType: 'borrow_leg', entityId: legId, after: { requestNo: leg.request_no, qty, asked, lots: picks.map((p) => ({ lot: p.lotNo, qty: p.qty })), task: task.taskNo } });
       await notifyRoles(client, leg.borrower_hospital_id, ['PHARMACIST', 'WAREHOUSE_OFFICER'], {
