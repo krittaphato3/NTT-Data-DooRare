@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useAuth } from '../../../context/AuthContext';
 import { Icon } from '../../../components/common/icons';
 import type { IconName } from '../../../components/common/icons';
 import { homeHrefFor, withRole } from '../../../data/navigation';
@@ -835,6 +836,7 @@ function DetailPanel({
  * drives the breadcrumb home and the switch back to UI-05.
  */
 export function LenderQueuePage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
+  const { user } = useAuth();
   const [query, setQuery] = useState('');
   const [urgency, setUrgency] = useState('');
   const [trigger, setTrigger] = useState('');
@@ -910,7 +912,7 @@ export function LenderQueuePage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
             lineHeight: '18px',
           }}
         >
-          รพ.สมุทรปราการ · ข้อมูล ณ 19:11 น. · ทุกคำขอต้องให้เภสัชกรอนุมัติก่อนส่ง · ไม่ตอบในเวลา = ส่งต่อผู้ให้ยืมถัดไปอัตโนมัติ
+          {user?.hospitalName ?? 'รพ.สมุทรปราการ'} · ข้อมูล ณ {new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น. · ทุกคำขอต้องให้เภสัชกรอนุมัติก่อนส่ง · ไม่ตอบในเวลา = ส่งต่อผู้ให้ยืมถัดไปอัตโนมัติ
         </p>
       </div>
 

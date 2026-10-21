@@ -84,3 +84,10 @@ summary: Borrow request lifecycle (create, propose, approve, respond, next round
 - Lender queue returned 0 for every hospital: 164+ seed legs have `request_item_id = NULL` and the queue/respond queries inner-joined on it. Now joined by `request_id` (and the item id when set). Not caught by the tests because test legs are created by the API.
 - Requests page showed 100 requests but all tiles 0: seed requests are older than the default 90-day period filter. In live mode the period defaults to "ทั้งหมด" (option added).
 - Lesson: run the new screens against the main (seed) DB too, not only against API-created rows. Lender tile "ตอบรับแล้ว" counts RECEIVED legs as well (history).
+
+## Follow-up 2: the "small" items done
+
+- Manual request (UI-10): `components/ManualBorrowDialog.tsx` (drug search from `/hospital-drugs`, only verified V/E, non-blood, non-controlled; qty; reason) -> create (context MANUAL) + propose. Verified in the browser on a DB copy (BR-2026-000579 created as MANUAL).
+- WH requests page (`WhBorrowPage`) now reads `useBorrowRequests` (read-only); verified with warehouse_officer1.hc (68 rows).
+- Lender queue API returns `context` and the borrower's `ved`; the UI no longer hard-codes `E` / `STOCK_ALERT`. Page subtitles use the signed-in hospital name instead of the fixed "รพ.สมุทรปราการ" text.
+- Still not live: cancel after approval (no API), `returnState` chips, EMERGENCY context filter, "ประวัติ" button, sidebar badges, lender tile "ตอบรับแล้ว" includes RECEIVED history.

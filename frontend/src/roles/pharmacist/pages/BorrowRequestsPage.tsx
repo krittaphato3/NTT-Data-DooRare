@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useAuth } from '../../../context/AuthContext';
 import { Icon } from '../../../components/common/icons';
 import { homeHrefFor, withRole } from '../../../data/navigation';
 import { useLenderQueue } from '../data/useLenderQueue';
@@ -9,6 +10,7 @@ import { useTick } from '../../../lib/time';
 import { ReasonDialog } from '../../hospital-admin/components/ReasonDialog';
 import { appendAuditEntry } from '../../hospital-admin/data/audit';
 import { HOSPITAL_ADMIN_USER } from '../../hospital-admin/data/session';
+import { ManualBorrowDialog } from '../components/ManualBorrowDialog';
 import { BorrowDrawer } from '../components/BorrowDrawer';
 import type { Decision } from '../components/BorrowDrawer';
 import { BorrowStatusTiles } from '../components/BorrowStatusTiles';
@@ -64,6 +66,7 @@ function withEscalation(r: BorrowRequest, esc: Record<string, { reason: string; 
  * `role` gates the write controls through `lib/rbac.ts` and drives the breadcrumb home.
  */
 export function BorrowRequestsPage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
+  const { user } = useAuth();
   const tick = useTick();
   const [group, setGroup] = useState<StatusGroup | null>(null);
   const [selId, setSelId] = useState('');
@@ -80,6 +83,8 @@ export function BorrowRequestsPage({ role = 'PHARMACIST' }: { role?: RoleCode })
   const lenderToAnswer = lender.source === 'live' ? lender.requests.filter((r) => r.status === 'waiting').length : LENDER_QUEUE.toAnswer;
   const isLive = live.source === 'live';
   const [actionError, setActionError] = useState<string | null>(null);
+  const [manualOpen, setManualOpen] = useState(false);
+  const [createdNotice, setCreatedNotice] = useState<string | null>(null);
   const [rejectTarget, setRejectTarget] = useState<BorrowRequest | null>(null);
   const [hospitals, setHospitals] = useState<ApiHospital[]>([]);
   const [escLender, setEscLender] = useState('');
@@ -245,7 +250,7 @@ export function BorrowRequestsPage({ role = 'PHARMACIST' }: { role?: RoleCode })
           <h1 className="tr-title">
             คำขอยืมระหว่างโรงพยาบาล <span>/ Borrow requests</span>
           </h1>
-          <div style={{ fontSize: 13 }}>รพ.สมุทรปราการ · ข้อมูล ณ 19:11 น. · ทุกคำขอต้องให้เภสัชกรอนุมัติก่อนส่ง · ไม่ตอบในเวลา = ส่งต่อผู้ให้ยืมถัดไปอัตโนมัติ</div>
+          <div style={{ fontSize: 13 }}>{user?.hospitalName ?? 'รพ.สมุทรปราการ'} · ข้อมูล ณ {new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น. · ทุกคำขอต้องให้เภสัชกรอนุมัติก่อนส่ง · ไม่ตอบในเวลา = ส่งต่อผู้ให้ยืมถัดไปอัตโนมัติ</div>
         </div>
         <div className="pagehead-actions">
           <button className="btn btn-s">
@@ -253,7 +258,7 @@ export function BorrowRequestsPage({ role = 'PHARMACIST' }: { role?: RoleCode })
             ประวัติ
           </button>
           {mayCreate && (
-            <button className="btn btn-p">
+            <button className="btn btn-p" disabled={!isLive} title={isLive ? undefined : 'ต้องเชื่อมต่อ API'} onClick={() => setManualOpen(true)}>
               <Icon name="plus" />
               สร้างคำขอยืมเอง <span style={{ fontWeight: 400 }}>UI-10</span>
             </button>
@@ -321,6 +326,19 @@ export function BorrowRequestsPage({ role = 'PHARMACIST' }: { role?: RoleCode })
         )}
       </section>
 
+      {createdNotice && (
+        <div role="status" className="card" style={{ padding: '10px 16px', color: '#166534', fontSize: 13 }}>{createdNotice}</div>
+      )}
+      {manualOpen && (
+        <ManualBorrowDialog
+          onClose={() => setManualOpen(false)}
+          onCreated={(no, status) => {
+            setManualOpen(false);
+            setCreatedNotice(`สร้างคำขอ ${no} แล้ว (${status === 'ESCALATED' ? 'ไม่พบผู้ให้ยืมที่เหมาะสม' : 'รออนุมัติในรายการด้านล่าง'})`);
+            void live.reload();
+          }}
+        />
+      )}
       {actionError && (
         <div role="alert" className="card" style={{ padding: '10px 16px', color: '#B91C1C', fontSize: 13 }}>ดำเนินการไม่สำเร็จ: {actionError}</div>
       )}

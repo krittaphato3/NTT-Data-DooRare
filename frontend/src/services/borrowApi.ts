@@ -80,6 +80,8 @@ export interface ApiLenderItem {
   status: ApiLegStatus;
   urgency: ApiUrgency;
   reason: string | null;
+  context: 'STOCK_ALERT' | 'MANUAL';
+  ved: 'V' | 'E' | 'D' | null;
   borrower: { id: string; code: string; name: string };
   drug: { id: string; name: string; baseUnit: string; coldChain: boolean };
   qtyAsked: number;

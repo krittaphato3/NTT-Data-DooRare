@@ -56,7 +56,8 @@ async function lotOptions(db: Db, hospitalId: string, drugMasterId: string, minD
 
 const QUEUE_SELECT = `
   SELECT bl.id, bl.request_id, bl.round_no, bl.status::text AS status, bl.qty_asked::float8 AS qty_asked, bl.qty_accepted::float8 AS qty_accepted, bl.qty_received::float8 AS qty_received,
-         bl.sent_at, bl.deadline_at, bl.reminded_at, bl.responded_at, bl.reject_reason, bl.message_text, br.request_no, br.urgency::text AS urgency, br.reason,
+         bl.sent_at, bl.deadline_at, bl.reminded_at, bl.responded_at, bl.reject_reason, bl.message_text, br.request_no, br.urgency::text AS urgency, br.reason, br.context::text AS context,
+         (SELECT hd.ved::text FROM hospital_drug hd WHERE hd.hospital_id = br.borrower_hospital_id AND hd.drug_master_id = i.drug_master_id LIMIT 1) AS ved,
          br.borrower_hospital_id, bh.code AS borrower_code, COALESCE(bh.name_th, bh.name_en) AS borrower_name,
          i.drug_master_id, concat_ws(' ', dm.generic_name, dm.strength, dm.dosage_form) AS drug_name, dm.base_unit, COALESCE(dm.is_cold_chain, false) AS cold_chain,
          tt.id AS task_id, tt.task_no, tt.status::text AS task_status
@@ -101,6 +102,8 @@ export class LenderService {
         status: l.status,
         urgency: l.urgency,
         reason: l.reason,
+        context: l.context,
+        ved: l.ved,
         borrower: { id: l.borrower_hospital_id, code: l.borrower_code, name: l.borrower_name },
         drug: { id: l.drug_master_id, name: l.drug_name, baseUnit: l.base_unit, coldChain: l.cold_chain },
         qtyAsked: l.qty_asked,

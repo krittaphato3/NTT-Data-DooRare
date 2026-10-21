@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
+import { useAuth } from '../../../context/AuthContext';
 import { Icon } from '../../../components/common/icons';
 import { BorrowStatusBadge, ReturnBadge, UrgencyBadge } from '../../pharmacist/components/BorrowBadges';
 import { BorrowStatusTiles } from '../../pharmacist/components/BorrowStatusTiles';
-import { BORROW_REQUESTS, GROUPS, groupOf, LEG_META } from '../../pharmacist/data/borrow';
+import { GROUPS, groupOf, LEG_META } from '../../pharmacist/data/borrow';
 import type { BorrowRequest, StatusGroup } from '../../pharmacist/data/borrow';
+import { useBorrowRequests } from '../../pharmacist/data/useBorrowRequests';
 import '../../pharmacist/borrow.css';
 import { ViewOnlyNote } from '../components/ViewOnlyNote';
 import { whHref } from '../data/routes';
@@ -17,9 +19,12 @@ import '../kit.css';
  * hospitals send to us (lender queue) are not shown to WH; they reach WH as tasks in the work inbox.
  */
 export function WhBorrowPage() {
+  const { user } = useAuth();
   const [group, setGroup] = useState<StatusGroup | null>(null);
   const [q, setQ] = useState('');
   const [selId, setSelId] = useState<string | null>(null);
+  // Our hospital's requests from GET /borrow-requests (read-only for WH); mock fixtures when the API is unreachable.
+  const { requests } = useBorrowRequests();
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -29,10 +34,10 @@ export function WhBorrowPage() {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  const counts = Object.fromEntries(GROUPS.map((g) => [g.id, BORROW_REQUESTS.filter((r) => groupOf(r.status) === g.id).length])) as Record<StatusGroup, number>;
+  const counts = Object.fromEntries(GROUPS.map((g) => [g.id, requests.filter((r) => groupOf(r.status) === g.id).length])) as Record<StatusGroup, number>;
   const needle = q.trim().toLowerCase();
-  const rows = BORROW_REQUESTS.filter((r) => !group || groupOf(r.status) === group).filter((r) => !needle || [r.id, r.drug, ...r.lender].some((t) => t.toLowerCase().includes(needle)));
-  const sel: BorrowRequest | undefined = BORROW_REQUESTS.find((r) => r.id === selId);
+  const rows = requests.filter((r) => !group || groupOf(r.status) === group).filter((r) => !needle || [r.id, r.drug, ...r.lender].some((t) => t.toLowerCase().includes(needle)));
+  const sel: BorrowRequest | undefined = requests.find((r) => r.id === selId);
 
   return (
     <>
@@ -45,7 +50,7 @@ export function WhBorrowPage() {
           <h1 className="tr-title">
             คำขอยืมของเรา <span>/ Borrow requests · ดูอย่างเดียว</span>
           </h1>
-          <div style={{ fontSize: 13 }}>รพ.สมุทรปราการ · คำขอยืมที่ รพ.เราส่งไปขอจาก รพ.อื่น · ใช้รู้ล่วงหน้าว่าของจะมาเมื่อไร</div>
+          <div style={{ fontSize: 13 }}>{user?.hospitalName ?? 'รพ.สมุทรปราการ'} · คำขอยืมที่ รพ.เราส่งไปขอจาก รพ.อื่น · ใช้รู้ล่วงหน้าว่าของจะมาเมื่อไร</div>
         </div>
       </section>
 
@@ -112,7 +117,7 @@ export function WhBorrowPage() {
         </div>
         <div className="tbl-foot">
           <span>แสดง <span className="num">{rows.length}</span> คำขอ</span>
-          <span>เห็นเฉพาะคำขอของ รพ.สมุทรปราการ</span>
+          <span>เห็นเฉพาะคำขอของ {user?.hospitalName ?? 'รพ.สมุทรปราการ'}</span>
         </div>
       </section>
 
