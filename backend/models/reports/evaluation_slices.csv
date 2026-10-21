@@ -1,0 +1,65 @@
+granularity,split,dimension,slice,rows,low_confidence,wape_p50,width_p95_p05,best_baseline,best_baseline_wape_p50,loses_at,pinball_0.5,pinball_0.9,pinball_0.95,coverage_0.9,coverage_0.95,delta_0.5,delta_0.9,delta_0.95
+WEEK,valid,ved,D,280,False,0.1451,25.1445,empirical_quantile,0.1431,"['0.5', '0.9', '0.95']",2.6238,1.2836,0.8332,0.925,0.975,0.0363,0.0534,0.0563
+WEEK,valid,ved,E,2128,False,0.061,306.7179,empirical_quantile,0.0792,[],36.0412,16.8927,10.796,0.8825,0.9403,-10.7322,-5.4091,-2.338
+WEEK,valid,ved,V,2240,False,0.0844,94.8702,empirical_quantile,0.0997,[],11.3039,5.6024,3.3392,0.8897,0.9446,-2.0474,-1.5732,-0.8982
+WEEK,valid,price_tier,HIGH,196,False,0.7571,3.6991,empirical_quantile,0.7535,"['0.5', '0.95']",0.2781,0.2935,0.2344,0.8827,0.9643,0.0013,-0.0142,0.0185
+WEEK,valid,price_tier,LOW,2996,False,0.0643,279.5847,empirical_quantile,0.0819,[],32.9394,15.6146,9.8221,0.8905,0.9383,-9.0316,-4.3636,-1.935
+WEEK,valid,price_tier,MID,1456,False,0.1464,23.2725,empirical_quantile,0.1593,[],2.7542,1.3856,0.8339,0.8853,0.9547,-0.2444,-1.3349,-0.8089
+WEEK,valid,item_type,DRUG,3668,False,0.0641,220.6482,empirical_quantile,0.0819,[],25.9917,12.2507,7.695,0.8931,0.946,-7.2216,-3.9862,-1.8491
+WEEK,valid,item_type,SUPPLY,980,False,0.0986,64.1916,empirical_quantile,0.1109,[],7.5648,4.0006,2.512,0.8714,0.9388,-0.9441,-0.4065,-0.1927
+WEEK,valid,hospital_tier,COMMUNITY,1708,False,0.0736,121.7908,empirical_quantile,0.0881,[],14.6808,6.6415,3.9844,0.8893,0.9514,-2.8895,-1.8916,-0.7871
+WEEK,valid,hospital_tier,SECONDARY,1960,False,0.0648,177.6365,empirical_quantile,0.0816,[],20.8837,10.5754,6.4746,0.8898,0.9418,-5.3836,-3.3507,-1.7245
+WEEK,valid,hospital_tier,TERTIARY,980,False,0.0622,322.5096,empirical_quantile,0.0824,[],37.494,17.1274,11.4198,0.8847,0.9378,-12.1705,-5.3279,-2.2929
+WEEK,valid,is_seasonal,false,4368,False,0.0654,198.2025,empirical_quantile,0.0826,[],23.3414,11.0906,6.9638,0.8874,0.9441,-6.1592,-2.9562,-1.3107
+WEEK,valid,is_seasonal,true,280,False,0.3318,23.203,ma_es_residual_quantile,0.5206,[],2.8426,1.474,0.9606,0.9071,0.95,-1.6172,-0.2875,-0.6869
+WEEK,valid,zero_heavy,false,4408,False,0.0657,197.6769,empirical_quantile,0.0833,[],23.2979,11.0669,6.9486,0.8877,0.9433,-6.2191,-3.4066,-1.5825
+WEEK,valid,zero_heavy,true,240,False,1.0238,3.6906,empirical_quantile,1.0381,['0.95'],0.2239,0.3066,0.2403,0.9042,0.9667,-0.0032,-0.0136,0.0169
+WEEK,valid,cold_start,false,4648,False,0.0658,187.6604,empirical_quantile,0.0833,[],22.1065,10.5113,6.6022,0.8886,0.9445,-5.8981,-3.2314,-1.4999
+WEEK,test,ved,D,280,False,0.1599,24.8594,empirical_quantile,0.1546,"['0.5', '0.9']",2.9038,1.3251,0.7663,0.8857,0.9679,0.0967,0.0524,-0.0185
+WEEK,test,ved,E,2128,False,0.063,334.1575,seasonal_naive,0.0854,[],37.7052,17.7413,10.7931,0.8806,0.9422,-13.3956,-32.0575,-31.6867
+WEEK,test,ved,V,2240,False,0.1018,104.6775,seasonal_naive,0.1186,[],14.0378,7.2012,4.6573,0.8875,0.9411,-2.3256,-5.7046,-6.1254
+WEEK,test,price_tier,HIGH,196,False,0.6568,3.8471,empirical_quantile,0.634,"['0.5', '0.9', '0.95']",0.2564,0.2542,0.2173,0.9337,0.9745,0.009,0.0021,0.0116
+WEEK,test,price_tier,LOW,2996,False,0.0689,302.5974,seasonal_naive,0.0896,[],35.7497,17.2066,10.6269,0.8795,0.9386,-10.7416,-26.4668,-26.6043
+WEEK,test,price_tier,MID,1456,False,0.1626,31.0368,seasonal_naive,0.2183,[],3.6664,1.8231,1.1908,0.8874,0.9485,-1.2536,-2.345,-2.9091
+WEEK,test,item_type,DRUG,3668,False,0.0696,242.8842,seasonal_naive,0.0905,[],28.727,13.8535,8.5817,0.882,0.9425,-8.6372,-21.4868,-21.4508
+WEEK,test,item_type,SUPPLY,980,False,0.0963,62.8839,empirical_quantile,0.0984,[],7.2693,3.5107,2.1807,0.8929,0.9459,-0.1526,-0.5331,-0.2542
+WEEK,test,hospital_tier,COMMUNITY,1708,False,0.075,131.7844,empirical_quantile,0.1039,[],15.0429,6.9203,4.3485,0.8829,0.9409,-5.7939,-1.9211,-0.6947
+WEEK,test,hospital_tier,SECONDARY,1960,False,0.0717,192.8113,seasonal_naive,0.0853,[],23.4231,11.9069,7.3348,0.8878,0.9495,-4.4667,-15.4221,-16.3244
+WEEK,test,hospital_tier,TERTIARY,980,False,0.0676,356.6606,empirical_quantile,0.0884,['0.95'],41.7265,19.4876,12.0522,0.8796,0.9347,-12.8541,-0.8662,0.4387
+WEEK,test,is_seasonal,false,4368,False,0.0698,213.9996,seasonal_naive,0.0911,[],25.2645,12.1684,7.5169,0.8878,0.9444,-7.6722,-18.8211,-19.1739
+WEEK,test,is_seasonal,true,280,False,0.27,63.4831,seasonal_naive,0.3361,[],7.6404,3.9417,2.7885,0.8286,0.925,-1.8721,-2.0254,-0.9346
+WEEK,test,zero_heavy,false,4384,False,0.0708,217.0377,seasonal_naive,0.0922,[],25.6437,12.3527,7.6478,0.8807,0.9423,-7.7513,-18.8817,-19.1636
+WEEK,test,zero_heavy,true,264,False,1.0595,3.9093,empirical_quantile,1.0474,"['0.5', '0.9', '0.95']",0.2749,0.3828,0.3289,0.9432,0.9583,0.0031,0.0069,0.0086
+WEEK,test,cold_start,false,4648,False,0.0708,204.9323,seasonal_naive,0.0923,[],24.2028,11.6728,7.2321,0.8843,0.9432,-7.3228,-17.8093,-18.0751
+MONTH,valid,ved,D,120,False,0.0865,61.1552,empirical_quantile,0.0786,['0.5'],6.8531,3.2776,2.1795,0.9417,0.9583,0.626,-0.108,-0.0426
+MONTH,valid,ved,E,912,False,0.061,1576.6216,empirical_quantile,0.075,[],161.3338,76.0155,50.675,0.9013,0.9507,-37.0165,-51.4816,-20.8311
+MONTH,valid,ved,V,960,False,0.0725,406.7335,empirical_quantile,0.0968,[],44.2244,18.2598,12.7511,0.8938,0.9417,-14.843,-16.4281,-6.8867
+MONTH,valid,price_tier,HIGH,84,True,0.5976,13.4263,empirical_quantile,0.526,['0.5'],1.2309,0.897,0.6309,0.9286,0.9643,0.1476,-0.0657,-0.0756
+MONTH,valid,price_tier,LOW,1284,False,0.0627,1388.5754,empirical_quantile,0.0775,[],144.1322,65.8658,44.3302,0.8956,0.9455,-33.8904,-46.7669,-18.7812
+MONTH,valid,price_tier,MID,624,False,0.0932,82.7293,seasonal_naive,0.1044,[],8.4056,4.1695,2.7968,0.9054,0.9471,-1.0111,-14.0559,-12.4727
+MONTH,valid,item_type,DRUG,1572,False,0.0633,1114.4132,empirical_quantile,0.0799,[],115.5004,52.9489,35.6371,0.8957,0.944,-30.3299,-39.4643,-16.1278
+MONTH,valid,item_type,SUPPLY,420,False,0.064,199.5813,seasonal_naive,0.0578,['0.5'],21.0656,9.5553,6.4207,0.9167,0.9571,2.0382,-25.652,-24.7258
+MONTH,valid,hospital_tier,COMMUNITY,732,False,0.0782,554.4184,empirical_quantile,0.0809,[],69.3284,30.0149,18.9314,0.9098,0.9454,-2.4383,-18.5402,-8.9881
+MONTH,valid,hospital_tier,SECONDARY,840,False,0.059,736.6703,seasonal_naive,0.0761,[],85.0911,35.2902,22.6228,0.8929,0.9524,-24.5732,-84.5755,-76.6921
+MONTH,valid,hospital_tier,TERTIARY,420,False,0.0594,1931.0581,empirical_quantile,0.0798,[],162.3554,84.8432,61.5649,0.8976,0.9381,-55.6797,-45.8172,-9.6446
+MONTH,valid,is_seasonal,false,1872,False,0.0628,967.5397,empirical_quantile,0.0772,[],100.5669,46.0172,30.9576,0.8996,0.945,-22.9722,-31.9436,-12.7751
+MONTH,valid,is_seasonal,true,120,False,0.2108,203.7289,seasonal_naive,0.2795,[],17.9413,9.2051,6.3794,0.9083,0.975,-5.842,-2.3424,-0.4034
+MONTH,valid,zero_heavy,false,1944,False,0.0633,944.002,empirical_quantile,0.0792,[],97.9264,44.8574,30.1916,0.9007,0.947,-24.6585,-32.269,-13.1723
+MONTH,valid,zero_heavy,true,48,True,1.0166,11.288,empirical_quantile,0.9551,['0.5'],0.9425,0.9614,0.5344,0.875,0.9375,0.0571,-0.0848,-0.1532
+MONTH,valid,cold_start,false,1992,False,0.0633,921.527,empirical_quantile,0.0793,[],95.5894,43.7996,29.477,0.9001,0.9468,-24.063,-31.4936,-12.8586
+MONTH,test,ved,D,120,False,0.0822,63.0207,empirical_quantile,0.0919,[],6.4799,2.9555,1.882,0.9083,0.9833,-0.7639,-0.678,-0.285
+MONTH,test,ved,E,912,False,0.0526,1262.8819,seasonal_naive,0.0613,[],135.1254,62.0309,34.1589,0.8761,0.9441,-22.3121,-142.9934,-139.7362
+MONTH,test,ved,V,960,False,0.0773,345.7342,seasonal_naive,0.0909,[],45.2852,18.4621,12.4784,0.876,0.9427,-7.969,-32.3758,-29.2895
+MONTH,test,price_tier,HIGH,84,True,0.473,12.1339,empirical_quantile,0.4498,"['0.5', '0.9', '0.95']",0.7856,0.6798,0.4846,0.9405,1.0,0.0386,0.0304,0.0238
+MONTH,test,price_tier,LOW,1284,False,0.0567,1120.3633,seasonal_naive,0.0663,[],126.294,55.9518,32.3413,0.8614,0.9369,-21.2695,-124.1096,-119.1896
+MONTH,test,price_tier,MID,624,False,0.0935,82.7724,seasonal_naive,0.1083,[],8.4268,4.4089,2.8703,0.9038,0.9567,-1.3344,-9.1855,-11.1745
+MONTH,test,item_type,DRUG,1572,False,0.057,893.3128,seasonal_naive,0.0672,[],100.6019,44.6295,25.8987,0.8798,0.9466,-18.0285,-100.743,-96.0617
+MONTH,test,item_type,SUPPLY,420,False,0.067,206.9711,seasonal_naive,0.0659,['0.5'],22.237,10.6973,6.2981,0.8714,0.9429,0.3703,-16.4456,-21.7243
+MONTH,test,hospital_tier,COMMUNITY,732,False,0.0611,456.1268,seasonal_naive,0.0733,[],52.6978,22.5095,14.0916,0.8798,0.9385,-10.5228,-53.0519,-49.0062
+MONTH,test,hospital_tier,SECONDARY,840,False,0.0582,643.3261,seasonal_naive,0.0661,[],81.5691,35.408,21.1,0.8762,0.9524,-11.0642,-77.8633,-74.1846
+MONTH,test,hospital_tier,TERTIARY,420,False,0.0546,1468.8975,seasonal_naive,0.0647,[],143.7928,67.6922,36.4738,0.8786,0.9452,-26.6393,-145.3238,-147.4894
+MONTH,test,is_seasonal,false,1872,False,0.057,785.1752,seasonal_naive,0.0666,[],88.4929,39.265,22.7336,0.8771,0.9455,-14.9171,-88.1781,-85.479
+MONTH,test,is_seasonal,true,120,False,0.1918,178.0645,seasonal_naive,0.2191,[],15.226,9.5525,6.6731,0.8917,0.95,-2.1698,-1.7152,-0.9705
+MONTH,test,zero_heavy,false,1944,False,0.0574,766.8268,seasonal_naive,0.0671,[],86.1408,38.3835,22.2919,0.8771,0.9444,-14.4875,-85.0204,-82.3745
+MONTH,test,zero_heavy,true,48,True,1.0376,10.5079,empirical_quantile,1.0185,"['0.5', '0.9']",0.5836,0.6847,0.4692,0.9167,1.0,0.0107,0.0607,-0.0424
+MONTH,test,cold_start,false,1992,False,0.0574,748.6022,seasonal_naive,0.0671,[],84.0792,37.4751,21.7661,0.878,0.9458,-14.1492,-82.9694,-80.3881

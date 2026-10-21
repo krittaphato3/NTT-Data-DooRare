@@ -1,0 +1,10 @@
+# Derived feature tables (regenerate with `python -m f1_forecast.cli features`)
+data/
+
+# Trained models + meta.json (regenerate with `python -m f1_forecast.cli train`)
+artifacts/
+
+# Python noise
+__pycache__/
+*.pyc
+.pytest_cache/

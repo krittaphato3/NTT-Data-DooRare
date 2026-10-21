@@ -1,0 +1,523 @@
+{
+  "generated_at": "2026-10-20T03:02:02+00:00",
+  "caveat": "MOCK DATA - not real accuracy; the pack is synthetic",
+  "method": {
+    "name": "split_conformal_cqr",
+    "scale": "log1p",
+    "rule": {
+      "max_width_ratio": 1.1,
+      "max_pinball_increase": {
+        "0.5": 0.01,
+        "0.9": 0.03,
+        "0.95": 0.03
+      },
+      "tercile_relative_gain": 0.2,
+      "min_bucket_rows": 500
+    }
+  },
+  "studies": {
+    "WEEK": {
+      "model_version": "f1-WEEK-2026-09-14-f455e37770dc",
+      "granularity": "WEEK",
+      "granularity_display": "weekly",
+      "blocks": {
+        "calibrate": [
+          "2025-08-18",
+          "2025-08-25",
+          "2025-09-01",
+          "2025-09-08",
+          "2025-09-15",
+          "2025-09-22",
+          "2025-09-29",
+          "2025-10-06",
+          "2025-10-13",
+          "2025-10-20",
+          "2025-10-27",
+          "2025-11-03",
+          "2025-11-10",
+          "2025-11-17"
+        ],
+        "gap": [
+          "2025-11-24"
+        ],
+        "check": [
+          "2025-12-01",
+          "2025-12-08",
+          "2025-12-15",
+          "2025-12-22",
+          "2025-12-29",
+          "2026-01-05",
+          "2026-01-12",
+          "2026-01-19",
+          "2026-01-26",
+          "2026-02-02",
+          "2026-02-09",
+          "2026-02-16",
+          "2026-02-23"
+        ],
+        "calibrate_rows": 2324,
+        "check_rows": 2158,
+        "low_n_threshold": 26
+      },
+      "buckets": {
+        "counts": {
+          "low": 784,
+          "mid": 770,
+          "high": 770
+        },
+        "tercile_feasible": true,
+        "min_bucket_rows": 500,
+        "series": 166
+      },
+      "check_half": {
+        "off": {
+          "coverage_off": {
+            "0.9": 0.8911,
+            "0.95": 0.9444
+          },
+          "coverage_calibrated": {
+            "0.9": 0.8911,
+            "0.95": 0.9444
+          },
+          "coverage_error_off": 0.0145,
+          "coverage_error_calibrated": 0.0145,
+          "coverage_error_gain": 0.0,
+          "width_off": 204.0174,
+          "width_calibrated": 204.0174,
+          "width_ratio": 1.0,
+          "pinball_off": {
+            "0.5": 21.6933,
+            "0.9": 10.7409,
+            "0.95": 7.0871
+          },
+          "pinball_calibrated": {
+            "0.5": 21.6933,
+            "0.9": 10.7409,
+            "0.95": 7.0871
+          },
+          "pinball_ratio": {
+            "0.5": 1.0,
+            "0.9": 1.0,
+            "0.95": 1.0
+          }
+        },
+        "global": {
+          "coverage_off": {
+            "0.9": 0.8911,
+            "0.95": 0.9444
+          },
+          "coverage_calibrated": {
+            "0.9": 0.899,
+            "0.95": 0.9513
+          },
+          "coverage_error_off": 0.0145,
+          "coverage_error_calibrated": 0.0024,
+          "coverage_error_gain": 0.0121,
+          "width_off": 204.0174,
+          "width_calibrated": 222.8889,
+          "width_ratio": 1.0925,
+          "pinball_off": {
+            "0.5": 21.6933,
+            "0.9": 10.7409,
+            "0.95": 7.0871
+          },
+          "pinball_calibrated": {
+            "0.5": 21.6887,
+            "0.9": 10.8663,
+            "0.95": 7.1385
+          },
+          "pinball_ratio": {
+            "0.5": 0.9998,
+            "0.9": 1.0117,
+            "0.95": 1.0072
+          }
+        },
+        "tercile": {
+          "coverage_off": {
+            "0.9": 0.8911,
+            "0.95": 0.9444
+          },
+          "coverage_calibrated": {
+            "0.9": 0.9018,
+            "0.95": 0.9486
+          },
+          "coverage_error_off": 0.0145,
+          "coverage_error_calibrated": 0.0032,
+          "coverage_error_gain": 0.0113,
+          "width_off": 204.0174,
+          "width_calibrated": 231.7491,
+          "width_ratio": 1.1359,
+          "pinball_off": {
+            "0.5": 21.6933,
+            "0.9": 10.7409,
+            "0.95": 7.0871
+          },
+          "pinball_calibrated": {
+            "0.5": 21.7905,
+            "0.9": 10.9801,
+            "0.95": 7.243
+          },
+          "pinball_ratio": {
+            "0.5": 1.0045,
+            "0.9": 1.0223,
+            "0.95": 1.022
+          }
+        }
+      },
+      "decision": {
+        "passing": [
+          "global"
+        ],
+        "tercile_feasible": true,
+        "enabled": true,
+        "variant": "global",
+        "reason": "only global satisfies the pre-registered rule"
+      },
+      "calibration_offsets_visible": {
+        "global": {
+          "0.05": -0.018705,
+          "0.1": -0.018625,
+          "0.25": -0.002322,
+          "0.5": -0.000431,
+          "0.75": 0.000807,
+          "0.9": 0.008875,
+          "0.95": 0.011348
+        }
+      },
+      "test": {
+        "rows": 4648,
+        "label": "calibrated test evaluation (new)",
+        "quantiles": {
+          "0.05": {
+            "coverage_before": 0.1059,
+            "coverage_after": 0.1018,
+            "pinball_before": 7.3049,
+            "pinball_after": 7.1974
+          },
+          "0.1": {
+            "coverage_before": 0.1444,
+            "coverage_after": 0.1336,
+            "pinball_before": 12.0996,
+            "pinball_after": 12.1424
+          },
+          "0.25": {
+            "coverage_before": 0.281,
+            "coverage_after": 0.2803,
+            "pinball_before": 20.592,
+            "pinball_after": 20.5942
+          },
+          "0.5": {
+            "coverage_before": 0.5077,
+            "coverage_after": 0.5069,
+            "pinball_before": 24.2028,
+            "pinball_after": 24.2137
+          },
+          "0.75": {
+            "coverage_before": 0.7352,
+            "coverage_after": 0.7352,
+            "pinball_before": 19.4839,
+            "pinball_after": 19.4839
+          },
+          "0.9": {
+            "coverage_before": 0.8843,
+            "coverage_after": 0.8965,
+            "pinball_before": 11.6728,
+            "pinball_after": 11.6301
+          },
+          "0.95": {
+            "coverage_before": 0.9432,
+            "coverage_after": 0.9516,
+            "pinball_before": 7.2321,
+            "pinball_after": 7.2028
+          }
+        },
+        "width_before": 204.9323,
+        "width_after": 220.6487,
+        "wape_before": 0.0708,
+        "wape_after": 0.0709,
+        "tt": {
+          "rows": 4368,
+          "nominal": 0.0744,
+          "stockout_before": 0.0884,
+          "stockout_after": 0.076,
+          "overstock_before": 0.7434,
+          "overstock_after": 0.739,
+          "under_thb_before": 232464.83,
+          "under_thb_after": 210237.63,
+          "over_thb_before": 250714.55,
+          "over_thb_after": 249536.53
+        },
+        "crossing": {
+          "raw_before": 0.17,
+          "shipped_before": 0.0,
+          "pre_sort_after": 0.0972,
+          "post_sort_after": 0.0
+        },
+        "gate": {
+          "split": "test",
+          "scope": "common row set",
+          "must_beat": [
+            "seasonal_naive",
+            "ma_es_residual_quantile",
+            "empirical_quantile"
+          ],
+          "quantiles": [
+            0.5,
+            0.9,
+            0.95
+          ],
+          "checks": {
+            "all_rows": {
+              "seasonal_naive": {
+                "model_pinball": {
+                  "0.5": 24.2137,
+                  "0.9": 11.6301,
+                  "0.95": 7.2028
+                },
+                "baseline_pinball": {
+                  "0.5": 31.5256,
+                  "0.9": 29.4821,
+                  "0.95": 25.3072
+                },
+                "delta": {
+                  "0.5": -7.3119,
+                  "0.9": -17.852,
+                  "0.95": -18.1044
+                },
+                "beats": true
+              },
+              "ma_es_residual_quantile": {
+                "model_pinball": {
+                  "0.5": 24.2137,
+                  "0.9": 11.6301,
+                  "0.95": 7.2028
+                },
+                "baseline_pinball": {
+                  "0.5": 40.7776,
+                  "0.9": 18.5131,
+                  "0.95": 11.9957
+                },
+                "delta": {
+                  "0.5": -16.5639,
+                  "0.9": -6.883,
+                  "0.95": -4.7929
+                },
+                "beats": true
+              },
+              "empirical_quantile": {
+                "model_pinball": {
+                  "0.5": 24.2137,
+                  "0.9": 11.6301,
+                  "0.95": 7.2028
+                },
+                "baseline_pinball": {
+                  "0.5": 33.741,
+                  "0.9": 13.6305,
+                  "0.95": 7.7086
+                },
+                "delta": {
+                  "0.5": -9.5273,
+                  "0.9": -2.0004,
+                  "0.95": -0.5058
+                },
+                "beats": true
+              }
+            },
+            "no_stockout_rows": {
+              "seasonal_naive": {
+                "model_pinball": {
+                  "0.5": 23.9314,
+                  "0.9": 11.6342,
+                  "0.95": 7.2158
+                },
+                "baseline_pinball": {
+                  "0.5": 31.2271,
+                  "0.9": 29.7058,
+                  "0.95": 25.5652
+                },
+                "delta": {
+                  "0.5": -7.2957,
+                  "0.9": -18.0716,
+                  "0.95": -18.3494
+                },
+                "beats": true
+              },
+              "ma_es_residual_quantile": {
+                "model_pinball": {
+                  "0.5": 23.9314,
+                  "0.9": 11.6342,
+                  "0.95": 7.2158
+                },
+                "baseline_pinball": {
+                  "0.5": 40.7354,
+                  "0.9": 18.5998,
+                  "0.95": 12.0709
+                },
+                "delta": {
+                  "0.5": -16.804,
+                  "0.9": -6.9656,
+                  "0.95": -4.8551
+                },
+                "beats": true
+              },
+              "empirical_quantile": {
+                "model_pinball": {
+                  "0.5": 23.9314,
+                  "0.9": 11.6342,
+                  "0.95": 7.2158
+                },
+                "baseline_pinball": {
+                  "0.5": 33.6773,
+                  "0.9": 13.6539,
+                  "0.95": 7.7171
+                },
+                "delta": {
+                  "0.5": -9.7459,
+                  "0.9": -2.0197,
+                  "0.95": -0.5013
+                },
+                "beats": true
+              }
+            }
+          },
+          "passed": true
+        },
+        "fitted": {
+          "variant": "global",
+          "rows": 4648,
+          "offsets": {
+            "0.05": -0.011619,
+            "0.1": -0.014818,
+            "0.25": -0.000284,
+            "0.5": -0.000431,
+            "0.75": -2e-06,
+            "0.9": 0.011387,
+            "0.95": 0.010951
+          }
+        }
+      },
+      "calibration_file": "/Users/sun/Documents/ntt-data/NTT-Data-DooRare/backend/models/artifacts/calibration/f1-WEEK-2026-09-14-f455e37770dc/calibration.json"
+    },
+    "MONTH": {
+      "model_version": "f1-MONTH-2026-08-01-8f70f4a87d1e-r2",
+      "granularity": "MONTH",
+      "granularity_display": "monthly",
+      "blocks": {
+        "calibrate": [
+          "2024-08-01",
+          "2024-09-01",
+          "2024-10-01",
+          "2024-11-01",
+          "2024-12-01",
+          "2025-01-01"
+        ],
+        "gap": [
+          "2025-02-01"
+        ],
+        "check": [
+          "2025-03-01",
+          "2025-04-01",
+          "2025-05-01",
+          "2025-06-01",
+          "2025-07-01"
+        ],
+        "calibrate_rows": 996,
+        "check_rows": 830,
+        "low_n_threshold": 26
+      },
+      "buckets": {
+        "counts": {
+          "low": 336,
+          "mid": 330,
+          "high": 330
+        },
+        "tercile_feasible": false,
+        "min_bucket_rows": 500,
+        "series": 166
+      },
+      "check_half": {
+        "off": {
+          "coverage_off": {
+            "0.9": 0.9108,
+            "0.95": 0.947
+          },
+          "coverage_calibrated": {
+            "0.9": 0.9108,
+            "0.95": 0.947
+          },
+          "coverage_error_off": 0.0139,
+          "coverage_error_calibrated": 0.0139,
+          "coverage_error_gain": 0.0,
+          "width_off": 895.7668,
+          "width_calibrated": 895.7668,
+          "width_ratio": 1.0,
+          "pinball_off": {
+            "0.5": 78.7951,
+            "0.9": 41.0707,
+            "0.95": 24.5784
+          },
+          "pinball_calibrated": {
+            "0.5": 78.7951,
+            "0.9": 41.0707,
+            "0.95": 24.5784
+          },
+          "pinball_ratio": {
+            "0.5": 1.0,
+            "0.9": 1.0,
+            "0.95": 1.0
+          }
+        },
+        "global": {
+          "coverage_off": {
+            "0.9": 0.9108,
+            "0.95": 0.947
+          },
+          "coverage_calibrated": {
+            "0.9": 0.9145,
+            "0.95": 0.9494
+          },
+          "coverage_error_off": 0.0139,
+          "coverage_error_calibrated": 0.0151,
+          "coverage_error_gain": -0.0012,
+          "width_off": 895.7668,
+          "width_calibrated": 961.215,
+          "width_ratio": 1.0731,
+          "pinball_off": {
+            "0.5": 78.7951,
+            "0.9": 41.0707,
+            "0.95": 24.5784
+          },
+          "pinball_calibrated": {
+            "0.5": 77.9865,
+            "0.9": 41.4383,
+            "0.95": 24.5483
+          },
+          "pinball_ratio": {
+            "0.5": 0.9897,
+            "0.9": 1.0089,
+            "0.95": 0.9988
+          }
+        }
+      },
+      "decision": {
+        "passing": [],
+        "tercile_feasible": false,
+        "enabled": false,
+        "variant": "off",
+        "reason": "no variant satisfies the pre-registered rule on the check half"
+      },
+      "calibration_offsets_visible": {
+        "global": {
+          "0.05": -0.022453,
+          "0.1": -0.018522,
+          "0.25": -0.003611,
+          "0.5": -0.002659,
+          "0.75": 0.003388,
+          "0.9": 0.004525,
+          "0.95": 0.002695
+        }
+      },
+      "test": null
+    }
+  }
+}

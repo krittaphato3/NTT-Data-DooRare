@@ -1,0 +1,10 @@
+# F1 quantile demand-forecasting module (CPU only).
+# Install:  python3 -m venv .venv && .venv/bin/pip install -r backend/models/requirements.txt
+# Run:      cd backend/models && ../.venv/bin/python -m f1_forecast.cli --help
+pandas>=2.2
+numpy>=1.26
+lightgbm>=4.5
+scikit-learn>=1.5
+PyYAML>=6.0
+pyarrow>=17
+pytest>=8
