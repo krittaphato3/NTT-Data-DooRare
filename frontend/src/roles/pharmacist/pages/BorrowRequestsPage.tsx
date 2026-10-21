@@ -160,6 +160,8 @@ export function BorrowRequestsPage({ role = 'PHARMACIST' }: { role?: RoleCode })
   const rows = inPeriod
     .filter((r) => !group || groupOf(r.status) === group)
     .filter((r) => !historyOnly || ['fulfilled', 'closed'].includes(groupOf(r.status)))
+    // Default view = requests still being worked on; the finished ones show under a status tile or "ประวัติ".
+    .filter((r) => group || historyOnly || isOpenRequest(r.status))
     .filter((r) => urgency === 'all' || r.urgency === urgency)
     .filter((r) => context === 'all' || r.context === context)
     .filter((r) => !needle || [r.id, r.drug, ...r.lender, ...r.legs.map((l) => l.hospital)].some((t) => t.toLowerCase().includes(needle)));

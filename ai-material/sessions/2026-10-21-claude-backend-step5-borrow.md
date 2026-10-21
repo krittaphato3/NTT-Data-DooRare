@@ -106,3 +106,5 @@ summary: Borrow request lifecycle (create, propose, approve, respond, next round
 - Follow-up 4 (branch fix/borrow-tabs-count-active-only): the two tab cards (our requests / lender queue) count only open items (`isOpenRequest`, `isOpenLeg`): HE shows 4 and 6 instead of 100 and 148, matching the DB. Finished ones stay in the lists and status tiles.
 
 - Follow-up 5: dashboard alerts/requests panels filtered live rows by the hospital-name selector text, so the one real alert (tab count 1) was hidden ("ไม่มีการแจ้งเตือนในหมวดนี้"). The name filter now applies to mock rows only; live rows are already scoped by the API.
+
+- Follow-up 6 (branch fix/lists-default-open-only): both lists default to open items so they match the tab counters (HE: 4 requests / 6 legs). Lender queue: status select "ที่ยังเปิดอยู่" (default) or "ทั้งหมด (รวมประวัติ)". Our requests: default open only; a status tile or the "ประวัติ" button shows the finished ones (94 fulfilled / 96 history for HE).

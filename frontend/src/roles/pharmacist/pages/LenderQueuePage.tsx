@@ -39,8 +39,9 @@ const TRIGGER_OPTS = [
   { value: 'STOCK_ALERT', label: 'STOCK_ALERT' },
   { value: 'MANUAL', label: 'MANUAL' },
 ];
-const STATUS_FILTER: { value: '' | BRStatus; label: string }[] = [
-  { value: '', label: 'สถานะ: ทั้งหมด' },
+const STATUS_FILTER: { value: '' | 'open' | BRStatus; label: string }[] = [
+  { value: 'open', label: 'สถานะ: ที่ยังเปิดอยู่' },
+  { value: '', label: 'ทั้งหมด (รวมประวัติ)' },
   { value: 'waiting', label: 'รอตอบกลับ' },
   { value: 'accepted', label: 'ตอบรับแล้ว' },
   { value: 'loaded', label: 'กำลังส่ง' },
@@ -845,7 +846,7 @@ export function LenderQueuePage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
   const [query, setQuery] = useState('');
   const [urgency, setUrgency] = useState('');
   const [trigger, setTrigger] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'' | BRStatus>('');
+  const [statusFilter, setStatusFilter] = useState<'' | 'open' | BRStatus>('open');
   const lq = useLenderQueue();
   const mine = useBorrowRequests();
   const minePending = mine.requests.filter((r) => r.status === 'PENDING_APPROVAL' || r.status === 'DRAFT').length;
@@ -862,7 +863,7 @@ export function LenderQueuePage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
   const rows = data.filter((r) => {
     if (urgency && r.urgency !== urgency) return false;
     if (trigger && r.trigger !== trigger) return false;
-    if (statusFilter && r.status !== statusFilter) return false;
+    if (statusFilter === 'open' ? !isOpenLeg(r.status) : statusFilter && r.status !== statusFilter) return false;
     if (q && !(r.id + r.drug + r.requester).toLowerCase().includes(q)) return false;
     return true;
   });
@@ -1134,7 +1135,7 @@ export function LenderQueuePage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
             </select>
             <select
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as '' | BRStatus)}
+              onChange={(e) => setStatusFilter(e.target.value as '' | 'open' | BRStatus)}
               style={selectStyle}
             >
               {STATUS_FILTER.map((o) => (
