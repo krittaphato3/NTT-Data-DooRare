@@ -15,6 +15,7 @@ import {
 } from '../data/lender';
 import type { BorrowRequest, BRStatus, LendableStock, LotOption } from '../data/lender';
 import { useLenderQueue } from '../data/useLenderQueue';
+import { useBorrowRequests } from '../data/useBorrowRequests';
 import { respondToLeg } from '../../../services/borrowApi';
 
 const UG_ICON: Record<string, IconName> = {
@@ -844,6 +845,8 @@ export function LenderQueuePage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
   const [statusFilter, setStatusFilter] = useState<'' | BRStatus>('');
   const lq = useLenderQueue();
   const isLive = lq.source === 'live';
+  const mine = useBorrowRequests();
+  const minePending = mine.requests.filter((r) => r.status === 'PENDING_APPROVAL' || r.status === 'DRAFT').length;
   const data = isLive ? lq.requests : BORROW_REQUESTS;
   const [selected, setSelected] = useState<BorrowRequest | null>(BORROW_REQUESTS[0]);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -967,10 +970,10 @@ export function LenderQueuePage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
                 fontFamily: 'Inter, sans-serif',
               }}
             >
-              9
+              {mine.requests.length}
             </span>
             <span className="badge st-pending">
-              รออนุมัติ 1
+              รออนุมัติ {minePending}
             </span>
           </div>
         </div>
@@ -1022,11 +1025,11 @@ export function LenderQueuePage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
                 fontFamily: 'Inter, sans-serif',
               }}
             >
-              2
+              {data.length}
             </span>
             <span className="badge st-pending">
               <Icon name="hourglass" className="ic12" />
-              รอเราตอบ 2
+              รอเราตอบ {data.filter((r) => r.status === 'waiting').length}
             </span>
           </div>
         </div>

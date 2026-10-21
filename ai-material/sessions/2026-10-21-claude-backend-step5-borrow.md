@@ -100,3 +100,5 @@ summary: Borrow request lifecycle (create, propose, approve, respond, next round
 - "ประวัติ" button toggles a finished-requests-only filter (fulfilled + closed/cancelled).
 - Verified on the main DB with pharmacist1.ha (badges 1/2/5/4, 125 returned chips, history filter 140 -> 119 rows).
 - Still not live: cancel after approval (needs an API), EMERGENCY context (F3), WH/driver/ER sidebar badges.
+
+- Lender page tab cards had hard-coded counts (9 / รออนุมัติ 1 / 2 / รอเราตอบ 2) while the requests page used the lender-queue mock (6); both now come from the same hooks (live: 100 / 148 for HE; mock: 9 / 6).
