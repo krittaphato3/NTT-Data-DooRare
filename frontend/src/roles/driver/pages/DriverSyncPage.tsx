@@ -1,25 +1,82 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Icon } from '../../../components/common/icons';
+import { useAuth } from '../../../context/AuthContext';
+import { fmtThaiTime } from '../../warehouse/data/transportLive';
+import { useTransport } from '../../warehouse/data/useTransport';
+import { clearRejected, listQueue, onQueueChange, syncQueue } from '../data/driverQueue';
+import type { QueuedEvent } from '../data/driverQueue';
 import { DRIVER_USER, DRIVER_VEHICLE } from '../data/session';
 import { COLD_CHAIN_GUIDELINE, EMERGENCY_CONTACTS, INITIAL_OFFLINE_EVENTS } from '../data/driverTasks';
 import type { DriverOfflineEvent } from '../data/driverTasks';
 
+type Row = DriverOfflineEvent & { state?: 'queued' | 'applied' | 'rejected'; detail?: string };
+
 export function DriverSyncPage() {
-  const [events, setEvents] = useState<DriverOfflineEvent[]>(INITIAL_OFFLINE_EVENTS);
+  const { user } = useAuth();
+  const tr = useTransport();
+  const [queue, setQueue] = useState<QueuedEvent[]>([]);
   const [isSimulatedOffline, setIsSimulatedOffline] = useState(false);
-  const [syncedAll, setSyncedAll] = useState(false);
+  const [syncMessage, setSyncMessage] = useState<string | null>(null);
+  const [syncError, setSyncError] = useState<string | null>(null);
 
-  const pendingCount = syncedAll ? 0 : events.filter((e) => !e.applied).length;
+  useEffect(() => {
+    const load = () => void listQueue().then(setQueue).catch(() => undefined);
+    load();
+    return onQueueChange(load);
+  }, []);
 
-  const handleManualSync = () => {
-    setSyncedAll(true);
-    setEvents((prev) =>
-      prev.map((e) => ({
-        ...e,
-        applied: true,
-        receivedAt: new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) + ' น. (ซิงก์สำเร็จ)',
-      }))
-    );
+  const live = tr.source === 'live';
+  const events: Row[] = useMemo(() => {
+    if (!live) return INITIAL_OFFLINE_EVENTS;
+    const queued: Row[] = queue.map((e) => ({
+      clientEventId: e.clientEventId,
+      seq: e.seq,
+      taskId: e.taskNo,
+      toStatus: e.toStatus,
+      capturedAt: fmtThaiTime(e.capturedAt),
+      receivedAt: e.state === 'rejected' ? 'เซิร์ฟเวอร์ปฏิเสธ' : 'รอสัญญาณเชื่อมต่อ...',
+      applied: false,
+      photoKeys: e.photos.map((_, i) => `queued-${i}`),
+      note: e.detail ?? e.note,
+      state: e.state === 'rejected' ? 'rejected' : 'queued',
+      detail: e.detail,
+    }));
+    const server: Row[] = tr.tasks
+      .flatMap((t) => t.events.map((ev) => ({ t, ev })))
+      .sort((a, b) => b.ev.capturedAt.localeCompare(a.ev.capturedAt))
+      .slice(0, 30)
+      .map(({ t, ev }) => ({
+        clientEventId: ev.clientEventId.slice(0, 13),
+        seq: ev.seq,
+        taskId: t.taskNo ?? t.id,
+        toStatus: ev.toStatus,
+        capturedAt: fmtThaiTime(ev.capturedAt),
+        receivedAt: `${fmtThaiTime(ev.receivedAt)} น.`,
+        applied: ev.applied,
+        photoKeys: ev.photoKeys,
+        note: ev.rejectReason ?? (ev.actorName ? `บันทึกโดย ${ev.actorName}` : ''),
+        state: ev.applied ? ('applied' as const) : ('rejected' as const),
+        detail: ev.rejectReason ?? undefined,
+      }));
+    return [...queued, ...server];
+  }, [live, queue, tr.tasks]);
+
+  const pendingCount = queue.filter((e) => e.state === 'pending').length;
+  const queuedPhotos = queue.reduce((n, e) => n + e.photos.length, 0);
+  const driverName = user?.name ?? DRIVER_USER.name;
+  const vehicle = tr.tasks.find((t) => t.vehicle)?.vehicle;
+  const plate = vehicle?.plate ?? DRIVER_VEHICLE.plateNumber;
+
+  const handleManualSync = async () => {
+    setSyncError(null);
+    setSyncMessage(null);
+    try {
+      const r = await syncQueue();
+      await tr.reload();
+      setSyncMessage(`ซิงก์แล้ว: สำเร็จ ${r.applied} · ซ้ำ ${r.duplicate} · ถูกปฏิเสธ ${r.rejected}`);
+    } catch (e) {
+      setSyncError((e as Error).message);
+    }
   };
 
   return (
@@ -55,14 +112,25 @@ export function DriverSyncPage() {
           </button>
           <button
             className="btn btn-p"
-            disabled={pendingCount === 0 || isSimulatedOffline}
-            onClick={handleManualSync}
+            disabled={pendingCount === 0 || isSimulatedOffline || !live}
+            onClick={() => void handleManualSync()}
           >
             <Icon name="sync" />
             บังคับซิงก์ข้อมูล ({pendingCount})
           </button>
         </div>
       </section>
+
+      {(syncMessage || syncError) && (
+        <section role={syncError ? 'alert' : 'status'} className="syncbar" style={syncError ? { background: '#FEF2F2', borderColor: '#FECACA' } : undefined}>
+          <span className="syncbar-text">{syncError ?? syncMessage}</span>
+          {queue.some((e) => e.state === 'rejected') && (
+            <button className="link" onClick={() => void clearRejected()}>
+              ล้างรายการที่ถูกปฏิเสธ
+            </button>
+          )}
+        </section>
+      )}
 
       {/* Network & Local Storage Quota Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 14 }}>
@@ -81,11 +149,11 @@ export function DriverSyncPage() {
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, marginBottom: 4 }}>
                 <span>รูปถ่ายหลักฐานในคิว</span>
                 <span className="num" style={{ fontWeight: 600, color: '#0F2A5C' }}>
-                  {syncedAll ? '0' : '2'} / 50 รูป (สูงสุด 200 MB)
+                  {live ? queuedPhotos : 2} / 50 รูป (สูงสุด 200 MB)
                 </span>
               </div>
               <div className="bar">
-                <span style={{ width: syncedAll ? '0%' : '4%', background: '#1D4ED8' }} />
+                <span style={{ width: `${Math.min(100, ((live ? queuedPhotos : 2) / 50) * 100)}%`, background: '#1D4ED8' }} />
               </div>
             </div>
 
@@ -119,9 +187,9 @@ export function DriverSyncPage() {
 
           <dl className="dlr" style={{ fontSize: 12.5 }}>
             <dt>คนขับ</dt>
-            <dd style={{ fontWeight: 600, color: '#0F2A5C' }}>{DRIVER_USER.name}</dd>
+            <dd style={{ fontWeight: 600, color: '#0F2A5C' }}>{driverName}</dd>
             <dt>ทะเบียนรถ</dt>
-            <dd><b className="num">{DRIVER_VEHICLE.plateNumber}</b></dd>
+            <dd><b className="num">{plate}</b></dd>
             <dt>ประเภทรถ</dt>
             <dd>{DRIVER_VEHICLE.vehicleType}</dd>
             <dt>ระบบความเย็น</dt>
@@ -145,7 +213,7 @@ export function DriverSyncPage() {
               ลำดับเหตุการณ์ที่บันทึกจากหน้าเครื่องคนขับและการตอบสนองจากเซิร์ฟเวอร์
             </div>
           </div>
-          {pendingCount > 0 && !syncedAll && (
+          {pendingCount > 0 && (
             <span className="badge t-amber">
               <Icon name="sync" className="ic12" />
               รอส่งเซิร์ฟเวอร์ {pendingCount} รายการ
@@ -197,6 +265,10 @@ export function DriverSyncPage() {
                       <span className="badge t-green" style={{ fontSize: 11 }}>
                         <Icon name="check" className="ic12" />
                         APPLIED
+                      </span>
+                    ) : ev.state === 'rejected' ? (
+                      <span className="badge t-red" style={{ fontSize: 11 }} title={ev.detail}>
+                        REJECTED
                       </span>
                     ) : (
                       <span className="badge t-amber" style={{ fontSize: 11 }}>

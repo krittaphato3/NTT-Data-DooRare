@@ -1,12 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Icon } from '../../../components/common/icons';
+import { useAuth } from '../../../context/AuthContext';
+import { compressImageToBase64 } from '../../../lib/imageCompress';
+import { uploadTransportPhoto } from '../../../services/transportApi';
 import { SyncBar } from '../../warehouse/components/SyncBar';
+import { useTransport } from '../../warehouse/data/useTransport';
 import { DRIVER_USER, DRIVER_VEHICLE } from '../data/session';
-import { isAssignedToDriver } from '../data/driverTasks';
+import { enqueueEvent, listQueue, onQueueChange, syncQueue } from '../data/driverQueue';
+import type { QueuedEvent } from '../data/driverQueue';
 import { DriverTaskCard } from '../components/DriverTaskCard';
 import { DriverTaskDrawer } from '../components/DriverTaskDrawer';
 import { DriverPhotoModal } from '../components/DriverPhotoModal';
-import { SHIPMENTS } from '../../warehouse/data/transport';
 import type { Shipment } from '../../warehouse/data/transport';
 import '../../warehouse/transport.css';
 
@@ -27,30 +31,50 @@ function useOnline(): boolean {
 
 type FilterTab = 'active' | 'in_transit' | 'all';
 
+const hhmm = () => new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+
+/** Shows what the driver already did on this device but the server has not seen yet. */
+function withQueue(task: Shipment, queue: QueuedEvent[]): Shipment {
+  const mine = queue.filter((e) => e.state === 'pending' && e.taskId === task.taskId).sort((a, b) => a.seq - b.seq);
+  if (mine.length === 0) return task;
+  const last = mine[mine.length - 1];
+  return {
+    ...task,
+    status: last.toStatus,
+    pending: true,
+    updatedAt: `${hhmm()} น.`,
+    photos: [...task.photos, ...mine.flatMap((e) => e.photos.map(() => ({ stage: e.toStatus === 'ARRIVED' ? ('ARRIVED' as const) : ('LOADED' as const), time: `${hhmm()} น.`, pending: true })))],
+  };
+}
+
 export function DriverTransportPage() {
   const realOnline = useOnline();
   // Simulated offline toggle for PWA offline resilience testing (NFR-011)
   const [simulatedOffline, setSimulatedOffline] = useState(false);
   const online = realOnline && !simulatedOffline;
+  const { user } = useAuth();
+  const tr = useTransport();
+  const live = tr.source === 'live';
 
-  const [tasks, setTasks] = useState<Shipment[]>(() => {
-    // Pick tasks assigned to current driver or tasks relevant to driver
-    const driverTasks = SHIPMENTS.filter((s) => isAssignedToDriver(s, DRIVER_USER.name));
-    return driverTasks.length > 0 ? driverTasks : SHIPMENTS.slice(0, 4);
-  });
+  const [queue, setQueue] = useState<QueuedEvent[]>([]);
+  useEffect(() => {
+    const load = () => void listQueue().then(setQueue).catch(() => undefined);
+    load();
+    return onQueueChange(load);
+  }, []);
+  const pendingQueue = queue.filter((e) => e.state === 'pending');
+
+  const tasks = useMemo(() => tr.shipments.map((t) => withQueue(t, queue)), [tr.shipments, queue]);
 
   const [tab, setTab] = useState<FilterTab>('active');
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [synced, setSynced] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Photo modal state
   const [photoModal, setPhotoModal] = useState<{ open: boolean; taskId: string; stage: 'LOADED' | 'ARRIVED' } | null>(null);
 
-  // Calculate pending items
-  const queuedCount = useMemo(() => {
-    if (synced) return 0;
-    return tasks.reduce((acc, t) => acc + (t.pending ? 1 : 0) + t.photos.filter((p) => p.pending).length, 0);
-  }, [tasks, synced]);
+  const queuedCount = pendingQueue.length;
 
   const activeTasks = useMemo(() => {
     return tasks.filter((t) => t.status === 'LOADED' || t.status === 'IN_TRANSIT' || t.status === 'WAITING_DISPATCH');
@@ -68,78 +92,70 @@ export function DriverTransportPage() {
 
   const selectedTask = selectedId ? tasks.find((t) => t.id === selectedId) : null;
 
+  const nextSeq = (t: Shipment) => Math.max(t.lastSeq ?? 0, ...queue.filter((e) => e.taskId === t.taskId).map((e) => e.seq)) + 1;
+
+  /** One status change: straight to the API when online, otherwise into the offline queue. */
+  const record = async (t: Shipment, toStatus: 'LOADED' | 'IN_TRANSIT' | 'ARRIVED', opts: { file?: File; note?: string } = {}) => {
+    if (!live || !t.taskId) throw new Error('ใช้ข้อมูลตัวอย่างอยู่ บันทึกไม่ได้ · ลองโหลดหน้าใหม่เมื่อเชื่อมต่อระบบได้');
+    const photo = opts.file ? await compressImageToBase64(opts.file) : null;
+    if (online) {
+      const keys = photo ? [(await uploadTransportPhoto(t.taskId, photo)).photoKey] : [];
+      await tr.advance(t, toStatus, keys.length ? { photoKeys: keys } : {});
+    } else {
+      await enqueueEvent({ taskId: t.taskId, taskNo: t.id, seq: nextSeq(t), toStatus, capturedAt: new Date().toISOString(), note: opts.note ?? '', photos: photo ? [photo] : [] });
+    }
+  };
+
+  const guarded = async (fn: () => Promise<void>) => {
+    setBusy(true);
+    setError(null);
+    try {
+      await fn();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   // Driver advances: LOADED -> IN_TRANSIT
   const handleDepart = (id: string) => {
-    const nowTime = new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
-    setTasks((prev) =>
-      prev.map((t) => {
-        if (t.id !== id) return t;
-        const newTimes = [...t.times];
-        newTimes[2] = `${nowTime} · ${DRIVER_USER.name} ออกเดินทาง`;
-        return {
-          ...t,
-          status: 'IN_TRANSIT',
-          updatedAt: `${nowTime} น.`,
-          updatedBy: `${DRIVER_USER.name} (คนขับ)`,
-          times: newTimes,
-          pending: !online,
-        };
-      })
-    );
+    const t = tasks.find((x) => x.id === id);
+    if (t) void guarded(() => record(t, 'IN_TRANSIT'));
   };
 
   // Driver opens arrival photo capture
   const handleArriveWithPhoto = (id: string) => {
+    setError(null);
     setPhotoModal({ open: true, taskId: id, stage: 'ARRIVED' });
   };
 
   // Save captured photo & advance status
-  const handleSavePhoto = (stage: 'LOADED' | 'ARRIVED', note: string) => {
-    if (!photoModal) return;
-    const nowTime = new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
-
-    setTasks((prev) =>
-      prev.map((t) => {
-        if (t.id !== photoModal.taskId) return t;
-        const newPhotos = [
-          ...t.photos,
-          {
-            stage,
-            time: `${nowTime} น.`,
-            pending: !online,
-          },
-        ];
-        const newTimes = [...t.times];
-        let nextStatus = t.status;
-        if (stage === 'ARRIVED') {
-          nextStatus = 'ARRIVED';
-          newTimes[3] = `${nowTime} · ${DRIVER_USER.name} + รูป ${note ? `(${note})` : ''}`;
-        }
-        return {
-          ...t,
-          status: nextStatus,
-          photos: newPhotos,
-          times: newTimes,
-          updatedAt: `${nowTime} น.`,
-          updatedBy: `${DRIVER_USER.name} (คนขับ)`,
-          pending: !online || t.pending,
-        };
-      })
-    );
-
-    setPhotoModal(null);
+  const handleSavePhoto = (stage: 'LOADED' | 'ARRIVED', note: string, file: File) => {
+    const t = photoModal && tasks.find((x) => x.id === photoModal.taskId);
+    if (!t) return;
+    void guarded(async () => {
+      await record(t, stage, { file, note });
+      setPhotoModal(null);
+    });
   };
 
-  const handleSyncAll = () => {
-    setSynced(true);
-    setTasks((prev) =>
-      prev.map((t) => ({
-        ...t,
-        pending: false,
-        photos: t.photos.map((p) => ({ ...p, pending: false })),
-      }))
-    );
-  };
+  const handleSyncAll = () =>
+    void guarded(async () => {
+      await syncQueue();
+      await tr.reload();
+    });
+
+  // Signal is back: send what was queued.
+  useEffect(() => {
+    if (online && live && pendingQueue.length > 0) handleSyncAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [online, live, pendingQueue.length]);
+
+  const driverName = user?.name ?? DRIVER_USER.name;
+  const driverInitial = user?.initial ?? DRIVER_USER.initial;
+  const hospitalLabel = user?.hospitalName ?? DRIVER_USER.hospitalLabel;
+  const plate = tasks.find((t) => t.vehiclePlate)?.vehiclePlate ?? DRIVER_VEHICLE.plateNumber;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -172,19 +188,19 @@ export function DriverTransportPage() {
               fontWeight: 700,
             }}
           >
-            {DRIVER_USER.initial}
+            {driverInitial}
           </div>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
               <h1 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#FFFFFF' }}>
-                {DRIVER_USER.name}
+                {driverName}
               </h1>
               <span className="badge t-green" style={{ height: 22, fontSize: 11.5, background: '#DCFCE7', color: '#166534' }}>
                 พร้อมปฏิบัติงาน (Active)
               </span>
             </div>
             <div style={{ fontSize: 13, opacity: 0.9, marginTop: 3 }}>
-              {DRIVER_VEHICLE.vehicleType} · ทะเบียน <b>{DRIVER_VEHICLE.plateNumber}</b> ({DRIVER_USER.hospitalLabel})
+              {DRIVER_VEHICLE.vehicleType} · ทะเบียน <b>{plate}</b> ({hospitalLabel})
             </div>
           </div>
         </div>
@@ -213,6 +229,17 @@ export function DriverTransportPage() {
           </a>
         </div>
       </section>
+
+      {tr.source === 'mock' && (
+        <section role="status" className="syncbar" style={{ background: '#FFFBEB', borderColor: '#FDE68A' }}>
+          <span className="syncbar-text">โหลดงานขนส่งจริงไม่ได้ ({tr.error}) · กำลังแสดงข้อมูลตัวอย่าง บันทึกสถานะไม่ได้</span>
+        </section>
+      )}
+      {error && !photoModal && (
+        <section role="alert" className="syncbar" style={{ background: '#FEF2F2', borderColor: '#FECACA' }}>
+          <span className="syncbar-text">{error}</span>
+        </section>
+      )}
 
       {/* Offline Sync Bar (UI-14 PWA requirement) */}
       <SyncBar
@@ -261,7 +288,7 @@ export function DriverTransportPage() {
               รายการงานขนส่งเวชภัณฑ์ <span className="en">UI-14 Driver Tasks</span>
             </h2>
             <div style={{ fontSize: 12.5, color: '#475569', marginTop: 2 }}>
-              แสดงเฉพาะงานขนส่งที่มอบหมายให้ {DRIVER_USER.name} (SEC-002 Least Privilege)
+              แสดงเฉพาะงานขนส่งที่มอบหมายให้ {driverName} (SEC-002 Least Privilege)
             </div>
           </div>
 
@@ -314,7 +341,7 @@ export function DriverTransportPage() {
                 key={t.id}
                 shipment={t}
                 status={t.status}
-                pending={!synced && (!!t.pending || t.photos.some((p) => p.pending))}
+                pending={!!t.pending || t.photos.some((p) => p.pending)}
                 onOpenDetail={(id) => setSelectedId(id)}
                 onDepart={handleDepart}
                 onArriveWithPhoto={handleArriveWithPhoto}
@@ -329,7 +356,7 @@ export function DriverTransportPage() {
         <DriverTaskDrawer
           shipment={selectedTask}
           status={selectedTask.status}
-          pending={!synced && (!!selectedTask.pending || selectedTask.photos.some((p) => p.pending))}
+          pending={!!selectedTask.pending || selectedTask.photos.some((p) => p.pending)}
           onClose={() => setSelectedId(null)}
           onDepart={handleDepart}
           onOpenPhotoModal={(stage) => setPhotoModal({ open: true, taskId: selectedTask.id, stage })}
@@ -343,6 +370,8 @@ export function DriverTransportPage() {
           taskId={photoModal.taskId}
           stage={photoModal.stage}
           online={online}
+          busy={busy}
+          error={error}
           onClose={() => setPhotoModal(null)}
           onSavePhoto={handleSavePhoto}
         />

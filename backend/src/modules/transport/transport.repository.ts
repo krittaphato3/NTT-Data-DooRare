@@ -131,7 +131,7 @@ export class TransportRepository {
     const events = new Map<string, TransportEventView[]>();
     if (taskIds.length === 0) return events;
     const result = await db.query(
-      `SELECT te.id, te.task_id, te.to_status::text AS to_status, te.captured_at, te.received_at, te.applied, te.reject_reason,
+      `SELECT te.id, te.client_event_id, te.seq, te.task_id, te.to_status::text AS to_status, te.captured_at, te.received_at, te.applied, te.reject_reason,
               te.photo_keys, te.temperature_c::float8 AS temperature_c, u.display_name, u.role::text AS role
          FROM transport_event te
          LEFT JOIN app_user u ON u.id = te.actor_id
@@ -143,6 +143,8 @@ export class TransportRepository {
       const list = events.get(row.task_id) ?? [];
       list.push({
         id: row.id,
+        clientEventId: row.client_event_id,
+        seq: Number(row.seq),
         toStatus: row.to_status,
         capturedAt: new Date(row.captured_at).toISOString(),
         receivedAt: new Date(row.received_at).toISOString(),

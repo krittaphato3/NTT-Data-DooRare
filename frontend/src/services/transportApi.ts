@@ -20,6 +20,8 @@ export interface ApiTransportLine {
 
 export interface ApiTransportEvent {
   id: string;
+  clientEventId: string;
+  seq: number;
   toStatus: ApiTransportStatus;
   capturedAt: string;
   receivedAt: string;
@@ -99,5 +101,24 @@ export function uploadTransportPhoto(taskId: string, dataBase64: string) {
   return apiJson<{ ok: true; photoKey: string; size: number }>(`/transport-tasks/${taskId}/photos`, {
     method: 'POST',
     body: JSON.stringify({ dataBase64 }),
+  });
+}
+
+export interface SyncEventInput {
+  clientEventId: string;
+  seq: number;
+  toStatus: 'LOADED' | 'IN_TRANSIT' | 'ARRIVED' | 'RECEIVED';
+  capturedAt: string;
+  photoKeys?: string[];
+}
+
+export type SyncOutcome = 'APPLIED' | 'DUPLICATE' | 'REJECTED_OUT_OF_ORDER' | 'REJECTED_INVALID_TRANSITION';
+
+/** API-F2a-017: offline batch, idempotent by clientEventId. */
+export function syncTransportEvents(taskId: string, events: SyncEventInput[]) {
+  return apiJson<{ ok: true; results: { clientEventId: string; outcome: SyncOutcome; detail?: string }[] }>(`/transport-tasks/${taskId}/events:sync`, {
+    method: 'POST',
+    headers: { 'Idempotency-Key': crypto.randomUUID() },
+    body: JSON.stringify({ events }),
   });
 }

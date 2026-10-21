@@ -28,6 +28,8 @@ export interface TransportLine {
 
 export interface TransportEventView {
   id: string;
+  clientEventId: string;
+  seq: number;
   toStatus: TransportStatus;
   capturedAt: string;
   receivedAt: string;

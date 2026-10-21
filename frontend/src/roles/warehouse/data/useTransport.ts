@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { compressImageToBase64 } from '../../../lib/imageCompress';
 import { advanceTransportTask, getTransportTasks, uploadTransportPhoto } from '../../../services/transportApi';
+import type { ApiTransportTask } from '../../../services/transportApi';
 import { AUDIT_HISTORY, SHIPMENTS } from './transport';
 import type { Shipment } from './transport';
 import { buildHistory, taskToShipment } from './transportLive';
@@ -19,6 +20,8 @@ export type TransportSource = 'loading' | 'live' | 'mock';
 interface State {
   source: TransportSource;
   shipments: Shipment[];
+  /** Raw API tasks (empty on the mock fallback). */
+  tasks: ApiTransportTask[];
   history: HistoryRow[];
   error: string | null;
 }
@@ -28,14 +31,14 @@ interface State {
  * If the API cannot be reached the screen keeps working on the mock list and says so.
  */
 export function useTransport() {
-  const [state, setState] = useState<State>({ source: 'loading', shipments: [], history: [], error: null });
+  const [state, setState] = useState<State>({ source: 'loading', shipments: [], tasks: [], history: [], error: null });
 
   const load = useCallback(async () => {
     try {
       const res = await getTransportTasks({ limit: 200 });
-      setState({ source: 'live', shipments: res.items.map((t) => taskToShipment(t)), history: buildHistory(res.items), error: null });
+      setState({ source: 'live', shipments: res.items.map((t) => taskToShipment(t)), tasks: res.items, history: buildHistory(res.items), error: null });
     } catch (error) {
-      setState({ source: 'mock', shipments: SHIPMENTS, history: AUDIT_HISTORY, error: (error as Error).message });
+      setState({ source: 'mock', shipments: SHIPMENTS, tasks: [], history: AUDIT_HISTORY, error: (error as Error).message });
     }
   }, []);
 

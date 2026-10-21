@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Icon } from '../../../components/common/icons';
 
 interface DriverPhotoModalProps {
@@ -6,11 +6,25 @@ interface DriverPhotoModalProps {
   stage: 'LOADED' | 'ARRIVED';
   online: boolean;
   onClose: () => void;
-  onSavePhoto: (stage: 'LOADED' | 'ARRIVED', note: string) => void;
+  onSavePhoto: (stage: 'LOADED' | 'ARRIVED', note: string, file: File) => void;
+  busy?: boolean;
+  error?: string | null;
 }
 
-export function DriverPhotoModal({ taskId, stage, online, onClose, onSavePhoto }: DriverPhotoModalProps) {
-  const [photoAdded, setPhotoAdded] = useState(true);
+export function DriverPhotoModal({ taskId, stage, online, onClose, onSavePhoto, busy, error }: DriverPhotoModalProps) {
+  const [file, setFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const photoAdded = !!file;
+  useEffect(() => {
+    if (!file) {
+      setPreview(null);
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    setPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
   const [note, setNote] = useState('');
   const nowTime = new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
 
@@ -75,16 +89,21 @@ export function DriverPhotoModal({ taskId, stage, online, onClose, onSavePhoto }
               gap: 8,
             }}
           >
+            <input
+              ref={inputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              hidden
+              data-testid="driver-photo-input"
+              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+            />
             {photoAdded ? (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-                <div style={{ width: 80, height: 80, borderRadius: 8, background: '#EFF6FF', border: '1px solid #BFDBFE', display: 'grid', placeItems: 'center', color: '#1D4ED8' }}>
-                  <Icon name="camera" className="ic20" style={{ width: 36, height: 36 }} />
-                </div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: '#0F2A5C' }}>
-                  {stage === 'LOADED' ? 'photo_cargo_loaded_01.jpg' : 'photo_dock_arrival_01.jpg'}
-                </div>
+                {preview && <img src={preview} alt="ตัวอย่างรูปที่เลือก" style={{ maxWidth: '100%', maxHeight: 160, borderRadius: 8, border: '1px solid #BFDBFE' }} />}
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#0F2A5C' }}>{file!.name}</div>
                 <div style={{ fontSize: 11.5, color: '#475569' }}>
-                  ขนาด 840 KB (บีบอัดอัตโนมัติ ≤ 1.5 MB ตาม NFR-011)
+                  ขนาดเดิม {(file!.size / 1024).toFixed(0)} KB (บีบอัดเป็น JPEG ≤ 1.5 MB ก่อนส่ง ตาม NFR-011)
                 </div>
                 {!online && (
                   <span className="badge t-amber" style={{ fontSize: 11 }}>
@@ -92,19 +111,18 @@ export function DriverPhotoModal({ taskId, stage, online, onClose, onSavePhoto }
                     จะบันทึกในเครื่อง (รอซิงก์เมื่อมีสัญญาณ)
                   </span>
                 )}
+                <button className="btn btn-s btn-sm" onClick={() => inputRef.current?.click()}>
+                  เปลี่ยนรูป
+                </button>
               </div>
             ) : (
               <div>
-                <button
-                  className="btn btn-s"
-                  onClick={() => setPhotoAdded(true)}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
-                >
+                <button className="btn btn-s" onClick={() => inputRef.current?.click()} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                   <Icon name="camera" />
                   เปิดกล้อง / เลือกรูปถ่าย
                 </button>
                 <div className="sub" style={{ marginTop: 6, fontSize: 11 }}>
-                  รองรับ JPEG, PNG (ไม่เกิน 10 รูปต่องาน)
+                  รองรับ JPEG, PNG, WebP (ไม่เกิน 10 รูปต่องาน)
                 </div>
               </div>
             )}
@@ -126,16 +144,21 @@ export function DriverPhotoModal({ taskId, stage, online, onClose, onSavePhoto }
         </div>
 
         <div style={{ padding: '12px 18px', background: '#F8FAFC', borderTop: '1px solid #E2E8F0', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+          {error && (
+            <span role="alert" style={{ marginRight: 'auto', fontSize: 12.5, color: '#B91C1C', alignSelf: 'center' }}>
+              {error}
+            </span>
+          )}
           <button className="btn btn-s" onClick={onClose}>
             ยกเลิก
           </button>
           <button
             className="btn btn-p"
-            disabled={!photoAdded}
-            onClick={() => onSavePhoto(stage, note)}
+            disabled={!photoAdded || busy}
+            onClick={() => file && onSavePhoto(stage, note, file)}
           >
             <Icon name="check" />
-            บันทึกรูปและอัปเดตสถานะ
+            {busy ? 'กำลังบันทึก…' : 'บันทึกรูปและอัปเดตสถานะ'}
           </button>
         </div>
       </div>

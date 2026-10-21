@@ -40,6 +40,9 @@ export interface Shipment {
   refId?: string;
   /** Live data: direction relative to the signed-in hospital (replaces the mock HOME_HOSPITAL rule). */
   outbound?: boolean;
+  /** Live data: highest event seq seen (the driver's offline queue continues from it) and the assigned vehicle plate. */
+  lastSeq?: number;
+  vehiclePlate?: string;
   kind: ShipmentKind;
   ref: string;
   drug: string;

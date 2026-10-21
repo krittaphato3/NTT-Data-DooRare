@@ -64,6 +64,8 @@ export function taskToShipment(t: ApiTransportTask, now = new Date()): Shipment 
     taskId: t.id,
     version: t.version,
     outbound: t.direction === 'OUT',
+    lastSeq: t.events.reduce((max, e) => Math.max(max, e.seq), 0),
+    vehiclePlate: t.vehicle?.plate,
     refType: t.refType,
     refId: t.refId,
     kind: t.kind,
