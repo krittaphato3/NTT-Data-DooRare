@@ -17,6 +17,8 @@ interface UserFormModalProps {
   user?: HospitalUser;
   /** Role that must stay assigned (editing the hospital's last active admin). */
   lockedRole?: RoleCode;
+  /** Server-side failure (409 CONFLICT, 422 ROLE_CONFLICT, 403 …) shown inside the dialog. */
+  error?: string;
   onClose: () => void;
   onSubmit: (values: UserFormValues) => void;
 }
@@ -27,7 +29,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
  * Invite / edit a hospital account (API-AD-006/007). Role choices are limited to the roles a
  * hospital admin may grant — SYSTEM_ADMIN and REGION_ADMIN are never offered (spec §5.2 scope).
  */
-export function UserFormModal({ mode, user, lockedRole, onClose, onSubmit }: UserFormModalProps) {
+export function UserFormModal({ mode, user, lockedRole, error, onClose, onSubmit }: UserFormModalProps) {
   const [name, setName] = useState(user?.name ?? '');
   const [email, setEmail] = useState(user?.email ?? '');
   const [roles, setRoles] = useState<RoleCode[]>(user?.roles ?? []);
@@ -150,6 +152,12 @@ export function UserFormModal({ mode, user, lockedRole, onClose, onSubmit }: Use
           {showErr(reasonErr) && <span className="ha-error">{reasonErr}</span>}
         </div>
       </div>
+
+      {error && (
+        <div className="ha-banner ha-banner-err" role="alert" data-part="user-form-error" style={{ marginTop: 14 }}>
+          <span>{error}</span>
+        </div>
+      )}
 
       <div className="ha-dialog-foot">
         <button className="btn btn-g" onClick={onClose}>

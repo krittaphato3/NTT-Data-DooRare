@@ -7,6 +7,8 @@ interface ReasonDialogProps {
   /** Exactly what will change, so the approver confirms the real effect. */
   detail: ReactNode;
   confirmLabel: string;
+  /** Server-side failure (409 SELF_LOCKOUT / LAST_ADMIN …) shown inside the dialog. */
+  error?: string;
   onConfirm: (reason: string) => void;
   onClose: () => void;
 }
@@ -15,7 +17,7 @@ interface ReasonDialogProps {
  * Confirmation dialog for audited write actions (SEC-003): the reason is mandatory and is what
  * gets written to the audit log, so confirm stays disabled until it is filled in.
  */
-export function ReasonDialog({ title, detail, confirmLabel, onConfirm, onClose }: ReasonDialogProps) {
+export function ReasonDialog({ title, detail, confirmLabel, error, onConfirm, onClose }: ReasonDialogProps) {
   const [reason, setReason] = useState('');
   const [touched, setTouched] = useState(false);
   const valid = reason.trim().length > 0;
@@ -42,6 +44,12 @@ export function ReasonDialog({ title, detail, confirmLabel, onConfirm, onClose }
         />
         {touched && !valid && <span className="ha-error">กรุณาระบุเหตุผล</span>}
       </div>
+
+      {error && (
+        <div className="ha-banner ha-banner-err" role="alert" data-part="reason-error" style={{ marginTop: 12 }}>
+          <span>{error}</span>
+        </div>
+      )}
 
       <div className="ha-dialog-foot">
         <button className="btn btn-g" onClick={onClose}>
