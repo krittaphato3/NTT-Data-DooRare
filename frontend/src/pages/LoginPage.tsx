@@ -19,6 +19,17 @@ const ROLE_INFO: Record<RoleCode, { label: string; icon: string; desc: string; c
   PROCUREMENT_OFFICER: { label: 'เจ้าหน้าที่จัดซื้อ (Procurement)', icon: 'chart', desc: 'ดูการพยากรณ์และร่างใบสั่งซื้อ (UI-02)', color: '#C2410C', bg: '#FFF7ED' },
 };
 
+/** The accounts used to demo how the roles work together (db/demo/README.md). */
+const DEMO_CAST: { email: string; role: RoleCode; hospital_code: string; hospital_name: string; title: string; does: string }[] = [
+  { email: 'er_staff1.ha@example.org', role: 'ER_STAFF', hospital_code: 'HA', hospital_name: 'โรงพยาบาลสมุทรปราการ', title: 'ER (ผู้แจ้งเหตุ)', does: 'แจ้งเหตุ อนุมัติแผน ส่งคำขอยืมฉุกเฉิน' },
+  { email: 'pharmacist1.ha@example.org', role: 'PHARMACIST', hospital_code: 'HA', hospital_name: 'โรงพยาบาลสมุทรปราการ', title: 'เภสัช (ผู้ขอยืม)', does: 'สร้าง/อนุมัติคำขอยืม จัดการยาใกล้หมดอายุ' },
+  { email: 'pharmacist1.hc@example.org', role: 'PHARMACIST', hospital_code: 'HC', hospital_name: 'โรงพยาบาลพระสมุทรเจดีย์ฯ', title: 'เภสัช (ผู้ให้ยืม)', does: 'ตอบรับ/ปฏิเสธคำขอที่ HA ส่งมา' },
+  { email: 'warehouse_officer1.ha@example.org', role: 'WAREHOUSE_OFFICER', hospital_code: 'HA', hospital_name: 'โรงพยาบาลสมุทรปราการ', title: 'คลัง (ผู้รับ / แพ็กชุด)', does: 'โหลดของ รับของเข้า แพ็กชุดฉุกเฉิน' },
+  { email: 'warehouse_officer1.hc@example.org', role: 'WAREHOUSE_OFFICER', hospital_code: 'HC', hospital_name: 'โรงพยาบาลพระสมุทรเจดีย์ฯ', title: 'คลัง (ผู้ให้ยืม)', does: 'โหลดของขึ้นรถ ถ่ายรูป' },
+  { email: 'driver1.ha@example.org', role: 'DRIVER', hospital_code: 'HA', hospital_name: 'โรงพยาบาลสมุทรปราการ', title: 'คนขับ', does: 'ออกเดินทาง ยืนยันถึงปลายทาง' },
+];
+const DEMO_ROLES: RoleCode[] = ['PHARMACIST', 'WAREHOUSE_OFFICER', 'ER_STAFF', 'DRIVER'];
+
 export function LoginPage() {
   const { login, dbConnected, dbMessage, refreshHealth } = useAuth();
 
@@ -237,6 +248,38 @@ export function LoginPage() {
             </p>
           </div>
 
+          <div style={{ marginBottom: 18 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#0F2A5C', marginBottom: 8 }}>
+              ชุดบัญชีสำหรับเดโม · ดูการทำงานร่วมกันของแต่ละบทบาท
+              <span style={{ fontWeight: 400, color: '#64748B' }}> (รหัสผ่าน doorare123 · OTP 123456)</span>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10 }}>
+              {DEMO_CAST.map((c) => {
+                const info = ROLE_INFO[c.role];
+                const selected = email === c.email;
+                return (
+                  <button
+                    key={c.email}
+                    type="button"
+                    disabled={loading}
+                    onClick={() =>
+                      handleQuickLoginRole({ id: c.email, email: c.email, display_name: c.title, role: c.role, mfa_enabled: false, hospital_code: c.hospital_code, hospital_name: c.hospital_name, all_roles: [c.role] })
+                    }
+                    style={{ textAlign: 'left', background: '#FFFFFF', border: `2px solid ${selected ? info.color : '#E2E8F0'}`, borderRadius: 10, padding: '10px 12px', cursor: 'pointer', font: 'inherit' }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 6 }}>
+                      <span style={{ fontSize: 13.5, fontWeight: 700, color: info.color }}>{c.title}</span>
+                      <span style={{ fontSize: 10.5, fontWeight: 700, padding: '2px 8px', borderRadius: 12, background: info.bg, color: info.color }}>{c.hospital_code}</span>
+                    </div>
+                    <div style={{ fontSize: 11.5, color: '#64748B', marginTop: 2 }}>{c.hospital_name}</div>
+                    <div style={{ fontSize: 11.5, color: '#475569', marginTop: 6 }}>{c.does}</div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div style={{ fontSize: 13, fontWeight: 700, color: '#0F2A5C', marginBottom: 8 }}>บทบาทอื่น</div>
           <div
             style={{
               display: 'grid',
@@ -244,7 +287,7 @@ export function LoginPage() {
               gap: 12,
             }}
           >
-            {roleAccounts.map((acc) => {
+            {roleAccounts.filter((a) => !DEMO_ROLES.includes(a.role)).map((acc) => {
               const info = ROLE_INFO[acc.role] || {
                 label: acc.role,
                 icon: 'user',
