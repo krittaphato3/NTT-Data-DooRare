@@ -52,3 +52,8 @@ summary: backfill + shape run inside db:load, db:scenarios for API scenarios (sn
 - Fixes found by re-running: alerts the rules refuse (NO_NEED) or with no lender are skipped (next alert tried); Agent plan tries HA2 / HA4 / HA5 (HA1 has no forecast at receivers, so it is the lot left waiting for the Agent); close of old PARTIALLY_FULFILLED / ESCALATED requests (before 15 Oct) in 02-shape.
 - Also fixed the hard-coded "13 Oct 19:11" in the warehouse header (`WhPageHeader.tsx`).
 - Mistake worth remembering: a test command built from a zsh variable failed and the full `db:demo` ran on the main DB instead of a dry check; no harm because it was restorable, but test destructive commands on a copy.
+
+## Update: alert timer (branch feature/alert-reevaluate-timer)
+
+- `reevaluateAlerts()` in `backend/src/modules/forecasts/forecasts.runs.ts`: every 6 hours (timer in `index.ts`) re-evaluates stock alerts against the CURRENT stock with the latest loaded forecast per granularity; loads/retrains nothing. Tested on a DB copy (WEEK 178 evaluated / 27 updated, MONTH 163 / 96 updated + 1 opened).
+- Agreed cadence: forecast every ~3 days (still blocked: no way to run the model from the backend, needs the model owner's command), alert check every 6 h (done), expiry scan every 15 min (existing).

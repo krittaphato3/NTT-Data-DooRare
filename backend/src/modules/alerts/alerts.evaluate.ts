@@ -80,16 +80,20 @@ async function apply(
     return;
   }
   const snoozeOver = existing.status === 'SNOOZED' && existing.snoozed_until && new Date(existing.snoozed_until) <= new Date();
-  await client.query(
+  // Only touch the row when something differs, so a re-evaluation with unchanged stock does not bump `version` (If-Match of open screens).
+  const changed = await client.query(
     `UPDATE stock_alert SET type = $2::alert_type, severity = $3::alert_severity, stock_qty = $4, days_cover = $5,
             forecast_result_id = COALESCE($6, forecast_result_id),
             status = CASE WHEN $7 THEN 'OPEN'::alert_status ELSE status END, snoozed_until = CASE WHEN $7 THEN NULL ELSE snoozed_until END,
             updated_at = now(), version = version + 1
-      WHERE id = $1`,
+      WHERE id = $1
+        AND ($7 OR type IS DISTINCT FROM $2::alert_type OR severity IS DISTINCT FROM $3::alert_severity
+             OR stock_qty IS DISTINCT FROM $4::numeric(14,3) OR days_cover IS DISTINCT FROM $5::numeric(8,2)
+             OR forecast_result_id IS DISTINCT FROM COALESCE($6::uuid, forecast_result_id))`,
     [existing.id, desired.type, desired.severity, r.stock, r.daysCover, r.forecastResultId, Boolean(snoozeOver)],
   );
   if (snoozeOver) result.reopened += 1;
-  else result.updated += 1;
+  else if (changed.rowCount) result.updated += 1;
 }
 
 /** Evaluates the forecasts of one run (one granularity) for every hospital it covers. */
