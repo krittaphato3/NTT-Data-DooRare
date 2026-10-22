@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Icon } from '../../../components/common/icons';
 import { HOSPITAL_ADMIN_HOME_HREF } from '../../../data/navigation';
 import { SESSIONS } from '../../../data/session';
@@ -11,6 +11,7 @@ import type { UserFormValues } from '../components/UserFormModal';
 import { UserTable } from '../components/UserTable';
 import { HOSPITAL_USERS, ROLES_IN_USE, ROLE_SHORT_TH, USER_STATUS_META, USER_STATUS_ORDER } from '../data/users';
 import type { HospitalUser, UserStatus } from '../data/users';
+import { createUser, listUsers, updateUser, type ApiUser } from '../../../services/adminApi';
 import '../admin.css';
 
 type ConfirmKind = 'suspend' | 'activate' | 'resend';
@@ -20,26 +21,91 @@ interface ConfirmState {
   id: string;
 }
 
+function isMockMode(): boolean {
+  if (typeof window === 'undefined') return false;
+  const params = new URLSearchParams(window.location.search);
+  return params.get('mock') === '1';
+}
+
+function formatThaiDateTime(iso: string | null): string {
+  if (!iso) return '—';
+  try {
+    const d = new Date(iso);
+    // Simple format similar to mock style
+    const day = d.getDate();
+    const months = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+    const month = months[d.getMonth()];
+    const year = String(d.getFullYear() + 543).slice(-2);
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mm = String(d.getMinutes()).padStart(2, '0');
+    return `${day} ${month} ${year} ${hh}:${mm}`;
+  } catch {
+    return iso;
+  }
+}
+
+function formatThaiDate(iso: string | null): string {
+  if (!iso) return '—';
+  try {
+    const d = new Date(iso);
+    const day = d.getDate();
+    const months = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+    const month = months[d.getMonth()];
+    const year = String(d.getFullYear() + 543).slice(-2);
+    return `${day} ${month} ${year}`;
+  } catch {
+    return iso;
+  }
+}
+
+function mapApiUserToHospitalUser(u: ApiUser): HospitalUser {
+  const roles = (u.roles || []).map((r) => r.code as RoleCode);
+  // ensure primary role is included
+  const primary = u.primaryRole as RoleCode;
+  if (primary && !roles.includes(primary)) {
+    roles.unshift(primary);
+  } else if (primary) {
+    // move primary to front
+    const idx = roles.indexOf(primary);
+    if (idx > 0) {
+      roles.splice(idx, 1);
+      roles.unshift(primary);
+    }
+  }
+  return {
+    id: u.id,
+    name: u.name,
+    email: u.email,
+    roles,
+    status: u.status,
+    mfa: u.mfaEnabled,
+    lastLogin: formatThaiDateTime(u.lastLoginAt),
+    created: formatThaiDate(u.createdAt),
+  };
+}
+
 /**
  * User management (Hospital Admin, own hospital).
- * Endpoints it will call when wired: API-AD-006 `GET /users`, API-AD-007 `POST /users`.
+ * Endpoints: API-AD-006 `GET /users`, API-AD-007 `POST /users`, `PATCH /users/{id}`.
  *
  * Access: read-write within the hospital only. The role picker never offers SYSTEM_ADMIN or
  * REGION_ADMIN (spec §5.2 scope), and the last active hospital admin cannot be suspended or
- * demoted (safeguard from rbac.md §5.5, kept as it does not conflict with the spec).
+ * demoted.
  */
 export function UserManagementPage() {
-  const [users, setUsers] = useState<HospitalUser[]>(HOSPITAL_USERS);
+  const [mock] = useState(isMockMode());
+  const [users, setUsers] = useState<HospitalUser[]>(mock ? HOSPITAL_USERS : []);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState<RoleCode | 'ALL'>('ALL');
   const [statusFilter, setStatusFilter] = useState<UserStatus | 'ALL'>('ALL');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(!mock);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [detailId, setDetailId] = useState<string | null>(null);
   const [formMode, setFormMode] = useState<'create' | 'edit' | null>(null);
   const [editId, setEditId] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<ConfirmState | null>(null);
+  const [idempotencyKey, setIdempotencyKey] = useState<string>(() => crypto.randomUUID());
 
   // Permission decisions come from lib/rbac.ts; this page only applies them.
   const mayManage = can(HOSPITAL_ADMIN_ROLE, 'manageUsers');
@@ -68,10 +134,33 @@ export function UserManagementPage() {
   const detail = detailId ? (users.find((u) => u.id === detailId) ?? null) : null;
   const editTarget = editId ? (users.find((u) => u.id === editId) ?? null) : null;
 
-  const refresh = () => {
+  const loadUsers = async () => {
+    if (mock) {
+      setUsers(HOSPITAL_USERS);
+      setLoading(false);
+      return;
+    }
     setError('');
     setLoading(true);
-    window.setTimeout(() => setLoading(false), 600);
+    try {
+      const res = await listUsers();
+      const mapped = (res.items || []).map(mapApiUserToHospitalUser);
+      setUsers(mapped);
+    } catch (e: any) {
+      const msg = e?.message || 'ไม่สามารถโหลดรายชื่อผู้ใช้ได้';
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadUsers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const refresh = () => {
+    loadUsers();
   };
 
   const resetFilters = () => {
@@ -80,44 +169,110 @@ export function UserManagementPage() {
     setStatusFilter('ALL');
   };
 
-  const handleCreate = (values: UserFormValues) => {
-    if (users.some((u) => u.email.toLowerCase() === values.email.toLowerCase())) {
-      setError(`อีเมล ${values.email} มีในระบบแล้ว`);
-      setNotice('');
+  const handleCreate = async (values: UserFormValues) => {
+    setError('');
+    setNotice('');
+    if (mock) {
+      if (users.some((u) => u.email.toLowerCase() === values.email.toLowerCase())) {
+        setError(`อีเมล ${values.email} มีในระบบแล้ว`);
+        return;
+      }
+      const nextId = `USR-${String(100101 + users.length)}`;
+      setUsers((prev) => [
+        {
+          id: nextId,
+          name: values.name,
+          email: values.email,
+          roles: values.roles,
+          status: 'INVITED',
+          mfa: values.mfa,
+          lastLogin: '—',
+          created: '13 ต.ค. 69',
+        },
+        ...prev,
+      ]);
+      setFormMode(null);
+      setNotice(`ส่งคำเชิญให้ ${values.email} แล้ว · เหตุผลถูกบันทึกใน audit log`);
       return;
     }
-    const nextId = `USR-${String(100101 + users.length)}`;
-    setUsers((prev) => [
-      {
-        id: nextId,
-        name: values.name,
-        email: values.email,
-        roles: values.roles,
-        status: 'INVITED',
-        mfa: values.mfa,
-        lastLogin: '—',
-        created: '13 ต.ค. 69',
-      },
-      ...prev,
-    ]);
-    setFormMode(null);
-    setError('');
-    setNotice(`ส่งคำเชิญให้ ${values.email} แล้ว (ตัวอย่าง) · เหตุผลถูกบันทึกใน audit log`);
+    try {
+      const res = await createUser(
+        {
+          name: values.name,
+          email: values.email,
+          roles: values.roles,
+          mfaEnabled: values.mfa,
+          reason: values.reason,
+        },
+        idempotencyKey,
+      );
+      const mapped = mapApiUserToHospitalUser(res.data);
+      setUsers((prev) => [mapped, ...prev.filter((u) => u.id !== mapped.id)]);
+      setFormMode(null);
+      setNotice(`ส่งคำเชิญให้ ${values.email} แล้ว · เหตุผลถูกบันทึกใน audit log`);
+      setIdempotencyKey(crypto.randomUUID());
+    } catch (e: any) {
+      const code = e?.code;
+      if (code === 'CONFLICT') {
+        setError('อีเมลนี้ถูกใช้งานแล้ว');
+      } else if (code === 'ROLE_CONFLICT') {
+        setError('บทบาทไม่สามารรวมกันได้ (ROLE_CONFLICT)');
+      } else {
+        setError(e?.message || 'เกิดข้อผิดพลาด');
+      }
+    }
   };
 
-  const handleEdit = (values: UserFormValues) => {
+  const handleEdit = async (values: UserFormValues) => {
     if (!editTarget) return;
-    setUsers((prev) =>
-      prev.map((u) =>
-        u.id === editTarget.id
-          ? { ...u, name: values.name, email: values.email, roles: values.roles, mfa: values.mfa }
-          : u,
-      ),
-    );
-    setFormMode(null);
-    setEditId(null);
     setError('');
-    setNotice(`บันทึกการแก้ไข ${values.name} แล้ว (ตัวอย่าง) · เหตุผลถูกบันทึกใน audit log`);
+    setNotice('');
+    if (mock) {
+      setUsers((prev) =>
+        prev.map((u) =>
+          u.id === editTarget.id
+            ? { ...u, name: values.name, email: values.email, roles: values.roles, mfa: values.mfa }
+            : u,
+        ),
+      );
+      setFormMode(null);
+      setEditId(null);
+      setNotice(`บันทึกการแก้ไข ${values.name} แล้ว · เหตุผลถูกบันทึกใน audit log`);
+      return;
+    }
+    try {
+      const rolesChanged = JSON.stringify([...(editTarget.roles || [])].sort()) !== JSON.stringify([...(values.roles || [])].sort());
+      const body: Record<string, unknown> = {};
+      if (values.name !== editTarget.name) body.name = values.name;
+      if (values.email !== editTarget.email) body.email = values.email;
+      if (rolesChanged) {
+        body.roles = values.roles;
+        body.primaryRole = values.roles[0];
+      }
+      if (values.mfa !== editTarget.mfa) body.mfaEnabled = values.mfa;
+      if (rolesChanged || values.mfa !== editTarget.mfa || values.name !== editTarget.name || values.email !== editTarget.email) {
+        body.reason = values.reason;
+      } else {
+        body.reason = values.reason || 'แก้ไขข้อมูล';
+      }
+      const res = await updateUser(editTarget.id, body);
+      const mapped = mapApiUserToHospitalUser(res.data);
+      setUsers((prev) => prev.map((u) => (u.id === editTarget.id ? mapped : u)));
+      setFormMode(null);
+      setEditId(null);
+      setNotice(`บันทึกการแก้ไข ${values.name} แล้ว · เหตุผลถูกบันทึกใน audit log`);
+    } catch (e: any) {
+      const code = e?.code;
+      if (code === 'SELF_LOCKOUT') {
+        setError('ปิดบัญชีขถืขตนเองไม่ได้ / ถอดบทบาท SYSTEM_ADMIN ของตนเองไม่ได้');
+      } else if (code === 'LAST_ADMIN') {
+        setError('ต้องมีผู้ดูแลรพายโรงพยาบาลที่ใช้งานได้อย่างน้อยมาก 1 บัญชี');
+      } else if (code === 'ROLE_CONFLICT') {
+        setError('บทบาทไม่สามารรวมกันได้ (ROLE_CONFLICT)');
+      } else {
+        setError(e?.message || 'เกิดข้อผิดพลาด');
+      }
+    }
   };
 
   const confirmCopy: Record<ConfirmKind, { title: string; detail: string; label: string }> = {
@@ -138,21 +293,46 @@ export function UserManagementPage() {
     },
   };
 
-  const runConfirm = (reason: string) => {
+  const runConfirm = async (reason: string) => {
     if (!confirm) return;
     const target = users.find((u) => u.id === confirm.id);
     if (!target) return;
+    setError('');
+    setNotice('');
     if (confirm.kind === 'resend') {
-      setNotice(`ส่งคำเชิญซ้ำให้ ${target.email} แล้ว (ตัวอย่าง) · เหตุผล: ${reason}`);
-    } else {
+      setNotice(`ส่งคำเชิญซ้ำให้ ${target.email} แล้ว · เหตุผล: ${reason}`);
+      setConfirm(null);
+      return;
+    }
+    if (mock) {
       const nextStatus: UserStatus = confirm.kind === 'suspend' ? 'SUSPENDED' : 'ACTIVE';
       setUsers((prev) => prev.map((u) => (u.id === target.id ? { ...u, status: nextStatus } : u)));
       setNotice(
-        `${confirm.kind === 'suspend' ? 'ระงับ' : 'เปิดใช้งาน'} ${target.name} แล้ว (ตัวอย่าง) · เหตุผลถูกบันทึกใน audit log`,
+        `${confirm.kind === 'suspend' ? 'ระงับ' : 'เปิดใช้งาน'} ${target.name} แล้ว · เหตุผลถูกบันทึกใน audit log`,
       );
+      setConfirm(null);
+      return;
     }
-    setConfirm(null);
-    setError('');
+    try {
+      const nextActive = confirm.kind === 'activate';
+      const res = await updateUser(target.id, { active: nextActive, reason });
+      const mapped = mapApiUserToHospitalUser(res.data);
+      setUsers((prev) => prev.map((u) => (u.id === target.id ? mapped : u)));
+      setNotice(
+        `${confirm.kind === 'suspend' ? 'ระงับ' : 'เปิดใช้งาน'} ${target.name} แล้ว · เหตุผลถูกบันทึกใน audit log`,
+      );
+      setConfirm(null);
+    } catch (e: any) {
+      const code = e?.code;
+      if (code === 'SELF_LOCKOUT') {
+        setError('ปิดบัญชีของตนเองไม่ได้');
+      } else if (code === 'LAST_ADMIN') {
+        setError('ต้องมีผู้ดูแลโรงพยาบาลที่ใช้งานอยู่อย่างน้อย 1 บัญชี');
+      } else {
+        setError(e?.message || 'เกิดข้อผิดพลาด');
+      }
+      setConfirm(null);
+    }
   };
 
   const busy = loading;
@@ -184,6 +364,7 @@ export function UserManagementPage() {
               className="btn btn-p"
               onClick={() => {
                 setEditId(null);
+                setIdempotencyKey(crypto.randomUUID());
                 setFormMode('create');
               }}
             >

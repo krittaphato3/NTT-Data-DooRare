@@ -1,36 +1,131 @@
-import { useState } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { Icon } from '../../../components/common/icons';
-import { INITIAL_AUDIT_LOGS, type AuditLogRow } from '../data/adminData';
+import { auditActionMeta, API_ACTION_OPTIONS, formatThaiDateTime, mapApiToAuditEntry } from '../../hospital-admin/data/audit';
+import type { AuditEntry } from '../../hospital-admin/data/audit';
+import { listAudit, verifyAudit } from '../../../services/adminApi';
+import { getHospitals } from '../../../services/catalogApi';
+
+const API_LIMIT = 50;
 
 interface AuditLogTabProps {
   externalQuery?: string;
   onShowToast: (msg: string) => void;
 }
 
+type Tone = 'green' | 'red' | 'blue' | 'amber' | 'purple';
+function toneFor(tone: string): Tone {
+  if (tone === 't-green') return 'green';
+  if (tone === 't-red') return 'red';
+  if (tone === 't-amber') return 'amber';
+  if (tone === 't-orange') return 'purple';
+  return 'blue';
+}
+
+function summarizeChange(before: Record<string, unknown>, after: Record<string, unknown>): string {
+  const keys = Array.from(new Set([...Object.keys(before ?? {}), ...Object.keys(after ?? {})]));
+  const parts: string[] = [];
+  for (const k of keys) {
+    const b = (before ?? {})[k];
+    const a = (after ?? {})[k];
+    if (String(b ?? '') === String(a ?? '')) continue;
+    parts.push(`${k}: ${b ?? '—'} → ${a ?? '—'}`);
+  }
+  return parts.length ? parts.join(' · ') : '—';
+}
+
 export function AuditLogTab({ externalQuery = '', onShowToast }: AuditLogTabProps) {
+  const [entries, setEntries] = useState<AuditEntry[]>([]);
+  const [cursor, setCursor] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [error, setError] = useState('');
   const [search, setSearch] = useState(externalQuery);
   const [actionFilter, setActionFilter] = useState('ALL');
-  const [logs] = useState<AuditLogRow[]>(INITIAL_AUDIT_LOGS);
+  const [hospitalFilter, setHospitalFilter] = useState('ALL');
+  const [hospitals, setHospitals] = useState<{ id: string; name: string }[]>([]);
+  const [verify, setVerify] = useState<{ intact: boolean; problems: number; checkedAt: string } | null>(null);
+  const [verifyLoading, setVerifyLoading] = useState(false);
+  const debounceRef = useRef<number | null>(null);
 
-  const effectiveSearch = (externalQuery || search).toLowerCase();
+  const buildParams = useCallback(
+    () => {
+      const p: Record<string, string> = { limit: String(API_LIMIT) };
+      const q = (externalQuery || search).trim();
+      if (q) p.q = q;
+      if (actionFilter !== 'ALL') p.action = actionFilter;
+      if (hospitalFilter !== 'ALL') p.hospitalId = hospitalFilter;
+      return p;
+    },
+    [externalQuery, search, actionFilter, hospitalFilter],
+  );
 
-  const filteredLogs = logs.filter((log) => {
-    const matchSearch =
-      !effectiveSearch ||
-      log.actorName.toLowerCase().includes(effectiveSearch) ||
-      log.action.toLowerCase().includes(effectiveSearch) ||
-      log.hospitalName.toLowerCase().includes(effectiveSearch) ||
-      log.entity.toLowerCase().includes(effectiveSearch) ||
-      log.details.toLowerCase().includes(effectiveSearch) ||
-      log.ip.includes(effectiveSearch);
+  const loadFirst = useCallback(
+    async (params: Record<string, string>) => {
+      setLoading(true);
+      setError('');
+      try {
+        const res = await listAudit(params);
+        setEntries(res.items.map(mapApiToAuditEntry));
+        setCursor(res.nextCursor);
+      } catch (e: any) {
+        setEntries([]);
+        setCursor(null);
+        setError(e?.message || 'ไม่สามารถโหลดบันทึกตรวจสอบได้');
+      } finally {
+        setLoading(false);
+      }
+    },
+    [],
+  );
 
-    const matchAction = actionFilter === 'ALL' || log.actionCode === actionFilter;
-    return matchSearch && matchAction;
-  });
+  // Hospital list for the SA-only hospitalId filter.
+  useEffect(() => {
+    getHospitals({ limit: 200 })
+      .then((res) => setHospitals((res.items || []).map((h) => ({ id: h.id, name: h.nameTh || h.code || h.id }))))
+      .catch(() => setHospitals([]));
+  }, []);
 
-  const handleExport = () => {
-    onShowToast('ส่งออกบันทึกตรวจสอบ (Audit Trail) ในรูปแบบไฟล์ที่มีการเข้ารหัส SHA-256 เรียบร้อยแล้ว');
+  // Initial load + reload on filter change (debounced for search).
+  useEffect(() => {
+    if (debounceRef.current) window.clearTimeout(debounceRef.current);
+    debounceRef.current = window.setTimeout(() => {
+      loadFirst(buildParams());
+    }, search ? 300 : 0);
+    return () => {
+      if (debounceRef.current) window.clearTimeout(debounceRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search, actionFilter, hospitalFilter, externalQuery]);
+
+  const loadMore = async () => {
+    if (!cursor) return;
+    setLoadingMore(true);
+    try {
+      const res = await listAudit(buildParams(), cursor);
+      setEntries((prev) => [...prev, ...res.items.map(mapApiToAuditEntry)]);
+      setCursor(res.nextCursor);
+    } catch (e: any) {
+      onShowToast(e?.message || 'โหลดเพิ่มไม่สำเร็จ');
+    } finally {
+      setLoadingMore(false);
+    }
   };
+
+  const runVerify = async () => {
+    setVerifyLoading(true);
+    setVerify(null);
+    try {
+      const res = await verifyAudit();
+      setVerify(res.data);
+      onShowToast(res.data.intact ? 'hash chain ถูกต้องทั้งหมด' : `พบปัญหา ${res.data.problems} จุด`);
+    } catch (e: any) {
+      onShowToast(e?.message || 'ตรวจสอบ hash chain ไม่สำเร็จ');
+    } finally {
+      setVerifyLoading(false);
+    }
+  };
+
+  const hasFilter = search || actionFilter !== 'ALL' || hospitalFilter !== 'ALL';
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -41,9 +136,10 @@ export function AuditLogTab({ externalQuery = '', onShowToast }: AuditLogTabProp
             <Icon name="search" style={{ width: 16, height: 16, color: '#94A3B8' }} />
             <input
               type="search"
-              placeholder="ค้นหาผู้กระทำ, การกระทำ, IP, รายละเอียด..."
+              placeholder="ค้นหา action / entity / เหตุผล..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+              aria-label="ค้นหาบันทึกตรวจสอบ"
             />
           </div>
 
@@ -53,17 +149,28 @@ export function AuditLogTab({ externalQuery = '', onShowToast }: AuditLogTabProp
             onChange={(e) => setActionFilter(e.target.value)}
             aria-label="กรองประเภทการกระทำ"
           >
-            <option value="ALL">ทุกประเภทการกระทำ (All Actions)</option>
-            <option value="LOGIN_SUCCESS">การเข้าสู่ระบบ (LOGIN_SUCCESS)</option>
-            <option value="CONFIG_UPDATE">การเปลี่ยนค่าระบบ (CONFIG_UPDATE)</option>
-            <option value="SEC_BLOCK">ความปลอดภัยบล็อก (SEC_BLOCK)</option>
-            <option value="DISPATCH_FULFILLED">การส่งมอบยา (DISPATCH_FULFILLED)</option>
-            <option value="REQUEST_APPROVED">การอนุมัติคำขอ (REQUEST_APPROVED)</option>
-            <option value="EMERGENCY_REQUEST">คำขอฉุกเฉิน (EMERGENCY_REQUEST)</option>
-            <option value="REQUEST_REJECTED">การปฏิเสธคำขอ (REQUEST_REJECTED)</option>
+            {API_ACTION_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
           </select>
 
-          {(search || actionFilter !== 'ALL') && (
+          <select
+            className="admin-select"
+            value={hospitalFilter}
+            onChange={(e) => setHospitalFilter(e.target.value)}
+            aria-label="กรองตามโรงพยาบาล"
+          >
+            <option value="ALL">ทุกโรงพยาบาล</option>
+            {hospitals.map((h) => (
+              <option key={h.id} value={h.id}>
+                {h.name}
+              </option>
+            ))}
+          </select>
+
+          {hasFilter && (
             <button
               type="button"
               className="admin-btn admin-btn-secondary"
@@ -71,6 +178,7 @@ export function AuditLogTab({ externalQuery = '', onShowToast }: AuditLogTabProp
               onClick={() => {
                 setSearch('');
                 setActionFilter('ALL');
+                setHospitalFilter('ALL');
               }}
             >
               ล้างตัวกรอง
@@ -78,11 +186,38 @@ export function AuditLogTab({ externalQuery = '', onShowToast }: AuditLogTabProp
           )}
         </div>
 
-        <button type="button" className="admin-btn admin-btn-secondary" onClick={handleExport}>
-          <Icon name="download" style={{ width: 16, height: 16 }} />
-          ส่งออก Audit Trail (Cryptographic Export)
+        <button type="button" className="admin-btn admin-btn-primary" disabled={verifyLoading} onClick={runVerify}>
+          <Icon name="shield" style={{ width: 16, height: 16 }} />
+          {verifyLoading ? 'กำลังตรวจสอบ…' : 'ตรวจสอบ hash chain'}
         </button>
       </div>
+
+      {verify && (
+        <div
+          style={{
+            background: verify.intact ? '#F0FDF4' : '#FEF2F2',
+            border: `1px solid ${verify.intact ? '#BBF7D0' : '#FECACA'}`,
+            color: verify.intact ? '#166534' : '#991B1B',
+            borderRadius: 8,
+            padding: '10px 14px',
+            fontSize: 13,
+          }}
+          role="status"
+        >
+          {verify.intact
+            ? `hash chain ถูกต้องทั้งหมด · ปัญหา 0 · ตรวจสอบเมื่อ ${formatThaiDateTime(verify.checkedAt)}`
+            : `พบความไม่ต่อเนื่องของ hash chain ${verify.problems} จุด · ตรวจสอบเมื่อ ${formatThaiDateTime(verify.checkedAt)}`}
+        </div>
+      )}
+
+      {error && (
+        <div
+          style={{ background: '#FEF2F2', border: '1px solid #FECACA', color: '#991B1B', borderRadius: 8, padding: '10px 14px', fontSize: 13 }}
+          role="alert"
+        >
+          {error}
+        </div>
+      )}
 
       {/* AUDIT LOG TABLE */}
       <div className="admin-table-container">
@@ -100,89 +235,72 @@ export function AuditLogTab({ externalQuery = '', onShowToast }: AuditLogTabProp
               </tr>
             </thead>
             <tbody>
-              {filteredLogs.length === 0 ? (
+              {loading ? (
+                <tr>
+                  <td colSpan={7} style={{ textAlign: 'center', padding: '36px 0', color: '#64748B' }}>
+                    กำลังโหลดบันทึกตรวจสอบ…
+                  </td>
+                </tr>
+              ) : entries.length === 0 ? (
                 <tr>
                   <td colSpan={7} style={{ textAlign: 'center', padding: '36px 0', color: '#64748B' }}>
                     ไม่พบบันทึกการตรวจสอบตามเงื่อนไขที่กำหนด
                   </td>
                 </tr>
               ) : (
-                filteredLogs.map((log) => (
-                  <tr key={log.id}>
-                    <td style={{ whiteSpace: 'nowrap', fontSize: 12, color: '#334155' }}>
-                      <div style={{ fontWeight: 600 }}>{log.timestamp}</div>
-                      <div style={{ fontSize: 10, color: '#94A3B8', fontFamily: 'monospace' }}>
-                        ID: {log.id}
-                      </div>
-                    </td>
-
-                    <td>
-                      <span
-                        className={`admin-badge ${
-                          log.actionTone === 'green'
-                            ? 'admin-badge-success'
-                            : log.actionTone === 'red'
-                            ? 'admin-badge-danger'
-                            : log.actionTone === 'amber'
-                            ? 'admin-badge-warning'
-                            : 'admin-badge-info'
-                        }`}
-                      >
-                        {log.action}
-                      </span>
-                    </td>
-
-                    <td>
-                      <div style={{ fontWeight: 600, color: '#0F2A5C' }}>{log.actorName}</div>
-                      <div style={{ fontSize: 11, color: '#64748B' }}>{log.actorRole}</div>
-                    </td>
-
-                    <td>
-                      <div style={{ fontSize: 13, color: '#0F2A5C' }}>{log.hospitalName}</div>
-                    </td>
-
-                    <td>
-                      <span
-                        style={{
-                          fontSize: 11,
-                          fontFamily: 'monospace',
-                          background: '#F1F5F9',
-                          padding: '2px 6px',
-                          borderRadius: 4,
-                          color: '#334155',
-                        }}
-                      >
-                        {log.entity}
-                      </span>
-                    </td>
-
-                    <td style={{ maxWidth: 320, fontSize: 12, color: '#1E293B' }}>
-                      {log.details}
-                    </td>
-
-                    <td>
-                      <div style={{ fontSize: 11, fontFamily: 'monospace', color: '#64748B' }}>
-                        IP: {log.ip}
-                      </div>
-                      <div
-                        style={{
-                          fontSize: 10,
-                          fontFamily: 'monospace',
-                          color: '#15803D',
-                          marginTop: 2,
-                        }}
-                        title={`SHA-256 Hash Chain: ${log.sha256Hash}`}
-                      >
-                        🔒 {log.sha256Hash.slice(0, 14)}…
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                entries.map((e) => {
+                  const meta = auditActionMeta(e.action);
+                  return (
+                    <tr key={e.id}>
+                      <td style={{ whiteSpace: 'nowrap', fontSize: 12, color: '#334155' }}>
+                        <div style={{ fontWeight: 600 }}>{e.at}</div>
+                        <div style={{ fontSize: 10, color: '#94A3B8', fontFamily: 'monospace' }}>ID: {e.id}</div>
+                      </td>
+                      <td>
+                        <span className={`admin-badge admin-badge-${toneFor(meta.tone)}`}>{meta.labelTh}</span>
+                      </td>
+                      <td>
+                        <div style={{ fontWeight: 600, color: '#0F2A5C' }}>{e.actor}</div>
+                        <div style={{ fontSize: 11, color: '#64748B' }}>{e.role}</div>
+                      </td>
+                      <td>
+                        <div style={{ fontSize: 13, color: '#0F2A5C' }}>{e.hospitalName ?? '—'}</div>
+                      </td>
+                      <td>
+                        <span style={{ fontSize: 11, fontFamily: 'monospace', background: '#F1F5F9', padding: '2px 6px', borderRadius: 4, color: '#334155' }}>
+                          {e.entityType}
+                          {e.entityId && e.entityId !== '—' ? ` · ${e.entityId}` : ''}
+                        </span>
+                      </td>
+                      <td style={{ maxWidth: 320, fontSize: 12, color: '#1E293B' }}>
+                        {e.reason || summarizeChange(e.before, e.after)}
+                      </td>
+                      <td>
+                        <div style={{ fontSize: 11, fontFamily: 'monospace', color: '#64748B' }}>IP: {e.ip}</div>
+                        <div style={{ fontSize: 10, fontFamily: 'monospace', color: '#15803D', marginTop: 2 }} title={`SHA-256: ${e.hash}`}>
+                          🔒 {e.hash.slice(0, 14)}…
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
         </div>
       </div>
+
+      {/* LOAD MORE */}
+      {!loading && entries.length > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <button type="button" className="admin-btn admin-btn-secondary" disabled={!cursor || loadingMore} onClick={loadMore}>
+            {loadingMore ? 'กำลังโหลด…' : 'โหลดเพิ่ม'}
+          </button>
+          <span style={{ fontSize: 12, color: '#64748B' }}>
+            แสดง {entries.length} รายการ{cursor ? ' · ยังมีรายการเพิ่มเติม' : ' · โหลดครบแล้ว'}
+          </span>
+        </div>
+      )}
     </div>
   );
 }

@@ -8,8 +8,9 @@
 
 import type { RoleCode } from '../../../lib/rbac';
 
-/** `config_setting.scope` — the schema stores `GLOBAL | REGION:<id> | HOSPITAL:<id>`. */
-export type ConfigScope = 'GLOBAL' | 'REGION' | 'HOSPITAL';
+/** `config_setting.scope` — the schema stores `GLOBAL | REGION:<id> | HOSPITAL:<id>`.
+ *  `DEFAULT` is a UI-only kind: the effective value comes from the file default (no stored row). */
+export type ConfigScope = 'GLOBAL' | 'REGION' | 'HOSPITAL' | 'DEFAULT';
 
 /** Scalar value kinds the screen can edit; structured defaults are flattened to dotted scalar keys. */
 export type ConfigValue = number | boolean | string;
@@ -219,6 +220,7 @@ export const SCOPE_META: Record<ConfigScope, { labelTh: string; tone: string; co
   HOSPITAL: { labelTh: 'โรงพยาบาล', tone: 't-blue', code: 'HOSPITAL:<id>' },
   REGION: { labelTh: 'เขตสุขภาพ', tone: 't-teal', code: 'REGION:<id>' },
   GLOBAL: { labelTh: 'ส่วนกลาง', tone: 't-grey', code: 'GLOBAL' },
+  DEFAULT: { labelTh: 'ค่าเริ่มต้น', tone: 't-amber', code: '(no stored row)' },
 };
 
 export const SCOPE_FILTERS: { value: ConfigScope | 'ALL'; labelTh: string }[] = [
@@ -226,4 +228,5 @@ export const SCOPE_FILTERS: { value: ConfigScope | 'ALL'; labelTh: string }[] = 
   { value: 'HOSPITAL', labelTh: 'โรงพยาบาล' },
   { value: 'REGION', labelTh: 'เขตสุขภาพ' },
   { value: 'GLOBAL', labelTh: 'ส่วนกลาง' },
+  { value: 'DEFAULT', labelTh: 'ค่าเริ่มต้น' },
 ];

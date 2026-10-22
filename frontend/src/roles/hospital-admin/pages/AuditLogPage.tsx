@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import { Icon } from '../../../components/common/icons';
 import { HOSPITAL_ADMIN_HOME_HREF } from '../../../data/navigation';
 import { can } from '../../../lib/rbac';
@@ -6,38 +6,101 @@ import { AuditDrawer } from '../components/AuditDrawer';
 import { AuditFilterBar, EMPTY_AUDIT_FILTERS } from '../components/AuditFilterBar';
 import type { AuditFilters } from '../components/AuditFilterBar';
 import { AuditTable, summarizeChange } from '../components/AuditTable';
-import { AUDIT_ACTION_META, AUDIT_ENTRIES, verifyAuditChain } from '../data/audit';
-import type { ChainVerifyResult, AuditEntry } from '../data/audit';
+import {
+  AUDIT_ENTRIES,
+  API_ACTION_OPTIONS,
+  auditActionMeta,
+  mapApiToAuditEntry,
+} from '../data/audit';
+import type { AuditEntry } from '../data/audit';
+import { listAudit } from '../../../services/adminApi';
 import * as authApi from '../../../services/authApi';
 import '../admin.css';
 
 const PAGE_SIZE = 8;
+const API_LIMIT = 50;
+
+function isMockMode(): boolean {
+  if (typeof window === 'undefined') return false;
+  return new URLSearchParams(window.location.search).get('mock') === '1';
+}
+
+/** Maps the UI filter state to API-AD-003 query params (limit 50 for cursor paging). */
+function toApiParams(f: AuditFilters): Record<string, string> {
+  const p: Record<string, string> = { limit: String(API_LIMIT) };
+  if (f.from) p.from = f.from;
+  if (f.to) p.to = f.to;
+  if (f.action && f.action !== 'ALL') p.action = f.action;
+  if (f.entityType && f.entityType !== 'ALL') p.entityType = f.entityType;
+  if (f.role && f.role !== 'ALL') p.role = f.role;
+  if (f.q.trim()) p.q = f.q.trim();
+  return p;
+}
 
 /**
- * Audit log (UI-18). Endpoint it will call when wired: API-AD-003 `GET /api/v1/audit-log`.
+ * Audit log (UI-18) — API-AD-003 `GET /api/v1/audit-log`.
  *
- * Access: read-only + export for the hospital's own entries only (spec §5.2 grants HOSPITAL_ADMIN
- * own-hospital audit viewing; SEC-002/003). "ตรวจสอบ hash chain" verifies the tamper-evident chain.
+ * HA sees only its own hospital's rows (+ hospital-entity rows for it) via the server scope
+ * (SEC-002). Large logs use cursor "load more" (limit 50). The "verify chain" button is
+ * SYSTEM_ADMIN-only and therefore never rendered on this HA screen.
  */
 export function AuditLogPage() {
+  const [mock] = useState(isMockMode());
   const [filters, setFilters] = useState<AuditFilters>(EMPTY_AUDIT_FILTERS);
   const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(false);
-  const [verify, setVerify] = useState<ChainVerifyResult | null>(null);
+  const [loading, setLoading] = useState(!isMockMode());
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [error, setError] = useState('');
   const [openId, setOpenId] = useState<string | null>(null);
+
+  // Mock path: fixed fixtures + optional recent-login merge.
   const [allEntries, setAllEntries] = useState<AuditEntry[]>(AUDIT_ENTRIES);
 
+  // API path: accumulated rows + cursor.
+  const [apiEntries, setApiEntries] = useState<AuditEntry[]>([]);
+  const [cursor, setCursor] = useState<string | null>(null);
+
+  // Permission decision comes from lib/rbac.ts, never from a local role check.
+  const mayView = can('HOSPITAL_ADMIN', 'viewAudit');
+
+  const loadFirst = useCallback(
+    async (f: AuditFilters) => {
+      setLoading(true);
+      setError('');
+      try {
+        const res = await listAudit(toApiParams(f));
+        setApiEntries(res.items.map(mapApiToAuditEntry));
+        setCursor(res.nextCursor);
+      } catch (e: any) {
+        setApiEntries([]);
+        setCursor(null);
+        setError(e?.message || 'ไม่สามารถโหลดบันทึกตรวจสอบได้');
+      } finally {
+        setLoading(false);
+      }
+    },
+    [],
+  );
+
   useEffect(() => {
+    if (mock) return;
+    loadFirst(EMPTY_AUDIT_FILTERS);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Mock only: merge recent login events into the fixture list.
+  useEffect(() => {
+    if (!mock) return;
     let mounted = true;
     authApi.getRecentLogins(15).then(({ events }) => {
       if (!mounted || !events || events.length === 0) return;
       const loginAuditRows: AuditEntry[] = events.map((e) => {
         const d = new Date(e.occurred_at);
-        const atStr = `${d.getDate()} ต.ค. 69 ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+        const p = (n: number) => String(n).padStart(2, '0');
+        const atStr = `${d.getDate()} ต.ค. 69 ${p(d.getHours())}:${p(d.getMinutes())}`;
         const afterMap: Record<string, string | null> = e.success
           ? { result: 'SUCCESS', device: e.device ?? null, browser: e.browser ?? null }
           : { result: 'FAILED', note: e.failure_reason || 'รหัสผ่านไม่ถูกต้อง' };
-
         return {
           id: `AUD-LGN-${e.id}`,
           at: atStr,
@@ -49,85 +112,80 @@ export function AuditLogPage() {
           entityId: `SES-${e.id}`,
           before: {},
           after: afterMap,
-          reason: e.success ? 'เข้าสู่ระบบสำเร็จ' : (e.failure_reason || 'เข้าสู่ระบบไม่สำเร็จ'),
+          reason: e.success ? 'เข้าสู่ระบบสำเร็จ' : e.failure_reason || 'เข้าสู่ระบบไม่สำเร็จ',
           ip: e.ip || '127.0.0.1',
           hash: `e${e.id}b…${String(e.id).padStart(4, '0')}`,
           prevHash: `c510…${String(e.id).padStart(4, '0')}`,
         };
       });
-
-      // Merge with AUDIT_ENTRIES avoiding duplicates
       setAllEntries((prev) => {
-        const existingIds = new Set(prev.map((x) => x.id));
-        const newOnes = loginAuditRows.filter((x) => !existingIds.has(x.id));
-        return [...newOnes, ...prev];
+        const existing = new Set(prev.map((x) => x.id));
+        return [...loginAuditRows.filter((x) => !existing.has(x.id)), ...prev];
       });
     });
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [mock]);
 
-  // Permission decision comes from lib/rbac.ts, never from a local role check.
-  const mayView = can('HOSPITAL_ADMIN', 'viewAudit');
-
+  // Mock path: client-side filter.
   const filtered = useMemo(() => {
     const needle = filters.q.trim().toLowerCase();
     const actor = filters.actor.trim().toLowerCase();
-    return allEntries.filter((e) => {
-      if (filters.role !== 'ALL' && e.role !== filters.role) return false;
-      if (filters.action !== 'ALL' && e.action !== filters.action) return false;
-      if (filters.entityType !== 'ALL' && e.entityType !== filters.entityType) return false;
-      if (actor && !e.actor.toLowerCase().includes(actor)) return false;
-      if (filters.from && e.atIso.slice(0, 10) < filters.from) return false;
-      if (filters.to && e.atIso.slice(0, 10) > filters.to) return false;
-      if (needle && !`${e.id} ${e.entityId} ${e.reason} ${e.ip} ${e.actor}`.toLowerCase().includes(needle)) return false;
-      return true;
-    }).sort((a, b) => (a.atIso < b.atIso ? 1 : a.atIso > b.atIso ? -1 : 0));
+    return allEntries
+      .filter((e) => {
+        if (filters.role !== 'ALL' && e.role !== filters.role) return false;
+        if (filters.action !== 'ALL' && e.action !== filters.action) return false;
+        if (filters.entityType !== 'ALL' && e.entityType !== filters.entityType) return false;
+        if (actor && !e.actor.toLowerCase().includes(actor)) return false;
+        if (filters.from && e.atIso.slice(0, 10) < filters.from) return false;
+        if (filters.to && e.atIso.slice(0, 10) > filters.to) return false;
+        if (needle && !`${e.id} ${e.entityId} ${e.reason} ${e.ip} ${e.actor}`.toLowerCase().includes(needle)) return false;
+        return true;
+      })
+      .sort((a, b) => (a.atIso < b.atIso ? 1 : a.atIso > b.atIso ? -1 : 0));
   }, [allEntries, filters]);
 
-  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const safePage = Math.min(page, pageCount);
-  const paged = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
-  const openEntry = openId ? (allEntries.find((e) => e.id === openId) ?? null) : null;
-
+  const loadMore = async () => {
+    if (!cursor) return;
+    setLoadingMore(true);
+    try {
+      const res = await listAudit(toApiParams(filters), cursor);
+      setApiEntries((prev) => [...prev, ...res.items.map(mapApiToAuditEntry)]);
+      setCursor(res.nextCursor);
+    } catch (e: any) {
+      setError(e?.message || 'โหลดเพิ่มไม่สำเร็จ');
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   const changeFilters = (next: AuditFilters) => {
     setFilters(next);
     setPage(1);
-    setVerify(null);
+    if (!mock) loadFirst(next);
   };
 
-  /** Client-side CSV of the currently filtered rows (mock "ส่งออก"). */
+  // Rows + pagination mode.
+  const rows: AuditEntry[] = mock ? filtered : apiEntries;
+  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(page, pageCount);
+  const paged = mock ? filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE) : apiEntries;
+  const openEntry = openId ? (rows.find((e) => e.id === openId) ?? null) : null;
+
   const exportCsv = () => {
-    const header = [
-      'เวลา', 'ผู้กระทำ', 'บทบาท', 'การกระทำ', 'ประเภทข้อมูล', 'รหัสข้อมูล',
-      'การเปลี่ยนแปลง', 'เหตุผล', 'IP', 'Agent run',
-    ];
-    const lines = filtered.map((e) => [
-      e.at, e.actor, e.role, AUDIT_ACTION_META[e.action].labelTh, e.entityType, e.entityId,
+    const header = ['เวลา', 'ผู้กระทำ', 'บทบาท', 'การกระทำ', 'ประเภทข้อมูล', 'รหัสข้อมูล', 'การเปลี่ยนแปลง', 'เหตุผล', 'IP', 'Agent run'];
+    const lines = rows.map((e) => [
+      e.at, e.actor, e.role, auditActionMeta(e.action).labelTh, e.entityType, e.entityId,
       summarizeChange(e.before, e.after), e.reason, e.ip, e.agentRunId ?? '',
     ]);
-    const csv = [header, ...lines]
-      .map((cols) => cols.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(','))
-      .join('\r\n');
+    const csv = [header, ...lines].map((cols) => cols.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\r\n');
     const url = URL.createObjectURL(new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8;' }));
     const a = document.createElement('a');
     a.href = url;
     a.download = 'audit-log-hospital-admin.csv';
     a.click();
     URL.revokeObjectURL(url);
-  };
-
-  const verifyChain = () => {
-    setLoading(true);
-    setVerify(null);
-    window.setTimeout(() => {
-      // Walks the live chain (oldest → newest), so rows appended by a waive or an escalate-manual
-      // are covered too — not a canned "OK" (SEC-003).
-      setVerify(verifyAuditChain());
-      setLoading(false);
-    }, 700);
   };
 
   return (
@@ -144,38 +202,32 @@ export function AuditLogPage() {
             บันทึกตรวจสอบ <span className="en">Audit log</span>
           </h1>
           <div style={{ fontSize: 13, lineHeight: '20px', marginTop: 2 }}>
-            โรงพยาบาลสมุทรปราการ · บันทึกแบบ hash-chain แก้ไขหรือลบไม่ได้ (SEC-003)
+            เห็นเฉพาะบันทึกของโรงพยาบาลตนเอง · บันทึกแบบ hash-chain แก้ไขหรือลบไม่ได้ (SEC-003)
           </div>
         </div>
         <div className="pagehead-actions">
-          <button className="btn btn-s" onClick={exportCsv} disabled={!mayView || filtered.length === 0}>
+          <button className="btn btn-s" onClick={exportCsv} disabled={!mayView || rows.length === 0}>
             <Icon name="upload" />
             ส่งออก CSV
-          </button>
-          <button className="btn btn-p" onClick={verifyChain} disabled={!mayView || loading}>
-            <Icon name="shield" />
-            {loading ? 'กำลังตรวจสอบ…' : 'ตรวจสอบ hash chain'}
           </button>
         </div>
       </section>
 
-      {verify && (
-        <div
-          className={`ha-banner ${verify.ok ? 'ha-banner-ok' : 'ha-banner-err'}`}
-          role="status"
-          data-part="audit-verify"
-        >
-          <Icon name={verify.ok ? 'checkc' : 'xc'} className="ic14" style={{ marginTop: 2 }} />
-          <span>
-            {verify.ok
-              ? `hash chain ถูกต้องทั้ง ${verify.checked} รายการ · ตรวจสอบเมื่อ ${verify.checkedAt}`
-              : `พบความไม่ต่อเนื่องของ hash chain ที่ ${verify.brokenAt ?? '—'}`}
-          </span>
+      {error && (
+        <div className="ha-banner ha-banner-err" role="alert" data-part="audit-error">
+          <Icon name="alertc" className="ic14" style={{ marginTop: 2 }} />
+          <span>{error}</span>
         </div>
       )}
 
       <section className="card" data-part="audit-card" style={{ padding: '16px 20px 8px' }}>
-        <AuditFilterBar filters={filters} onChange={changeFilters} resultCount={filtered.length} />
+        <AuditFilterBar
+          filters={filters}
+          onChange={changeFilters}
+          resultCount={rows.length}
+          actionOptions={mock ? undefined : API_ACTION_OPTIONS}
+          hideActor={!mock}
+        />
 
         {loading ? (
           <div aria-busy="true" aria-label="กำลังโหลดบันทึกตรวจสอบ" style={{ padding: '12px 0' }}>
@@ -183,7 +235,7 @@ export function AuditLogPage() {
               <div key={i} className="ha-skel-row" />
             ))}
           </div>
-        ) : filtered.length === 0 ? (
+        ) : rows.length === 0 ? (
           <div className="ha-state">
             <Icon name="search" className="ic20" />
             <div className="ha-state-title">ไม่พบบันทึกที่ตรงกับเงื่อนไข</div>
@@ -197,10 +249,13 @@ export function AuditLogPage() {
             rows={paged}
             page={safePage}
             pageCount={pageCount}
-            total={filtered.length}
+            total={rows.length}
             activeId={openId}
             onPage={setPage}
             onOpen={setOpenId}
+            hasMore={Boolean(cursor)}
+            loadingMore={loadingMore}
+            onLoadMore={mock ? undefined : loadMore}
           />
         )}
       </section>

@@ -1,5 +1,5 @@
 import { Icon } from '../../../components/common/icons';
-import { AUDIT_ACTION_META } from '../data/audit';
+import { auditActionMeta } from '../data/audit';
 import type { AuditEntry, AuditValue } from '../data/audit';
 
 /** Compact `field: before → after` summary for the table cell (full detail lives in the drawer). */
@@ -23,10 +23,14 @@ interface AuditTableProps {
   activeId: string | null;
   onPage: (page: number) => void;
   onOpen: (id: string) => void;
+  /** API mode: when provided, the footer renders "โหลดเพิ่ม" (cursor paging) instead of prev/next. */
+  hasMore?: boolean;
+  loadingMore?: boolean;
+  onLoadMore?: () => void;
 }
 
 /** Result table for UI-18. Own-hospital entries only; read-only. */
-export function AuditTable({ rows, page, pageCount, total, activeId, onPage, onOpen }: AuditTableProps) {
+export function AuditTable({ rows, page, pageCount, total, activeId, onPage, onOpen, hasMore, loadingMore, onLoadMore }: AuditTableProps) {
   return (
     <>
       <div className="scroll-x">
@@ -48,7 +52,7 @@ export function AuditTable({ rows, page, pageCount, total, activeId, onPage, onO
           </thead>
           <tbody>
             {rows.map((e) => {
-              const meta = AUDIT_ACTION_META[e.action];
+              const meta = auditActionMeta(e.action);
               return (
                 <tr key={e.id} className={activeId === e.id ? 'r-active' : ''}>
                   <td>
@@ -108,15 +112,26 @@ export function AuditTable({ rows, page, pageCount, total, activeId, onPage, onO
           แสดง <span className="num">{rows.length}</span> จาก <span className="num">{total}</span> รายการ · เฉพาะโรงพยาบาลสมุทรปราการ
         </span>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-          <button className="btn btn-s btn-sm" disabled={page <= 1} onClick={() => onPage(page - 1)}>
-            ก่อนหน้า
-          </button>
-          <span className="num">
-            {page} / {pageCount}
-          </span>
-          <button className="btn btn-s btn-sm" disabled={page >= pageCount} onClick={() => onPage(page + 1)}>
-            ถัดไป
-          </button>
+          {onLoadMore ? (
+            <>
+              <button className="btn btn-s btn-sm" disabled={!hasMore || loadingMore} onClick={onLoadMore}>
+                {loadingMore ? 'กำลังโหลด…' : 'โหลดเพิ่ม'}
+              </button>
+              {!hasMore && <span className="ha-hint">โหลดครบแล้ว</span>}
+            </>
+          ) : (
+            <>
+              <button className="btn btn-s btn-sm" disabled={page <= 1} onClick={() => onPage(page - 1)}>
+                ก่อนหน้า
+              </button>
+              <span className="num">
+                {page} / {pageCount}
+              </span>
+              <button className="btn btn-s btn-sm" disabled={page >= pageCount} onClick={() => onPage(page + 1)}>
+                ถัดไป
+              </button>
+            </>
+          )}
         </span>
       </div>
     </>

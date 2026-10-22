@@ -1,8 +1,8 @@
 import { Icon } from '../../../components/common/icons';
 import type { RoleCode } from '../../../lib/rbac';
 import { ROLE_LABEL } from '../../../lib/rbac';
-import { AUDIT_ACTION_OPTIONS, AUDIT_ENTRIES, ENTITY_TYPE_OPTIONS } from '../data/audit';
-import type { AuditAction, EntityType } from '../data/audit';
+import { AUDIT_ACTION_OPTIONS, ENTITY_TYPE_OPTIONS } from '../data/audit';
+import type { EntityType } from '../data/audit';
 
 export interface AuditFilters {
   /** ISO `yyyy-mm-dd` (from `<input type="date">`); '' means unbounded. */
@@ -10,7 +10,8 @@ export interface AuditFilters {
   to: string;
   actor: string;
   role: RoleCode | 'ALL';
-  action: AuditAction | 'ALL';
+  /** `ALL` or an action code (mock CREATE/… or real CONFIG_UPDATED/…). */
+  action: string;
   entityType: EntityType | 'ALL';
   q: string;
 }
@@ -30,12 +31,16 @@ interface AuditFilterBarProps {
   onChange: (next: AuditFilters) => void;
   /** Rows left after filtering, echoed in the hint line. */
   resultCount: number;
+  /** Action options for the dropdown — API mode passes the real action codes. */
+  actionOptions?: { value: string; label: string }[];
+  /** Hides the free-text actor filter (the API has no actor-name search — only `actorId`). */
+  hideActor?: boolean;
 }
 
-/** Filter bar for UI-18 — filters stay client-side until API-AD-003 is wired. */
-export function AuditFilterBar({ filters, onChange, resultCount }: AuditFilterBarProps) {
-  // Only roles that actually appear in the hospital's own log — never a cross-hospital choice.
-  const roleOptions: (RoleCode | 'ALL')[] = ['ALL', ...Array.from(new Set(AUDIT_ENTRIES.map((e) => e.role)))];
+/** Filter bar for UI-18. In API mode the values are sent to API-AD-003 as query params. */
+export function AuditFilterBar({ filters, onChange, resultCount, actionOptions = AUDIT_ACTION_OPTIONS, hideActor = false }: AuditFilterBarProps) {
+  // A stable role list — never a cross-hospital guess; the server scopes the rows (SEC-002).
+  const roleOptions: (RoleCode | 'ALL')[] = ['ALL', 'SYSTEM_ADMIN', 'HOSPITAL_ADMIN', 'PHARMACIST', 'WAREHOUSE_OFFICER', 'PROCUREMENT_OFFICER', 'ER_STAFF', 'DRIVER', 'DATA_ADMIN', 'AUDITOR'];
 
   return (
     <div className="sa-toolbar" data-part="audit-filters">
@@ -72,16 +77,18 @@ export function AuditFilterBar({ filters, onChange, resultCount }: AuditFilterBa
         />
       </label>
 
-      <label className="ha-field">
-        <span className="ha-label">ผู้กระทำ</span>
-        <input
-          className="ha-input"
-          value={filters.actor}
-          aria-label="ผู้กระทำ"
-          placeholder="ชื่อผู้ใช้"
-          onChange={(e) => onChange({ ...filters, actor: e.target.value })}
-        />
-      </label>
+      {!hideActor && (
+        <label className="ha-field">
+          <span className="ha-label">ผู้กระทำ</span>
+          <input
+            className="ha-input"
+            value={filters.actor}
+            aria-label="ผู้กระทำ"
+            placeholder="ชื่อผู้ใช้"
+            onChange={(e) => onChange({ ...filters, actor: e.target.value })}
+          />
+        </label>
+      )}
 
       <label className="ha-field">
         <span className="ha-label">บทบาท</span>
@@ -107,7 +114,7 @@ export function AuditFilterBar({ filters, onChange, resultCount }: AuditFilterBa
           aria-label="การกระทำ"
           onChange={(e) => onChange({ ...filters, action: e.target.value as AuditFilters['action'] })}
         >
-          {AUDIT_ACTION_OPTIONS.map((o) => (
+          {actionOptions.map((o) => (
             <option key={o.value} value={o.value}>
               {o.label}
             </option>
