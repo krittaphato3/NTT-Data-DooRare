@@ -3,6 +3,10 @@
 --   * lots close to expiry (HA 5, HB 3, HC 2) and 2 lots already expired at HA, so the pharmacist/warehouse have work
 -- All new lots are named DEMO-NE-* / DEMO-EXP-*; spikes are ledger rows with ref_type DEMO_SPIKE.
 \set ON_ERROR_STOP on
+-- old mock requests left half-done for years (all their legs are already finished) are closed, so they do not count as open work
+UPDATE borrow_request SET status = 'CLOSED_UNFULFILLED', updated_at = now(), version = version + 1
+ WHERE status IN ('PARTIALLY_FULFILLED', 'ESCALATED') AND created_at < '2026-10-15';
+
 DO $$
 DECLARE
   spec record; hd record; lot record; free numeric; target numeric; take numeric; remaining numeric; n int;
