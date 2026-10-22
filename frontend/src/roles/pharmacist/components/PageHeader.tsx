@@ -5,6 +5,9 @@ import { mayActFor } from '../../../lib/rbac';
 import type { RoleCode } from '../../../lib/rbac';
 import { HOSPITAL_ADMIN_USER } from '../../hospital-admin/data/session';
 
+const todayTh = () => new Date().toLocaleDateString('th-TH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+const timeTh = () => new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', hour12: false });
+
 interface PageHeaderProps {
   isAdmin: boolean;
   hospital: string;
@@ -90,7 +93,7 @@ export function PageHeader({ isAdmin, hospital, onHospital, role = 'PHARMACIST',
           )}
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
             <Icon name="calendar" />
-            วันอังคารที่ 13 ตุลาคม 2569 · <span className="num">19:11</span> น.
+            {todayTh()} · <span className="num">{timeTh()}</span> น.
           </span>
           {isAdmin && !hospitalLocked && (
             <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13 }}>

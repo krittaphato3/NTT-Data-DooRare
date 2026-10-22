@@ -35,6 +35,13 @@
     "date": "2026-10-22"
   },
   {
+    "path": "sessions/2026-10-22-claude-demo-backfill-and-scenarios.md",
+    "title": "Demo data - backfill 1-21 Oct, role scenarios for pharmacist / ER / warehouse / driver, snapshot and restore",
+    "summary": "db:snapshot / db:restore / db:demo; SQL backfill to 21 Oct, shaping of…",
+    "tags": "session, demo, mock-data, backfill, scenarios, snapshot, reset, detailed",
+    "date": "2026-10-22"
+  },
+  {
     "path": "sessions/2026-10-21-buffy-f1-quantile-phase8.md",
     "title": "F1 quantile forecast module (Phase 8 — closing, scripts + docs only)",
     "summary": "run_all.sh (no training) green; README completed; DoD checklist and API evidence printed",
@@ -189,13 +196,6 @@
     "date": "2026-10-17"
   },
   {
-    "path": "context/runbook.md",
-    "title": "Runbook",
-    "summary": "Runbook",
-    "tags": "session",
-    "date": "2026-10-16"
-  },
-  {
     "path": "sessions/2026-10-16-1628-buffy-phase2c-return-obligations-waive.md",
     "title": "Return obligations + Waive (Phase 2C)",
     "summary": "HOSPITAL_ADMIN gets a read-only ภาระการคืน sub-tab on Borrow requests plus the API-XC-005…",
@@ -221,14 +221,21 @@
     "title": "ai-material",
     "summary": "ai-material",
     "tags": "session",
-    "date": "2026-10-14"
+    "date": "2026-10-15"
   },
   {
     "path": "context/conventions.md",
     "title": "Conventions",
     "summary": "Conventions",
     "tags": "session",
-    "date": "2026-10-14"
+    "date": "2026-10-15"
+  },
+  {
+    "path": "context/runbook.md",
+    "title": "Runbook",
+    "summary": "Runbook",
+    "tags": "session",
+    "date": "2026-10-15"
   },
   {
     "path": "decisions/0002-role-based-frontend-structure.md",

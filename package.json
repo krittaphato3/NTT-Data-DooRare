@@ -17,6 +17,9 @@
     "db:up": "bash scripts/db.sh up",
     "db:load": "bash scripts/db.sh load",
     "db:reset": "bash scripts/db.sh reset",
+    "db:snapshot": "bash scripts/db.sh snapshot",
+    "db:restore": "bash scripts/db.sh restore",
+    "db:demo": "bash scripts/db.sh demo",
     "db:psql": "bash scripts/db.sh psql"
   },
   "devDependencies": {
