@@ -128,7 +128,7 @@ export async function requestView(db: Db, row: Record<string, any>, viewer: Auth
   };
 }
 
-async function nextRequestNo(client: Db): Promise<string> {
+export async function nextRequestNo(client: Db): Promise<string> {
   const prefix = `BR-${new Date().getFullYear()}-`;
   await client.query(`SELECT pg_advisory_xact_lock(hashtext($1))`, [prefix]);
   const last = await client.query(`SELECT max(substring(request_no FROM '[0-9]+$')::int) AS n FROM borrow_request WHERE request_no LIKE $1`, [`${prefix}%`]);

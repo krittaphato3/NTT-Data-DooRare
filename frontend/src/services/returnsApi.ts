@@ -11,6 +11,8 @@ export interface ApiReturnObligation {
   returnMode: 'IN_KIND' | 'BLOOD_REPLACEMENT';
   direction: 'OWE' | 'OWED' | null;
   drug: { id: string | null; name: string | null; baseUnit: string | null; ved: 'V' | 'E' | 'D' | null };
+  /** Set when the obligation is a whole F3 kit (then `drug.id` is null). */
+  kitTypeId?: string | null;
   qty: number;
   qtyReturned: number;
   qtyRemaining: number;

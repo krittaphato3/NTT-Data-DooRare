@@ -8,7 +8,7 @@ const TABS: { id: IncidentTab; label: string; badge?: string }[] = [
 ];
 
 /** Sub-tabs of the incident console (all four for the pharmacist / hospital admin view; `tabs` narrows them). */
-export function IncidentTabs({ active, onChange, tabs }: { active: IncidentTab; onChange: (tab: IncidentTab) => void; tabs?: IncidentTab[] }) {
+export function IncidentTabs({ active, onChange, tabs, badges }: { active: IncidentTab; onChange: (tab: IncidentTab) => void; tabs?: IncidentTab[]; badges?: Partial<Record<IncidentTab, string>> }) {
   return (
     <div style={{ display: 'flex', gap: 6, borderBottom: '1px solid #e2e8f0', paddingBottom: 2 }}>
       {TABS.filter((t) => !tabs || tabs.includes(t.id)).map((t) => (
@@ -32,9 +32,9 @@ export function IncidentTabs({ active, onChange, tabs }: { active: IncidentTab; 
           onClick={() => onChange(t.id)}
         >
           <span>{t.label}</span>
-          {t.badge && (
+          {(badges ? badges[t.id] : t.badge) && (
             <span style={{ fontSize: 11, background: '#fee2e2', color: '#b91c1c', padding: '1px 6px', borderRadius: 10, fontWeight: 700 }}>
-              {t.badge}
+              {badges ? badges[t.id] : t.badge}
             </span>
           )}
         </button>

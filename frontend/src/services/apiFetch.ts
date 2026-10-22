@@ -35,7 +35,7 @@ export async function apiJson<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await apiFetch(path, init);
   if (!res.ok) {
     const problem = await res.json().catch(() => ({}));
-    throw Object.assign(new Error(problem.message || problem.title || `HTTP ${res.status}`), { status: res.status });
+    throw Object.assign(new Error(problem.message || problem.title || `HTTP ${res.status}`), { status: res.status, code: problem.code as string | undefined, details: problem.details as unknown });
   }
   return res.json();
 }

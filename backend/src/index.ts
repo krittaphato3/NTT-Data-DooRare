@@ -3,6 +3,7 @@ import { config } from './config/env.js';
 import { withTransaction } from './db/tx.js';
 import { runExpiryJobs } from './modules/expiry/expiry.routes.js';
 import { processLegTimers } from './modules/borrow/borrow.flow.js';
+import { processEmergencyTimers } from './modules/incidents/emergency.borrow.js';
 
 const server = app.listen(config.port, () => {
   console.log(`[DooRare Backend] Server running on http://0.0.0.0:${config.port}`);
@@ -11,7 +12,10 @@ const server = app.listen(config.port, () => {
 
 // JOB-04: reminders and timeouts of waiting borrow legs, once a minute (also callable via POST /jobs/borrow-timers).
 const timers = setInterval(() => {
-  withTransaction((client) => processLegTimers(client)).catch((err) => console.error('[DooRare Backend] borrow timers failed', err));
+  withTransaction(async (client) => {
+    await processLegTimers(client);
+    await processEmergencyTimers(client); // F3: ask the next hospitals / alert staff once a leg timed out
+  }).catch((err) => console.error('[DooRare Backend] borrow timers failed', err));
 }, 60_000);
 timers.unref();
 

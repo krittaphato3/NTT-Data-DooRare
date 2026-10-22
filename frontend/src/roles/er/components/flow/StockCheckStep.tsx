@@ -4,6 +4,9 @@ interface StockCheckStepProps {
   lines: StockLine[];
   onBack: () => void;
   onNext: () => void;
+  /** Wording of the follow-up: the prototype says the Agent drafts the requests, the live flow is rule-based. */
+  shortHint?: string;
+  nextLabel?: string;
 }
 
 function Tile({ label, value, tone }: { label: string; value: number; tone: string }) {
@@ -16,7 +19,7 @@ function Tile({ label, value, tone }: { label: string; value: number; tone: stri
 }
 
 /** Step 3: the confirmed plan checked against stock. Items that are short go on to the borrow request. */
-export function StockCheckStep({ lines, onBack, onNext }: StockCheckStepProps) {
+export function StockCheckStep({ lines, onBack, onNext, shortHint, nextLabel }: StockCheckStepProps) {
   const short = lines.filter((l) => l.shortage > 0);
   const okCount = lines.length - short.length;
 
@@ -73,7 +76,7 @@ export function StockCheckStep({ lines, onBack, onNext }: StockCheckStepProps) {
 
       <div className="card" style={{ padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
         <div style={{ fontSize: 12.5, color: short.length ? '#92400e' : '#166534' }}>
-          {short.length ? `ขาด ${short.length} รายการ · ให้ Agent เลือกโรงพยาบาลผู้ให้ยืมและจัดคำขอให้ตรวจก่อนส่ง` : 'สต็อกพอทุกรายการ · ไม่ต้องยืม ไปจัดชุดได้เลย'}
+          {short.length ? `ขาด ${short.length} รายการ · ${shortHint ?? 'ให้ Agent เลือกโรงพยาบาลผู้ให้ยืมและจัดคำขอให้ตรวจก่อนส่ง'}` : 'สต็อกพอทุกรายการ · ไม่ต้องยืม ไปจัดชุดได้เลย'}
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <button type="button" className="btn btn-s" onClick={onBack}>
@@ -81,7 +84,7 @@ export function StockCheckStep({ lines, onBack, onNext }: StockCheckStepProps) {
           </button>
           {short.length > 0 ? (
             <button type="button" className="btn btn-p" style={{ fontWeight: 600 }} onClick={onNext}>
-              ดูคำขอยืมที่ Agent จัดให้ →
+              {nextLabel ?? 'ดูคำขอยืมที่ Agent จัดให้ →'}
             </button>
           ) : (
             <a className="btn btn-p" style={{ fontWeight: 600 }} href="?role=er&page=track">

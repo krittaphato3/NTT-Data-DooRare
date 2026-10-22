@@ -20,6 +20,7 @@ import { borrowJobsRouter, borrowRequestsRouter, lenderQueueRouter } from './mod
 import { allocationPlansRouter, expiryJobsRouter, nearExpiryRouter, poolRouter, repeatExpiryRouter } from './modules/expiry/expiry.routes.js';
 import { reportsRouter, valueRouter } from './modules/value/value.routes.js';
 import { transportRouter, vehiclesRouter } from './modules/transport/transport.routes.js';
+import { emergencyLegsRouter, incidentRulesRouter, incidentsRouter, kitStockRouter, kitTasksRouter, presetKitsRouter } from './modules/incidents/incidents.routes.js';
 
 export const app = express();
 
@@ -51,6 +52,12 @@ app.use('/api/v1/drug-master', drugMasterRouter); // API-F2b-006
 app.use('/api/v1/central-items', centralItemsRouter); // API-F2b-007 (read)
 app.use('/api/v1/hospital-drugs', hospitalDrugsRouter);
 app.use('/api/v1/kit-types', kitTypesRouter); // API-F3-016
+app.use('/api/v1/incidents', incidentsRouter); // API-F3-001..007, -011..013
+app.use('/api/v1/emergency-legs', emergencyLegsRouter); // API-F3-008
+app.use('/api/v1/kit-tasks', kitTasksRouter); // API-F3-009 / -010
+app.use('/api/v1/kit-stock', kitStockRouter); // API-F3-014 / -015
+app.use('/api/v1/preset-kits', presetKitsRouter); // F3 rule tables (not in openapi)
+app.use('/api/v1/incident-rules', incidentRulesRouter);
 app.use('/api/v1/inventory', inventoryRouter);
 app.use('/api/v1/notifications', notificationsRouter); // API-PL-004 / -005
 app.use('/api/v1/alerts', alertsRouter); // API-F1a-005 / -006 / -007

@@ -16,6 +16,7 @@ import type pg from 'pg';
 import { auditContext, writeAudit } from '../../core/audit.js';
 import type { AuditContext } from '../../core/audit.js';
 import { getSetting } from '../../core/settings.js';
+import { addKits, removeKits } from '../../core/kitStock.js';
 import { adjustStock, ensureLot, findHospitalDrug, releaseHeld } from '../../core/stock.js';
 import { config } from '../../config/env.js';
 import { HttpError } from '../../middleware/httpError.js';
@@ -135,6 +136,20 @@ async function isKitLeg(client: pg.PoolClient, task: Record<string, any>): Promi
     [task.ref_id],
   );
   return result.rows[0]?.kind === 'KIT';
+}
+
+/** The kit type and confirmed quantity of a kit leg (F3 emergency borrowing: whole sets move between kit_stock rows). */
+async function kitOfLeg(client: pg.PoolClient, legId: string): Promise<{ kitTypeId: string; accepted: number }> {
+  const r = (
+    await client.query(
+      `SELECT i.kit_type_id, bl.qty_accepted::float8 AS accepted FROM borrow_leg bl
+         JOIN borrow_request_item i ON i.id = COALESCE(bl.request_item_id, (SELECT min(y.id::text)::uuid FROM borrow_request_item y WHERE y.request_id = bl.request_id))
+        WHERE bl.id = $1`,
+      [legId],
+    )
+  ).rows[0];
+  if (!r?.kit_type_id) throw new HttpError(409, 'NO_KIT', 'ไม่พบชนิดชุดยาของงานขนส่งนี้');
+  return { kitTypeId: r.kit_type_id, accepted: Number(r.accepted ?? 0) };
 }
 
 async function shipFromSender(client: pg.PoolClient, task: Record<string, any>, user: AuthSessionUser, lots: ShipLot[]): Promise<void> {
@@ -289,10 +304,23 @@ export async function applyTransition(client: pg.PoolClient, ctx: AuditContext, 
   if (input.toStatus === 'LOADED' && !kit) {
     await shipFromSender(client, task, user, await lotsOfTask(client, task));
   }
+  if (input.toStatus === 'LOADED' && kit) {
+    const { kitTypeId, accepted } = await kitOfLeg(client, task.ref_id);
+    const after = await removeKits(client, task.from_hospital_id, kitTypeId, accepted); // the reservation made at confirmation is consumed first
+    await writeAudit(client, ctx, { action: 'KIT_STOCK_LEND_OUT', entityType: 'kit_stock', entityId: kitTypeId, after: { hospitalId: task.from_hospital_id, qty: accepted, ...after, legId: task.ref_id } });
+  }
   if (input.toStatus === 'RECEIVED') {
     received = kit ? input.qtyReceived : await receiveAtReceiver(client, task, user, await lotsOfTask(client, task), input.qtyReceived);
     if (received === undefined) {
       received = Number((await client.query(`SELECT qty_accepted::float8 AS q FROM borrow_leg WHERE id = $1`, [task.ref_id])).rows[0]?.q ?? 0);
+    }
+    if (kit) {
+      const { kitTypeId, accepted } = await kitOfLeg(client, task.ref_id);
+      if (!Number.isInteger(received) || received <= 0 || received > accepted) {
+        throw new HttpError(400, 'VALIDATION', `จำนวนชุดที่รับต้องเป็นจำนวนเต็มมากกว่า 0 และไม่เกินจำนวนที่ส่ง (${accepted})`);
+      }
+      const after = await addKits(client, task.to_hospital_id, kitTypeId, received);
+      await writeAudit(client, ctx, { action: 'KIT_STOCK_BORROW_IN', entityType: 'kit_stock', entityId: kitTypeId, after: { hospitalId: task.to_hospital_id, qty: received, ...after, legId: task.ref_id } });
     }
   }
 

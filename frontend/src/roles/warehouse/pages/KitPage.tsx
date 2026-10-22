@@ -14,6 +14,8 @@ import '../transport.css';
 import '../dashboard.css';
 import '../inbox.css';
 import '../kit.css';
+import { mockFallbackEnabled } from '../../../services/dataSource';
+import { LiveKitPage } from './LiveKitPage';
 
 type Tab = 'urgent' | 'pack' | 'incidents' | 'returns';
 
@@ -30,7 +32,7 @@ function mmss(s: number): string {
  *  - แพ็กชุดยา / เหตุการณ์ / รับคืน: our own incidents.
  * UI only: mock data, state is local.
  */
-export function KitPage() {
+function MockKitPage() {
   const tick = useTick();
   const urgentLeft = mmss(URGENT_SECONDS - tick);
   const [tab, setTab] = useState<Tab>('urgent');
@@ -190,4 +192,9 @@ export function KitPage() {
       )}
     </>
   );
+}
+
+/** Live F3 page for the warehouse; the sample-data prototype only in demo mode (`?mock=1`). */
+export function KitPage() {
+  return mockFallbackEnabled() ? <MockKitPage /> : <LiveKitPage />;
 }

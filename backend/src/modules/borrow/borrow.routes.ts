@@ -6,6 +6,7 @@ import { withTransaction } from '../../db/tx.js';
 import { borrowService } from './borrow.service.js';
 import { lenderService } from './lender.service.js';
 import { processLegTimers } from './borrow.flow.js';
+import { processEmergencyTimers } from '../incidents/emergency.borrow.js';
 
 /**
  * F1b borrow requests. Spec x-roles: PHARMACIST creates / proposes / approves / edits; reads are open to the pharmacist,
@@ -32,6 +33,6 @@ lenderQueueRouter.get('/', requireAuth, requireRole('PHARMACIST', 'WAREHOUSE_OFF
 /** JOB-04 trigger for operators / tests: reminders and timeouts of waiting legs. */
 export const borrowJobsRouter = Router();
 borrowJobsRouter.post('/borrow-timers', requireAuth, requireRole('SYSTEM_ADMIN'), asyncHandler(async (_req, res) => {
-  const result = await withTransaction((client) => processLegTimers(client));
+  const result = await withTransaction(async (client) => ({ ...(await processLegTimers(client)), emergency: await processEmergencyTimers(client) }));
   res.json({ ok: true, ...result });
 }));

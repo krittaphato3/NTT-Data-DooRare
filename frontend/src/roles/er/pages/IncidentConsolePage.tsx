@@ -8,6 +8,8 @@ import { PackPanel } from '../components/PackPanel';
 import { PlanPanel } from '../components/PlanPanel';
 import { SummaryPanel } from '../components/SummaryPanel';
 import type { RoleCode } from '../../../lib/rbac';
+import { mockFallbackEnabled } from '../../../services/dataSource';
+import { LiveConsole } from '../live/LiveConsole';
 
 /** Keeps an inactive tab mounted (so its state survives a tab switch) but hidden. */
 function TabSlot({ active, children }: { active: boolean; children: ReactNode }) {
@@ -19,7 +21,7 @@ function TabSlot({ active, children }: { active: boolean; children: ReactNode })
  * (`ErPageSwitch`); this single page is what the pharmacist and hospital admin open (view-only,
  * gated by `getIncidentAccess`).
  */
-export function IncidentConsolePage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
+function MockIncidentConsole({ role }: { role: RoleCode }) {
   const [activeTab, setActiveTab] = useState<IncidentTab>('plan');
 
   return (
@@ -45,4 +47,9 @@ export function IncidentConsolePage({ role = 'PHARMACIST' }: { role?: RoleCode }
     </IncidentFrame>
     </div>
   );
+}
+
+/** Live console (plan, borrowing, packing, summary of a chosen incident); the sample-data prototype only in demo mode (`?mock=1`). */
+export function IncidentConsolePage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
+  return mockFallbackEnabled() ? <MockIncidentConsole role={role} /> : <LiveConsole role={role} />;
 }

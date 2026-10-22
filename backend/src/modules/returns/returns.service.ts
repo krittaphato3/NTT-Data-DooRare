@@ -8,6 +8,7 @@ import { oneOf, parsePage, toPage } from '../../core/pagination.js';
 import { bodyObject, optionalNumber, uuidParam } from '../../core/validate.js';
 import { pool, query } from '../../db/client.js';
 import { withTransaction } from '../../db/tx.js';
+import { addKits, removeKits } from '../../core/kitStock.js';
 import { adjustStock, ensureLot, findHospitalDrug, pickFefo } from '../../core/stock.js';
 import { HttpError } from '../../middleware/httpError.js';
 import type { Db } from '../../db/tx.js';
@@ -22,7 +23,7 @@ const SELECT = `
          ro.due_date::text AS due_date, ro.returned_at, ro.waived_reason, ro.waived_by,
          ro.debtor_hospital_id, d.code AS debtor_code, d.name_th AS debtor_name,
          ro.creditor_hospital_id, c.code AS creditor_code, c.name_th AS creditor_name,
-         ro.drug_master_id, COALESCE(${DRUG_NAME}, kt.name) AS drug_name, COALESCE(dm.base_unit, 'ชุด') AS base_unit,
+         ro.drug_master_id, ro.kit_type_id, COALESCE(NULLIF(${DRUG_NAME}, ''), kt.name) AS drug_name, COALESCE(dm.base_unit, 'ชุด') AS base_unit,
          br.request_no, bl.round_no, wu.display_name AS waived_by_name,
          (SELECT a.occurred_at FROM audit_log a WHERE a.entity_type = 'return_obligation' AND a.entity_id = ro.id AND a.action = 'RETURN_WAIVED' ORDER BY a.id DESC LIMIT 1) AS waived_at,
          (SELECT hd.ved::text FROM hospital_drug hd WHERE hd.hospital_id = ro.debtor_hospital_id AND hd.drug_master_id = ro.drug_master_id ORDER BY hd.local_code LIMIT 1) AS ved,
@@ -48,6 +49,8 @@ function view(row: Record<string, any>, user: AuthSessionUser, receipts: any[] =
     /** From the caller's hospital: OWE = we must return, OWED = we are waiting for a return; null for region-wide users. */
     direction: !mine ? null : row.debtor_hospital_id === mine ? 'OWE' : row.creditor_hospital_id === mine ? 'OWED' : null,
     drug: { id: row.drug_master_id, name: row.drug_name, baseUnit: row.base_unit, ved: row.ved ?? null },
+    /** Set when the obligation is a whole kit (F3); then `drug.id` is null. */
+    kitTypeId: row.kit_type_id ?? null,
     qty: row.qty,
     qtyReturned: row.qty_returned,
     qtyRemaining: ROUND(row.qty - row.qty_returned),
@@ -115,21 +118,29 @@ export class ReturnsService {
       if (!ob || !mine || (ob.debtor_hospital_id !== mine && ob.creditor_hospital_id !== mine)) throw new HttpError(404, 'NOT_FOUND', 'ไม่พบภาระการคืน');
       if (!['OPEN', 'REMINDED', 'OVERDUE'].includes(ob.status)) throw new HttpError(409, 'ALREADY_DECIDED', `ภาระการคืนนี้ปิดแล้ว (${ob.status})`);
       if (ob.return_mode !== 'IN_KIND') throw new HttpError(422, 'VALIDATION', 'การคืนเลือดทำโดยธนาคารเลือด ยังไม่รองรับใน API นี้');
-      if (!ob.drug_master_id) throw new HttpError(422, 'VALIDATION', 'การคืนชุดยายังไม่รองรับใน API นี้');
       const remaining = ROUND(ob.qty - ob.qty_returned);
       if (qty > remaining + 1e-9) throw new HttpError(400, 'VALIDATION', `คืนได้ไม่เกินที่ค้างอยู่ (${remaining})`);
 
-      const picks = await pickFefo(client, ob.debtor_hospital_id, ob.drug_master_id, qty);
-      const creditorListing = await findHospitalDrug(client, ob.creditor_hospital_id, ob.drug_master_id);
-      if (!creditorListing) throw new HttpError(409, 'MAPPING_NOT_VERIFIED', 'ผู้ให้ยืมไม่มีรายการยานี้ในบัญชียาของตน');
-      for (const pick of picks) {
-        await adjustStock(client, ob.debtor_hospital_id, { lotId: pick.lotId, delta: -pick.qty, reason: 'RETURN_OUT', refType: 'return_obligation', refId: id, actorId: user.id });
-        const creditorLot = await ensureLot(client, ob.creditor_hospital_id, creditorListing, { lotNo: pick.lotNo, expiryDate: pick.expiryDate, manufacturer: pick.manufacturer });
-        await adjustStock(client, ob.creditor_hospital_id, { lotId: creditorLot, delta: pick.qty, reason: 'RETURN_IN', refType: 'return_obligation', refId: id, actorId: user.id });
-        await client.query(
-          `INSERT INTO return_receipt (obligation_id, drug_master_id, lot_id, qty_local, qty_base, received_by) VALUES ($1, $2, $3, $4, $4, $5)`,
-          [id, ob.drug_master_id, creditorLot, pick.qty, user.id],
-        );
+      if (!ob.drug_master_id) {
+        // F3 kit: whole ready sets go back from the debtor's kit stock to the creditor's (no lots, no receipts; the audit row is the record)
+        if (!ob.kit_type_id) throw new HttpError(422, 'VALIDATION', 'ภาระการคืนนี้ไม่ระบุรายการที่ต้องคืน');
+        if (!Number.isInteger(qty)) throw new HttpError(400, 'VALIDATION', 'จำนวนชุดที่คืนต้องเป็นจำนวนเต็ม');
+        const out = await removeKits(client, ob.debtor_hospital_id, ob.kit_type_id, qty);
+        const into = await addKits(client, ob.creditor_hospital_id, ob.kit_type_id, qty);
+        await writeAudit(client, auditContext(req), { action: 'KIT_STOCK_RETURN', entityType: 'kit_stock', entityId: ob.kit_type_id, after: { obligationId: id, qty, debtor: { hospitalId: ob.debtor_hospital_id, ...out }, creditor: { hospitalId: ob.creditor_hospital_id, ...into } } });
+      } else {
+        const picks = await pickFefo(client, ob.debtor_hospital_id, ob.drug_master_id, qty);
+        const creditorListing = await findHospitalDrug(client, ob.creditor_hospital_id, ob.drug_master_id);
+        if (!creditorListing) throw new HttpError(409, 'MAPPING_NOT_VERIFIED', 'ผู้ให้ยืมไม่มีรายการยานี้ในบัญชียาของตน');
+        for (const pick of picks) {
+          await adjustStock(client, ob.debtor_hospital_id, { lotId: pick.lotId, delta: -pick.qty, reason: 'RETURN_OUT', refType: 'return_obligation', refId: id, actorId: user.id });
+          const creditorLot = await ensureLot(client, ob.creditor_hospital_id, creditorListing, { lotNo: pick.lotNo, expiryDate: pick.expiryDate, manufacturer: pick.manufacturer });
+          await adjustStock(client, ob.creditor_hospital_id, { lotId: creditorLot, delta: pick.qty, reason: 'RETURN_IN', refType: 'return_obligation', refId: id, actorId: user.id });
+          await client.query(
+            `INSERT INTO return_receipt (obligation_id, drug_master_id, lot_id, qty_local, qty_base, received_by) VALUES ($1, $2, $3, $4, $4, $5)`,
+            [id, ob.drug_master_id, creditorLot, pick.qty, user.id],
+          );
+        }
       }
       const done = ROUND(ob.qty_returned + qty) >= ob.qty - 1e-9;
       await client.query(

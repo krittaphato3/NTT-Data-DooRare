@@ -59,3 +59,8 @@ Relevant files: `frontend/src/App.tsx`, `frontend/src/roles/pharmacist/pages/Das
 
 - ER shell at `/?role=er`; incident console is role-aware (pharmacist view-only). See `sessions/2026-10-17-claude-er-incident-console.md`.
 - Next: browser pass, team decision on joint close approval.
+
+## Branch feature/backend-step7-f3-incidents-kits
+
+- F3 backend (incidents, rule-based plan F-27, approval, urgent borrowing with first-wins, kit packing / stock / returns, two-signature close, reconciliation) and the ER / WH / PH screens on the API. 405 step-7 checks + 37 unit tests + earlier suites pass. See `sessions/2026-10-22-claude-backend-step7-f3.md` (roles decision, plan shape, kit stock model, gaps).
+- Not committed / pushed. Next: step 8 (Admin: users, config, audit-log, kill-switch); open F3 gaps: INCIDENT_REPORT / UCEP documents, WH work-inbox page (mock), blood returns, Agent.
