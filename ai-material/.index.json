@@ -1,5 +1,12 @@
 [
   {
+    "path": "sessions/2026-10-22-claude-backend-step6-f2.md",
+    "title": "Backend step 6 - F2 near-expiry, regional pool, allocation plans, repeat expiry, value, reports",
+    "summary": "Near-expiry scan and review, pool, plan approval / options / mutual-consent cancel,…",
+    "tags": "session, backend, f2, near-expiry, pool, allocation, reports, frontend, detailed",
+    "date": "2026-10-22"
+  },
+  {
     "path": "context/current-task.md",
     "title": "Current Task",
     "summary": "Current Task",

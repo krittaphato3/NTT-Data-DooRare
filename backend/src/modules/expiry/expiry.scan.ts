@@ -62,6 +62,15 @@ export async function scanNearExpiry(client: pg.PoolClient, today = new Date()):
   );
   result.refreshed = refreshed.rowCount ?? 0;
 
+  // A plan still waiting for approval cannot ship an expired lot: it is cancelled (approved plans are left to the transport flow).
+  await client.query(
+    `UPDATE allocation_plan ap SET status = 'CANCELLED', updated_at = now(), version = ap.version + 1
+       FROM pool_entry pe, near_expiry_item ne, stock_lot sl
+      WHERE pe.id = ap.pool_entry_id AND ne.id = pe.near_expiry_item_id AND sl.id = ne.lot_id
+        AND ap.status IN ('DRAFT','READY_FOR_APPROVAL','NEEDS_DISCUSSION') AND sl.expiry_date <= $1::date`,
+    [day],
+  );
+
   // BR-F2a-024: a released lot that expired before any shipment leaves the pool; the hold is released and the item is closed.
   const stale = (
     await client.query(

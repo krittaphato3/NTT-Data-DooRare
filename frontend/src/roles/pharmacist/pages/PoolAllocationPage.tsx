@@ -3,13 +3,10 @@ import { Icon } from '../../../components/common/icons';
 import { homeHrefFor } from '../../../data/navigation';
 import type { RoleCode } from '../../../lib/rbac';
 import { AllocationDrawer } from '../components/AllocationDrawer';
-import {
-  ALLOCATION_PLANS,
-  COST_LIMIT_PCT,
-  POOL_LOTS,
-  POOL_TOTAL_VALUE,
-  planStatusMeta,
-} from '../data/pool';
+import { cancelPlan, choosePlanOption, decidePlan } from '../../../services/expiryApi';
+import type { ApiPlanOption } from '../../../services/expiryApi';
+import { usePoolAndPlans } from '../data/useExpiryF2';
+import { COST_LIMIT_PCT, planStatusMeta } from '../data/pool';
 import type { AllocationPlan, PlanStatus } from '../data/pool';
 import '../pool.css';
 
@@ -20,7 +17,6 @@ const TABS: { id: PoolTab; label: string; ui: string }[] = [
   { id: 'plans', label: 'แผนจัดสรร', ui: 'UI-09' },
 ];
 
-const RECEIVER_COUNT = new Set(POOL_LOTS.map((l) => l.from)).size + 3;
 
 /**
  * UI-08 Central pool + UI-09 Allocation plan review (spec F2a). UI only: mock
@@ -35,8 +31,33 @@ export function PoolAllocationPage({ role = 'PHARMACIST' }: { role?: RoleCode })
   const [tab, setTab] = useState<PoolTab>('plans');
   const [selId, setSelId] = useState('');
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [plans, setPlans] = useState<AllocationPlan[]>(ALLOCATION_PLANS);
+  const data = usePoolAndPlans();
+  const live = data.source === 'live';
+  const POOL_LOTS = data.pool;
+  const POOL_TOTAL_VALUE = POOL_LOTS.reduce((s, l) => s + l.value, 0);
+  const [localPlans, setPlans] = useState<AllocationPlan[] | null>(null);
+  const [showFinished, setShowFinished] = useState(false);
+  const allPlans = live ? data.plans : (localPlans ?? data.plans);
+  // Default view = plans still in progress; finished ones (completed / cancelled) are history.
+  const plans = live && !showFinished ? allPlans.filter((p) => p.status !== 'COMPLETED' && p.status !== 'CANCELLED') : allPlans;
   const [decisions, setDecisions] = useState<Record<string, string>>({});
+  const [busy, setBusy] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  /** Live: every decision is an API call; the plan is reloaded from the server afterwards. */
+  const run = (p: AllocationPlan, call: Promise<unknown>, doneText: string) => {
+    setBusy(true);
+    setActionError(null);
+    call
+      .then(() => data.reload())
+      .then(() => setDecisions((m) => ({ ...m, [p.id]: doneText })))
+      .catch((e: Error) => setActionError(e.message))
+      .finally(() => setBusy(false));
+  };
+  const liveApprove = (p: AllocationPlan) => p.live && run(p, decidePlan(p.live.uuid, 'APPROVED', p.version), 'บันทึกการเห็นชอบแล้ว (audit_log)');
+  const liveReject = (p: AllocationPlan, comment: string) => p.live && run(p, decidePlan(p.live.uuid, 'REJECTED', p.version, comment), 'บันทึกการไม่เห็นชอบแล้ว · แผนเข้าสถานะต้องหารือ');
+  const liveOption = (p: AllocationPlan, id: string, label: string) => p.live && run(p, choosePlanOption(p.live.uuid, id as ApiPlanOption, p.version), `บันทึกทางเลือกแล้ว: ${label} (audit_log)`);
+  const liveCancel = (p: AllocationPlan, reason: string) => p.live && run(p, cancelPlan(p.live.uuid, reason), 'ส่งคำขอยกเลิกแล้ว · ถ้าเป็นแผนที่อนุมัติแล้วต้องให้อีกฝ่ายยินยอมด้วย');
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -47,7 +68,7 @@ export function PoolAllocationPage({ role = 'PHARMACIST' }: { role?: RoleCode })
   }, []);
 
   const pendingMine = plans.filter((p) => p.status === 'PENDING_MY_APPROVAL').length;
-  const needDoc = plans.filter((p) => p.status === 'APPROVED').length;
+  const needDoc = plans.filter((p) => p.status === 'APPROVED' || p.status === 'TRANSPORTING').length;
 
   const open = (id: string) => {
     setSelId(id);
@@ -58,7 +79,7 @@ export function PoolAllocationPage({ role = 'PHARMACIST' }: { role?: RoleCode })
 
   const approve = (id: string) => {
     setPlans((prev) =>
-      prev.map((p) =>
+      (prev ?? plans).map((p) =>
         p.id === id
           ? {
               ...p,
@@ -93,7 +114,7 @@ export function PoolAllocationPage({ role = 'PHARMACIST' }: { role?: RoleCode })
             คลังกลาง · แผนจัดสรร <span>/ Central pool · UI-08 · Allocation plans · UI-09</span>
           </h1>
           <div style={{ fontSize: 13 }}>
-            เขตสุขภาพที่ 6 · คลังกลางรวมเฉพาะข้อมูล (ถูกกันไว้ = กันออกจากสต็อกใช้งาน) · อัปเดตล่าสุด 02:30 น. ·
+            เขตสุขภาพที่ 6 · คลังกลางรวมเฉพาะข้อมูล (ถูกกันไว้ = กันออกจากสต็อกใช้งาน) · แผนจัดสรรมาจากการจับคู่ของ Agent ·
             แผนที่ไม่คุ้มค่าขนส่ง (F-23 ≥ {COST_LIMIT_PCT}%) ต้องเลือก 1 ใน 4 ทางก่อนส่ง
           </div>
         </div>
@@ -117,7 +138,7 @@ export function PoolAllocationPage({ role = 'PHARMACIST' }: { role?: RoleCode })
           </div>
           <div className="pl-kpi-val num">{POOL_LOTS.length} ล็อต</div>
           <div className="pl-kpi-sub num">
-            รวม ฿{POOL_TOTAL_VALUE.toLocaleString()} · รอส่งให้ {RECEIVER_COUNT} โรงพยาบาล
+            รวม ฿{Math.round(POOL_TOTAL_VALUE).toLocaleString()} · อยู่ในแผน {plans.filter((p) => p.live?.openForApproval).length} แผน
           </div>
         </div>
         <div className="pl-kpi pl-kpi-warn">
@@ -125,7 +146,7 @@ export function PoolAllocationPage({ role = 'PHARMACIST' }: { role?: RoleCode })
             รอฉันเห็นชอบ <span className="en">MY APPROVAL</span>
           </div>
           <div className="pl-kpi-val num">{pendingMine} แผน</div>
-          <div className="pl-kpi-sub">AP-2026-000046 ใกล้หมดเวลา 14:30 น. · เตือน 50% เมื่อเหลือครึ่งเวลา</div>
+          <div className="pl-kpi-sub">{live ? 'ทุก รพ.ที่เกี่ยวข้องต้องเห็นชอบ · เกินกำหนดเข้าสถานะต้องหารือ' : 'AP-2026-000046 ใกล้หมดเวลา 14:30 น.'}</div>
         </div>
         <div className="pl-kpi">
           <div className="pl-kpi-label">
@@ -149,6 +170,11 @@ export function PoolAllocationPage({ role = 'PHARMACIST' }: { role?: RoleCode })
                 {t.label} <span className="cnt">{t.id === 'pool' ? POOL_LOTS.length : plans.length}</span>
               </button>
             ))}
+            {live && tab === 'plans' && (
+              <button type="button" className="tab" aria-pressed={showFinished} onClick={() => setShowFinished((v) => !v)}>
+                {showFinished ? 'ซ่อนแผนที่จบแล้ว' : `แสดงแผนที่จบแล้ว (${allPlans.length - plans.length})`}
+              </button>
+            )}
             <span className="sub" style={{ marginLeft: 6 }}>
               {tab === 'pool'
                 ? 'สินค้ายังอยู่ที่ รพ.ต้นทาง · เบิกใช้ไม่ได้จนกว่าจะส่งมอบ'
@@ -289,7 +315,7 @@ export function PoolAllocationPage({ role = 'PHARMACIST' }: { role?: RoleCode })
               ? `รวม ${POOL_LOTS.length} ล็อต · ฿${POOL_TOTAL_VALUE.toLocaleString()} · กันออกจากสต็อกใช้งานทั้งหมด (FR-F2a-013)`
               : `รวม ${plans.length} แผน · รอฉันเห็นชอบ ${pendingMine} · ค่าขนส่งคำนวณจาก 300 + 8 บาท/กม. (+500 ค่าความเย็น)`}
           </span>
-          <span className="num">อัปเดตล่าสุด 02:30 น. · JOB-06</span>
+          <span className="num">JOB-06 · จับคู่โดย Agent</span>
         </div>
       </section>
 
@@ -299,8 +325,12 @@ export function PoolAllocationPage({ role = 'PHARMACIST' }: { role?: RoleCode })
           plan={sel}
           role={role}
           decision={decisions[sel.id]}
-          onApprove={() => approve(sel.id)}
-          onUneconomical={(label) => decideUneconomical(sel.id, label)}
+          onApprove={() => (live ? liveApprove(sel) : approve(sel.id))}
+          onReject={(comment) => liveReject(sel, comment)}
+          onUneconomical={(label, id) => (live && id ? liveOption(sel, id, label) : decideUneconomical(sel.id, label))}
+          onCancel={(reason) => liveCancel(sel, reason)}
+          busy={busy}
+          error={actionError}
           onClose={() => setDrawerOpen(false)}
         />
       )}

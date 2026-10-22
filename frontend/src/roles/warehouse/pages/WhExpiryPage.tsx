@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { Icon } from '../../../components/common/icons';
-import { EXPIRY_KPIS, fefoUsable, NEAR_EXPIRY_ITEMS } from '../../pharmacist/data/nearExpiry';
+import { EXPIRY_KPIS, fefoUsable, lotValue } from '../../pharmacist/data/nearExpiry';
+import { useNearExpiry } from '../../pharmacist/data/useNearExpiry';
+import { usePoolAndPlans } from '../../pharmacist/data/useExpiryF2';
 import type { NearExpiryStatus } from '../../pharmacist/data/nearExpiry';
-import { ALLOCATION_PLANS, planStatusMeta, POOL_LOTS, POOL_TOTAL_VALUE } from '../../pharmacist/data/pool';
+import { planStatusMeta } from '../../pharmacist/data/pool';
 import { ViewOnlyNote } from '../components/ViewOnlyNote';
 import { whHref } from '../data/routes';
 import '../transport.css';
@@ -25,7 +27,22 @@ const baht = (n: number) => `฿${n.toLocaleString('en-US')}`;
 
 /** WH view of near-expiry (F2): our lots, the central pool, allocation plans and repeat-expiry rules (RBAC 👁). */
 export function WhExpiryPage() {
+  const ne = useNearExpiry();
+  const pp = usePoolAndPlans();
+  const NEAR_EXPIRY_ITEMS = ne.items;
+  const POOL_LOTS = pp.pool;
+  const ALLOCATION_PLANS = pp.plans;
+  const POOL_TOTAL_VALUE = POOL_LOTS.reduce((s, l) => s + l.value, 0);
   const [tab, setTab] = useState<Tab>('mine');
+  const live = ne.source === 'live';
+  const money = (n: number) => `฿${Math.round(n).toLocaleString('en-US')}`;
+  const kpis = live
+    ? [
+        { label: 'รอเภสัชกรตัดสินใจ', en: 'DETECTED', value: `${NEAR_EXPIRY_ITEMS.filter((i) => i.status === 'PENDING').length} ล็อต`, sub: `มูลค่า ${money(NEAR_EXPIRY_ITEMS.filter((i) => i.status === 'PENDING').reduce((s, i) => s + lotValue(i), 0))}`, accent: '#D97706', accentBg: '#FFF7ED' },
+        { label: 'ในคลังกลาง (ถูกกันไว้)', en: 'POOL', value: `${POOL_LOTS.length} ล็อต`, sub: `มูลค่า ${money(POOL_TOTAL_VALUE)}`, accent: '#166534', accentBg: '#F0FDF4' },
+        { label: 'แผนจัดสรรที่เกี่ยวกับ รพ.เรา', en: 'PLANS', value: `${ALLOCATION_PLANS.length} แผน`, sub: `กำลังขนส่ง ${ALLOCATION_PLANS.filter((p) => p.status === 'TRANSPORTING').length} · รอเห็นชอบ ${ALLOCATION_PLANS.filter((p) => p.live?.openForApproval).length}`, accent: '#1D4ED8', accentBg: '#EFF6FF' },
+      ]
+    : EXPIRY_KPIS;
   const [q, setQ] = useState('');
   const needle = q.trim().toLowerCase();
   const has = (...t: string[]) => !needle || t.some((x) => x.toLowerCase().includes(needle));
@@ -59,7 +76,7 @@ export function WhExpiryPage() {
       </section>
 
       <section className="ib-kpis" aria-label="สรุป F2" style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
-        {EXPIRY_KPIS.map((k) => (
+        {kpis.map((k) => (
           <div key={k.en} className="ib-kpi" style={{ borderLeftColor: k.accent, background: k.accentBg }}>
             <div className="ib-kpi-label">{k.label} <span className="en">{k.en}</span></div>
             <div className="ib-kpi-val num">{k.value}</div>

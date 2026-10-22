@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { Icon } from '../../../components/common/icons';
+import { LiveReports } from '../components/LiveReports';
+import { mockFallbackEnabled } from '../../../services/dataSource';
 import { homeHrefFor } from '../../../data/navigation';
 import type { RoleCode } from '../../../lib/rbac';
 import {
@@ -37,7 +39,7 @@ const TABS: TabItem[] = [
  * UI-19 Reports & Value. Read-only for every role; `role` drives the breadcrumb home, because a role
  * carried in the query string must keep it in every link.
  */
-export function ReportsPage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
+function MockReportsPage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
   const [activeTab, setActiveTab] = useState<ReportTab>('value');
   const [showMonthlyTable, setShowMonthlyTable] = useState(false);
   const [period] = useState('12 เดือน · พ.ย. 68 – ต.ค. 69');
@@ -887,4 +889,9 @@ export function ReportsPage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
       </footer>
     </div>
   );
+}
+
+/** Live reports unless demo mode (`?mock=1`) asks for the fixtures. */
+export function ReportsPage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
+  return mockFallbackEnabled() ? <MockReportsPage role={role} /> : <LiveReports role={role} />;
 }

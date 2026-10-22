@@ -493,7 +493,7 @@ function AuthenticatedShell() {
           <DataStatusBanner />
           {/* Screens whose API is not built yet still show sample data; say so instead of passing it off as real. */}
           {!mockFallbackEnabled() &&
-            (isEr || onIncident || onReport || onExpiry || onPool || onUsers || onAudit || onConfig || (warehouse && (onInbox || onKit)) || (onAdmin && ['accounts', 'config', 'audit'].includes(adminTab ?? ''))) && (
+            (isEr || onIncident || onUsers || onAudit || onConfig || (warehouse && (onInbox || onKit)) || (onAdmin && ['accounts', 'config', 'audit'].includes(adminTab ?? ''))) && (
               <div role="note" className="card" style={{ margin: '0 0 12px', padding: '10px 16px', fontSize: 13, background: '#FFFBEB', borderColor: '#FDE68A', color: '#92400E' }}>
                 หน้านี้ยังแสดงข้อมูลตัวอย่าง — ระบบหลังบ้านของส่วนนี้ยังไม่เปิดให้ใช้ ตัวเลขและรายการที่เห็นไม่ได้มาจากฐานข้อมูล
               </div>

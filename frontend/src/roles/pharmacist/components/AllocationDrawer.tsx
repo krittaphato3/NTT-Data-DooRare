@@ -9,14 +9,22 @@ interface AllocationDrawerProps {
   plan: AllocationPlan;
   decision?: string;
   onApprove: () => void;
-  onUneconomical: (label: string) => void;
+  onUneconomical: (label: string, optionId?: string) => void;
+  /** Live plans only (API-F2a-009 / -011). */
+  onReject?: (comment: string) => void;
+  onCancel?: (reason: string) => void;
+  busy?: boolean;
+  error?: string | null;
   onClose: () => void;
   /** Role viewing the drawer; the approval decision is gated through `lib/rbac.ts`. */
   role?: RoleCode;
 }
 
 /** UI-09 Allocation plan review — F-22 feasibility, F-23 economics, approval chain. */
-export function AllocationDrawer({ plan: p, decision, onApprove, onUneconomical, onClose, role = 'PHARMACIST' }: AllocationDrawerProps) {
+export function AllocationDrawer({ plan: p, decision, onApprove, onUneconomical, onReject, onCancel, busy = false, error = null, onClose, role = 'PHARMACIST' }: AllocationDrawerProps) {
+  const [note, setNote] = useState('');
+  const noteOk = note.trim().length >= 3;
+  const L = p.live;
   /* Approving a plan and choosing the uneconomical-exit route both belong to the pharmacist. */
   const mayApprove = mayActFor(role, 'PHARMACIST', 'approveAllocation');
   const approveHint = requiredRoleHint('approveAllocation');
@@ -27,7 +35,10 @@ export function AllocationDrawer({ plan: p, decision, onApprove, onUneconomical,
   const effectiveRatio = withMerge && p.merge ? p.merge.newRatioPct : p.costRatioPct;
   const effectiveCost = withMerge && p.merge ? p.merge.newCost : p.transportCost;
   const nowEconomical = effectiveRatio < COST_LIMIT_PCT;
-  const canApprove = p.status === 'PENDING_MY_APPROVAL' || p.status === 'AWAITING_APPROVAL';
+  const canApprove = L ? L.openForApproval && L.myDecision !== 'APPROVED' : p.status === 'PENDING_MY_APPROVAL' || p.status === 'AWAITING_APPROVAL';
+  const needsOption = L ? !p.economical && !L.option && L.openForApproval && L.isOrigin : !p.economical && p.status === 'PENDING_MY_APPROVAL';
+  const options = L ? L.options.map((o) => ({ id: o.id, label: o.label, hint: '' })) : uneconomicalOptions();
+  const mayCancel = Boolean(L) && (L!.openForApproval || p.status === 'APPROVED' || p.status === 'AUTO_APPROVED' || p.status === 'TRANSPORTING');
 
   return (
     <aside className="tr-drawer" aria-label="รายละเอียดแผนจัดสรร">
@@ -58,6 +69,18 @@ export function AllocationDrawer({ plan: p, decision, onApprove, onUneconomical,
       </div>
 
       <div className="tr-drawer-body">
+        {L && (
+          <div className="tr-box">
+            <h3 className="tr-h3">รายการส่ง <span className="en">ต่อ รพ.ปลายทาง</span></h3>
+            <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, lineHeight: '20px' }}>
+              {L.lines.map((l) => (
+                <li key={l.receiver}>{l.receiver} · <b className="num">{l.qty.toLocaleString()} {p.unit}</b> · {l.km} กม. · ค่าขนส่ง ฿{l.cost.toLocaleString()}{l.taskNo ? ` · ${l.taskNo}` : ''}</li>
+              ))}
+            </ul>
+            {L.option && <div className="sub" style={{ marginTop: 6 }}>ทางเลือกที่เจ้าของยาเลือก: {L.options.find((o) => o.id === L.option)?.label ?? L.option}</div>}
+          </div>
+        )}
+
         {/* F-22 feasibility */}
         <div className="tr-box">
           <h3 className="tr-h3">
@@ -157,12 +180,13 @@ export function AllocationDrawer({ plan: p, decision, onApprove, onUneconomical,
             <Icon name="checkc" className="ic20" style={{ color: '#166534' }} />
             <span>{decision}</span>
           </div>
-        ) : !p.economical && p.status === 'PENDING_MY_APPROVAL' ? (
+        ) : needsOption ? (
           <div className="pl-decide">
             <h3 className="tr-h3" style={{ color: '#B91C1C' }}>
               ⚠ ค่าขนส่งเกินเกณฑ์ · เจ้าของยาต้องเลือก 1 ใน 4 ทาง <span className="en">FR-F2a-005</span>
             </h3>
-            {uneconomicalOptions().map((o) => (
+            {error && <div role="alert" style={{ color: '#B91C1C', fontSize: 12.5 }}>{error}</div>}
+            {options.map((o) => (
               <label key={o.id} className={`pl-opt ${picked === o.id ? 'pl-opt-on' : ''}`}>
                 <input type="radio" name="uneco" checked={picked === o.id} onChange={() => setPicked(o.id)} />
                 <span>
@@ -173,23 +197,23 @@ export function AllocationDrawer({ plan: p, decision, onApprove, onUneconomical,
                 </span>
               </label>
             ))}
-            {picked === 'accept' && !nowEconomical && (
+            {(picked === 'accept' || picked === 'MERGE_SHIPMENTS' || picked === 'RAISE_VALUE') && !nowEconomical && (
               <div className="pl-warn-line">ยืนยันว่ายอมจ่ายค่าขนส่ง {effectiveRatio}% (เกินเกณฑ์ {COST_LIMIT_PCT}%) · บันทึก audit_log</div>
             )}
             <div style={{ display: 'flex', gap: 8 }}>
               <button
                 className="btn btn-p"
                 style={{ flex: 1 }}
-                disabled={!picked || !mayApprove}
+                disabled={!picked || !mayApprove || busy}
                 title={mayApprove ? undefined : approveHint}
                 onClick={() => {
-                  const o = uneconomicalOptions().find((x) => x.id === picked);
-                  onUneconomical(o ? `${o.label}${withMerge ? ' (รวมส่งกับรอบอื่น)' : ''}` : '');
+                  const o = options.find((x) => x.id === picked);
+                  onUneconomical(o ? `${o.label}${withMerge ? ' (รวมส่งกับรอบอื่น)' : ''}` : '', o?.id);
                 }}
               >
                 ยืนยันตัดสินใจ
               </button>
-              {picked === 'accept' && nowEconomical && (
+              {picked === 'accept' && nowEconomical && !L && (
                 <button
                   className="btn btn-g"
                   disabled={!mayApprove}
@@ -203,27 +227,40 @@ export function AllocationDrawer({ plan: p, decision, onApprove, onUneconomical,
           </div>
         ) : canApprove ? (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {error && <div role="alert" style={{ color: '#B91C1C', fontSize: 12.5, width: '100%' }}>{error}</div>}
+            {L && <input className="sel" style={{ width: '100%' }} placeholder="เหตุผล/ความเห็น (จำเป็นเมื่อไม่เห็นชอบ)" value={note} onChange={(e) => setNote(e.target.value)} />}
             <button
               className="btn btn-p"
-              disabled={!mayApprove}
-              title={mayApprove ? undefined : approveHint}
+              disabled={!mayApprove || busy || (!!L && !p.economical && !L.option)}
+              title={mayApprove ? (L && !p.economical && !L.option ? 'ค่าขนส่งเกินเกณฑ์ ต้องให้เจ้าของยาเลือกทางเลือกก่อน' : undefined) : approveHint}
               onClick={onApprove}
             >
               <Icon name="check" />
               เห็นชอบแผน
             </button>
-            <button className="btn btn-g" disabled={!mayApprove} title={mayApprove ? undefined : approveHint}>
+            <button className="btn btn-g" disabled={!mayApprove || busy || (!!L && !noteOk)} title={mayApprove ? undefined : approveHint} onClick={() => (L ? onReject?.(note.trim()) : undefined)}>
               <Icon name="x" />
               ไม่เห็นชอบ · ขอแก้แผน
             </button>
           </div>
         ) : (
           <div className="sub">
+            {p.status === 'CANCELLED' ? 'แผนถูกยกเลิก · ปริมาณกลับไปรอจับคู่ใหม่ในคลังกลาง' : p.status === 'COMPLETED' ? 'ส่งมอบครบแล้ว · นับเป็นมูลค่าที่เลี่ยงการหมดอายุ' : p.status === 'TRANSPORTING' ? 'อนุมัติครบแล้ว · กำลังขนส่ง (UI-14)' : null}
             {p.status === 'NEEDS_DISCUSSION'
               ? 'แผนถูกตีกลับ → เข้าสู่ NEEDS_DISCUSSION · นัดหารือและแก้แผน แล้วส่งเห็นชอบใหม่ (FR-F2a-007)'
               : p.status === 'AUTO_APPROVED'
                 ? 'เครือข่ายเดียวกัน → Auto Approve · แก้/ยกเลิกได้ก่อน LOADED (A1)'
                 : 'อนุมัติครบแล้ว · รอเอกสาร XC-1 และขั้นตอนขนส่ง UI-14'}
+          </div>
+        )}
+        {mayCancel && (
+          <div className="pl-decide">
+            <h3 className="tr-h3">ยกเลิกแผน <span className="en">FR-F2a-018</span></h3>
+            {L?.cancelRequestedBy && <div className="sub">มี รพ.ขอยกเลิกแล้ว · รออีกฝ่าย (เจ้าของยา) ยินยอมด้วยการกดยกเลิกจาก รพ.ของตน</div>}
+            <input className="sel" style={{ width: '100%' }} placeholder="เหตุผล (อย่างน้อย 3 ตัวอักษร)" value={note} onChange={(e) => setNote(e.target.value)} />
+            <button className="btn btn-g" disabled={!mayApprove || busy || !noteOk} onClick={() => onCancel?.(note.trim())}>
+              {p.status === 'TRANSPORTING' || p.status === 'APPROVED' || p.status === 'AUTO_APPROVED' ? 'ขอยกเลิก / ยินยอมยกเลิก (ต้องสองฝ่าย)' : 'ยกเลิกแผน'}
+            </button>
           </div>
         )}
       </div>
