@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Icon } from '../../../components/common/icons';
 import { HOSPITAL_ADMIN_HOME_HREF } from '../../../data/navigation';
 import { can, HOSPITAL_ADMIN_ROLE, isRestrictedConfigKey, ROLE_LABEL } from '../../../lib/rbac';
@@ -9,7 +9,33 @@ import { ReasonDialog } from '../components/ReasonDialog';
 import { CONFIG_DRUGS, CONFIG_HISTORY, CONFIG_SECTIONS, SCOPE_FILTERS } from '../data/config';
 import type { ConfigChange, ConfigDrugRow, ConfigKey, ConfigScope, ConfigValue, VedCode } from '../data/config';
 import { HOSPITAL_ADMIN_USER } from '../data/session';
+import { listAllConfig, updateConfig, type ApiConfigItem } from '../../../services/adminApi';
 import '../admin.css';
+
+function isMockMode(): boolean {
+  if (typeof window === 'undefined') return false;
+  return new URLSearchParams(window.location.search).get('mock') === '1';
+}
+
+/** API `group` → Thai/EN group heading + traceability code (order below matches the spec §23 grouping). */
+const GROUP_META: Record<string, { labelTh: string; labelEn: string; code: string }> = {
+  forecast: { labelTh: 'การพยากรณ์', labelEn: 'Forecast', code: 'BR-F1a · §23' },
+  ved: { labelTh: 'การจัดกลุ่ม VED', labelEn: 'VED', code: 'BR-F1a · §23' },
+  abc: { labelTh: 'การจัดกลุ่ม ABC', labelEn: 'ABC', code: 'ASM-35 · §23' },
+  borrow: { labelTh: 'การยืมระหว่างโรงพยาบาล', labelEn: 'Borrowing', code: 'BR-F1b · §23' },
+  agent: { labelTh: 'Agent (AI ผู้ช่วยเสนอแผน)', labelEn: 'Agent', code: '§14 · §23' },
+  expiry: { labelTh: 'ยาใกล้หมดอายุ', labelEn: 'Near-expiry', code: 'BR-F2a · §23' },
+  return: { labelTh: 'การคืนยา', labelEn: 'Return', code: 'BR-XC · §23' },
+  emergency: { labelTh: 'เหตุฉุกเฉิน (F3)', labelEn: 'Emergency', code: 'BR-F3 · §23' },
+  network: { labelTh: 'เครือข่าย', labelEn: 'Network', code: 'BR-F2a · §23' },
+  coldchain: { labelTh: 'กล่องควบคุมอุณหภูมิ', labelEn: 'Cold chain', code: 'ASM-15 · §23' },
+  mapping: { labelTh: 'การจับคู่รหัสยา (F4)', labelEn: 'Drug mapping', code: 'BR-F2b · §23' },
+  security: { labelTh: 'ความปลอดภัย', labelEn: 'Security', code: '§8 · §23' },
+  retention: { labelTh: 'ระยะเวลาเก็บข้อมูล', labelEn: 'Retention', code: 'ASM-26 · §23' },
+};
+const GROUP_ORDER = Object.keys(GROUP_META);
+
+type ConfigSectionLike = { id: string; labelTh: string; labelEn: string; code: string; keys: ConfigKey[] };
 
 type Tab = 'settings' | 'drugs';
 
@@ -45,14 +71,19 @@ const NOW = '13 ต.ค. 69 09:10';
  * kill switch are read-only here. Every permission answer comes from `can()` in lib/rbac.ts.
  */
 export function ConfigurationPage() {
+  const [mock] = useState(isMockMode());
   const [tab, setTab] = useState<Tab>('settings');
   const [scopeFilter, setScopeFilter] = useState<ConfigScope | 'ALL'>('ALL');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(!isMockMode());
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
   const [pending, setPending] = useState<Pending | null>(null);
   const [history, setHistory] = useState<{ key?: string } | null>(null);
 
+  const [sections, setSections] = useState<ConfigSectionLike[]>(CONFIG_SECTIONS);
+  const [apiByKey, setApiByKey] = useState<Map<string, ApiConfigItem>>(new Map());
+  const [fallbackCount, setFallbackCount] = useState(0);
+  const [conflictKey, setConflictKey] = useState<string | null>(null);
   const [values, setValues] = useState<Record<string, ConfigValue>>(() => {
     const initial: Record<string, ConfigValue> = {};
     for (const section of CONFIG_SECTIONS) for (const k of section.keys) initial[k.key] = k.value;
@@ -67,22 +98,34 @@ export function ConfigurationPage() {
   const mayConfigure = can(HOSPITAL_ADMIN_ROLE, 'configureRules');
   const mayConfigureRestricted = can(HOSPITAL_ADMIN_ROLE, 'configureRestrictedRules');
 
-  /** `configureRules` means "may configure at own scope" (spec §5.2 grants HOSPITAL_ADMIN own scope). */
-  const editableFor = (row: ConfigKey) =>
-    mayConfigure && row.scope === 'HOSPITAL' && (!isRestrictedConfigKey(row.key) || mayConfigureRestricted);
+  /** API mode trusts the server `editable` flag (already encodes readOnly + §23 restricted for HA).
+   *  Mock mode falls back to the local scope + restricted-prefix rule. */
+  const editableFor = (row: ConfigKey) => {
+    if (!mock) return apiByKey.get(row.key)?.editable ?? false;
+    return mayConfigure && row.scope === 'HOSPITAL' && (!isRestrictedConfigKey(row.key) || mayConfigureRestricted);
+  };
 
-  /** Why a value cannot be written — always names the scope or the role that would be required. */
+  /** Why a value cannot be written — always names the scope, the role, or the API readOnly reason. */
   const scopeBlockedReason = (scope: ConfigScope, key: string): string => {
     if (!mayConfigure) return `ต้องเป็น ${ROLE_LABEL.HOSPITAL_ADMIN} ขึ้นไป`;
     if (scope === 'REGION') return `ค่าขอบเขตเขตสุขภาพ — ต้องเป็น ${ROLE_LABEL.REGION_ADMIN} ขึ้นไป`;
     if (scope === 'GLOBAL') return `ค่าส่วนกลาง — ต้องเป็น ${ROLE_LABEL.SYSTEM_ADMIN}`;
-    if (isRestrictedConfigKey(key)) return `คีย์กลุ่มนี้ (§23) — ต้องเป็น ${ROLE_LABEL.REGION_ADMIN} ขึ้นไป`;
+    if (isRestrictedConfigKey(key)) return `คีย์กลุ่มนี้ (§23) — ต้องเป็น ${ROLE_LABEL.SYSTEM_ADMIN} ขึ้นไป`;
     return 'อ่านอย่างเดียว';
   };
 
-  const blockedReason = (row: ConfigKey): string => scopeBlockedReason(row.scope, row.key);
+  const blockedReason = (row: ConfigKey): string | undefined => {
+    if (!mock) {
+      const it = apiByKey.get(row.key);
+      if (!it) return undefined;
+      if (it.readOnly) return it.readOnlyReason ?? 'อ่านอย่างเดียว';
+      if (!it.editable) return 'คีย์กลุ่มนี้ (§23) ต้องเป็น SYSTEM_ADMIN ขึ้นไป — ผู้ดูแลโรงพยาบาลแก้ไขไม่ได้';
+      return undefined;
+    }
+    return scopeBlockedReason(row.scope, row.key);
+  };
 
-  const killSwitchReason = `สวิตช์นี้เปลี่ยนได้เฉพาะ ${ROLE_LABEL.SYSTEM_ADMIN} หรือ ${ROLE_LABEL.REGION_ADMIN} (API-AD-004) — ผู้ดูแลโรงพยาบาลดูได้อย่างเดียว`;
+  const killSwitchReason = `สวิตช์นี้เปลี่ยนได้เฉพาะ ${ROLE_LABEL.SYSTEM_ADMIN} เท่านั้น (API-AD-004) — ผู้ดูแลโรงพยาบาลดูได้อย่างเดียว`;
 
   const invalidFor = (row: ConfigKey, draft: string | boolean | undefined): string => {
     if (draft === undefined || typeof draft === 'boolean') return '';
@@ -115,10 +158,10 @@ export function ConfigurationPage() {
   };
 
   const scopeCounts = (() => {
-    const counts: Record<ConfigScope | 'ALL', number> = { ALL: 0, HOSPITAL: 0, REGION: 0, GLOBAL: 0 };
-    for (const section of CONFIG_SECTIONS) {
+    const counts: Record<ConfigScope | 'ALL', number> = { ALL: 0, HOSPITAL: 0, REGION: 0, GLOBAL: 0, DEFAULT: 0 };
+    for (const section of sections) {
       for (const k of section.keys) {
-        counts[k.scope] += 1;
+        counts[k.scope] = (counts[k.scope] ?? 0) + 1;
         counts.ALL += 1;
       }
     }
@@ -127,10 +170,82 @@ export function ConfigurationPage() {
 
   const dirtyCount = Object.keys(drafts).length + Object.keys(drugDrafts).length;
 
-  const refresh = () => {
-    setError('');
+  /** Mock label lookup from the fixture (labelTh/labelEn keyed by config key). */
+  const buildMockLabelMap = () => {
+    const m = new Map<string, { labelTh: string; labelEn: string }>();
+    for (const s of CONFIG_SECTIONS) for (const k of s.keys) m.set(k.key, { labelTh: k.labelTh, labelEn: k.labelEn });
+    return m;
+  };
+
+  /** Loads GET /config (following nextCursor), maps API items to UI rows, groups by API `group`. */
+  const loadConfig = async () => {
+    if (mock) {
+      const initial: Record<string, ConfigValue> = {};
+      for (const section of CONFIG_SECTIONS) for (const k of section.keys) initial[k.key] = k.value;
+      setValues(initial);
+      setSections(CONFIG_SECTIONS);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
-    window.setTimeout(() => setLoading(false), 600);
+    setError('');
+    try {
+      const items = await listAllConfig();
+      const mockLabel = buildMockLabelMap();
+      const map = new Map<string, ApiConfigItem>();
+      const byGroup = new Map<string, ConfigKey[]>();
+      const vals: Record<string, ConfigValue> = {};
+      let fallback = 0;
+      for (const it of items) {
+        map.set(it.key, it);
+        vals[it.key] = it.value as ConfigValue;
+        const ml = mockLabel.get(it.key);
+        if (!ml) fallback += 1;
+        const row: ConfigKey = {
+          key: it.key,
+          // Label: mock label where it exists, otherwise the API `description` (fallback).
+          labelTh: ml?.labelTh ?? it.description,
+          labelEn: ml?.labelEn ?? '',
+          type: it.type,
+          unit: it.unit,
+          scope: it.scope as ConfigScope,
+          value: it.value as ConfigValue,
+          fileDefault: it.fileDefault as ConfigValue,
+          min: it.min,
+          max: it.max,
+          description: it.description,
+          updatedBy: it.updatedBy?.name ?? 'ยังไม่แก้ (ใช้ค่าเริ่มต้น)',
+          updatedAt: it.updatedAt ?? '—',
+        };
+        const list = byGroup.get(it.group) ?? [];
+        list.push(row);
+        byGroup.set(it.group, list);
+      }
+      const secs = GROUP_ORDER.filter((g) => byGroup.has(g)).map((g) => ({
+        id: g,
+        labelTh: GROUP_META[g].labelTh,
+        labelEn: GROUP_META[g].labelEn,
+        code: GROUP_META[g].code,
+        keys: byGroup.get(g)!,
+      }));
+      setApiByKey(map);
+      setFallbackCount(fallback);
+      setValues(vals);
+      setSections(secs);
+    } catch (e: any) {
+      setError(e?.message || 'ไม่สามารถโหลดค่าตั้งต้นได้');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadConfig();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const refresh = () => {
+    loadConfig();
   };
 
   const requestConfigSave = (row: ConfigKey) => {
@@ -148,8 +263,48 @@ export function ConfigurationPage() {
     setPending({ kind: 'config', row, next });
   };
 
-  const applyPending = (reason: string) => {
+  const applyPending = async (reason: string) => {
     if (!pending) return;
+
+    // API mode: commit config changes to PUT /config/{key} with a reason + If-Match (optimistic lock).
+    if (pending.kind === 'config' && !mock) {
+      const { row, next } = pending;
+      const item = apiByKey.get(row.key);
+      // If-Match = the row's updatedAt exactly as returned by GET (ignored by the server on a first
+      // write at a scope that has no row yet).
+      const ifMatch = item?.updatedAt && item.updatedAt !== '—' ? item.updatedAt : undefined;
+      try {
+        await updateConfig(row.key, { value: next, reason }, ifMatch);
+        setDrafts((d) => {
+          const copy = { ...d };
+          delete copy[row.key];
+          return copy;
+        });
+        setPending(null);
+        setError('');
+        setConflictKey(null);
+        setNotice(`บันทึก ${row.key} แล้ว · เหตุผลถูกบันทึกใน audit log`);
+        await loadConfig(); // refresh effective scope + updatedAt for the next optimistic lock
+        return;
+      } catch (e: any) {
+        const code = e?.code as string | undefined;
+        if (code === 'VERSION_CONFLICT') {
+          setConflictKey(row.key);
+          setError('ค่าตั้งต้นถูกแก้ไขโดยผู้อื่นแล้ว กรุณารีเฟรชค่าปัจจุบันก่อนแก้ไขอีกครั้ง');
+        } else if (code === 'CONFIG_READ_ONLY') {
+          setError(e?.message || 'คีย์นี้อ่านอย่างเดียว แก้ไขผ่าน API ไม่ได้');
+        } else if (code === 'FORBIDDEN') {
+          setError(e?.message || 'ไม่มีสิทธิ์แก้ไขคีย์นี้ในขอบเขตที่ระบุ');
+        } else if (code === 'VALIDATION') {
+          setError(e?.message || 'ค่าไม่ถูกต้อง (ชนิด/ช่วงค่าไม่ผ่าน)');
+        } else {
+          setError(e?.message || 'เกิดข้อผิดพลาด');
+        }
+        setNotice('');
+        setPending(null);
+        return;
+      }
+    }
 
     if (pending.kind === 'config') {
       const { row, next } = pending;
@@ -189,6 +344,20 @@ export function ConfigurationPage() {
 
     setError('');
     setPending(null);
+  };
+
+  /** VERSION_CONFLICT (409): drop the local draft and re-fetch the server's current value. */
+  const reloadConflicted = async () => {
+    if (conflictKey) {
+      setDrafts((d) => {
+        const copy = { ...d };
+        delete copy[conflictKey];
+        return copy;
+      });
+    }
+    setConflictKey(null);
+    setError('');
+    await loadConfig();
   };
 
   const pendingDetail = () => {
@@ -239,6 +408,11 @@ export function ConfigurationPage() {
           <div style={{ fontSize: 13, lineHeight: '20px', marginTop: 2 }}>
             โรงพยาบาลสมุทรปราการ · แก้ไขได้เฉพาะค่าขอบเขตโรงพยาบาล · ลำดับการใช้ค่า HOSPITAL → REGION → GLOBAL → ค่าเริ่มต้น
           </div>
+          {!mock && (
+            <div className="ha-hint" style={{ marginTop: 2 }}>
+              ใช้ป้ายชื่อจากเค้าโครงเดิม {scopeCounts.ALL - fallbackCount} คีย์ · ใช้คำอธิบายจาก API เป็นป้ายชื่อสำรอง {fallbackCount} คีย์
+            </div>
+          )}
         </div>
         <div className="pagehead-actions">
           <button className="btn btn-s" onClick={refresh} disabled={loading}>
@@ -259,9 +433,14 @@ export function ConfigurationPage() {
         </div>
       )}
       {error && (
-        <div className="ha-banner ha-banner-err" role="alert" data-part="config-error">
+        <div className="ha-banner ha-banner-err" role="alert" data-part="config-error" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <Icon name="alertc" className="ic14" style={{ marginTop: 2 }} />
-          <span>{error}</span>
+          <span style={{ flex: 1 }}>{error}</span>
+          {conflictKey && (
+            <button className="btn btn-s btn-sm" onClick={reloadConflicted}>
+              โหลดค่าปัจจุบัน
+            </button>
+          )}
         </div>
       )}
 
@@ -340,7 +519,7 @@ export function ConfigurationPage() {
               ))}
             </section>
           ) : (
-            CONFIG_SECTIONS.map((section, index) => {
+            sections.map((section, index) => {
               const rows = scopeFilter === 'ALL' ? section.keys : section.keys.filter((k) => k.scope === scopeFilter);
               if (rows.length === 0) return null;
               return (

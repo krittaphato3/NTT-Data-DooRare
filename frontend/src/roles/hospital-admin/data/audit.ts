@@ -3,6 +3,8 @@
  *  (SEC-003); entries are hash-chained so they cannot be edited or deleted. */
 
 import type { RoleCode } from '../../../lib/rbac';
+import { ROLE_LABEL } from '../../../lib/rbac';
+import type { ApiAuditItem } from '../../../services/adminApi';
 
 export type AuditAction =
   | 'CREATE' | 'UPDATE' | 'SUSPEND' | 'ACTIVATE' | 'INVITE'
@@ -12,13 +14,14 @@ export type AuditValue = string | number | boolean | null;
 
 export interface AuditEntry {
   id: string;
-  /** Thai short Buddhist-era date + HH:MM, as used across the dashboard. */
+  /** Thai short Buddhist-era date + HH:M, as used across the dashboard. */
   at: string;
   /** Gregorian ISO timestamp used for date-range filtering and sorting (the UI shows `at`). */
   atIso: string;
   actor: string;
-  role: RoleCode;
-  action: AuditAction;
+  /** Real API actions (e.g. CONFIG_UPDATED) are wider than the mock `AuditAction` union. */
+  role: RoleCode | string;
+  action: string;
   entityType: string;
   entityId: string;
   /** Field-level snapshot before the change; `{}` for creates/logins. */
@@ -31,6 +34,8 @@ export interface AuditEntry {
   agentRunId?: string;
   hash: string;
   prevHash: string;
+  /** SA view only: hospital the row belongs to (API `hospital.name`), when present. */
+  hospitalName?: string;
 }
 
 export interface ActionMeta {
@@ -39,7 +44,7 @@ export interface ActionMeta {
   tone: string;
 }
 
-export const AUDIT_ACTION_META: Record<AuditAction, ActionMeta> = {
+export const AUDIT_ACTION_META: Record<string, ActionMeta> = {
   CREATE: { labelTh: 'สร้าง', tone: 't-blue' },
   UPDATE: { labelTh: 'แก้ไข', tone: 't-blue' },
   SUSPEND: { labelTh: 'ระงับ', tone: 't-red' },
@@ -52,7 +57,70 @@ export const AUDIT_ACTION_META: Record<AuditAction, ActionMeta> = {
   LOGIN: { labelTh: 'เข้าสู่ระบบ', tone: 't-teal' },
   LOGIN_FAILED: { labelTh: 'เข้าสู่ระบบไม่สำเร็จ', tone: 't-red' },
   VERIFY_CHAIN: { labelTh: 'ตรวจสอบ hash chain', tone: 't-teal' },
+  // Real API actions (API-AD-003 rows written by the backend).
+  USER_CREATED: { labelTh: 'สร้างบัญชี', tone: 't-blue' },
+  USER_ROLES_CHANGED: { labelTh: 'เปลี่ยนบทบาท', tone: 't-amber' },
+  USER_ACTIVATED: { labelTh: 'เปิดใช้งานบัญชี', tone: 't-green' },
+  USER_SUSPENDED: { labelTh: 'ระงับบัญชี', tone: 't-red' },
+  USER_UPDATED: { labelTh: 'แก้ไขบัญชี', tone: 't-blue' },
+  CONFIG_UPDATED: { labelTh: 'แก้ไขค่าตั้งต้น', tone: 't-blue' },
+  AGENT_KILL_SWITCH_ON: { labelTh: 'เปิด Agent (kill switch)', tone: 't-green' },
+  AGENT_KILL_SWITCH_OFF: { labelTh: 'ปิด Agent (kill switch)', tone: 't-red' },
 };
+
+/** Safe accessor: unknown actions (from other modules) still render their raw code. */
+export function auditActionMeta(action: string): ActionMeta {
+  return AUDIT_ACTION_META[action] ?? { labelTh: action, tone: 't-grey' };
+}
+
+/** Safe role label: real actor roles map through ROLE_LABEL; unknown/system values fall back to the raw string. */
+export function roleLabel(role: string): string {
+  return (ROLE_LABEL as Record<string, string>)[role] ?? role;
+}
+
+/** ISO timestamp → Thai short Buddhist-era `d MMM yy HH:MM` (the dashboard's display format). */
+export function formatThaiDateTime(iso: string | null | undefined): string {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return String(iso);
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${d.getDate()} ${TH_MONTHS[d.getMonth()]} ${String(d.getFullYear() + 543).slice(2)} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+/** Maps one API `GET /audit-log` row to the UI `AuditEntry` shape (actor=null → "ระบบ"). */
+export function mapApiToAuditEntry(item: ApiAuditItem): AuditEntry {
+  return {
+    id: String(item.id),
+    at: formatThaiDateTime(item.occurredAt),
+    atIso: item.occurredAt,
+    actor: item.actor?.name ?? 'ระบบ (System)',
+    role: item.actor?.role ?? 'SYSTEM',
+    action: item.action,
+    entityType: item.entityType,
+    entityId: item.entityId ?? '—',
+    before: (item.before ?? {}) as Record<string, AuditValue>,
+    after: (item.after ?? {}) as Record<string, AuditValue>,
+    reason: item.reason ?? '',
+    ip: item.ip ?? '—',
+    agentRunId: item.agentRunId ?? undefined,
+    hash: item.rowHash,
+    prevHash: item.prevHash ?? '—',
+    hospitalName: item.hospital?.name ?? item.hospital?.code ?? undefined,
+  };
+}
+
+/** Real API action values for the server-side filter dropdown (HA + SA). */
+export const API_ACTION_OPTIONS: { value: string; label: string }[] = [
+  { value: 'ALL', label: 'ทุกการกระทำ' },
+  { value: 'USER_CREATED', label: 'สร้างบัญชี' },
+  { value: 'USER_ROLES_CHANGED', label: 'เปลี่ยนบทบาท' },
+  { value: 'USER_ACTIVATED', label: 'เปิดใช้งานบัญชี' },
+  { value: 'USER_SUSPENDED', label: 'ระงับบัญชี' },
+  { value: 'USER_UPDATED', label: 'แก้ไขบัญชี' },
+  { value: 'CONFIG_UPDATED', label: 'แก้ไขค่าตั้งต้น' },
+  { value: 'AGENT_KILL_SWITCH_ON', label: 'เปิด Agent (kill switch)' },
+  { value: 'AGENT_KILL_SWITCH_OFF', label: 'ปิด Agent (kill switch)' },
+];
 
 /** Filter options for the audit filter bar; `ALL` means "no filter". */
 export const AUDIT_ACTION_OPTIONS: { value: AuditAction | 'ALL'; label: string }[] = [

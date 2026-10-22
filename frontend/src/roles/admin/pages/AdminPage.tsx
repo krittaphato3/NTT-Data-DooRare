@@ -53,7 +53,10 @@ export function AdminPage({ query = '', onQuery }: AdminPageProps) {
   useEffect(() => {
     void reloadHospitals();
   }, []);
-  const [users, setUsers] = useState<UserAccount[]>(INITIAL_USERS);
+  // Dashboard/hospital views still read the fixture set (their live wiring is a separate task); the
+  // accounts tab loads its own rows from GET /users and reports the exact total when known.
+  const [users] = useState<UserAccount[]>(INITIAL_USERS);
+  const [liveUserCount, setLiveUserCount] = useState<number | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const showToast = (msg: string) => {
@@ -127,34 +130,6 @@ export function AdminPage({ query = '', onQuery }: AdminPageProps) {
     showToast(`เพิ่มโรงพยาบาล "${newHosp.name}" เข้าสู่เครือข่ายเรียบร้อยแล้ว`);
   };
 
-  // User CRUD Handlers
-  const handleAddUser = (
-    newUser: Omit<UserAccount, 'id' | 'createdAt' | 'loginCount' | 'lastLogin' | 'isOnline'>,
-  ) => {
-    const id = `USR-${String(users.length + 1).padStart(3, '0')}`;
-    const account: UserAccount = {
-      ...newUser,
-      id,
-      loginCount: 0,
-      lastLogin: 'เพิ่งสร้างบัญชี (ยังไม่เคยเข้าสู่ระบบ)',
-      isOnline: false,
-      createdAt: '16 ต.ค. 69 (วันนี้)',
-    };
-    setUsers([account, ...users]);
-    showToast(`สร้างบัญชีผู้ใช้ "${newUser.name}" เรียบร้อยแล้ว`);
-  };
-
-  const handleUpdateUser = (id: string, updates: Partial<UserAccount>) => {
-    setUsers(users.map((u) => (u.id === id ? { ...u, ...updates } : u)));
-    showToast(`อัปเดตข้อมูลบัญชีผู้ใช้เรียบร้อยแล้ว`);
-  };
-
-  const handleDeleteUser = (id: string) => {
-    const user = users.find((u) => u.id === id);
-    setUsers(users.filter((u) => u.id !== id));
-    showToast(`ลบ/ระงับบัญชี "${user?.name || id}" เรียบร้อยแล้ว`);
-  };
-
   const selectedHospital = selectedHospitalId
     ? hospitals.find((h) => h.id === selectedHospitalId)
     : null;
@@ -177,7 +152,7 @@ export function AdminPage({ query = '', onQuery }: AdminPageProps) {
           if (tab !== 'hospitals') setSelectedHospitalId(null);
         }}
         hospitalCount={hospitals.length}
-        userCount={hospitalsLive ? hospitals.reduce((n, h) => n + h.staffCount, 0) : users.length}
+        userCount={liveUserCount ?? (hospitalsLive ? hospitals.reduce((n, h) => n + h.staffCount, 0) : users.length)}
         onlineCount={liveOnline ?? (mockFallbackEnabled() ? users.filter((u) => u.isOnline).length : 0)}
         selectedHospitalName={selectedHospital?.name}
         onBackToHospitals={handleBackToHospitals}
@@ -247,12 +222,10 @@ export function AdminPage({ query = '', onQuery }: AdminPageProps) {
 
       {activeTab === 'accounts' && (
         <AccountCrudTab
-          users={users}
           hospitals={hospitals}
-          onAddUser={handleAddUser}
-          onUpdateUser={handleUpdateUser}
-          onDeleteUser={handleDeleteUser}
           externalQuery={query}
+          onShowToast={showToast}
+          onUsersCount={setLiveUserCount}
         />
       )}
 

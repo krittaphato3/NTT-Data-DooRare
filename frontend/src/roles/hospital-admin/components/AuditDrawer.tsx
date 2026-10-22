@@ -1,7 +1,6 @@
 import { useEffect } from 'react';
 import { Icon } from '../../../components/common/icons';
-import { ROLE_LABEL } from '../../../lib/rbac';
-import { AUDIT_ACTION_META } from '../data/audit';
+import { auditActionMeta, roleLabel } from '../data/audit';
 import type { AuditEntry } from '../data/audit';
 
 interface AuditDrawerProps {
@@ -11,7 +10,7 @@ interface AuditDrawerProps {
 
 /** Row detail for UI-18: full before/after snapshot, agent run and hash-chain links. */
 export function AuditDrawer({ entry, onClose }: AuditDrawerProps) {
-  const meta = AUDIT_ACTION_META[entry.action];
+  const meta = auditActionMeta(entry.action);
 
   // Keyboard-operable: Escape closes the drawer, matching the dialog shell.
   useEffect(() => {
@@ -58,7 +57,7 @@ export function AuditDrawer({ entry, onClose }: AuditDrawerProps) {
             <dt>ผู้กระทำ</dt>
             <dd>{entry.actor}</dd>
             <dt>บทบาท</dt>
-            <dd>{ROLE_LABEL[entry.role]}</dd>
+            <dd>{roleLabel(entry.role)}</dd>
             <dt>การกระทำ</dt>
             <dd>{meta.labelTh}</dd>
             <dt>ประเภทข้อมูล</dt>
