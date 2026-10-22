@@ -94,3 +94,25 @@ export async function triggerForecastRuns(req: Request) {
   for (const g of list) runs.push(await runOne(req, g));
   return { ok: true, jobId: runs[0].runId, status: 'SUCCEEDED', runs };
 }
+
+/**
+ * Timer job (every 6 hours, see index.ts): evaluates the alerts again against the CURRENT stock using the latest loaded
+ * forecast of each granularity. It never loads or retrains a forecast; with no loaded run it does nothing.
+ */
+export async function reevaluateAlerts(): Promise<{ granularity: Granularity; runId: string; alerts: EvaluateResult }[]> {
+  const out: { granularity: Granularity; runId: string; alerts: EvaluateResult }[] = [];
+  for (const granularity of ['WEEK', 'MONTH'] as const) {
+    await withTransaction(async (client) => {
+      const run = (
+        await client.query(
+          `SELECT fr.id FROM forecast_run fr
+            WHERE fr.status = 'SUCCEEDED' AND EXISTS (SELECT 1 FROM forecast_result f WHERE f.run_id = fr.id AND f.granularity = $1::forecast_granularity)
+            ORDER BY fr.started_at DESC LIMIT 1`,
+          [granularity],
+        )
+      ).rows[0];
+      if (run) out.push({ granularity, runId: run.id, alerts: await evaluateAlerts(client, run.id, granularity) });
+    });
+  }
+  return out;
+}

@@ -2,6 +2,7 @@ import { app } from './app.js';
 import { config } from './config/env.js';
 import { withTransaction } from './db/tx.js';
 import { runExpiryJobs } from './modules/expiry/expiry.routes.js';
+import { reevaluateAlerts } from './modules/forecasts/forecasts.runs.js';
 import { processLegTimers } from './modules/borrow/borrow.flow.js';
 import { processEmergencyTimers } from './modules/incidents/emergency.borrow.js';
 
@@ -24,6 +25,12 @@ const expiryTimer = setInterval(() => {
   runExpiryJobs().catch((err) => console.error('[DooRare Backend] expiry jobs failed', err));
 }, 15 * 60_000);
 expiryTimer.unref();
+
+// Stock alerts against the current stock (latest loaded forecast), every 6 hours. A new forecast is loaded by POST /forecasts/runs.
+const alertTimer = setInterval(() => {
+  reevaluateAlerts().catch((err) => console.error('[DooRare Backend] alert re-evaluation failed', err));
+}, 6 * 3_600_000);
+alertTimer.unref();
 
 process.on('SIGTERM', () => {
   console.log('[DooRare Backend] SIGTERM received, shutting down gracefully...');
