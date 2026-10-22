@@ -3,6 +3,7 @@ import type { RoleCode } from '../../../lib/rbac';
 import { ROLE_OPTIONS } from '../data/users';
 import type { HospitalUser } from '../data/users';
 import { Modal } from './Modal';
+import { useAuth } from '../../../context/AuthContext';
 
 export interface UserFormValues {
   name: string;
@@ -30,6 +31,9 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
  * hospital admin may grant — SYSTEM_ADMIN and REGION_ADMIN are never offered (spec §5.2 scope).
  */
 export function UserFormModal({ mode, user, lockedRole, error, onClose, onSubmit }: UserFormModalProps) {
+  const { user: authUser } = useAuth();
+  // Signed-in admin's own hospital from the session, not a sample name (F-04).
+  const hospitalName = authUser?.hospitalName ?? '';
   const [name, setName] = useState(user?.name ?? '');
   const [email, setEmail] = useState(user?.email ?? '');
   const [roles, setRoles] = useState<RoleCode[]>(user?.roles ?? []);
@@ -66,7 +70,7 @@ export function UserFormModal({ mode, user, lockedRole, error, onClose, onSubmit
     <Modal label={`${mode === 'create' ? 'เชิญผู้ใช้ใหม่' : 'แก้ไขบทบาทผู้ใช้'} / ${user?.name ?? ''}`} onClose={onClose}>
       <h2 className="sec-h">{mode === 'create' ? 'เชิญผู้ใช้ใหม่' : 'แก้ไขบทบาทผู้ใช้'}</h2>
       <div className="sub" style={{ marginTop: 4 }}>
-        ขอบเขตโรงพยาบาลสมุทรปราการ · สิทธิ์ถูกกำหนดตามบทบาท (spec §5.2)
+        ขอบเขต{hospitalName} · สิทธิ์ถูกกำหนดตามบทบาท (spec §5.2)
       </div>
 
       <div className="ha-form" style={{ marginTop: 16 }}>

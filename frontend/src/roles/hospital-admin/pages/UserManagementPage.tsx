@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useAuth } from '../../../context/AuthContext';
 import { Icon } from '../../../components/common/icons';
 import { HOSPITAL_ADMIN_HOME_HREF } from '../../../data/navigation';
 import { SESSIONS } from '../../../data/session';
@@ -93,6 +94,9 @@ function mapApiUserToHospitalUser(u: ApiUser): HospitalUser {
  * demoted.
  */
 export function UserManagementPage() {
+  const { user } = useAuth();
+  // The signed-in admin's own hospital, from the session — never a hardcoded sample name (F-04).
+  const hospitalName = user?.hospitalName ?? '';
   const [mock] = useState(isMockMode());
   const [users, setUsers] = useState<HospitalUser[]>(mock ? HOSPITAL_USERS : []);
   const [search, setSearch] = useState('');
@@ -127,7 +131,7 @@ export function UserManagementPage() {
   const tiles = [
     { label: 'บัญชีที่ใช้งานอยู่', value: users.filter((u) => u.status === 'ACTIVE').length, sub: `จากทั้งหมด ${users.length} บัญชี` },
     { label: 'รอตอบรับคำเชิญ', value: users.filter((u) => u.status === 'INVITED').length, sub: 'ส่งคำเชิญซ้ำได้จากตาราง' },
-    { label: 'บทบาทที่ใช้งาน', value: ROLES_IN_USE.length, sub: 'ภายในโรงพยาบาลสมุทรปราการ' },
+    { label: 'บทบาทที่ใช้งาน', value: ROLES_IN_USE.length, sub: `ภายใน${hospitalName}` },
     { label: 'MFA เปิดใช้งาน', value: users.filter((u) => u.mfa).length, sub: 'ผู้ดูแลโรงพยาบาลต้องเปิด MFA' },
   ];
 
@@ -351,7 +355,7 @@ export function UserManagementPage() {
             จัดการผู้ใช้ <span className="en">User management</span>
           </h1>
           <div style={{ fontSize: 13, lineHeight: '20px', marginTop: 2 }}>
-            โรงพยาบาลสมุทรปราการ · เห็นเฉพาะข้อมูลโรงพยาบาลตนเอง
+            {hospitalName} · เห็นเฉพาะข้อมูลโรงพยาบาลตนเอง
           </div>
         </div>
         <div className="pagehead-actions">
@@ -536,7 +540,7 @@ export function UserManagementPage() {
             <dt>บทบาท</dt>
             <dd>{detail.roles.map((r) => ROLE_SHORT_TH[r]).join(' · ')}</dd>
             <dt>ขอบเขต</dt>
-            <dd>โรงพยาบาลสมุทรปราการ (HOSPITAL)</dd>
+            <dd>{hospitalName} (HOSPITAL)</dd>
             <dt>MFA</dt>
             <dd>{detail.mfa ? 'เปิดใช้งาน' : 'ปิดใช้งาน'}</dd>
             <dt>เข้าใช้ล่าสุด</dt>
