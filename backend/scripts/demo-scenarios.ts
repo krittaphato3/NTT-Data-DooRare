@@ -60,12 +60,20 @@ async function newRequest(hosp: string, idx: number, lenders: string[]): Promise
         AND NOT EXISTS (SELECT 1 FROM borrow_request br JOIN borrow_request_item i ON i.request_id = br.id WHERE br.stock_alert_id = a.id)
         AND NOT EXISTS (SELECT 1 FROM borrow_request br JOIN borrow_request_item i ON i.request_id = br.id
                          WHERE br.borrower_hospital_id = a.hospital_id AND i.drug_master_id = hd.drug_master_id AND br.status::text NOT IN ('FULFILLED','CLOSED_UNFULFILLED','CANCELLED'))
-      ORDER BY CASE a.severity::text WHEN 'VERY_URGENT' THEN 0 WHEN 'URGENT' THEN 1 ELSE 2 END, a.days_cover NULLS LAST, a.id OFFSET $2 LIMIT 1`,
-    [code, 0],
+      ORDER BY CASE a.severity::text WHEN 'VERY_URGENT' THEN 0 WHEN 'URGENT' THEN 1 ELSE 2 END, a.days_cover NULLS LAST, a.id LIMIT 15`,
+    [code],
   );
-  if (!alerts[0]) { skip(`${code} request ${idx}: no open LOW_STOCK alert left`); return null; }
-  const created = await must('create', call(t, 'POST', '/borrow-requests', { stockAlertId: alerts[0].id }));
-  const prop = await must('propose', call(t, 'POST', `/borrow-requests/${created.id}/propose`, {}));
+  // the first alert the rules accept (some are not worth a request: stock + incoming is enough) that also has a lender
+  let created: any = null;
+  let prop: any = null;
+  for (const a of alerts) {
+    const c = await call(t, 'POST', '/borrow-requests', { stockAlertId: a.id });
+    if (c.status >= 300) continue;
+    const p = await must('propose', call(t, 'POST', `/borrow-requests/${c.json.id}/propose`, {}));
+    if (!((p.data.proposal?.ladder ?? []) as any[]).some((e) => e.lendable > 0)) { await call(t, 'POST', `/borrow-requests/${c.json.id}/reject`, { reason: 'DEMO: ไม่มีผู้ให้ยืมที่พร้อม' }); continue; }
+    created = c.json; prop = p; break;
+  }
+  if (!created) { skip(`${code} request ${idx}: no usable LOW_STOCK alert left`); return null; }
   const ladder = prop.data.proposal.ladder as any[];
   const want = lenders.map((c) => ladder.find((e) => e.code === c && e.lendable > 0)).filter(Boolean);
   if (lenders.length && want.length === lenders.length) {
@@ -240,13 +248,16 @@ async function main() {
       if (approval === 'manual' && was !== undefined) await q(`UPDATE config_setting SET value = $1::jsonb WHERE key = 'network.auto_approve' AND scope = 'GLOBAL'`, [JSON.stringify(was)]);
     }
   };
-  await step('HA1 (18 d) released -> Agent plan waiting for the pharmacist', async () => {
-    const it = byLot('DEMO-NE-HA1'); if (!it) throw new Error('item missing (scan found nothing?)');
-    await must('release', call(T.phha, 'POST', `/near-expiry/${it.id}/release`, {}));
-    if (!(await agentPlan(it.id, [{ code: 'HB', qty: 0.5 }, { code: 'HC', qty: 0.3 }], 'HA', 'manual'))) throw new Error('plan not created');
+  await step('HA lot released -> Agent plan waiting for the pharmacist (first lot with receivers that need it)', async () => {
+    for (const lot of ['DEMO-NE-HA2', 'DEMO-NE-HA4', 'DEMO-NE-HA5']) {
+      const it = byLot(lot); if (!it) continue;
+      await must('release', call(T.phha, 'POST', `/near-expiry/${it.id}/release`, {}));
+      if (await agentPlan(it.id, [{ code: 'HB', qty: 0.4 }, { code: 'HC', qty: 0.3 }, { code: 'HD', qty: 0.2 }, { code: 'HE', qty: 0.1 }], 'HA', 'manual')) return;
+    }
+    throw new Error('no HA lot had receivers that need it');
   });
-  await step('HA2 (33 d) released, no match yet -> waiting for the Agent', async () => {
-    const it = byLot('DEMO-NE-HA2'); if (!it) throw new Error('item missing');
+  await step('HA1 (18 d) released, no match yet -> waiting for the Agent', async () => {
+    const it = byLot('DEMO-NE-HA1'); if (!it) throw new Error('item missing');
     await must('release', call(T.phha, 'POST', `/near-expiry/${it.id}/release`, {}));
   });
   await step('HA3 (47 d) kept (review later)', async () => {

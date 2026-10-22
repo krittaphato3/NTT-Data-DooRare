@@ -4,7 +4,7 @@ date: 2026-10-22
 author: alongkorn
 ai: claude
 tags: session, demo, mock-data, backfill, scenarios, snapshot, reset, detailed
-summary: db:snapshot / db:restore / db:demo; SQL backfill to 21 Oct, shaping of low stock, near-expiry and kits, API-driven scenarios per role; pharmacist header date fixed
+summary: backfill + shape run inside db:load, db:scenarios for API scenarios (snapshot idea dropped); SQL backfill to 21 Oct, shaping of low stock, near-expiry and kits, API-driven scenarios per role; pharmacist header date fixed
 ---
 
 > Detailed on purpose (user asked for detailed notes).
@@ -45,3 +45,10 @@ summary: db:snapshot / db:restore / db:demo; SQL backfill to 21 Oct, shaping of 
 - Forecast artifacts still end ~21 Sep; alerts severity comes from them. Retraining / a 3-day forecast timer needs the model owner's way to run it.
 - Pages of the other roles (ER, WH, driver) not clicked through after the demo run; no automated test for the demo scripts.
 - Agent integration (F1b messages, F2 plan proposal endpoint), cancel-after-approval of borrow requests.
+
+## Update (same day): snapshot dropped
+
+- User wanted the extended data as THE main data, no snapshot/restore. `scripts/db.sh`: `load` now runs 01-backfill + 02-shape after the CSV; `db:scenarios` runs the API scenarios (needs backend; refuses twice). Commands `db:snapshot`, `db:restore`, `db:demo` removed; the `doorare_baseline` database was dropped.
+- Fixes found by re-running: alerts the rules refuse (NO_NEED) or with no lender are skipped (next alert tried); Agent plan tries HA2 / HA4 / HA5 (HA1 has no forecast at receivers, so it is the lot left waiting for the Agent); close of old PARTIALLY_FULFILLED / ESCALATED requests (before 15 Oct) in 02-shape.
+- Also fixed the hard-coded "13 Oct 19:11" in the warehouse header (`WhPageHeader.tsx`).
+- Mistake worth remembering: a test command built from a zsh variable failed and the full `db:demo` ran on the main DB instead of a dry check; no harm because it was restorable, but test destructive commands on a copy.
