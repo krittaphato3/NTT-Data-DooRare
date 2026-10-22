@@ -7,6 +7,13 @@
     "date": "2026-10-22"
   },
   {
+    "path": "sessions/2026-10-22-buffy-backend-step8-admin.md",
+    "title": "Backend step 8 - Admin APIs (config, users, audit log, kill switch)",
+    "summary": "Admin-role APIs only (matrix roles); config catalogue + read-only spec keys, user…",
+    "tags": "session, backend, admin, config, users, audit, rbac, step8, detailed",
+    "date": "2026-10-22"
+  },
+  {
     "path": "sessions/2026-10-22-claude-backend-step6-f2.md",
     "title": "Backend step 6 - F2 near-expiry, regional pool, allocation plans, repeat expiry, value, reports",
     "summary": "Near-expiry scan and review, pool, plan approval / options / mutual-consent cancel,…",
@@ -175,6 +182,13 @@
     "date": "2026-10-17"
   },
   {
+    "path": "context/runbook.md",
+    "title": "Runbook",
+    "summary": "Runbook",
+    "tags": "session",
+    "date": "2026-10-16"
+  },
+  {
     "path": "sessions/2026-10-16-1628-buffy-phase2c-return-obligations-waive.md",
     "title": "Return obligations + Waive (Phase 2C)",
     "summary": "HOSPITAL_ADMIN gets a read-only ภาระการคืน sub-tab on Borrow requests plus the API-XC-005…",
@@ -200,21 +214,14 @@
     "title": "ai-material",
     "summary": "ai-material",
     "tags": "session",
-    "date": "2026-10-15"
+    "date": "2026-10-14"
   },
   {
     "path": "context/conventions.md",
     "title": "Conventions",
     "summary": "Conventions",
     "tags": "session",
-    "date": "2026-10-15"
-  },
-  {
-    "path": "context/runbook.md",
-    "title": "Runbook",
-    "summary": "Runbook",
-    "tags": "session",
-    "date": "2026-10-15"
+    "date": "2026-10-14"
   },
   {
     "path": "decisions/0002-role-based-frontend-structure.md",

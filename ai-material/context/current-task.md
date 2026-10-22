@@ -64,3 +64,11 @@ Relevant files: `frontend/src/App.tsx`, `frontend/src/roles/pharmacist/pages/Das
 
 - F3 backend (incidents, rule-based plan F-27, approval, urgent borrowing with first-wins, kit packing / stock / returns, two-signature close, reconciliation) and the ER / WH / PH screens on the API. 405 step-7 checks + 37 unit tests + earlier suites pass. See `sessions/2026-10-22-claude-backend-step7-f3.md` (roles decision, plan shape, kit stock model, gaps).
 - Not committed / pushed. Next: step 8 (Admin: users, config, audit-log, kill-switch); open F3 gaps: INCIDENT_REPORT / UCEP documents, WH work-inbox page (mock), blood returns, Agent.
+
+## Branch feature/backend-step8-admin
+
+- Admin APIs backend only: `GET/PUT /config` (81-key catalogue, 35 spec-only read-only keys), `POST /agent/kill-switch` (GLOBAL `agent.enabled`), `GET/POST /users` + `PATCH /users/{id}` (invite/edit/deactivate), `GET /audit-log` + `GET /audit-log/verify`. Matrix roles only: HA+SA (SA only for kill-switch/verify).
+- 48 unit tests + 165 integration checks green against a v1.5 copy with generated mock data (`npm --prefix backend run test:integration`, needs `TEST_DATABASE_URL` pointing at a non-main DB; `PERF_SEED_LOGIN_EVENTS=100000` opens the EXPLAIN gate); `npm --prefix backend run build` clean. See `sessions/2026-10-22-buffy-backend-step8-admin.md`.
+- Note: the live `doorare` DB is still **v1.4 and empty** (no `app_user_role`/`login_event`), and `db/mock/csv` was missing; the suite now rejects a pre-v1.5 copy with an explicit missing-object list.
+- Repeatable verification added: `backend/tests/integration/admin.integration.test.ts` + README + `test:integration` script; `npm test` stays DB-free.
+- Not committed. Next: frontend wiring of HA screens / SA tabs (separate task); optional REGION lookup in `core/settings.ts`; agent runtime consuming the kill switch.
