@@ -19,7 +19,7 @@ export function WhPageHeader() {
           </span>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
             <Icon name="calendar" />
-            วันอังคารที่ 13 ตุลาคม 2569 · <span className="num">19:11</span> น.
+            {new Date().toLocaleDateString('th-TH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} · <span className="num">{new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', hour12: false })}</span> น.
           </span>
         </div>
       </div>
