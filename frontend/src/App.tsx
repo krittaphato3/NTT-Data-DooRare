@@ -406,6 +406,13 @@ function AuthenticatedShell() {
   const onReadOnlyView = HA_READ_ONLY_PAGES.includes(route.page);
   const isHospitalAdminPageAllowed =
     (onUsers && mayManageUsers) || (onAudit && mayViewAudit) || (onConfig && mayConfigure) || onReadOnlyView;
+  /* users/audit/config are served only to HOSPITAL_ADMIN (own hospital) and SYSTEM_ADMIN by
+     API-AD-006 / API-AD-003 / API-AD-001, so no other role may render them even by typing the URL.
+     The `hospitalAdmin` guard below only protects the Hospital Admin's own navigation; without this
+     clause a PHARMACIST (viewAudit/configureRules are true for them) would still reach those screens. */
+  const isDeniedAdminPage =
+    ((onUsers || onAudit || onConfig) && !hospitalAdmin && !isSystemAdminRole) ||
+    (hospitalAdmin && !isHospitalAdminPageAllowed);
 
   // Real user profile for TopBar
   const currentUserProfile = user
@@ -509,9 +516,10 @@ function AuthenticatedShell() {
             )
           ) : isEr ? (
             <ErPageSwitch page={erPage} />
-          ) : hospitalAdmin && !isHospitalAdminPageAllowed ? (
-            /* Guard for a Hospital Admin page outside the allowed set. The operational screens
-               render read-only through their `role` prop; this card covers anything else. */
+          ) : isDeniedAdminPage ? (
+            /* Guard for a Hospital Admin page outside the allowed set, and for any other role
+               arriving on users/audit/config via URL. The operational screens render read-only
+               through their `role` prop; this card covers anything else. */
             <AccessDenied homeHref={HOSPITAL_ADMIN_HOME_HREF} />
           ) : warehouse ? (
             onTransport ? <TransportTrackingPage role="WAREHOUSE_OFFICER" /> : onInbox ? <InboxPage /> : onKit ? <KitPage /> : onDocs ? <DocumentsPage role="WAREHOUSE_OFFICER" /> : onStock || onAlerts ? <WhStockPage /> : onRequests ? <WhBorrowPage /> : onExpiry ? <WhExpiryPage /> : onDrugs ? <WhDrugsPage /> : <WarehouseDashboardPage />
