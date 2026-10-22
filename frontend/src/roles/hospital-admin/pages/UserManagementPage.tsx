@@ -216,7 +216,7 @@ export function UserManagementPage() {
       if (code === 'CONFLICT') {
         setError('อีเมลนี้ถูกใช้งานแล้ว');
       } else if (code === 'ROLE_CONFLICT') {
-        setError('บทบาทไม่สามารรวมกันได้ (ROLE_CONFLICT)');
+        setError('บทบาทไม่สามารถรวมกันได้ (ROLE_CONFLICT)');
       } else {
         setError(e?.message || 'เกิดข้อผิดพลาด');
       }
@@ -264,11 +264,11 @@ export function UserManagementPage() {
     } catch (e: any) {
       const code = e?.code;
       if (code === 'SELF_LOCKOUT') {
-        setError('ปิดบัญชีขถืขตนเองไม่ได้ / ถอดบทบาท SYSTEM_ADMIN ของตนเองไม่ได้');
+        setError('ปิดบัญชีของตนเองไม่ได้ / ถอดบทบาท SYSTEM_ADMIN ของตนเองไม่ได้');
       } else if (code === 'LAST_ADMIN') {
-        setError('ต้องมีผู้ดูแลรพายโรงพยาบาลที่ใช้งานได้อย่างน้อยมาก 1 บัญชี');
+        setError('ต้องมีผู้ดูแลโรงพยาบาลที่ใช้งานอยู่อย่างน้อย 1 บัญชี');
       } else if (code === 'ROLE_CONFLICT') {
-        setError('บทบาทไม่สามารรวมกันได้ (ROLE_CONFLICT)');
+        setError('บทบาทไม่สามารถรวมกันได้ (ROLE_CONFLICT)');
       } else {
         setError(e?.message || 'เกิดข้อผิดพลาด');
       }
@@ -365,6 +365,7 @@ export function UserManagementPage() {
               onClick={() => {
                 setEditId(null);
                 setIdempotencyKey(crypto.randomUUID());
+                setError('');
                 setFormMode('create');
               }}
             >
@@ -476,20 +477,25 @@ export function UserManagementPage() {
             onOpen={setDetailId}
             onEdit={(id) => {
               setEditId(id);
+              setError('');
               setFormMode('edit');
             }}
             onToggleStatus={(id) => {
               const u = users.find((x) => x.id === id);
               if (!u) return;
+              setError('');
               setConfirm({ kind: u.status === 'SUSPENDED' ? 'activate' : 'suspend', id });
             }}
-            onResend={(id) => setConfirm({ kind: 'resend', id })}
+            onResend={(id) => {
+              setError('');
+              setConfirm({ kind: 'resend', id });
+            }}
           />
         )}
       </section>
 
       {formMode === 'create' && (
-        <UserFormModal mode="create" onClose={() => setFormMode(null)} onSubmit={handleCreate} />
+        <UserFormModal mode="create" error={error} onClose={() => setFormMode(null)} onSubmit={handleCreate} />
       )}
 
       {formMode === 'edit' && editTarget && (
@@ -497,6 +503,7 @@ export function UserManagementPage() {
           mode="edit"
           user={editTarget}
           lockedRole={isLastAdmin(editTarget) ? HOSPITAL_ADMIN_ROLE : undefined}
+          error={error}
           onClose={() => {
             setFormMode(null);
             setEditId(null);
@@ -510,6 +517,7 @@ export function UserManagementPage() {
           title={confirmCopy[confirm.kind].title}
           detail={confirmCopy[confirm.kind].detail}
           confirmLabel={confirmCopy[confirm.kind].label}
+          error={error}
           onClose={() => setConfirm(null)}
           onConfirm={runConfirm}
         />
