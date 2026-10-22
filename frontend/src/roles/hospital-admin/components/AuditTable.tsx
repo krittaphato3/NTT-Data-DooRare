@@ -1,4 +1,5 @@
 import { Icon } from '../../../components/common/icons';
+import { useAuth } from '../../../context/AuthContext';
 import { auditActionMeta } from '../data/audit';
 import type { AuditEntry, AuditValue } from '../data/audit';
 
@@ -31,6 +32,9 @@ interface AuditTableProps {
 
 /** Result table for UI-18. Own-hospital entries only; read-only. */
 export function AuditTable({ rows, page, pageCount, total, activeId, onPage, onOpen, hasMore, loadingMore, onLoadMore }: AuditTableProps) {
+  const { user } = useAuth();
+  // Signed-in admin's own hospital from the session, not a sample name (F-04).
+  const hospitalName = user?.hospitalName ?? '';
   return (
     <>
       <div className="scroll-x">
@@ -109,7 +113,7 @@ export function AuditTable({ rows, page, pageCount, total, activeId, onPage, onO
       </div>
       <div className="tbl-foot">
         <span>
-          แสดง <span className="num">{rows.length}</span> จาก <span className="num">{total}</span> รายการ · เฉพาะโรงพยาบาลสมุทรปราการ
+          แสดง <span className="num">{rows.length}</span> จาก <span className="num">{total}</span> รายการ · เฉพาะ{hospitalName}
         </span>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
           {onLoadMore ? (

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useAuth } from '../../../context/AuthContext';
 import { Icon } from '../../../components/common/icons';
 import { HOSPITAL_ADMIN_HOME_HREF } from '../../../data/navigation';
 import { can, HOSPITAL_ADMIN_ROLE, isRestrictedConfigKey, ROLE_LABEL } from '../../../lib/rbac';
@@ -71,6 +72,9 @@ const NOW = '13 ต.ค. 69 09:10';
  * kill switch are read-only here. Every permission answer comes from `can()` in lib/rbac.ts.
  */
 export function ConfigurationPage() {
+  const { user } = useAuth();
+  // Signed-in admin's own hospital from the session, not a sample name (F-04).
+  const hospitalName = user?.hospitalName ?? '';
   const [mock] = useState(isMockMode());
   const [tab, setTab] = useState<Tab>('settings');
   const [scopeFilter, setScopeFilter] = useState<ConfigScope | 'ALL'>('ALL');
@@ -406,7 +410,7 @@ export function ConfigurationPage() {
             ตั้งค่า · Kill switch <span className="en">Configuration</span>
           </h1>
           <div style={{ fontSize: 13, lineHeight: '20px', marginTop: 2 }}>
-            โรงพยาบาลสมุทรปราการ · แก้ไขได้เฉพาะค่าขอบเขตโรงพยาบาล · ลำดับการใช้ค่า HOSPITAL → REGION → GLOBAL → ค่าเริ่มต้น
+            {hospitalName} · แก้ไขได้เฉพาะค่าขอบเขตโรงพยาบาล · ลำดับการใช้ค่า HOSPITAL → REGION → GLOBAL → ค่าเริ่มต้น
           </div>
           {!mock && (
             <div className="ha-hint" style={{ marginTop: 2 }}>
@@ -656,7 +660,7 @@ export function ConfigurationPage() {
 
           <div className="tbl-foot">
             <span>
-              แสดง <span className="num">{drugs.length}</span> รายการ · เฉพาะยาของโรงพยาบาลสมุทรปราการ
+              แสดง <span className="num">{drugs.length}</span> รายการ · เฉพาะยาของ{hospitalName}
             </span>
             <span>ค่าเริ่มต้นเกณฑ์ใกล้หมดอายุมาจากค่าตั้งต้นระบบ</span>
           </div>
@@ -680,7 +684,7 @@ export function ConfigurationPage() {
         >
           <h2 className="sec-h">ประวัติการแก้ไขค่าตั้งต้น</h2>
           <div className="sub">
-            {history.key ? <span className="code">{history.key}</span> : 'ทุกรายการของโรงพยาบาลสมุทรปราการ'}
+            {history.key ? <span className="code">{history.key}</span> : `ทุกรายการของ${hospitalName}`}
           </div>
           <div style={{ marginTop: 8 }}>
             <ConfigHistoryList items={changes} keyFilter={history.key} />
