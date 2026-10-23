@@ -11,14 +11,15 @@ interface RequestsTableProps {
   onOpen: (id: string) => void;
   onConfirm: (id: string) => void;
   /** Opens the drawer with the decline form ready. */
-  onDecline: (id: string) => void;
+  onDecline?: (id: string) => void;
   /** Button text for the confirm action (default "ยืนยัน"). */
   confirmLabel?: string;
   caption?: string;
+  hideDecline?: boolean;
 }
 
 /** Every request asking the warehouse to send goods out; answer it right in the row. */
-export function RequestsTable({ rows, activeId, urgentLeft, onOpen, onConfirm, onDecline, confirmLabel = 'ยืนยัน', caption = 'คำขอเร่งด่วนจาก รพ.อื่น' }: RequestsTableProps) {
+export function RequestsTable({ rows, activeId, urgentLeft, onOpen, onConfirm, onDecline, confirmLabel = 'ยืนยัน', caption = 'คำขอเร่งด่วนจาก รพ.อื่น', hideDecline = false }: RequestsTableProps) {
   return (
     <div className="scroll-x">
       <table className="tbl ib-tbl" aria-label={caption}>
@@ -76,11 +77,18 @@ export function RequestsTable({ rows, activeId, urgentLeft, onOpen, onConfirm, o
                   {open ? (
                     <span style={{ display: 'inline-flex', gap: 6 }}>
                       <button className="btn btn-sm btn-p" onClick={() => onConfirm(r.id)}>{confirmLabel}</button>
-                      <button className="btn btn-sm btn-g" onClick={() => onDecline(r.id)}>ปฏิเสธ…</button>
+                      {!hideDecline && onDecline && (
+                        <button className="btn btn-sm btn-g" onClick={() => onDecline(r.id)}>ปฏิเสธ…</button>
+                      )}
                     </span>
                   ) : r.status === 'CONFIRMED' && r.transportId ? (
-                    <a className="btn btn-sm btn-s" href={whHref('transport')} style={{ textDecoration: 'none' }}>
-                      ไปที่ขนส่ง <span className="code" style={{ fontSize: 11 }}>{r.transportId.slice(-6)}</span>
+                    <a
+                      className="btn btn-sm btn-s"
+                      href={`${whHref('transport')}&task=${encodeURIComponent(r.transportId)}`}
+                      style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                    >
+                      <Icon name="truck" className="ic12" />
+                      ไปที่ขนส่ง <span className="code" style={{ fontSize: 11 }}>{r.transportId}</span>
                     </a>
                   ) : (
                     <span className="sub">ส่งกลับเภสัชกรแล้ว</span>

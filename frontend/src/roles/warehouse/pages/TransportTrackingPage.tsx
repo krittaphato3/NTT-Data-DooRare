@@ -64,9 +64,23 @@ export function TransportTrackingPage({ role = 'WAREHOUSE_OFFICER' }: { role?: T
     }
   });
   const [status, setStatus] = useState<TransportStatus | null>(null);
-  // Nothing is selected on entry; the detail drawer opens only when a row is picked.
-  const [selId, setSelId] = useState<string | null>(null);
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  // Detail drawer: opens on row pick or when deep linked via ?task=... or ?id=...
+  const [selId, setSelId] = useState<string | null>(() => {
+    try {
+      const q = new URLSearchParams(window.location.search);
+      return q.get('task') || q.get('id');
+    } catch {
+      return null;
+    }
+  });
+  const [drawerOpen, setDrawerOpen] = useState<boolean>(() => {
+    try {
+      const q = new URLSearchParams(window.location.search);
+      return Boolean(q.get('task') || q.get('id'));
+    } catch {
+      return false;
+    }
+  });
   const [histOpen, setHistOpen] = useState(false);
   const [synced, setSynced] = useState(false);
   const [receipt, setReceipt] = useState<Record<string, ReceiptState>>({});
@@ -148,6 +162,21 @@ export function TransportTrackingPage({ role = 'WAREHOUSE_OFFICER' }: { role?: T
     if (r.status === 'LOADED' && r.pending) setSynced(true);
     open(r.shipment.id);
   };
+
+  // Deep-link handler: automatically select task and switch tab direction if URL specifies ?task=... or ?id=...
+  useEffect(() => {
+    try {
+      const q = new URLSearchParams(window.location.search);
+      const target = q.get('task') || q.get('id');
+      if (!target || all.length === 0) return;
+      const match = all.find((r) => r.shipment.id === target || r.shipment.taskId === target);
+      if (match) {
+        setDir(isOutbound(match.shipment) ? 'out' : 'in');
+        setSelId(match.shipment.id);
+        setDrawerOpen(true);
+      }
+    } catch {}
+  }, [all]);
 
   const sel = selId ? all.find((r) => r.shipment.id === selId) : undefined;
 

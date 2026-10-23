@@ -15,12 +15,13 @@ interface InboxDrawerProps {
   onDecline: (reason: string) => void;
   kicker?: string;
   confirmLabel?: string;
+  hideDecline?: boolean;
 }
 
 const DECLINE_REASONS = ['สต็อกจริงไม่พอ', 'ล็อตมีปัญหา (เสียหาย/ถูกเรียกคืน)', 'ล็อตอายุไม่ถึงเกณฑ์ (< 180 วัน)', 'อื่นๆ'];
 
 /** Details of one request: what to send, which lots, and the answer. */
-export function InboxDrawer({ item: it, urgentLeft, startDeclining, onClose, onConfirm, onDecline, kicker = 'คำขอเร่งด่วน F3 · ตอบแล้วงานจะไปที่ติดตามการขนส่ง', confirmLabel = 'ยืนยัน · เตรียมส่ง' }: InboxDrawerProps) {
+export function InboxDrawer({ item: it, urgentLeft, startDeclining, onClose, onConfirm, onDecline, kicker = 'คำขอเร่งด่วน F3 · ตอบแล้วงานจะไปที่ติดตามการขนส่ง', confirmLabel = 'ยืนยัน · เตรียมส่ง', hideDecline = false }: InboxDrawerProps) {
   const [declining, setDeclining] = useState(startDeclining);
   const [reasonKind, setReasonKind] = useState(DECLINE_REASONS[0]);
   const [note, setNote] = useState('');
@@ -66,11 +67,11 @@ export function InboxDrawer({ item: it, urgentLeft, startDeclining, onClose, onC
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <Icon name="checkc" style={{ marginTop: 2 }} />
               <span style={{ flex: 1 }}>
-                ยืนยันจะแพ็กแล้ว · งานขนส่ง <span className="code">{it.transportId}</span> พร้อมไปเตรียมของและขึ้นรถ
+                ยืนยันจะแพ็กแล้ว · งานขนส่ง <span className="code">{it.transportId || it.id}</span> พร้อมไปเตรียมของและขึ้นรถ
               </span>
             </div>
-            <a className="btn btn-p btn-sm" href={whHref('transport')} style={{ textDecoration: 'none' }}>
-              <Icon name="truck" /> ไปที่หน้าติดตามการขนส่ง
+            <a className="btn btn-p btn-sm" href={`${whHref('transport')}&task=${encodeURIComponent(it.transportId || it.id)}`} style={{ textDecoration: 'none' }}>
+              <Icon name="truck" /> ไปที่หน้าติดตามการขนส่ง ({it.transportId || it.id})
             </a>
           </div>
         )}
@@ -111,7 +112,7 @@ export function InboxDrawer({ item: it, urgentLeft, startDeclining, onClose, onC
           <div className="sub" style={{ marginTop: 6 }}>ติ๊กหยิบจริงที่หน้าติดตามการขนส่งหลังยืนยัน</div>
         </div>
 
-        {declining && open && (
+        {!hideDecline && declining && open && (
           <section aria-label="เตรียมไม่ได้" className="proxy-box">
             <b style={{ fontSize: 13, color: '#0F2A5C', fontWeight: 600 }}>เตรียมไม่ได้ · ส่งกลับให้เภสัชกรตัดสินใจ</b>
             <select className="sel" value={reasonKind} onChange={(e) => setReasonKind(e.target.value)} aria-label="เหตุผล">
@@ -136,13 +137,13 @@ export function InboxDrawer({ item: it, urgentLeft, startDeclining, onClose, onC
               {confirmLabel}
             </button>
           )}
-          {open && !declining && (
+          {!hideDecline && open && !declining && (
             <button className="btn btn-g" onClick={() => setDeclining(true)}>ปฏิเสธ…</button>
           )}
           {it.status === 'CONFIRMED' && whHref('transport') && (
-            <a className="btn btn-s" href={whHref('transport')} style={{ textDecoration: 'none' }}>
+            <a className="btn btn-s" href={`${whHref('transport')}&task=${encodeURIComponent(it.transportId || it.id)}`} style={{ textDecoration: 'none' }}>
               <Icon name="truck" />
-              ไปที่ติดตามการขนส่ง
+              ไปที่ติดตามการขนส่ง ({it.transportId || it.id})
             </a>
           )}
         </div>

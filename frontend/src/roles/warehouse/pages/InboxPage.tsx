@@ -215,11 +215,6 @@ export function InboxPage() {
           <div className="ib-kpi-val num">{inRows.length} รายการ</div>
           <div className="ib-kpi-sub">รอรับทราบ {toAck} · ถึงแล้วรอยืนยันรับ {toReceive}</div>
         </div>
-        <div className="ib-kpi">
-          <div className="ib-kpi-label">ส่งกลับเภสัชกร <span className="en">DECLINED</span></div>
-          <div className="ib-kpi-val num">{items.filter((r) => r.status === 'DECLINED').length} งาน</div>
-          <div className="ib-kpi-sub">เตรียมไม่ได้ · เภสัชกรตัดสินใจต่อ</div>
-        </div>
       </section>
 
       <section className="card" style={{ padding: 0 }}>
@@ -261,9 +256,9 @@ export function InboxPage() {
             urgentLeft="—"
             confirmLabel="ยืนยันจะแพ็ก"
             caption="งานส่งออก"
+            hideDecline={true}
             onOpen={(id) => open(id)}
             onConfirm={confirm}
-            onDecline={(id) => open(id, true)}
           />
         ) : (
           <InboundTable rows={inRows} acked={acked} onAck={(id) => setAcked((s) => new Set(s).add(id))} />
@@ -282,6 +277,7 @@ export function InboxPage() {
           startDeclining={declineFirst}
           kicker="กล่องงานเข้า · ยืนยันแล้วไปขึ้นรถที่ติดตามการขนส่ง"
           confirmLabel="ยืนยันจะแพ็ก"
+          hideDecline={true}
           onClose={() => setSelId(null)}
           onConfirm={() => confirm(sel.id)}
           onDecline={(reason) => decline(sel.id, reason)}
