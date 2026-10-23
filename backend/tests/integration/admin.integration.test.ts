@@ -337,7 +337,6 @@ describe('Step 8 admin API', () => {
     eq('401 POST /agent/kill-switch without token', (await call('POST', '/agent/kill-switch', { body: { enabled: false } })).status, 401);
 
     for (const [role, token] of [
-      ['PHARMACIST', tokens.ph],
       ['WAREHOUSE_OFFICER', tokens.wh],
       ['ER_STAFF', tokens.er],
       ['DRIVER', tokens.dr],
@@ -346,6 +345,9 @@ describe('Step 8 admin API', () => {
       eq(`403 GET /users as ${role}`, (await call('GET', '/users', { token })).status, 403);
       eq(`403 GET /audit-log as ${role}`, (await call('GET', '/audit-log', { token })).status, 403);
     }
+    eq('403 GET /config as PHARMACIST', (await call('GET', '/config', { token: tokens.ph })).status, 403);
+    eq('403 GET /users as PHARMACIST', (await call('GET', '/users', { token: tokens.ph })).status, 403);
+    eq('200 GET /audit-log as PHARMACIST (spec 5.2 own)', (await call('GET', '/audit-log', { token: tokens.ph })).status, 200);
     eq(
       '403 POST /users as PHARMACIST',
       (await call('POST', '/users', { token: tokens.ph, body: {}, headers: { 'Idempotency-Key': 'k1' } })).status,

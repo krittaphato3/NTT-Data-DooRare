@@ -135,7 +135,7 @@ const MATRIX: Record<RoleCode, Record<Action, boolean>> = {
     configureRestrictedRules: false,
     approveBorrow: true, confirmLend: true, releaseNearExpiry: true, approveAllocation: true,
     approveIncidentPlan: false, verifyMapping: true, editMapping: true, updateInventory: true,
-    configureRules: true, manageUsers: false, viewAudit: true, waiveReturn: false, killSwitch: false,
+    configureRules: false, manageUsers: false, viewAudit: true, waiveReturn: false, killSwitch: false,
     createBorrowRequest: true, acknowledgeAlert: true, transportStatus: false, manageIncident: false,
     printDocuments: true, cancelRequest: true,
   },
@@ -251,6 +251,7 @@ export const ACTION_OWNERS: Partial<Record<Action, RoleCode[]>> = {
   transportStatus: ['WAREHOUSE_OFFICER', 'DRIVER'],
   printDocuments: ['PHARMACIST', 'WAREHOUSE_OFFICER'],
   cancelRequest: ['PHARMACIST'],
+  viewAudit: ['HOSPITAL_ADMIN', 'SYSTEM_ADMIN', 'PHARMACIST', 'AUDITOR'],
   waiveReturn: ['HOSPITAL_ADMIN'],
   escalateManual: ['PHARMACIST', 'HOSPITAL_ADMIN'],
 };

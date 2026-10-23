@@ -18,6 +18,10 @@ interface BorrowDrawerProps {
   onClose: () => void;
   /** Opens the escalate-manual confirm dialog (API-F1b-012) for an ESCALATED request. */
   onEscalate: (r: BorrowRequest) => void;
+  /** Opens the cancel confirm dialog for an in-progress request (QA-PHARM-005). */
+  onCancel?: (r: BorrowRequest) => void;
+  /** Opens the record-return dialog for a request with return obligations (QA-PHARM-005). */
+  onRecordReturn?: (r: BorrowRequest) => void;
   /** Role viewing the drawer; every action is gated through `lib/rbac.ts`. */
   role?: RoleCode;
 }
@@ -32,7 +36,7 @@ const BANNER: Record<StatusGroup, [string, string, string]> = {
 };
 
 /** UI-05 request detail (we are the borrower). Actions are local state only. */
-export function BorrowDrawer({ request: r, tick, decision, onDecide, onClose, onEscalate, role = 'PHARMACIST' }: BorrowDrawerProps) {
+export function BorrowDrawer({ request: r, tick, decision, onDecide, onClose, onEscalate, onCancel, onRecordReturn, role = 'PHARMACIST' }: BorrowDrawerProps) {
   const group = groupOf(r.status);
 
   /** Action each drawer button performs, so a role that may not act sees it disabled with a hint. */
@@ -46,6 +50,19 @@ export function BorrowDrawer({ request: r, tick, decision, onDecide, onClose, on
   const addLender = gate('escalateManual');
   const recordReturn = gate('updateInventory');
   const cancelRequest = gate('cancelRequest');
+  const shouldShowCancel = ['DRAFT', 'PENDING_APPROVAL', 'APPROVED', 'IN_PROGRESS', 'PARTIALLY_FULFILLED', 'ESCALATED'].includes(r.status);
+  const cancelCancellableStatus = ['DRAFT', 'PENDING_APPROVAL', 'APPROVED', 'IN_PROGRESS', 'ESCALATED'].includes(r.status);
+  const cancelHasMovingLegs = r.legs.some((l) => ['LOADED', 'IN_TRANSIT', 'RECEIVED'].includes(l.rawStatus ?? l.state));
+  const cancelDisabled = !cancelRequest.allowed || !cancelCancellableStatus || cancelHasMovingLegs;
+  const cancelHint = !cancelRequest.allowed
+    ? cancelRequest.hint
+    : r.status === 'PARTIALLY_FULFILLED'
+      ? 'ไม่สามารถยกเลิกคำขอในสถานะ PARTIALLY_FULFILLED ได้เนื่องจากได้รับยาบางส่วนแล้ว'
+      : cancelHasMovingLegs
+        ? 'ไม่สามารถยกเลิกคำขอได้เนื่องจากยาถูกจัดขึ้นรถหรืออยู่ระหว่างจัดส่งแล้ว'
+        : !cancelCancellableStatus
+          ? `ไม่สามารถยกเลิกคำขอในสถานะ ${r.status}`
+          : undefined;
   const [bg, border, fg] = BANNER[group];
   const bannerIcon: IconName = group === 'progress' ? 'clock' : groupMeta(group).icon;
   const activeLeg = r.legs.findIndex((l) => l.state === 'WAITING');
@@ -208,13 +225,23 @@ export function BorrowDrawer({ request: r, tick, decision, onDecide, onClose, on
                 เพิ่มผู้ให้ยืม
               </button>
             )}
-            {r.action === 'recordReturn' && (
-              <button className="btn btn-p" disabled={!recordReturn.allowed} title={recordReturn.hint}>
+            {(r.action === 'recordReturn' || (r.status === 'FULFILLED' && (r.returnState === 'PENDING' || r.returnState === 'OVERDUE'))) && (
+              <button
+                className="btn btn-p"
+                disabled={!recordReturn.allowed}
+                title={recordReturn.hint}
+                onClick={() => onRecordReturn?.(r)}
+              >
                 บันทึกการคืน
               </button>
             )}
-            {group === 'progress' && (
-              <button className="btn btn-g" disabled={!cancelRequest.allowed} title={cancelRequest.hint}>
+            {shouldShowCancel && (
+              <button
+                className="btn btn-g"
+                disabled={cancelDisabled}
+                title={cancelHint}
+                onClick={() => onCancel?.(r)}
+              >
                 ยกเลิกคำขอ
               </button>
             )}

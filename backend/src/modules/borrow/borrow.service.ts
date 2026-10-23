@@ -17,6 +17,7 @@ import { pool, query } from '../../db/client.js';
 import { withTransaction } from '../../db/tx.js';
 import type { Db } from '../../db/tx.js';
 import { HttpError } from '../../middleware/httpError.js';
+import { holdStock } from '../../core/stock.js';
 import type { AuthSessionUser } from '../auth/auth.types.js';
 import { loadBorrowConfig } from './borrow.config.js';
 import { advanceRequest, asStoredLadder, draftMessage, effectiveQty, loadLegs, loadRequest, sendLegs, setRequestStatus } from './borrow.flow.js';
@@ -427,6 +428,137 @@ export class BorrowService {
       if (r.stock_alert_id) await client.query(`UPDATE stock_alert SET status = 'ACKNOWLEDGED', updated_at = now(), version = version + 1 WHERE id = $1 AND status = 'LINKED_TO_REQUEST'`, [r.stock_alert_id]);
       const run = (await client.query(`SELECT id FROM agent_run WHERE ref_type = 'borrow_request' AND ref_id = $1 ORDER BY created_at DESC LIMIT 1`, [id])).rows[0];
       await client.query(`INSERT INTO decision_log (agent_run_id, ref_type, ref_id, decision, rationale, human_actor_id, human_action) VALUES ($1, 'borrow_request', $2, 'REJECTED', $3, $4, 'reject')`, [run?.id ?? null, id, reason, user.id]);
+      const data = await requestView(client, await loadDetail(client, id), user);
+      return { ok: true, id, version: data.version, data };
+    });
+  }
+
+  /**
+   * Cancel an in-progress or approved request (spec §7.15 POST /borrow-requests/{id}/cancel).
+   * Pharmacist of borrower only.
+   * If any leg is LOADED / IN_TRANSIT / RECEIVED or transport task is already moving goods,
+   * cancel is BLOCKED (409 CANNOT_CANCEL) per spec AC-F2a-08 / §03.
+   * If not loaded, unsent/pending/waiting legs and tasks are cancelled.
+   */
+  async cancel(req: Request, rawId: string) {
+    const user = req.user!;
+    mustBePharmacistOf(user);
+    const id = uuidParam(rawId, 'id');
+    const body = bodyObject(req.body ?? {});
+    const reason = typeof body.reason === 'string' ? body.reason.trim() : '';
+    if (reason.length < 3) throw new HttpError(400, 'VALIDATION', 'ต้องระบุเหตุผลในการยกเลิก (อย่างน้อย 3 ตัวอักษร)');
+    return withTransaction(async (client) => {
+      // 1. Lock the request row (SELECT ... FOR UPDATE) to avoid race conditions with lender response / dispatch
+      const locked = (
+        await client.query(`SELECT id, status::text FROM borrow_request WHERE id = $1 FOR UPDATE`, [id])
+      ).rows[0];
+      if (!locked) throw new HttpError(404, 'NOT_FOUND', 'ไม่พบคำขอยืม');
+
+      const request = await loadRequest(client, id);
+      assertBorrower(user, request);
+      const r = request!;
+
+      if (['FULFILLED', 'CLOSED_UNFULFILLED', 'CANCELLED'].includes(r.status)) {
+        throw new HttpError(409, 'ALREADY_DECIDED', `ไม่สามารถยกเลิกคำขอในสถานะ ${r.status} เนื่องจากคำขอปิดแล้ว`);
+      }
+      if (r.status === 'PARTIALLY_FULFILLED') {
+        throw new HttpError(
+          409,
+          'CANNOT_CANCEL_PARTIAL',
+          'ไม่สามารถยกเลิกคำขอในสถานะ PARTIALLY_FULFILLED ได้เนื่องจากได้รับยาบางส่วนแล้ว (การปิดยอดค้างรับต้องดำเนินการผ่านขั้นตอนปิดยอด)',
+        );
+      }
+      if (!['DRAFT', 'PENDING_APPROVAL', 'APPROVED', 'IN_PROGRESS', 'ESCALATED'].includes(r.status)) {
+        throw new HttpError(409, 'INVALID_TRANSITION', `ไม่สามารถยกเลิกคำขอในสถานะ ${r.status}`);
+      }
+
+      // Check and lock legs for this request inside the same transaction
+      const legs = await client.query(
+        `SELECT bl.id, bl.status::text AS leg_status, bl.lender_hospital_id, tt.id AS task_id, tt.status::text AS task_status
+           FROM borrow_leg bl
+           LEFT JOIN transport_task tt ON tt.ref_type = 'BORROW_LEG' AND tt.ref_id = bl.id AND tt.status <> 'CANCELLED'
+          WHERE bl.request_id = $1
+          FOR UPDATE OF bl`,
+        [id],
+      );
+
+      const hasLoadedOrMoving = legs.rows.some((l) =>
+        ['LOADED', 'IN_TRANSIT', 'RECEIVED'].includes(l.leg_status) ||
+        ['LOADED', 'IN_TRANSIT', 'ARRIVED', 'RECEIVED'].includes(l.task_status),
+      );
+      if (hasLoadedOrMoving) {
+        throw new HttpError(409, 'CANNOT_CANCEL', 'ไม่สามารถยกเลิกคำขอได้เนื่องจากยาถูกจัดขึ้นรถหรืออยู่ระหว่างจัดส่งแล้ว');
+      }
+
+      // Release FEFO lot holds on lender's stock for accepted/partial legs
+      const lotsToRelease = await client.query(
+        `SELECT bll.leg_id, bll.lot_id, bll.qty::float8 AS qty, bl.lender_hospital_id, sl.qty_held::float8 AS current_held
+           FROM borrow_leg_lot bll
+           JOIN borrow_leg bl ON bl.id = bll.leg_id
+           JOIN stock_lot sl ON sl.id = bll.lot_id
+          WHERE bl.request_id = $1
+            AND bl.status IN ('ACCEPTED', 'PARTIAL')`,
+        [id],
+      );
+
+      for (const row of lotsToRelease.rows) {
+        const releaseQty = Math.min(row.qty, Math.max(0, row.current_held));
+        if (releaseQty > 0) {
+          await holdStock(client, row.lender_hospital_id, row.lot_id, -releaseQty);
+        }
+      }
+
+      // Notify each affected lender hospital whose leg is cancelled
+      const notifiedLenders = new Set<string>();
+      for (const l of legs.rows) {
+        if (['SENT', 'ACCEPTED', 'PARTIAL'].includes(l.leg_status) && !notifiedLenders.has(l.lender_hospital_id)) {
+          notifiedLenders.add(l.lender_hospital_id);
+          await notifyRoles(client, l.lender_hospital_id, ['PHARMACIST', 'WAREHOUSE_OFFICER'], {
+            kind: 'BORROW_LEG_CANCELLED',
+            title: `ผู้ขอยกเลิกคำขอยืม ${r.request_no}`,
+            body: `เหตุผล: ${reason}`,
+            refType: 'borrow_request',
+            refId: id,
+          });
+        }
+      }
+
+      // Cancel unfulfilled legs and transport tasks in WAITING_DISPATCH
+      await client.query(
+        `UPDATE borrow_leg
+            SET status = 'CANCELLED'::leg_status,
+                reject_reason = COALESCE(reject_reason, $2)
+          WHERE request_id = $1 AND status IN ('PENDING', 'SENT', 'ACCEPTED', 'PARTIAL')`,
+        [id, `ยกเลิกตามคำขอ: ${reason}`],
+      );
+
+      await client.query(
+        `UPDATE transport_task
+            SET status = 'CANCELLED'::transport_status,
+                cancel_reason = $2,
+                updated_at = now()
+          WHERE ref_type = 'BORROW_LEG'
+            AND ref_id IN (SELECT id FROM borrow_leg WHERE request_id = $1)
+            AND status = 'WAITING_DISPATCH'`,
+        [id, reason],
+      );
+
+      await setRequestStatus(client, r, 'CANCELLED', auditContext(req), 'REQ_CANCELLED', { reason });
+      await client.query(`UPDATE borrow_request SET reason = COALESCE(reason || ' | ', '') || $2 WHERE id = $1`, [id, `ยกเลิก: ${reason}`]);
+
+      if (r.stock_alert_id) {
+        await client.query(
+          `UPDATE stock_alert SET status = 'ACKNOWLEDGED', updated_at = now(), version = version + 1 WHERE id = $1 AND status = 'LINKED_TO_REQUEST'`,
+          [r.stock_alert_id],
+        );
+      }
+
+      const run = (await client.query(`SELECT id FROM agent_run WHERE ref_type = 'borrow_request' AND ref_id = $1 ORDER BY created_at DESC LIMIT 1`, [id])).rows[0];
+      await client.query(
+        `INSERT INTO decision_log (agent_run_id, ref_type, ref_id, decision, rationale, human_actor_id, human_action) VALUES ($1, 'borrow_request', $2, 'CANCELLED', $3, $4, 'cancel')`,
+        [run?.id ?? null, id, reason, user.id],
+      );
+
       const data = await requestView(client, await loadDetail(client, id), user);
       return { ok: true, id, version: data.version, data };
     });

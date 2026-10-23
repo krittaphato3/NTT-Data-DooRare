@@ -147,6 +147,33 @@ export function NearExpiryPage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
     setDrawerOpen(true);
   };
 
+  /** Client-side CSV export of filtered near-expiry items (QA-PHARM-007). */
+  const exportCsv = () => {
+    const header = ['รหัสรายการ', 'ยา', 'VED', 'เลขล็อต', 'วันหมดอายุ', 'เหลืออีก (วัน)', 'สต็อกคงเหลือ', 'หน่วย', 'มูลค่า (บาท)', 'สถานะ', 'จำนวนที่ปล่อย'];
+    const lines = rows.map((r) => [
+      r.id,
+      r.drug,
+      r.ved,
+      r.lot,
+      r.expiry,
+      r.daysLeft,
+      r.qty,
+      r.unit,
+      Math.round(lotValue(r)),
+      r.status,
+      r.releasedQty ?? '',
+    ]);
+    const csv = [header, ...lines]
+      .map((cols) => cols.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(','))
+      .join('\r\n');
+    const url = URL.createObjectURL(new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8;' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `near-expiry-${tab}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <>
       <section className="pagehead">
@@ -166,11 +193,11 @@ export function NearExpiryPage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
           </div>
         </div>
         <div className="pagehead-actions">
-          <button className="btn btn-s">
+          <button className="btn btn-s" onClick={exportCsv} title="ส่งออกข้อมูลเป็น CSV">
             <Icon name="download" />
             CSV
           </button>
-          <button className="btn btn-s">
+          <button className="btn btn-s" onClick={() => window.print()} title="พิมพ์หรือบันทึกเป็น PDF">
             <Icon name="fileText" />
             PDF
           </button>

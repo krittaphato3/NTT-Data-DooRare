@@ -21,6 +21,18 @@ export function DocumentDrawer({ doc, onOpenDoc, onClose, mayPrint = true }: Doc
   const isVoid = doc.status === 'VOID';
   const voidNote = doc.voidNote;
 
+  const handleDownload = () => {
+    const blob = new Blob([JSON.stringify(doc, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${doc.id}-v${doc.version}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <aside className="tr-drawer" aria-label="รายละเอียดเอกสาร">
       <div className="tr-drawer-head">
@@ -48,10 +60,10 @@ export function DocumentDrawer({ doc, onOpenDoc, onClose, mayPrint = true }: Doc
           <button className="btn btn-p btn-sm" disabled={!mayPrint} title={mayPrint ? undefined : noPrintHint} onClick={() => window.print()}>
             <Icon name="printer" /> พิมพ์
           </button>
-          <button className="btn btn-s btn-sm" disabled={!mayPrint} title={mayPrint ? undefined : noPrintHint}>
+          <button className="btn btn-s btn-sm" disabled={!mayPrint} title={mayPrint ? undefined : noPrintHint} onClick={() => window.print()}>
             <Icon name="fileText" /> PDF
           </button>
-          <button className="link" type="button" style={{ fontSize: 12.5 }}>
+          <button className="link" type="button" style={{ fontSize: 12.5 }} disabled={!mayPrint} title={mayPrint ? undefined : noPrintHint} onClick={handleDownload}>
             ดาวน์โหลดไฟล์ต้นฉบับ
           </button>
           <span className="code" style={{ marginLeft: 'auto', fontSize: 11, color: '#94A3B8' }}>

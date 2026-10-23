@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { USER } from '../../../data/session';
 import { Icon } from '../../../components/common/icons';
-import { mayActFor } from '../../../lib/rbac';
+import { can, mayActFor } from '../../../lib/rbac';
 import type { RoleCode } from '../../../lib/rbac';
 import { HOSPITAL_ADMIN_USER } from '../../hospital-admin/data/session';
+import { ManualBorrowDialog } from './ManualBorrowDialog';
 
 const todayTh = () => new Date().toLocaleDateString('th-TH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 const timeTh = () => new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', hour12: false });
@@ -18,10 +19,13 @@ interface PageHeaderProps {
   hospitalLocked?: boolean;
 }
 
-type DialogKind = null | 'create' | 'emergency';
+/** Shown when a borrow request was successfully created via ManualBorrowDialog. */
+interface CreateSuccess {
+  requestNo: string;
+  status: string;
+}
 
 const HOSPITALS = ['ทุกโรงพยาบาล (12)', 'โรงพยาบาลสมุทรปราการ', 'รพ.บางพลี', 'รพ.บางบ่อ'];
-const DRUGS = ['Insulin Glargine pen', 'Adrenaline 1 mg/mL amp', 'Amlodipine 5 mg tab', 'Metformin 500 mg tab'];
 
 function useEscape(onClose: () => void) {
   useEffect(() => {
@@ -54,18 +58,17 @@ function DialogShell({ label, onClose, children }: { label: string; onClose: () 
   );
 }
 
-const fieldStyle: React.CSSProperties = { height: 36, border: '1px solid #94A3B8', borderRadius: 8, padding: '0 10px', font: 'inherit', color: '#0F2A5C', background: '#FFFFFF', width: '100%' };
-
 export function PageHeader({ isAdmin, hospital, onHospital, role = 'PHARMACIST', hospitalLocked = false }: PageHeaderProps) {
-  const [dialog, setDialog] = useState<DialogKind>(null);
-  const [sent, setSent] = useState(false);
+  const [showBorrowDialog, setShowBorrowDialog] = useState(false);
+  const [createSuccess, setCreateSuccess] = useState<CreateSuccess | null>(null);
   /* Own-hospital scope keeps its own identity (name + hospital) — never the pooled pharmacist view. */
   const viewer = hospitalLocked ? HOSPITAL_ADMIN_USER : USER;
   const roleTh = isAdmin ? 'ผู้ดูแลระบบ (Admin)' : viewer.roleTh;
-  const mayReportIncident = mayActFor(role, 'PHARMACIST', 'manageIncident');
+  /* manageIncident is FALSE for PHARMACIST in the RBAC matrix (spec §5.2 / lib/rbac.ts WRITE_ROLES).
+     Previously used mayActFor(role, 'PHARMACIST', 'manageIncident') which bypasses the matrix when
+     role === ownerRole and always returned true for PHARMACIST — QA-PHARM-004 fix. */
+  const mayReportIncident = can(role, 'manageIncident');
   const mayCreateRequest = mayActFor(role, 'PHARMACIST', 'createBorrowRequest');
-
-  const open = (k: Exclude<DialogKind, null>) => { setSent(false); setDialog(k); };
 
   return (
     <section className="pagehead" data-part="page-header">
@@ -123,66 +126,43 @@ export function PageHeader({ isAdmin, hospital, onHospital, role = 'PHARMACIST',
       </div>
       <div className="pagehead-actions">
         {mayReportIncident && (
-          <button className="btn btn-s" onClick={() => open('emergency')}>
+          <button className="btn btn-s" onClick={() => window.location.assign('?page=incident')}>
             <Icon name="siren" />
             รายงานเหตุฉุกเฉิน <span className="label-en" style={{ fontWeight: 400, opacity: 0.8 }}>Report Emergency</span>
           </button>
         )}
         {mayCreateRequest && (
-          <button className="btn btn-p" onClick={() => open('create')}>
+          <button className="btn btn-p" onClick={() => { setCreateSuccess(null); setShowBorrowDialog(true); }}>
             <Icon name="plus" />
             สร้างคำขอยืม <span className="label-en" style={{ fontWeight: 400, opacity: 0.85 }}>Create Request</span>
           </button>
         )}
       </div>
 
-      {dialog !== null && (
-        <DialogShell label={dialog === 'create' ? 'สร้างคำขอยืม / Create Request' : 'รายงานเหตุฉุกเฉิน / Report Emergency'} onClose={() => setDialog(null)}>
-          {!sent ? (
-            <form
-              onSubmit={(e) => { e.preventDefault(); setSent(true); }}
-              style={{ display: 'flex', flexDirection: 'column', gap: 12 }}
-            >
-              <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: '#0F2A5C' }}>
-                {dialog === 'create' ? 'สร้างคำขอยืม' : 'รายงานเหตุฉุกเฉิน'} <span className="en">{dialog === 'create' ? 'Create Request' : 'Report Emergency'}</span>
-              </h2>
-              <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13 }}>
-                ยา / เวชภัณฑ์
-                <select aria-label="ยา / เวชภัณฑ์" style={fieldStyle} defaultValue={DRUGS[0]}>
-                  {DRUGS.map((d) => (
-                    <option key={d}>{d}</option>
-                  ))}
-                </select>
-              </label>
-              <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13 }}>
-                จำนวน
-                <input aria-label="จำนวน" type="number" min={1} defaultValue={20} style={fieldStyle} />
-              </label>
-              <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13 }}>
-                {dialog === 'create' ? 'โรงพยาบาลผู้ให้ยืม' : 'สถานที่เกิดเหตุ'}
-                <select aria-label={dialog === 'create' ? 'โรงพยาบาลผู้ให้ยืม' : 'สถานที่เกิดเหตุ'} style={fieldStyle} defaultValue="รพ.บางพลี">
-                  <option>รพ.บางพลี</option>
-                  <option>รพ.บางบ่อ</option>
-                  <option>รพ.บางเสาธง</option>
-                  <option>รพ.พระสมุทรเจดีย์สวาทยานนท์</option>
-                </select>
-              </label>
-              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 4 }}>
-                <button type="button" className="btn btn-g btn-sm" onClick={() => setDialog(null)}>ยกเลิก</button>
-                <button type="submit" className="btn btn-p btn-sm">{dialog === 'create' ? 'ส่งคำขอ' : 'รายงาน'}</button>
-              </div>
-            </form>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#DCFCE7', color: '#166534', borderRadius: 8, padding: '10px 12px', fontSize: 13, fontWeight: 500 }}>
-                <Icon name="checkc" />
-                {dialog === 'create' ? 'ส่งคำขอแล้ว #REQ-1057 · รอโรงพยาบาลผู้ให้ยืมตอบรับ' : 'รับรายงานเหตุฉุกเฉินแล้ว · ศูนย์ประสานยา เขต 6 รับทราบ'}
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                <button className="btn btn-s btn-sm" onClick={() => setDialog(null)}>ปิด</button>
-              </div>
+      {/* Real ManualBorrowDialog (UI-10, API-F1b-001/004) replaces the previous dummy modal.
+          QA-PHARM-004: no more hardcoded #REQ-1057 or setSent(true). */}
+      {showBorrowDialog && (
+        <ManualBorrowDialog
+          onClose={() => setShowBorrowDialog(false)}
+          onCreated={(requestNo, status) => {
+            setShowBorrowDialog(false);
+            setCreateSuccess({ requestNo, status });
+          }}
+        />
+      )}
+
+      {/* Success toast shown after ManualBorrowDialog completes. */}
+      {createSuccess && (
+        <DialogShell label="สร้างคำขอยืมสำเร็จ" onClose={() => setCreateSuccess(null)}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#DCFCE7', color: '#166534', borderRadius: 8, padding: '10px 12px', fontSize: 13, fontWeight: 500 }}>
+              <Icon name="checkc" />
+              ส่งคำขอแล้ว {createSuccess.requestNo} · สถานะ: {createSuccess.status}
             </div>
-          )}
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <button className="btn btn-s btn-sm" onClick={() => setCreateSuccess(null)}>ปิด</button>
+            </div>
+          </div>
         </DialogShell>
       )}
     </section>

@@ -94,6 +94,12 @@ export class ReturnsService {
       where.push(direction === 'owe' ? `ro.debtor_hospital_id = ${p}` : direction === 'owed' ? `ro.creditor_hospital_id = ${p}` : `(ro.debtor_hospital_id = ${p} OR ro.creditor_hospital_id = ${p})`);
     }
     if (status) where.push(`ro.status = $${params.push(status)}::return_status`);
+    if (typeof raw.requestId === 'string' && raw.requestId.trim()) {
+      where.push(`br.id = $${params.push(raw.requestId.trim())}::uuid`);
+    }
+    if (typeof raw.requestNo === 'string' && raw.requestNo.trim()) {
+      where.push(`br.request_no = $${params.push(raw.requestNo.trim())}`);
+    }
     params.push(page.limit + 1, page.offset);
     const result = await query(
       `${SELECT} ${where.length ? `WHERE ${where.join(' AND ')}` : ''}

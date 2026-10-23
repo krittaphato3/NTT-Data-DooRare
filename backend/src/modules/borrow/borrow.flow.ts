@@ -207,7 +207,7 @@ export async function processLegTimers(client: pg.PoolClient, now = new Date()):
     await client.query(
       `SELECT bl.id, bl.request_id, bl.lender_hospital_id, bl.sent_at, bl.deadline_at, bl.reminded_at, br.request_no
          FROM borrow_leg bl JOIN borrow_request br ON br.id = bl.request_id
-        WHERE bl.status = 'SENT' AND bl.deadline_at IS NOT NULL ORDER BY bl.deadline_at FOR UPDATE OF bl`,
+        WHERE bl.status = 'SENT' AND br.status NOT IN ('CANCELLED', 'FULFILLED', 'CLOSED_UNFULFILLED') AND bl.deadline_at IS NOT NULL ORDER BY bl.deadline_at FOR UPDATE OF bl`,
     )
   ).rows;
   const touched = new Set<string>();

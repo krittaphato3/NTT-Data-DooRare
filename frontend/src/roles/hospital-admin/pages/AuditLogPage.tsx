@@ -1,7 +1,8 @@
 import { useMemo, useState, useEffect, useCallback } from 'react';
 import { Icon } from '../../../components/common/icons';
-import { HOSPITAL_ADMIN_HOME_HREF } from '../../../data/navigation';
+import { homeHrefFor } from '../../../data/navigation';
 import { can } from '../../../lib/rbac';
+import type { RoleCode } from '../../../lib/rbac';
 import { AuditDrawer } from '../components/AuditDrawer';
 import { AuditFilterBar, EMPTY_AUDIT_FILTERS } from '../components/AuditFilterBar';
 import type { AuditFilters } from '../components/AuditFilterBar';
@@ -44,7 +45,7 @@ function toApiParams(f: AuditFilters): Record<string, string> {
  * (SEC-002). Large logs use cursor "load more" (limit 50). The "verify chain" button is
  * SYSTEM_ADMIN-only and therefore never rendered on this HA screen.
  */
-export function AuditLogPage() {
+export function AuditLogPage({ role = 'HOSPITAL_ADMIN' }: { role?: RoleCode } = {}) {
   const [mock] = useState(isMockMode());
   const [filters, setFilters] = useState<AuditFilters>(EMPTY_AUDIT_FILTERS);
   const [page, setPage] = useState(1);
@@ -61,7 +62,7 @@ export function AuditLogPage() {
   const [cursor, setCursor] = useState<string | null>(null);
 
   // Permission decision comes from lib/rbac.ts, never from a local role check.
-  const mayView = can('HOSPITAL_ADMIN', 'viewAudit');
+  const mayView = can(role, 'viewAudit');
 
   const loadFirst = useCallback(
     async (f: AuditFilters) => {
@@ -193,7 +194,7 @@ export function AuditLogPage() {
       <section className="pagehead" data-part="page-header">
         <div>
           <nav aria-label="breadcrumb" style={{ fontSize: 12, lineHeight: '16px' }}>
-            <a href={HOSPITAL_ADMIN_HOME_HREF} className="link" style={{ fontSize: 12, fontWeight: 400 }}>
+            <a href={homeHrefFor(role)} className="link" style={{ fontSize: 12, fontWeight: 400 }}>
               หน้าหลัก
             </a>{' '}
             <span aria-hidden="true">›</span> <span aria-current="page">บันทึกตรวจสอบ</span>

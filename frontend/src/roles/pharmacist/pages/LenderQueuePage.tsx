@@ -8,6 +8,7 @@ import type { RoleCode } from '../../../lib/rbac';
 import { fmtTime, useTick } from '../../../lib/time';
 import {
   BORROW_REQUESTS,
+  BR_STATUS_META,
   BR_URGENCY_META,
   isOpenLeg,
   LENDABLE_STOCK,
@@ -277,6 +278,124 @@ function LotRow({
   );
 }
 
+// ─── Status icons & read-only state banners ──────────────────────────
+const STATUS_ICON: Record<BRStatus, IconName> = {
+  waiting: 'hourglass',
+  accepted: 'checkc',
+  partial: 'checkc',
+  loaded: 'truck',
+  in_transit: 'truck',
+  received: 'checkc',
+  declined: 'xc',
+  timeout: 'clock',
+};
+
+interface StatusBannerInfo {
+  title: string;
+  detail: string;
+  bg: string;
+  border: string;
+  color: string;
+  icon: IconName;
+}
+
+const STATUS_BANNER: Record<Exclude<BRStatus, 'waiting'>, StatusBannerInfo> = {
+  accepted: {
+    title: 'ตอบรับคำขอยืมแล้ว',
+    detail: 'ระบบส่งงานจัดยาให้ทีมคลังเตรียมจ่าย · รอคลังยืนยันขึ้นรถ (LOADED)',
+    bg: '#eff6ff',
+    border: '#bfdbfe',
+    color: '#1d4ed8',
+    icon: 'checkc',
+  },
+  partial: {
+    title: 'ตอบรับคำขอยืมบางส่วนแล้ว',
+    detail: 'ระบบส่งงานจัดยาให้ทีมคลังตามจำนวนที่ตอบรับ · ส่วนที่เหลือส่งต่อให้ผู้ให้ยืมรายอื่น',
+    bg: '#eff6ff',
+    border: '#bfdbfe',
+    color: '#1d4ed8',
+    icon: 'checkc',
+  },
+  loaded: {
+    title: 'คลังจัดยาขึ้นรถแล้ว (กำลังส่ง)',
+    detail: 'ตัดสต็อกของเราเรียบร้อยแล้ว · อยู่ระหว่างการส่งมอบให้ผู้ยืม',
+    bg: '#f0fdf4',
+    border: '#bbf7d0',
+    color: '#15803d',
+    icon: 'truck',
+  },
+  in_transit: {
+    title: 'ยาอยู่ระหว่างการขนส่ง',
+    detail: 'ยาออกจากโรงพยาบาลเราแล้ว · กำลังเดินทางไปยังโรงพยาบาลผู้ยืม',
+    bg: '#f0fdf4',
+    border: '#bbf7d0',
+    color: '#15803d',
+    icon: 'truck',
+  },
+  received: {
+    title: 'ผู้ยืมได้รับยาเรียบร้อยแล้ว',
+    detail: 'การให้ยืมเสร็จสมบูรณ์ · บันทึกภาระคืนยาตามกำหนดเวลาแล้ว',
+    bg: '#f0fdf4',
+    border: '#bbf7d0',
+    color: '#15803d',
+    icon: 'checkc',
+  },
+  declined: {
+    title: 'ปฏิเสธคำขอยืมแล้ว (หรือถูกยกเลิก)',
+    detail: 'คำขอนี้สิ้นสุดแล้ว · ระบบดำเนินการส่งต่อให้ผู้ให้ยืมรายอื่นตามบันไดคำขอ',
+    bg: '#fef2f2',
+    border: '#fecaca',
+    color: '#b91c1c',
+    icon: 'xc',
+  },
+  timeout: {
+    title: 'หมดเวลาตอบกลับแล้ว',
+    detail: 'ระบบถือเป็นการปฏิเสธอัตโนมัติ (Silence is rejection) และส่งต่อให้ผู้ให้ยืมรายอื่นแล้ว',
+    bg: '#fffbeb',
+    border: '#fef3c7',
+    color: '#b45309',
+    icon: 'clock',
+  },
+};
+
+function ReadOnlyStatusBanner({ status }: { status: Exclude<BRStatus, 'waiting'> }) {
+  const banner = STATUS_BANNER[status] ?? STATUS_BANNER.declined;
+  return (
+    <div
+      style={{
+        padding: '14px 16px',
+        borderTop: '1px solid #e2e8f0',
+        background: '#ffffff',
+        flex: 'none',
+      }}
+    >
+      <div
+        style={{
+          background: banner.bg,
+          border: `1px solid ${banner.border}`,
+          borderRadius: 10,
+          padding: '12px 14px',
+          display: 'flex',
+          gap: 10,
+          alignItems: 'flex-start',
+        }}
+      >
+        <div style={{ color: banner.color, marginTop: 2, flex: 'none' }}>
+          <Icon name={banner.icon} className="ic16" />
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: banner.color }}>
+            {banner.title}
+          </div>
+          <div style={{ fontSize: 11.5, color: '#475569', lineHeight: '16px' }}>
+            {banner.detail}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Detail panel ─────────────────────────────────────────────────────
 function DetailPanel({
   req,
@@ -337,6 +456,7 @@ function DetailPanel({
   const lots = liveLots ?? LOTS[req.drug] ?? [];
   const stock = live ? (liveStock ?? undefined) : LENDABLE_STOCK[req.drug];
   const urgencyMeta = BR_URGENCY_META[req.urgency];
+  const statusMeta = BR_STATUS_META[req.status] ?? BR_STATUS_META.waiting;
 
   const totalLotQty = lots
     .filter((l) => selectedLots[l.lotId] && l.fefoEligible)
@@ -405,44 +525,10 @@ function DetailPanel({
             >
               {req.id}
             </span>
-            {(() => {
-              const st = req.status;
-              const stLabel =
-                st === 'waiting'
-                  ? 'รอเราตอบ'
-                  : st === 'accepted'
-                  ? 'ตอบรับแล้ว'
-                  : st === 'partial'
-                  ? 'ให้บางส่วน'
-                  : st === 'loaded' || st === 'in_transit'
-                  ? 'กำลังส่ง'
-                  : st === 'received'
-                  ? 'ผู้ยืมรับแล้ว'
-                  : 'ปฏิเสธ';
-              const stBadgeCls =
-                st === 'waiting'
-                  ? 'st-pending'
-                  : st === 'accepted' || st === 'received'
-                  ? 'st-approved'
-                  : st === 'loaded' || st === 'in_transit'
-                  ? 'st-transit'
-                  : 'st-rejected';
-              return (
-                <span className={`badge ${stBadgeCls}`}>
-                  <Icon
-                    name={
-                      st === 'waiting'
-                        ? 'hourglass'
-                        : st === 'loaded' || st === 'in_transit'
-                        ? 'truck'
-                        : 'checkc'
-                    }
-                    className="ic12"
-                  />
-                  {stLabel}
-                </span>
-              );
-            })()}
+            <span className={`badge ${statusMeta.cls}`}>
+              <Icon name={STATUS_ICON[req.status] ?? 'hourglass'} className="ic12" />
+              {statusMeta.th}
+            </span>
             <span className={`badge ${urgencyMeta.cls}`}>
               <Icon name={UG_ICON[req.urgency]} className="ic12" />
               {req.urgencyLabel}
@@ -716,8 +802,8 @@ function DetailPanel({
         )}
       </div>
 
-      {/* Footer actions */}
-      {req.status === 'waiting' && (
+      {/* Footer: active actions when waiting, or read-only status banner when already decided */}
+      {req.status === 'waiting' ? (
         <div
           style={{
             padding: '12px 16px',
@@ -889,6 +975,8 @@ function DetailPanel({
             ตอบแล้วระบบสร้างงานขนส่งทันที · สต็อกของเราตัดเมื่อขึ้นรถ (LOADED) · ผู้ยืมต้องคืนเป็นยาตัวเดิมภายใน 30 วัน
           </div>
         </div>
+      ) : (
+        <ReadOnlyStatusBanner status={req.status as Exclude<BRStatus, 'waiting'>} />
       )}
     </div>
   );
@@ -1235,6 +1323,7 @@ export function LenderQueuePage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
                 {rows.map((r) => {
                   const isSelected = selected?.id === r.id;
                   const urgMeta = BR_URGENCY_META[r.urgency];
+                  const statusMeta = BR_STATUS_META[r.status] ?? BR_STATUS_META.waiting;
                   return (
                     <tr
                       key={r.id}
@@ -1261,8 +1350,12 @@ export function LenderQueuePage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
                         >
                           {r.id}
                         </a>
-                        <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>
-                          รอบ {r.round} · <span className="code">{r.trigger}</span>
+                        <div style={{ fontSize: 11, color: '#64748b', marginTop: 2, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                          <span>รอบ {r.round} · <span className="code">{r.trigger}</span></span>
+                          <span className={`badge ${statusMeta.cls}`} style={{ fontSize: 10.5, padding: '1px 6px' }}>
+                            <Icon name={STATUS_ICON[r.status] ?? 'hourglass'} className="ic12" />
+                            {statusMeta.th}
+                          </span>
                         </div>
                       </td>
                       <td style={{ minWidth: 180 }}>
