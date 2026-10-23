@@ -14,20 +14,23 @@
     - Replaced hardcoded "รอเราตอบ" badge with dynamic status computation.
     - Updated lot pre-selection to only select lots needed up to requested quantity in FEFO order.
     - Disabled "ให้บางส่วน" button when requested quantity is 1.
+  - Fixed white-screen (WSOD) crash on SPA rebuild: added `ErrorBoundary` to `App.tsx` and updated `nginx.conf` with explicit `no-cache` on `index.html` and 404 for missing hashed assets so browsers never execute fallback HTML as JavaScript.
   - Verified TypeScript compilation with `npm run build` and rebuilt Docker frontend container.
 - **decisions:**
   - Used `localStorage` (`doorare_wh_packed_{taskNo}`) to track packing confirmation state per task locally without requiring extra backend schema changes, while relying on backend `transport_task.status` (`WAITING_DISPATCH`, `LOADED`, `IN_TRANSIT`, `ARRIVED`, `RECEIVED`) for end-to-end task lifecycle.
   - Completed transport tasks (`RECEIVED` or `CANCELLED`) are filtered out from the inbox outbound queue as they no longer need action from warehouse packing.
   - Deep-linked inbound shipments directly to the Inbound tab in Transport Tracking via URL param `dir=in`.
+  - Added ErrorBoundary at application root to gracefully catch any unhandled rendering exceptions and provide recovery actions instead of a blank screen.
 - **files touched:**
+  - `frontend/nginx.conf`
   - `frontend/src/App.tsx`
+  - `frontend/src/components/common/ErrorBoundary.tsx`
   - `frontend/src/roles/pharmacist/pages/LenderQueuePage.tsx`
   - `frontend/src/roles/warehouse/components/InboundTable.tsx`
   - `frontend/src/roles/warehouse/components/InboxDrawer.tsx`
   - `frontend/src/roles/warehouse/pages/InboxPage.tsx`
   - `frontend/src/roles/warehouse/pages/TransportTrackingPage.tsx`
 - **errors encountered:**
-  - None during build (`npm run build` completed cleanly).
+  - White screen on navigation to `?role=warehouse&page=kit` caused by browser caching the previous build's `index.html` referencing an old JS bundle hash that was replaced during container rebuild.
 - **next steps:**
-  - Commit changes to `feature/warehouse-inbox-live`.
-  - Test end-to-end flow in browser across Pharmacist, Warehouse, and Driver roles.
+  - Guide user to do a Hard Refresh (`Cmd + Shift + R` / `Ctrl + Shift + R`) in their browser.
