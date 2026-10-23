@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { streamAiChat, type ChatMessage, type RouteContext } from '../../services/aiChatApi';
+import { DooRareBotAvatar } from './DooRareBotAvatar';
 import './chatDrawer.css';
 
 interface ProposalCardProps {
@@ -196,10 +197,7 @@ export const DooRareChatDrawer: React.FC = () => {
         aria-label="Open AI Copilot"
       >
         <span className="doorare-chat-pulse-badge" />
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-          <path d="M8 10h.01M12 10h.01M16 10h.01" />
-        </svg>
+        <DooRareBotAvatar size={38} />
       </button>
 
       {/* Backdrop Overlay */}
@@ -213,7 +211,9 @@ export const DooRareChatDrawer: React.FC = () => {
         {/* Header */}
         <div className="doorare-chat-header">
           <div className="doorare-chat-title-group">
-            <div className="doorare-chat-avatar">✨</div>
+            <div className="doorare-chat-avatar">
+              <DooRareBotAvatar size={32} />
+            </div>
             <div>
               <div className="doorare-chat-title">DooRare AI Copilot</div>
               <span className="doorare-chat-context-badge">
