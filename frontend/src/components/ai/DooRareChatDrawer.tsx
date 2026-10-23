@@ -2,7 +2,16 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { streamAiChat, type ChatMessage, type RouteContext } from '../../services/aiChatApi';
 import { DooRareBotAvatar } from './DooRareBotAvatar';
+import { MarkdownContent } from '../common/MarkdownContent';
+import { ToolExecutionLogCard, type ToolLogEntry } from './ToolExecutionLogCard';
 import './chatDrawer.css';
+
+interface DisplayChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  toolLogs?: ToolLogEntry[];
+}
 
 interface ProposalCardProps {
   proposal: {
@@ -93,7 +102,7 @@ export const DooRareChatDrawer: React.FC = () => {
   const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [displayMessages, setDisplayMessages] = useState<DisplayChatMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [activeTool, setActiveTool] = useState<string | null>(null);
   const [proposals, setProposals] = useState<any[]>([]);
@@ -106,12 +115,12 @@ export const DooRareChatDrawer: React.FC = () => {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, activeTool, proposals]);
+  }, [displayMessages, activeTool, proposals]);
 
   // Handle drawer close: completely reset conversation history and active state
   const handleClose = () => {
     setIsOpen(false);
-    setMessages([]);
+    setDisplayMessages([]);
     setInput('');
     setActiveTool(null);
     setProposals([]);
@@ -138,35 +147,94 @@ export const DooRareChatDrawer: React.FC = () => {
     if (!prompt || isStreaming) return;
 
     setInput('');
-    const userMsg: ChatMessage = { role: 'user', content: prompt };
-    const updatedMessages = [...messages, userMsg];
-    setMessages(updatedMessages);
+    const userMsg: DisplayChatMessage = {
+      id: `msg_user_${Date.now()}`,
+      role: 'user',
+      content: prompt,
+    };
+    const assistantMsgId = `msg_asst_${Date.now()}`;
+    const assistantPlaceholder: DisplayChatMessage = {
+      id: assistantMsgId,
+      role: 'assistant',
+      content: '',
+      toolLogs: [],
+    };
+
+    const updatedDisplay = [...displayMessages, userMsg, assistantPlaceholder];
+    setDisplayMessages(updatedDisplay);
+    const assistantIndex = updatedDisplay.length - 1;
+
     setIsStreaming(true);
     setActiveTool(null);
 
-    // Placeholder for assistant answer
+    // API messages payload for the backend
+    const apiMessages: ChatMessage[] = [
+      ...displayMessages
+        .filter((m) => m.content.trim().length > 0)
+        .map((m) => ({ role: m.role, content: m.content })),
+      { role: 'user', content: prompt },
+    ];
+
     let assistantText = '';
-    const assistantIndex = updatedMessages.length;
 
     try {
       await streamAiChat(
-        updatedMessages,
+        apiMessages,
         getRouteContext(),
         {
           onStatus: (_st) => {
             // Status update
           },
           onToolStart: (tool) => {
+            const newLog: ToolLogEntry = {
+              id: tool.id || `tool_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+              name: tool.name,
+              args: tool.args,
+              status: 'running',
+              startTime: Date.now(),
+            };
             setActiveTool(`กำลังค้นหาข้อมูลด้วย: ${tool.name}...`);
+            setDisplayMessages((prev) => {
+              const copy = [...prev];
+              const target = copy[assistantIndex];
+              if (target) {
+                const logs = [...(target.toolLogs || []), newLog];
+                copy[assistantIndex] = { ...target, toolLogs: logs };
+              }
+              return copy;
+            });
           },
-          onToolEnd: () => {
+          onToolEnd: (res) => {
             setActiveTool(null);
+            setDisplayMessages((prev) => {
+              const copy = [...prev];
+              const target = copy[assistantIndex];
+              if (target && target.toolLogs) {
+                const logs = target.toolLogs.map((log) => {
+                  if (log.status === 'running' && (log.id === res.id || log.name === res.name || !res.id)) {
+                    return {
+                      ...log,
+                      status: res.success === false ? ('failed' as const) : ('completed' as const),
+                      result: res.data,
+                      error: res.error,
+                      durationMs: Date.now() - log.startTime,
+                    };
+                  }
+                  return log;
+                });
+                copy[assistantIndex] = { ...target, toolLogs: logs };
+              }
+              return copy;
+            });
           },
           onToken: (token) => {
             assistantText += token;
-            setMessages((prev) => {
+            setDisplayMessages((prev) => {
               const copy = [...prev];
-              copy[assistantIndex] = { role: 'assistant', content: assistantText };
+              const target = copy[assistantIndex];
+              if (target) {
+                copy[assistantIndex] = { ...target, content: assistantText };
+              }
               return copy;
             });
           },
@@ -174,10 +242,19 @@ export const DooRareChatDrawer: React.FC = () => {
             setProposals((prev) => [...prev, proposal]);
           },
           onError: (errMsg) => {
-            setMessages((prev) => [
-              ...prev,
-              { role: 'assistant', content: `⚠️ ขออภัย เกิดข้อผิดพลาด: ${errMsg}` },
-            ]);
+            setDisplayMessages((prev) => {
+              const copy = [...prev];
+              const target = copy[assistantIndex];
+              if (target) {
+                copy[assistantIndex] = {
+                  ...target,
+                  content: target.content
+                    ? `${target.content}\n\n⚠️ ขออภัย เกิดข้อผิดพลาด: ${errMsg}`
+                    : `⚠️ ขออภัย เกิดข้อผิดพลาด: ${errMsg}`,
+                };
+              }
+              return copy;
+            });
           },
           onDone: () => {
             setIsStreaming(false);
@@ -248,7 +325,7 @@ export const DooRareChatDrawer: React.FC = () => {
 
         {/* Messages Body */}
         <div className="doorare-chat-messages">
-          {messages.length === 0 && (
+          {displayMessages.length === 0 && (
             <div style={{ textAlign: 'center', color: '#64748b', marginTop: '40px', padding: '0 20px' }}>
               <div style={{ fontSize: '32px', marginBottom: '12px' }}>🤖</div>
               <div style={{ fontWeight: 600, color: '#1e293b', marginBottom: '6px' }}>
@@ -260,26 +337,42 @@ export const DooRareChatDrawer: React.FC = () => {
             </div>
           )}
 
-          {messages.map((msg, i) => (
-            <div key={i} className={`doorare-chat-msg-row ${msg.role}`}>
-              <div className={`doorare-chat-bubble ${msg.role}`}>
-                {msg.content}
-              </div>
+          {displayMessages.map((msg) => (
+            <div key={msg.id} className={`doorare-chat-msg-row ${msg.role}`}>
+              {/* Harness Tool Logs above assistant bubble */}
+              {msg.toolLogs && msg.toolLogs.length > 0 && (
+                <div className="doorare-chat-tools-container">
+                  {msg.toolLogs.map((tool) => (
+                    <ToolExecutionLogCard key={tool.id} tool={tool} />
+                  ))}
+                </div>
+              )}
+
+              {msg.content ? (
+                <div className={`doorare-chat-bubble ${msg.role}`}>
+                  <MarkdownContent content={msg.content} />
+                </div>
+              ) : null}
             </div>
           ))}
 
           {/* Thinking / Typing Animated Dots Indicator */}
-          {isStreaming && (!messages[messages.length - 1] || messages[messages.length - 1].role === 'user') && (
-            <div className="doorare-chat-msg-row assistant">
-              <div className="doorare-typing-bubble" title="AI กำลังคิดคำตอบ...">
-                <span className="doorare-typing-dot" />
-                <span className="doorare-typing-dot" />
-                <span className="doorare-typing-dot" />
+          {isStreaming &&
+            (!displayMessages[displayMessages.length - 1] ||
+              displayMessages[displayMessages.length - 1].role === 'user' ||
+              (!displayMessages[displayMessages.length - 1].content &&
+                (!displayMessages[displayMessages.length - 1].toolLogs ||
+                  displayMessages[displayMessages.length - 1].toolLogs?.length === 0))) && (
+              <div className="doorare-chat-msg-row assistant">
+                <div className="doorare-typing-bubble" title="AI กำลังคิดคำตอบ...">
+                  <span className="doorare-typing-dot" />
+                  <span className="doorare-typing-dot" />
+                  <span className="doorare-typing-dot" />
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Active Tool Indicator */}
+          {/* Active Tool Indicator (Transient status pill) */}
           {activeTool && (
             <div className="doorare-chat-tool-indicator">
               <span className="doorare-tool-spinner" />
@@ -292,8 +385,15 @@ export const DooRareChatDrawer: React.FC = () => {
             <ProposalCard
               key={idx}
               proposal={prop}
-              onActionComplete={(msg) => {
-                setMessages((prev) => [...prev, { role: 'assistant', content: msg }]);
+              onActionComplete={(msgText) => {
+                setDisplayMessages((prev) => [
+                  ...prev,
+                  {
+                    id: `prop_res_${Date.now()}`,
+                    role: 'assistant',
+                    content: msgText,
+                  },
+                ]);
               }}
             />
           ))}

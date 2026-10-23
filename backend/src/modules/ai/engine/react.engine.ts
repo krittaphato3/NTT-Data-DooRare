@@ -174,6 +174,11 @@ export class ReActEngine {
 
         await onEvent({
           type: 'tool_end',
+          toolCall: {
+            id: call.id,
+            name: toolName,
+            arguments: toolArgs,
+          },
           toolResult: result,
         });
 

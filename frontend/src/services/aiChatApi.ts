@@ -25,7 +25,7 @@ export interface StreamEventCallbacks {
   onStatus?: (data: { message: string; role?: string }) => void;
   onToken?: (text: string) => void;
   onToolStart?: (tool: { id?: string; name: string; args?: Record<string, unknown> }) => void;
-  onToolEnd?: (res: { success?: boolean; error?: string }) => void;
+  onToolEnd?: (res: { id?: string; name?: string; success?: boolean; data?: unknown; error?: string }) => void;
   onProposal?: (proposal: any) => void;
   onError?: (error: string) => void;
   onDone?: () => void;

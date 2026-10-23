@@ -421,3 +421,322 @@
   color: #0369a1;
   border-color: #7dd3fc;
 }
+
+/* ========================================================
+   Markdown Formatting Styles (Bold, Italic, Code, Lists)
+   ======================================================== */
+
+.doorare-markdown-body {
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: inherit;
+}
+
+.doorare-md-bold {
+  font-weight: 700;
+  color: inherit;
+}
+
+.doorare-chat-bubble.assistant .doorare-md-bold {
+  color: #0f172a;
+}
+
+.doorare-md-italic {
+  font-style: italic;
+}
+
+.doorare-inline-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 0.88em;
+  background-color: #f1f5f9;
+  color: #0f172a;
+  padding: 2px 5px;
+  border-radius: 4px;
+  border: 1px solid #e2e8f0;
+}
+
+.doorare-chat-bubble.user .doorare-inline-code {
+  background-color: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: #ffffff;
+}
+
+.doorare-code-block-wrapper {
+  margin: 8px 0;
+  background-color: #0f172a;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.doorare-code-lang {
+  padding: 4px 10px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #94a3b8;
+  background-color: #1e293b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid #334155;
+}
+
+.doorare-code-block {
+  margin: 0;
+  padding: 10px 14px;
+  overflow-x: auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #f8fafc;
+}
+
+.doorare-md-p {
+  margin: 4px 0;
+}
+
+.doorare-md-p:first-child {
+  margin-top: 0;
+}
+
+.doorare-md-p:last-child {
+  margin-bottom: 0;
+}
+
+.doorare-md-h1,
+.doorare-md-h2,
+.doorare-md-h3 {
+  font-weight: 700;
+  color: #0f172a;
+  margin: 10px 0 4px 0;
+}
+
+.doorare-md-h1 {
+  font-size: 16px;
+}
+
+.doorare-md-h2 {
+  font-size: 14.5px;
+}
+
+.doorare-md-h3 {
+  font-size: 13.5px;
+}
+
+.doorare-md-ul,
+.doorare-md-ol {
+  margin: 6px 0;
+  padding-left: 20px;
+}
+
+.doorare-md-ul li,
+.doorare-md-ol li {
+  margin: 2px 0;
+}
+
+.doorare-md-quote {
+  margin: 6px 0;
+  padding: 4px 12px;
+  border-left: 3px solid #0284c7;
+  background-color: #f8fafc;
+  color: #475569;
+  font-style: italic;
+  border-radius: 0 4px 4px 0;
+}
+
+.doorare-md-link {
+  color: #0284c7;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.doorare-md-link:hover {
+  color: #0369a1;
+}
+
+/* ========================================================
+   Harness Tool Execution Log Card Styles
+   ======================================================== */
+
+.doorare-chat-tools-container {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 8px;
+  max-width: 100%;
+}
+
+.doorare-tool-log-card {
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background-color: #f8fafc;
+  overflow: hidden;
+  transition: all 0.2s ease;
+  font-size: 12px;
+}
+
+.doorare-tool-log-card.running {
+  border-color: #7dd3fc;
+  background-color: #f0f9ff;
+  box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.2);
+}
+
+.doorare-tool-log-card.completed {
+  border-color: #e2e8f0;
+  background-color: #ffffff;
+}
+
+.doorare-tool-log-card.failed {
+  border-color: #fca5a5;
+  background-color: #fef2f2;
+}
+
+.doorare-tool-log-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 10px;
+  cursor: pointer;
+  user-select: none;
+  background: inherit;
+  transition: background-color 0.15s;
+}
+
+.doorare-tool-log-header:hover {
+  background-color: #f1f5f9;
+}
+
+.doorare-tool-log-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+  flex: 1;
+}
+
+.doorare-tool-icon {
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.doorare-tool-name {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-weight: 600;
+  color: #0f172a;
+  white-space: nowrap;
+}
+
+.doorare-tool-args-preview {
+  font-size: 11px;
+  color: #64748b;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 160px;
+}
+
+.doorare-tool-log-status-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.doorare-tool-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 9999px;
+  font-size: 10.5px;
+  font-weight: 600;
+}
+
+.doorare-tool-badge.running {
+  background-color: #e0f2fe;
+  color: #0284c7;
+}
+
+.doorare-tool-badge.completed {
+  background-color: #dcfce7;
+  color: #15803d;
+}
+
+.doorare-tool-badge.failed {
+  background-color: #fee2e2;
+  color: #b91c1c;
+}
+
+.doorare-tool-spinner-inline {
+  width: 9px;
+  height: 9px;
+  border: 1.5px solid #bae6fd;
+  border-top-color: #0284c7;
+  border-radius: 50%;
+  animation: toolSpin 0.75s linear infinite;
+  display: inline-block;
+}
+
+.doorare-tool-chevron {
+  font-size: 9px;
+  color: #94a3b8;
+  margin-left: 2px;
+}
+
+.doorare-tool-log-body {
+  padding: 8px 10px;
+  border-top: 1px solid #e2e8f0;
+  background-color: #ffffff;
+}
+
+.doorare-tool-section {
+  margin-bottom: 6px;
+}
+
+.doorare-tool-section:last-child {
+  margin-bottom: 0;
+}
+
+.doorare-tool-section-label {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #64748b;
+  margin-bottom: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.doorare-tool-code-preview {
+  margin: 0;
+  padding: 6px 8px;
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+  line-height: 1.45;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  max-height: 140px;
+  overflow: auto;
+  color: #0f172a;
+}
+
+.doorare-tool-code-preview.success {
+  border-color: #cbd5e1;
+}
+
+.doorare-tool-code-preview.error {
+  background-color: #fef2f2;
+  border-color: #fca5a5;
+  color: #991b1b;
+}
+
+.doorare-tool-running-placeholder {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  color: #64748b;
+  padding: 6px 8px;
+  background-color: #f0f9ff;
+  border-radius: 4px;
+}
+
