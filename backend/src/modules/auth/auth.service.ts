@@ -175,7 +175,9 @@ export class AuthService {
   /** `touch` = also bump `last_seen_at` (the `/me` poll marks the user online). */
   async getMe(token: string, touch = true): Promise<AuthSessionUser | null> {
     let session = this.activeSessions.get(token);
-    if (!session && token.startsWith('sess_')) {
+    // DEMO ONLY (opt-in): tokens are `sess_<8 hex of user id>_<time>`, i.e. guessable. Never enable in a real deployment.
+    const demoRecovery = process.env.DEMO_SESSION_RECOVERY === 'true';
+    if (!session && demoRecovery && token.startsWith('sess_')) {
       const parts = token.split('_');
       if (parts[1] && parts[1].length === 8) {
         const recovered = await this.repo.findUserByIdPrefix(parts[1]);
