@@ -17,6 +17,7 @@
   - Fixed white-screen (WSOD) crash on SPA rebuild: added `ErrorBoundary` to `App.tsx` and updated `nginx.conf` with explicit `no-cache` on `index.html` and 404 for missing hashed assets so browsers never execute fallback HTML as JavaScript.
   - Removed decline button and decline KPI card from Warehouse Inbox (WH role only confirms to pack).
   - Wired direct deep-linking from "ไปที่ขนส่ง {taskNo}" so clicking it navigates to Transport Tracking and automatically opens the detail drawer for that specific task.
+  - Persisted inbound "รับทราบ" state in `localStorage` (`doorare_wh_in_acked_{hospitalId}`) so acknowledged items remain acknowledged and show "ดูที่ติดตามการขนส่ง" across browser refreshes.
   - Verified TypeScript compilation with `npm run build` and rebuilt Docker frontend container.
 - **decisions:**
   - Used `localStorage` (`doorare_wh_packed_{taskNo}`) to track packing confirmation state per task locally without requiring extra backend schema changes, while relying on backend `transport_task.status` (`WAITING_DISPATCH`, `LOADED`, `IN_TRANSIT`, `ARRIVED`, `RECEIVED`) for end-to-end task lifecycle.
