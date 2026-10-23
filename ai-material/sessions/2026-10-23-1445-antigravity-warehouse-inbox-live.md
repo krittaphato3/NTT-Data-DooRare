@@ -35,6 +35,9 @@
     - Removed disconnected standalone "+ เพิ่มรูป" button when status is `LOADED` at sender warehouse.
     - Integrated photo upload directly into the expanded "ออกเดินทางแทนคนขับ" (Proxy) section.
     - Warehouse officer can input reason, optionally attach departure photo(s), and submit "ยืนยัน · ออกเดินทางแทนคนขับ" together.
+  - Fixed multi-hospital multi-tab test session collision (`AuthContext.tsx` & `apiFetch.ts`):
+    - Stored and resolved session tokens via `sessionStorage` with fallback to `localStorage`.
+    - Prevents tab 1 (HA) and tab 2 (HC) on `localhost:8080` from overwriting each other's auth token when testing simultaneous sender/receiver workflows.
 - **decisions:**
   - Used `localStorage` (`doorare_wh_packed_{taskNo}`) to track packing confirmation state per task locally without requiring extra backend schema changes, while relying on backend `transport_task.status` (`WAITING_DISPATCH`, `LOADED`, `IN_TRANSIT`, `ARRIVED`, `RECEIVED`) for end-to-end task lifecycle.
   - Completed transport tasks (`RECEIVED` or `CANCELLED`) are filtered out from the inbox outbound queue as they no longer need action from warehouse packing.
