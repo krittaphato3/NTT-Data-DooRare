@@ -162,6 +162,8 @@ export const getIncidentKitRecommendationsTool: IAgentTool<{
         RED: args.redCasualties || 0,
         YELLOW: args.yellowCasualties || 0,
         GREEN: args.greenCasualties || 0,
+        BLACK: 0,
+        UNKNOWN: 0,
       };
 
       const totalCasualties = counts.RED + counts.YELLOW + counts.GREEN;
@@ -500,7 +502,7 @@ export const ER_PROPOSAL_WHITELIST = {
       title: z.string().min(1, 'Incident title is required'),
       eventType: z.string().default('MASS_CASUALTY'),
       location: z.string().optional(),
-      patientCounts: z.record(z.number().int().min(0)).optional(),
+      patientCounts: z.record(z.string(), z.number().int().min(0)).optional(),
       description: z.string().optional(),
     }),
   },
@@ -565,13 +567,13 @@ export const submitErActionProposalTool: IAgentTool<{
       .describe('Whitelisted emergency action type'),
     title: z.string().describe('Short title for the emergency proposal'),
     description: z.string().describe('Detailed emergency justification'),
-    summary: z.record(z.unknown()).describe('Key-value summary of casualties, kit counts, or antidotes'),
+    summary: z.record(z.string(), z.unknown()).describe('Key-value summary of casualties, kit counts, or antidotes'),
     targetId: z
       .string()
       .uuid()
       .optional()
       .describe('Target incident UUID if linking dispatch or borrow to an incident'),
-    payload: z.record(z.unknown()).describe('Action-specific payload parameters'),
+    payload: z.record(z.string(), z.unknown()).describe('Action-specific payload parameters'),
   }),
   allowedRoles: ['ER_STAFF', 'SYSTEM_ADMIN'],
   execute: async (args, context: RequestContext): Promise<ToolResult> => {
@@ -594,10 +596,14 @@ export const submitErActionProposalTool: IAgentTool<{
         };
       }
 
+      // Resolve effective incidentId (from targetId or payload.incidentId)
+      const effectiveIncidentId =
+        args.targetId || (typeof args.payload?.incidentId === 'string' ? args.payload.incidentId : undefined);
+
       // Build whitelisted endpoint
       let endpoint: string;
       try {
-        endpoint = actionDef.buildEndpoint(args.targetId);
+        endpoint = actionDef.buildEndpoint(effectiveIncidentId);
       } catch (err: any) {
         return {
           success: false,
@@ -605,14 +611,14 @@ export const submitErActionProposalTool: IAgentTool<{
         };
       }
 
-      // If targetId (incidentId) is supplied, enforce hospital ownership
-      if (args.targetId) {
+      // If effectiveIncidentId is supplied, enforce hospital ownership
+      if (effectiveIncidentId) {
         const inc = await query<{ hospital_id: string }>(
           'SELECT hospital_id FROM incident WHERE id = $1',
-          [args.targetId],
+          [effectiveIncidentId],
         );
         if (inc.rows.length === 0) {
-          return { success: false, error: `Incident '${args.targetId}' not found.` };
+          return { success: false, error: `Incident '${effectiveIncidentId}' not found.` };
         }
         if (!isSystemAdmin && inc.rows[0].hospital_id !== hospitalId) {
           return {

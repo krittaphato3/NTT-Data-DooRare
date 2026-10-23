@@ -604,11 +604,15 @@ export const interpretLenderResponseTool: IAgentTool<{
       const rejectPattern =
         /(ปฏิเสธ|ไม่มี(?!.*แต่มี)|ไม่สะดวก|ไม่สามารถ|(?<!ไม่|ยังไม่|ทั้ง)หมด|ติดเคส|ไม่มีสต็อก|ไม่พอ(?!.*แต่มี)|reject|unavailable|no\s*stock|cannot|out\s*of\s*stock|declined)/i;
 
-      // Check for full accept patterns
-      const acceptPattern =
-        /(พร้อมส่ง|ได้ครบ|ยินดีให้ยืม|อนุมัติ|ส่งให้ได้|มีพอ|ไม่หมด|ยังไม่หมด|accept|approved|can\s*provide\s*all|full\s*quantity|available)/i;
+      // Check for explicit agreement patterns
+      const explicitAcceptPattern =
+        /(พร้อมส่ง|ได้ครบ|ยินดีให้ยืม|อนุมัติ|ส่งให้ได้|ส่งได้|ตกลง|accept|approved|can\s*provide\s*all|will\s*send|available\s*to\s*lend)/i;
 
-      let decision: 'ACCEPT' | 'PARTIAL' | 'REJECT';
+      // Check for availability-only signals (indicates stock exists, but does not explicitly agree to lend)
+      const availabilityOnlyPattern =
+        /(ไม่หมด|ยังไม่หมด|ยังมีอยู่|พอมี|ยังมีสต็อก|still\s*have|not\s*out\s*of\s*stock)/i;
+
+      let decision: 'ACCEPT' | 'PARTIAL' | 'REJECT' | 'UNCLEAR';
       let confirmedQuantity: number | null = null;
       let confidence: 'HIGH' | 'MEDIUM' | 'LOW' = 'HIGH';
 
@@ -624,21 +628,28 @@ export const interpretLenderResponseTool: IAgentTool<{
           decision = 'ACCEPT';
           confirmedQuantity = args.askedQuantity;
         }
-      } else if (rejectPattern.test(text) && !acceptPattern.test(text)) {
+      } else if (rejectPattern.test(text) && !explicitAcceptPattern.test(text)) {
         decision = 'REJECT';
         confirmedQuantity = 0;
-      } else if (acceptPattern.test(text) && !rejectPattern.test(text)) {
+      } else if (explicitAcceptPattern.test(text) && !rejectPattern.test(text)) {
         decision = 'ACCEPT';
         confirmedQuantity = args.askedQuantity;
-      } else if (rejectPattern.test(text) && acceptPattern.test(text)) {
+      } else if (availabilityOnlyPattern.test(text) && !rejectPattern.test(text)) {
+        // Signals availability without explicit agreement or quantity
+        decision = 'UNCLEAR';
+        confirmedQuantity = null;
+        flags.push('NEEDS_CONFIRMATION');
+        confidence = 'MEDIUM';
+      } else if (rejectPattern.test(text) && explicitAcceptPattern.test(text)) {
         // Ambiguous conflicting signals
         decision = 'REJECT';
         confirmedQuantity = null;
         confidence = 'LOW';
       } else {
         // Unclear response
-        decision = 'REJECT';
+        decision = 'UNCLEAR';
         confirmedQuantity = null;
+        flags.push('NEEDS_CONFIRMATION');
         confidence = 'LOW';
       }
 
@@ -736,13 +747,13 @@ export const submitPharmacistProposalTool: IAgentTool<{
       .describe('Whitelisted pharmacist action type'),
     title: z.string().describe('Title of the proposed action'),
     description: z.string().describe('Detailed clinical explanation or rationale'),
-    summary: z.record(z.unknown()).describe('Key-value summary of proposed metrics'),
+    summary: z.record(z.string(), z.unknown()).describe('Key-value summary of proposed metrics'),
     targetId: z
       .string()
       .uuid()
       .optional()
       .describe('Target ID required for alert snoozing (alertId) or pool release (nearExpiryId)'),
-    payload: z.record(z.unknown()).describe('Action-specific payload parameters'),
+    payload: z.record(z.string(), z.unknown()).describe('Action-specific payload parameters'),
   }),
   allowedRoles: ['PHARMACIST', 'SYSTEM_ADMIN'],
   execute: async (args, context: RequestContext): Promise<ToolResult> => {

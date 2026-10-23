@@ -496,21 +496,34 @@ test('getIncidentKitRecommendationsTool: computes kit requirements from triage c
 });
 
 test('interpretLenderResponseTool: follow-up tests for "ไม่หมด" and "ยังไม่หมด"', async () => {
-  // Test "ไม่หมด" (not out of stock -> must be ACCEPT, not REJECT)
+  // Test "ไม่หมด" without explicit agreement (availability only -> must be UNCLEAR with NEEDS_CONFIRMATION)
   const res1 = await interpretLenderResponseTool.execute(
-    { responseText: 'สต็อกยาไม่หมด สามารถจัดส่งให้ได้ตามที่ขอ', askedQuantity: 5 },
+    { responseText: 'สต็อกยาไม่หมด แต่ยังไม่ได้เช็คเวรแพทย์', askedQuantity: 5 },
     { role: 'PHARMACIST' },
   );
   assert.equal(res1.success, true);
-  assert.equal((res1.data as any).decision, 'ACCEPT');
+  assert.equal((res1.data as any).decision, 'UNCLEAR');
+  assert.equal((res1.data as any).confirmedQuantity, null);
+  assert.ok((res1.data as any).flags.includes('NEEDS_CONFIRMATION'));
 
-  // Test "ยังไม่หมด" (not yet out of stock -> must be ACCEPT, not REJECT)
+  // Test "ยังไม่หมด" without explicit agreement (availability only -> UNCLEAR with NEEDS_CONFIRMATION)
   const res2 = await interpretLenderResponseTool.execute(
-    { responseText: 'ยาในคลังยังไม่หมด ส่งมอบได้', askedQuantity: 3 },
+    { responseText: 'ยาในคลังยังไม่หมดนะ', askedQuantity: 3 },
     { role: 'PHARMACIST' },
   );
   assert.equal(res2.success, true);
-  assert.equal((res2.data as any).decision, 'ACCEPT');
+  assert.equal((res2.data as any).decision, 'UNCLEAR');
+  assert.equal((res2.data as any).confirmedQuantity, null);
+  assert.ok((res2.data as any).flags.includes('NEEDS_CONFIRMATION'));
+
+  // Test explicit agreement alongside availability ("ยังไม่หมด พร้อมส่งให้ได้") -> ACCEPT
+  const res3 = await interpretLenderResponseTool.execute(
+    { responseText: 'ยาในคลังยังไม่หมด พร้อมส่งให้ได้ครบตามจำนวน', askedQuantity: 4 },
+    { role: 'PHARMACIST' },
+  );
+  assert.equal(res3.success, true);
+  assert.equal((res3.data as any).decision, 'ACCEPT');
+  assert.equal((res3.data as any).confirmedQuantity, 4);
 });
 
 test('draftEmergencyIncidentTool: configuration and role validation', () => {
@@ -689,11 +702,12 @@ test('submitErActionProposalTool: generates DISPATCH_EMERGENCY_KITS proposal wit
   }
 });
 
-test('submitErActionProposalTool: generates REQUEST_URGENT_ANTIDOTE proposal', async () => {
+test('submitErActionProposalTool: generates REQUEST_URGENT_ANTIDOTE proposal (standalone and incident-linked)', async () => {
   const hosp = (await query('SELECT id FROM hospital WHERE active = true LIMIT 1')).rows[0];
   const drugMaster = (await query('SELECT id FROM drug_master LIMIT 1')).rows[0];
 
-  const res = await submitErActionProposalTool.execute(
+  // Case 1: Standalone (no incidentId) -> POST /api/v1/borrow-requests
+  const resStandalone = await submitErActionProposalTool.execute(
     {
       actionType: 'REQUEST_URGENT_ANTIDOTE',
       title: 'ขอยืม Antivenom เร่งด่วน',
@@ -713,11 +727,47 @@ test('submitErActionProposalTool: generates REQUEST_URGENT_ANTIDOTE proposal', a
     { role: 'ER_STAFF', hospitalId: hosp.id },
   );
 
-  assert.equal(res.success, true);
-  assert.ok(res.proposal);
-  assert.equal(res.proposal?.type, 'REQUEST_URGENT_ANTIDOTE');
-  assert.equal(res.proposal?.actionApi.endpoint, '/api/v1/borrow-requests');
-  assert.equal(res.proposal?.actionApi.method, 'POST');
+  assert.equal(resStandalone.success, true);
+  assert.ok(resStandalone.proposal);
+  assert.equal(resStandalone.proposal?.type, 'REQUEST_URGENT_ANTIDOTE');
+  assert.equal(resStandalone.proposal?.actionApi.endpoint, '/api/v1/borrow-requests');
+  assert.equal(resStandalone.proposal?.actionApi.method, 'POST');
+
+  // Case 2: Linked to an incident -> POST /api/v1/incidents/:id/emergency-borrow
+  const incident = (
+    await query('SELECT id FROM incident WHERE hospital_id = $1 LIMIT 1', [hosp.id])
+  ).rows[0];
+
+  if (incident) {
+    const resLinked = await submitErActionProposalTool.execute(
+      {
+        actionType: 'REQUEST_URGENT_ANTIDOTE',
+        title: 'ขอยืมยาแก้พิษฉุกเฉินตามแผนอุบัติภัย',
+        description: 'ขอยืม Atropine ตามแผนรองรับเหตุสารเคมี',
+        summary: { incidentId: incident.id },
+        targetId: incident.id,
+        payload: {
+          reason: 'เคสสารเคมีตามแผนฉุกเฉิน',
+          urgency: 'VERY_URGENT',
+          items: [
+            {
+              drugMasterId: drugMaster.id,
+              qtyRequested: 10,
+            },
+          ],
+        },
+      },
+      { role: 'ER_STAFF', hospitalId: hosp.id },
+    );
+
+    assert.equal(resLinked.success, true);
+    assert.ok(resLinked.proposal);
+    assert.equal(
+      resLinked.proposal?.actionApi.endpoint,
+      `/api/v1/incidents/${incident.id}/emergency-borrow`,
+    );
+    assert.equal(resLinked.proposal?.actionApi.method, 'POST');
+  }
 });
 
 test('submitErActionProposalTool: validates targetId requirement and foreign ownership', async () => {
