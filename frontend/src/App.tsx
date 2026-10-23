@@ -47,6 +47,7 @@ import { DriverTransportPage } from './roles/driver/pages/DriverTransportPage';
 import { DriverSyncPage } from './roles/driver/pages/DriverSyncPage';
 import { AdminPage } from './roles/admin/pages/AdminPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { LoginPage } from './pages/LoginPage';
 
 
@@ -227,9 +228,11 @@ function initialDriver(): boolean {
  */
 export default function App() {
   return (
-    <AuthProvider>
-      <AppRoot />
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <AppRoot />
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
 
