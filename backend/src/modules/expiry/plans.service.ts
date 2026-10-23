@@ -223,6 +223,22 @@ export class PlansService {
       assertVersion(plan, version);
       if (decision === 'APPROVED' && !plan.economical && !plan.option_chosen) throw new HttpError(409, 'OPTION_REQUIRED', 'ค่าขนส่งเกินเกณฑ์ ต้องให้เภสัชกรเจ้าของยาเลือกทางเลือกก่อน (BR-F2a-011)');
       if (body.approveAll && decision === 'APPROVED') {
+        if (Array.isArray(body.lines)) {
+          for (const line of body.lines) {
+            const qty = Number(line.qty);
+            if (qty > 0 && typeof line.receiver === 'string') {
+              const cleanName = line.receiver.replace(/^รพ\./, '').trim();
+              await client.query(
+                `UPDATE allocation_line al
+                 SET qty = $1, value_thb = round(($1 * (al.value_thb / NULLIF(al.qty, 0)))::numeric, 2)
+                 FROM hospital h
+                 WHERE al.receiver_hospital_id = h.id AND al.plan_id = $2
+                   AND (h.name_th LIKE '%' || $3 || '%' OR h.code = $3)`,
+                [qty, id, cleanName],
+              );
+            }
+          }
+        }
         await client.query(
           `UPDATE plan_approval SET decision = 'APPROVED', decided_by = $2, decided_at = now(), comment = COALESCE(comment, 'เห็นชอบตามมติที่ประชุม') WHERE plan_id = $1`,
           [id, user.id],

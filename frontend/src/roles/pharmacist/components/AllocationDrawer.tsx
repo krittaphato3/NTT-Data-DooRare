@@ -9,7 +9,7 @@ interface AllocationDrawerProps {
   plan: AllocationPlan;
   decision?: string;
   onApprove: () => void;
-  onApproveAll?: (resolutionNote: string) => void;
+  onApproveAll?: (resolutionNote: string, lines?: { receiver: string; qty: number }[]) => void;
   onUneconomical: (label: string, optionId?: string) => void;
   /** Live plans only (API-F2a-009 / -011). */
   onReject?: (comment: string) => void;
@@ -357,7 +357,7 @@ export function AllocationDrawer({ plan: p, decision, onApprove, onApproveAll, o
                     onClick={() => {
                       const desc = lines.map((l) => `${l.receiver} ${l.qty} ${p.unit}`).join(', ');
                       if (onApproveAll) {
-                        onApproveAll(`เห็นชอบตามมติที่ประชุม: ${desc}`);
+                        onApproveAll(`เห็นชอบตามมติที่ประชุม: ${desc}`, lines);
                       } else {
                         onUneconomical(`บันทึกผลการประชุมเรียบร้อย: ${desc} · อนุมัติผ่านทุก รพ.`);
                       }
