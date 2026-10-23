@@ -18,22 +18,28 @@ Implement UI enhancements for Feature 2 (Near-Expiry Pooling & Allocation) demon
    - Mapped `comment: a.comment ?? undefined` in `poolLive.ts` so live backend rejections display verbatim comments.
 
 2. **Allocation Drawer UI (`AllocationDrawer.tsx`, `pool.css`):**
-   - Added **Prominent Meeting Callout Banner** at the top of the drawer when status is `NEEDS_DISCUSSION`, citing `BR-F2a-013` and `ASM-16` (100% consensus rule) and listing participating hospitals.
+   - Added **Prominent Meeting Callout Banner** at the top of the drawer when status is `NEEDS_DISCUSSION`, citing `BR-F2a-013` and `ASM-16` (100% consensus rule) and listing participating hospitals dynamically.
    - Enhanced **Consensus Checklist**:
      - Status badges: เห็นชอบ (Green), ไม่เห็นชอบ (Red), รอการตอบรับ (Amber).
      - Objection Quote Card with red border and warning icon displaying the exact hospital's reason and timestamp.
      - Rule reminder card explaining 100% unanimity required for XC-1 dispatch.
+   - Separated input states: `note` for rejection reason and `cancelNote` for cancellation reason so inputs no longer mirror each other.
    - Added **Interactive Meeting & Allocation Actions**:
-     - Action button 1: "นัดหมายประชุมด่วน (เฉพาะ 3 รพ.)" opening teleconference details, agenda, participant list, and copyable meeting link (`https://meet.doorare.moph.go.th/f2-ap-2026-000039`).
-     - Action button 2: "บันทึกผลการประชุม & ปรับปรุงยอด (v3)" with quantity inputs for each receiver validating that the sum matches available pool stock before submitting updated v(N+1) plan.
+     - Action button 1: "นัดหมายประชุมด่วน (เฉพาะ N รพ.)" opening teleconference details, agenda, participant list, and copyable meeting link.
+     - Action button 2: "บันทึกผลการประชุม & ปรับปรุงยอด" with dynamic quantity inputs for each receiver (matching actual line receivers in the plan).
+     - Action button 3: "ยืนยันมติที่ประชุม & อนุมัติผ่านทุก รพ. ทันที" which writes the adjusted line quantities into `allocation_line` in the database, marks all hospital approvals as `APPROVED`, and transitions the plan to `APPROVED` -> `TRANSPORTING`.
 
 3. **Pool & Allocation Page Overview (`PoolAllocationPage.tsx`):**
    - Added 4th KPI card for "รอนัดประชุมหารือ (NEEDS_DISCUSSION · ASM-16)".
    - Added quick amber warning indicator in allocation table rows highlighting which hospital objected.
+   - Wired `onApproveAll` to `decidePlan` with `approveAll: true` and updated `lines` payload.
 
-4. **Verification & Docker Container Rebuild:**
-   - `npm --prefix frontend run build` clean (exit code 0).
-   - Docker image `ntt-data-doorare-frontend` rebuilt and container restarted. HTTP 200 verified.
+4. **Reverted Experimental Auth Auto-Recovery:**
+   - As requested by user, completely reverted session auto-recovery changes (`auth.service.ts`, `auth.repository.ts`, `docker-compose.yml`) via `git revert`. Demo auth behaves exactly as originally designed with in-memory sessions pending team discussion on Cognito JWT migration.
+
+5. **Verification & Docker Container Rebuild:**
+   - `npm --prefix backend run build` and `npm --prefix frontend run build` clean (exit code 0).
+   - Docker containers rebuilt and running healthy.
 
 ## Decisions
 - **No Database Schema Change Needed:** Postgres `plan_status` enum already includes `'NEEDS_DISCUSSION'` and `plan_approval` table has `comment text`.
