@@ -47,6 +47,19 @@ export function useTransport() {
 
   useEffect(() => {
     void load();
+    const onFocus = () => {
+      void load();
+    };
+    window.addEventListener('focus', onFocus);
+    const interval = setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        void load();
+      }
+    }, 10000);
+    return () => {
+      window.removeEventListener('focus', onFocus);
+      clearInterval(interval);
+    };
   }, [load]);
 
   const advance = useCallback(

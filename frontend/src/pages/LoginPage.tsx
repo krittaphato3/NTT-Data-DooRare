@@ -26,7 +26,9 @@ const DEMO_CAST: { email: string; role: RoleCode; hospital_code: string; hospita
   { email: 'pharmacist1.hc@example.org', role: 'PHARMACIST', hospital_code: 'HC', hospital_name: 'โรงพยาบาลพระสมุทรเจดีย์ฯ', title: 'เภสัช (ผู้ให้ยืม)', does: 'ตอบรับ/ปฏิเสธคำขอที่ HA ส่งมา' },
   { email: 'warehouse_officer1.ha@example.org', role: 'WAREHOUSE_OFFICER', hospital_code: 'HA', hospital_name: 'โรงพยาบาลสมุทรปราการ', title: 'คลัง (ผู้รับ / แพ็กชุด)', does: 'โหลดของ รับของเข้า แพ็กชุดฉุกเฉิน' },
   { email: 'warehouse_officer1.hc@example.org', role: 'WAREHOUSE_OFFICER', hospital_code: 'HC', hospital_name: 'โรงพยาบาลพระสมุทรเจดีย์ฯ', title: 'คลัง (ผู้ให้ยืม)', does: 'โหลดของขึ้นรถ ถ่ายรูป' },
-  { email: 'driver1.ha@example.org', role: 'DRIVER', hospital_code: 'HA', hospital_name: 'โรงพยาบาลสมุทรปราการ', title: 'คนขับ', does: 'ออกเดินทาง ยืนยันถึงปลายทาง' },
+  { email: 'driver1.ha@example.org', role: 'DRIVER', hospital_code: 'HA', hospital_name: 'โรงพยาบาลสมุทรปราการ', title: 'คนขับ (รพ.สมุทรปราการ)', does: 'ออกเดินทาง ยืนยันถึงปลายทาง' },
+  { email: 'driver1.hc@example.org', role: 'DRIVER', hospital_code: 'HC', hospital_name: 'โรงพยาบาลพระสมุทรเจดีย์ฯ', title: 'คนขับ (รพ.พระสมุทรเจดีย์ฯ)', does: 'ออกเดินทาง ยืนยันถึงปลายทาง' },
+  { email: 'driver1.hb@example.org', role: 'DRIVER', hospital_code: 'HB', hospital_name: 'โรงพยาบาลบางพลี', title: 'คนขับ (รพ.บางพลี)', does: 'ออกเดินทาง ยืนยันถึงปลายทาง' },
 ];
 const DEMO_ROLES: RoleCode[] = ['PHARMACIST', 'WAREHOUSE_OFFICER', 'ER_STAFF', 'DRIVER'];
 

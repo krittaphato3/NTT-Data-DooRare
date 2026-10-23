@@ -51,6 +51,8 @@
   - `frontend/nginx.conf`
   - `frontend/src/App.tsx`
   - `frontend/src/components/common/ErrorBoundary.tsx`
+  - `frontend/src/pages/LoginPage.tsx`
+  - `frontend/src/roles/driver/components/DriverTaskDrawer.tsx`
   - `frontend/src/roles/pharmacist/pages/LenderQueuePage.tsx`
   - `frontend/src/roles/warehouse/components/InboundTable.tsx`
   - `frontend/src/roles/warehouse/components/InboxDrawer.tsx`
@@ -58,11 +60,14 @@
   - `frontend/src/roles/warehouse/components/ShipmentDrawer.tsx`
   - `frontend/src/roles/warehouse/data/transport.ts`
   - `frontend/src/roles/warehouse/data/transportLive.ts`
+  - `frontend/src/roles/warehouse/data/useTransport.ts`
   - `frontend/src/roles/warehouse/pages/InboxPage.tsx`
   - `frontend/src/roles/warehouse/pages/TransportTrackingPage.tsx`
   - `frontend/src/roles/warehouse/transport.css`
 - **errors encountered:**
   - White screen on navigation to `?role=warehouse&page=kit` caused by browser caching the previous build's `index.html` referencing an old JS bundle hash that was replaced during container rebuild.
   - Generic camera icon displayed instead of actual photo thumbnail preview upon selecting/uploading a file in the transport drawer.
+  - Driver screen did not automatically update status when warehouse triggered proxy departure because `useTransport` only loaded once on mount without polling or window focus listeners.
 - **next steps:**
-  - Guide user to do a Hard Refresh (`Cmd + Shift + R` / `Ctrl + Shift + R`) in their browser and test photo upload and thumbnail preview.
+  - Guide user to do a Hard Refresh (`Cmd + Shift + R` / `Ctrl + Shift + R`) in their browser and test photo upload, thumbnail preview, and driver auto-update flow.
+  - Verified Feature 2 (AI Agent near-expiry matching) end-to-end integration with Warehouse Work Inbox and Transport Tracking pipeline.

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Icon } from '../../../components/common/icons';
 import { fmtQty, HOSPITALS, STEP_ORDER, STEPS } from '../../warehouse/data/transport';
 import type { Shipment, TransportStatus } from '../../warehouse/data/transport';
@@ -23,6 +24,7 @@ export function DriverTaskDrawer({
   onOpenPhotoModal,
   onSync,
 }: DriverTaskDrawerProps) {
+  const [previewPhoto, setPreviewPhoto] = useState<string | null>(null);
   const idx = status === 'CANCELLED' ? -1 : STEP_ORDER.indexOf(status);
 
   return (
@@ -156,11 +158,52 @@ export function DriverTaskDrawer({
           <div className="photo-grid">
             {s.photos.map((ph, i) => {
               const pend = !!ph.pending && pending;
+              const hasUrl = Boolean(ph.url);
               return (
-                <div key={i} className="ph" role="img" aria-label={`รูปขั้น ${ph.stage} เวลา ${ph.time}`}>
-                  <Icon name="camera" className="ic20" />
-                  <span className="code" style={{ fontSize: 10 }}>{ph.stage}</span>
-                  <span className="num" style={{ fontSize: 10.5 }}>{ph.time}</span>
+                <div
+                  key={i}
+                  className="ph"
+                  role="img"
+                  aria-label={`รูปขั้น ${ph.stage} เวลา ${ph.time}`}
+                  style={{ position: 'relative', overflow: 'hidden', cursor: hasUrl ? 'pointer' : 'default', padding: 0 }}
+                  onClick={() => {
+                    if (hasUrl) setPreviewPhoto(ph.url!);
+                  }}
+                  title={hasUrl ? 'คลิกเพื่อดูภาพขนาดใหญ่' : undefined}
+                >
+                  {hasUrl ? (
+                    <img
+                      src={ph.url}
+                      alt={ph.stage}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                    />
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', padding: 4 }}>
+                      <Icon name="camera" className="ic20" />
+                      <span className="code" style={{ fontSize: 10 }}>{ph.stage}</span>
+                      <span className="num" style={{ fontSize: 10.5 }}>{ph.time}</span>
+                    </div>
+                  )}
+                  {hasUrl && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
+                        background: 'linear-gradient(transparent, rgba(0,0,0,0.75))',
+                        padding: '4px 6px 2px',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        color: '#FFFFFF',
+                        fontSize: 10,
+                      }}
+                    >
+                      <span className="code" style={{ fontSize: 9.5 }}>{ph.stage}</span>
+                      <span className="num" style={{ fontSize: 9.5 }}>{ph.time}</span>
+                    </div>
+                  )}
                   {pend && <span className="badge t-amber ph-pend">รอซิงก์</span>}
                 </div>
               );
@@ -222,6 +265,59 @@ export function DriverTaskDrawer({
           </a>
         </div>
       </div>
+
+      {/* Lightbox Preview Modal for Photos */}
+      {previewPhoto && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0, 0, 0, 0.85)',
+            zIndex: 9999,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 20,
+          }}
+          onClick={() => setPreviewPhoto(null)}
+        >
+          <div style={{ position: 'relative', maxWidth: '90vw', maxHeight: '85vh' }} onClick={(e) => e.stopPropagation()}>
+            <img
+              src={previewPhoto}
+              alt="ดูรูปถ่ายขนส่งขนาดใหญ่"
+              style={{
+                maxWidth: '100%',
+                maxHeight: '80vh',
+                borderRadius: 8,
+                boxShadow: '0 20px 25px -5px rgba(0,0,0,0.5)',
+                display: 'block',
+              }}
+            />
+            <button
+              className="btn btn-s btn-sm"
+              style={{
+                position: 'absolute',
+                top: -14,
+                right: -14,
+                borderRadius: '50%',
+                width: 36,
+                height: 36,
+                padding: 0,
+                display: 'grid',
+                placeItems: 'center',
+                background: '#FFFFFF',
+                boxShadow: '0 4px 6px -1px rgba(0,0,0,0.3)',
+              }}
+              onClick={() => setPreviewPhoto(null)}
+            >
+              <Icon name="x" />
+            </button>
+          </div>
+        </div>
+      )}
     </aside>
   );
 }
