@@ -25,6 +25,8 @@ export interface BorrowLeg {
   /** Lender ranking score from the system order; absent for a lender added outside the ladder. */
   si?: number;
   state: LegState;
+  /** Raw backend leg status (e.g. SENT, ACCEPTED, LOADED, IN_TRANSIT, RECEIVED, CANCELLED). */
+  rawStatus?: string;
   detail: string;
 }
 

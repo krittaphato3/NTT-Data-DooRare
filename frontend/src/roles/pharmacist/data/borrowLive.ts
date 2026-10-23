@@ -63,7 +63,7 @@ export function borrowRequestToView(r: ApiBorrowRequest, now = Date.now(), retur
     detail: e.qtyPlanned > 0 ? `ลำดับ ${e.rank} · รอบแรก ขอ ${n(e.qtyPlanned)} ${unit}` : `ลำดับ ${e.rank} · ส่งต่อถ้ารอบแรกได้ไม่ครบ`,
   }));
   const legs: BorrowLeg[] = r.legs.length
-    ? r.legs.map((l) => ({ hospital: l.lender.name, ...(l.si !== null ? { si: l.si } : {}), state: LEG[l.status], detail: legDetail(l, unit) }))
+    ? r.legs.map((l) => ({ hospital: l.lender.name, ...(l.si !== null ? { si: l.si } : {}), state: LEG[l.status], rawStatus: l.status, detail: legDetail(l, unit) }))
     : proposed;
   const stop = r.stop && r.status !== 'DRAFT'
     ? {

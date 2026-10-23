@@ -50,8 +50,9 @@ export function BorrowDrawer({ request: r, tick, decision, onDecide, onClose, on
   const addLender = gate('escalateManual');
   const recordReturn = gate('updateInventory');
   const cancelRequest = gate('cancelRequest');
+  const shouldShowCancel = ['DRAFT', 'PENDING_APPROVAL', 'APPROVED', 'IN_PROGRESS', 'PARTIALLY_FULFILLED', 'ESCALATED'].includes(r.status);
   const cancelCancellableStatus = ['DRAFT', 'PENDING_APPROVAL', 'APPROVED', 'IN_PROGRESS', 'ESCALATED'].includes(r.status);
-  const cancelHasMovingLegs = r.legs.some((l) => ['LOADED', 'IN_TRANSIT', 'RECEIVED'].includes(l.state));
+  const cancelHasMovingLegs = r.legs.some((l) => ['LOADED', 'IN_TRANSIT', 'RECEIVED'].includes(l.rawStatus ?? l.state));
   const cancelDisabled = !cancelRequest.allowed || !cancelCancellableStatus || cancelHasMovingLegs;
   const cancelHint = !cancelRequest.allowed
     ? cancelRequest.hint
@@ -234,7 +235,7 @@ export function BorrowDrawer({ request: r, tick, decision, onDecide, onClose, on
                 บันทึกการคืน
               </button>
             )}
-            {(group === 'progress' || r.status === 'ESCALATED') && (
+            {shouldShowCancel && (
               <button
                 className="btn btn-g"
                 disabled={cancelDisabled}
