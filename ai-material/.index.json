@@ -7,6 +7,20 @@
     "date": "2026-10-23"
   },
   {
+    "path": "sessions/2026-10-23-1058-antigravity-launch-web-docker.md",
+    "title": "Launch Web Docker",
+    "summary": "Verified running Docker services and opened web UI at localhost:8080.",
+    "tags": "session, docker, web, frontend",
+    "date": "2026-10-23"
+  },
+  {
+    "path": "sessions/2026-10-23-1215-antigravity-qa-pharmacist-fixes.md",
+    "title": "QA Execution and Fixes for Role Pharmacist",
+    "summary": "Executed and merged all 7 QA fixes for role PHARMACIST into feature/backend-api…",
+    "tags": "session, qa, pharmacist, rbac, borrow, reports, documents",
+    "date": "2026-10-23"
+  },
+  {
     "path": "context/current-task.md",
     "title": "Current Task",
     "summary": "Current Task",
@@ -210,6 +224,13 @@
     "date": "2026-10-17"
   },
   {
+    "path": "context/runbook.md",
+    "title": "Runbook",
+    "summary": "Runbook",
+    "tags": "session",
+    "date": "2026-10-16"
+  },
+  {
     "path": "sessions/2026-10-16-1628-buffy-phase2c-return-obligations-waive.md",
     "title": "Return obligations + Waive (Phase 2C)",
     "summary": "HOSPITAL_ADMIN gets a read-only ภาระการคืน sub-tab on Borrow requests plus the API-XC-005…",
@@ -235,21 +256,14 @@
     "title": "ai-material",
     "summary": "ai-material",
     "tags": "session",
-    "date": "2026-10-15"
+    "date": "2026-10-14"
   },
   {
     "path": "context/conventions.md",
     "title": "Conventions",
     "summary": "Conventions",
     "tags": "session",
-    "date": "2026-10-15"
-  },
-  {
-    "path": "context/runbook.md",
-    "title": "Runbook",
-    "summary": "Runbook",
-    "tags": "session",
-    "date": "2026-10-15"
+    "date": "2026-10-14"
   },
   {
     "path": "decisions/0002-role-based-frontend-structure.md",
