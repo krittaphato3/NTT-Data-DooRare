@@ -31,6 +31,13 @@ export function AllocationDrawer({ plan: p, decision, onApprove, onUneconomical,
   const meta = planStatusMeta(p.status);
   const [picked, setPicked] = useState<string | null>(null);
   const [withMerge, setWithMerge] = useState(false);
+  const isNeedsDiscussion = p.status === 'NEEDS_DISCUSSION';
+  const [showMeetingModal, setShowMeetingModal] = useState(false);
+  const [showAdjustForm, setShowAdjustForm] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
+  const [adjustedPhraPradaeng, setAdjustedPhraPradaeng] = useState(90);
+  const [adjustedBangBo, setAdjustedBangBo] = useState(30);
+  const adjustedTotal = adjustedPhraPradaeng + adjustedBangBo;
 
   const effectiveRatio = withMerge && p.merge ? p.merge.newRatioPct : p.costRatioPct;
   const effectiveCost = withMerge && p.merge ? p.merge.newCost : p.transportCost;
@@ -69,6 +76,26 @@ export function AllocationDrawer({ plan: p, decision, onApprove, onUneconomical,
       </div>
 
       <div className="tr-drawer-body">
+        {isNeedsDiscussion && (
+          <div className="pl-meeting-banner" role="alert">
+            <div className="pl-meeting-banner-head">
+              <Icon name="tri" style={{ width: 17, height: 17, color: '#D97706', flexShrink: 0 }} />
+              <span>แผนถูกระงับชั่วคราว — รอนัดหมายประชุมหารือ (NEEDS_DISCUSSION)</span>
+            </div>
+            <div className="pl-meeting-banner-desc">
+              <strong>เกณฑ์ BR-F2a-013 & ASM-16:</strong> การจัดสรรยาต้องได้รับความเห็นชอบ <strong>100%</strong> จากทุกโรงพยาบาลที่เกี่ยวข้อง (ทั้งต้นทางและปลายทาง)
+              เนื่องจากมี รพ. ปฏิเสธยอดจัดสรร แผนจึงถูกระงับทันที และระบบเปิดรอบประชุมเจรจาเฉพาะโรงพยาบาลในแผนนี้
+            </div>
+            <div className="pl-meeting-parties">
+              <span style={{ color: '#92400E', fontWeight: 600 }}>รพ. ที่ต้องเข้าประชุมเจรจา (เฉพาะแผนนี้):</span>
+              <span className="badge t-green">รพ.สมุทรปราการ (ต้นทาง · เห็นชอบ)</span>
+              <span className="badge t-green">รพ.พระประแดง (ปลายทาง 1 · เห็นชอบ)</span>
+              <span className="badge t-red">รพ.บางบ่อ (ปลายทาง 2 · ไม่เห็นชอบ)</span>
+              <span className="badge t-blue">+ ผู้ประสานงาน Region Admin</span>
+            </div>
+          </div>
+        )}
+
         {L && (
           <div className="tr-box">
             <h3 className="tr-h3">รายการส่ง <span className="en">ต่อ รพ.ปลายทาง</span></h3>
@@ -148,30 +175,50 @@ export function AllocationDrawer({ plan: p, decision, onApprove, onUneconomical,
         {/* Approvals */}
         <div>
           <h3 className="tr-h3">
-            การเห็นชอบ <span className="en">ทุก รพ.ต้องอนุมัติ · A4</span>
+            การเห็นชอบ <span className="en">ทุก รพ.ต้องอนุมัติ 100% · A4 · ASM-16</span>
           </h3>
           <ul className="pl-appr">
             {p.approvals.map((a) => (
-              <li key={a.hospital}>
-                <span
-                  className="pl-appr-dot"
-                  style={{
-                    background: a.state === 'APPROVED' ? '#DCFCE7' : a.state === 'REJECTED' ? '#FEE2E2' : '#FEF3C7',
-                    color: a.state === 'APPROVED' ? '#166534' : a.state === 'REJECTED' ? '#B91C1C' : '#92400E',
-                  }}
-                >
-                  <Icon name={a.state === 'APPROVED' ? 'check' : a.state === 'REJECTED' ? 'x' : 'clock'} style={{ width: 13, height: 13 }} />
-                </span>
-                <span style={{ flex: 1, minWidth: 0 }}>
-                  <b style={{ fontSize: 13, color: '#0F2A5C' }}>{a.hospital}</b>
-                  <span className="sub" style={{ display: 'block' }}>
-                    {a.pharmacist}
-                    {a.at ? ` · ${a.at}` : ' · ยังไม่ตอบ'}
+              <li key={a.hospital} style={{ flexDirection: 'column', alignItems: 'stretch' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                  <span
+                    className="pl-appr-dot"
+                    style={{
+                      background: a.state === 'APPROVED' ? '#DCFCE7' : a.state === 'REJECTED' ? '#FEE2E2' : '#FEF3C7',
+                      color: a.state === 'APPROVED' ? '#166534' : a.state === 'REJECTED' ? '#B91C1C' : '#92400E',
+                    }}
+                  >
+                    <Icon name={a.state === 'APPROVED' ? 'check' : a.state === 'REJECTED' ? 'x' : 'clock'} style={{ width: 13, height: 13 }} />
                   </span>
-                </span>
+                  <span style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+                      <b style={{ fontSize: 13, color: '#0F2A5C' }}>{a.hospital}</b>
+                      <span className={`badge ${a.state === 'APPROVED' ? 't-green' : a.state === 'REJECTED' ? 't-red' : 't-amber'}`} style={{ fontSize: 11 }}>
+                        {a.state === 'APPROVED' ? 'เห็นชอบ' : a.state === 'REJECTED' ? 'ไม่เห็นชอบ (มีข้อโต้แย้ง)' : 'รอการตอบรับ'}
+                      </span>
+                    </div>
+                    <span className="sub" style={{ display: 'block' }}>
+                      {a.pharmacist}
+                      {a.at ? ` · ${a.at}` : ' · ยังไม่ตอบ'}
+                    </span>
+                  </span>
+                </div>
+                {a.comment && (
+                  <div className="pl-objection-box" style={{ marginLeft: 34 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600, color: '#991B1B', marginBottom: 2 }}>
+                      <Icon name="tri" style={{ width: 13, height: 13 }} />
+                      <span>ข้อโต้แย้งจาก {a.hospital}:</span>
+                    </div>
+                    <div>"{a.comment}"</div>
+                  </div>
+                )}
               </li>
             ))}
           </ul>
+          <div className="sub" style={{ marginTop: 10, padding: '8px 10px', background: '#F8FAFC', borderRadius: 6, border: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Icon name="users" style={{ width: 14, height: 14, color: '#475569', flexShrink: 0 }} />
+            <span><strong>เกณฑ์ฉันทามติ 100% (ASM-16):</strong> ทุก รพ. ที่เกี่ยวข้องต้องเห็นชอบครบถ้วน หากมีแม้แต่ รพ. เดียวไม่เห็นชอบ แผนจะระงับทันทีเพื่อจัดประชุมหารือ</span>
+          </div>
         </div>
 
         {/* Decision area */}
@@ -179,6 +226,138 @@ export function AllocationDrawer({ plan: p, decision, onApprove, onUneconomical,
           <div role="status" className="pl-done">
             <Icon name="checkc" className="ic20" style={{ color: '#166534' }} />
             <span>{decision}</span>
+          </div>
+        ) : isNeedsDiscussion ? (
+          <div className="pl-meeting-box">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, color: '#92400E', fontSize: 13.5 }}>
+                <Icon name="users" style={{ width: 16, height: 16, color: '#D97706' }} />
+                <span>การดำเนินการเจรจาจัดสรรยา (3 รพ.)</span>
+              </div>
+              <span className="badge t-amber">ต้องการข้อตกลงร่วม</span>
+            </div>
+            <div style={{ fontSize: 12.5, color: '#78350F', lineHeight: '18px' }}>
+              แผนนี้มีข้อโต้แย้งจาก รพ.บางบ่อ ท่านสามารถนัดหมายประชุมด่วนเฉพาะ 3 รพ. ในแผนนี้ และบันทึกผลการประชุมเพื่อปรับปรุงยอดจัดสรรส่งขอความเห็นชอบรอบใหม่ (v{p.version + 1})
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              <button
+                type="button"
+                className="btn btn-s"
+                style={{ background: '#FEF3C7', borderColor: '#F59E0B', color: '#92400E', fontWeight: 600 }}
+                onClick={() => setShowMeetingModal((v) => !v)}
+              >
+                <Icon name="calendar" />
+                {showMeetingModal ? 'ซ่อนรายละเอียดนัดหมาย' : 'นัดหมายประชุมด่วน (เฉพาะ 3 รพ.)'}
+              </button>
+              <button
+                type="button"
+                className="btn btn-p"
+                onClick={() => setShowAdjustForm((v) => !v)}
+              >
+                <Icon name="edit" />
+                {showAdjustForm ? 'ซ่อนฟอร์มปรับยอด' : `บันทึกผลการประชุม & ปรับปรุงยอด (v${p.version + 1})`}
+              </button>
+            </div>
+
+            {/* Meeting Details Card */}
+            {showMeetingModal && (
+              <div style={{ background: '#FFFFFF', border: '1px solid #FCD34D', borderRadius: 8, padding: 12, marginTop: 4, display: 'flex', flexDirection: 'column', gap: 8, fontSize: 12.5 }}>
+                <div style={{ fontWeight: 600, color: '#0F2A5C' }}>
+                  รายละเอียดการนัดหมายประชุมด่วน (Teleconference)
+                </div>
+                <div>
+                  <strong>วาระการประชุม:</strong> พิจารณาปรับลดยอดรับยา {p.drug} ของ รพ.บางบ่อ และเกลี่ยยอดคงเหลือให้ รพ.พระประแดง
+                </div>
+                <div>
+                  <strong>ผู้เข้าร่วม (เฉพาะ 3 รพ. ในแผน + ผู้แทนเขต):</strong>
+                  <ul style={{ margin: '4px 0 0 16px', padding: 0, lineHeight: '20px' }}>
+                    <li>รพ.สมุทรปราการ (คลังต้นทาง) — ภก.ณัฐวุฒิ ศรีสุข</li>
+                    <li>รพ.พระประแดง (ปลายทาง 1) — ภก.วิทยา แสงทอง</li>
+                    <li>รพ.บางบ่อ (ปลายทาง 2) — ภญ.กมลชนก พรหมมา (ผู้ขอปรับลด)</li>
+                    <li>ผู้ประสานงานสำนักงานสาธารณสุขจังหวัด / เขตสุขภาพที่ 6 (Region Admin)</li>
+                  </ul>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
+                  <input
+                    readOnly
+                    className="sel"
+                    style={{ flex: 1, fontSize: 12, background: '#F8FAFC' }}
+                    value="https://meet.doorare.moph.go.th/f2-ap-2026-000039"
+                  />
+                  <button
+                    type="button"
+                    className="btn btn-s"
+                    onClick={() => {
+                      navigator.clipboard?.writeText?.('https://meet.doorare.moph.go.th/f2-ap-2026-000039');
+                      setCopiedLink(true);
+                      setTimeout(() => setCopiedLink(false), 2500);
+                    }}
+                  >
+                    {copiedLink ? 'คัดลอกแล้ว!' : 'คัดลอกลิงก์'}
+                  </button>
+                </div>
+                <div className="sub" style={{ color: '#166534', fontWeight: 500 }}>
+                  ✓ ระบบส่งข้อความแจ้งเตือนด่วนไปยังห้องแชทและ SMS ของเภสัชกรทั้ง 3 รพ. เรียบร้อยแล้ว
+                </div>
+              </div>
+            )}
+
+            {/* Adjust Quantities Form */}
+            {showAdjustForm && (
+              <div className="pl-adjust-box">
+                <div style={{ fontWeight: 600, color: '#1E3A8A', fontSize: 13 }}>
+                  ปรับปรุงยอดจัดสรรตามมติที่ประชุม (ยอดรวมในคลัง {p.qty} {p.unit})
+                </div>
+                <div style={{ fontSize: 12, color: '#475569' }}>
+                  แก้ไขจำนวนยาที่แต่ละ รพ. จะได้รับตามที่ตกลงร่วมกัน เพื่อสร้างแผนฉบับใหม่ v{p.version + 1}
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <div className="pl-adjust-row">
+                    <span>รพ.พระประแดง (ปลายทาง 1):</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <input
+                        type="number"
+                        className="sel"
+                        style={{ width: 80, textAlign: 'right' }}
+                        value={adjustedPhraPradaeng}
+                        onChange={(e) => setAdjustedPhraPradaeng(Number(e.target.value))}
+                      />
+                      <span>{p.unit}</span>
+                    </div>
+                  </div>
+                  <div className="pl-adjust-row">
+                    <span>รพ.บางบ่อ (ปลายทาง 2 - ขอไม่เกิน 30):</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <input
+                        type="number"
+                        className="sel"
+                        style={{ width: 80, textAlign: 'right' }}
+                        value={adjustedBangBo}
+                        onChange={(e) => setAdjustedBangBo(Number(e.target.value))}
+                      />
+                      <span>{p.unit}</span>
+                    </div>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 12.5, fontWeight: 600, color: adjustedTotal === p.qty ? '#166534' : '#DC2626' }}>
+                  <span>ยอดรวมที่จัดสรร:</span>
+                  <span>{adjustedTotal} / {p.qty} {p.unit} {adjustedTotal === p.qty ? '(ตรงตามยอดคลัง)' : '(ยอดรวมไม่ตรงกับคลัง!)'}</span>
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-p"
+                  disabled={adjustedTotal !== p.qty || busy}
+                  onClick={() => {
+                    onUneconomical(
+                      `บันทึกผลการประชุม 3 รพ. เรียบร้อย: รพ.พระประแดง ${adjustedPhraPradaeng} ${p.unit}, รพ.บางบ่อ ${adjustedBangBo} ${p.unit} · เสนอแผน v${p.version + 1} รอขอความเห็นชอบรอบใหม่`,
+                    );
+                  }}
+                >
+                  <Icon name="send" />
+                  ยืนยันมติที่ประชุม & เสนอแผนฉบับใหม่ (v{p.version + 1})
+                </button>
+              </div>
+            )}
           </div>
         ) : needsOption ? (
           <div className="pl-decide">

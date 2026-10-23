@@ -33,6 +33,7 @@ export interface PlanApproval {
   pharmacist: string;
   state: 'APPROVED' | 'WAITING' | 'REJECTED';
   at?: string;
+  comment?: string;
 }
 
 export interface UneconomicalOption {
@@ -87,7 +88,7 @@ const PLAN_STATUS_META: Record<PlanStatus, { label: string; tone: string }> = {
   AWAITING_APPROVAL: { label: 'รอเห็นชอบจาก รพ.อื่น', tone: 't-blue' },
   APPROVED: { label: 'อนุมัติแล้ว · รอเอกสาร', tone: 't-green' },
   AUTO_APPROVED: { label: 'อนุมัติอัตโนมัติ (เครือข่ายเดียว)', tone: 't-teal' },
-  NEEDS_DISCUSSION: { label: 'ต้องหารือ · แก้แผน', tone: 't-red' },
+  NEEDS_DISCUSSION: { label: 'รอนัดประชุมหารือ (NEEDS_DISCUSSION)', tone: 't-amber' },
   TRANSPORTING: { label: 'อนุมัติแล้ว · กำลังขนส่ง', tone: 't-green' },
   COMPLETED: { label: 'ส่งมอบครบแล้ว', tone: 't-green' },
   CANCELLED: { label: 'ยกเลิก', tone: 't-grey' },
@@ -331,30 +332,31 @@ export const ALLOCATION_PLANS: AllocationPlan[] = [
     drug: 'Omeprazole 40 mg inj',
     code: 'OMP-11802',
     ved: 'E',
-    qty: 80,
+    qty: 120,
     unit: 'VIAL',
     unitValue: 35,
-    totalValue: 2800,
+    totalValue: 4200,
     distanceKm: 41,
     coldChain: false,
     transportCost: 628,
-    costRatioPct: 22.4,
-    economical: false,
-    from: 'รพ.พระประแดง',
-    to: 'รพ.บางบ่อ',
+    costRatioPct: 15.0,
+    economical: true,
+    from: 'รพ.สมุทรปราการ (คลังต้นทาง)',
+    to: 'รพ.พระประแดง (40 VIAL) · รพ.บางบ่อ (80 VIAL)',
     lotNo: 'OMP-11802-5',
     expiry: '2 ม.ค. 2027',
     daysLeft: 80,
     agent: {
       run: 'F2_T2',
       confidence: 'ต่ำ',
-      note: 'รพ.บางบ่อไม่อนุมัติรอบก่อน (สต็อกเพิ่มขึ้นจาก PO ที่เพิ่งมาถึง) · แผนปรับลดเหลือ 80 VIAL รอเห็นชอบใหม่ (ASM-16)',
+      note: 'รพ.บางบ่อ มีข้อโต้แย้งยอดรับยา ทำให้แผนไม่บรรลุฉันทามติ 100% (ASM-16) เข้าสู่สถานะ NEEDS_DISCUSSION ต้องจัดประชุมหารือเฉพาะ 3 รพ. ที่เกี่ยวข้อง (สมุทรปราการ, พระประแดง, บางบ่อ) และ Region Admin เพื่อสรุปยอดแบ่งสรรใหม่',
     },
     approvals: [
-      { hospital: 'รพ.พระประแดง', pharmacist: 'ภก.วิทยา แสงทอง', state: 'APPROVED', at: '11 ต.ค. · 15:44 น.' },
-      { hospital: 'รพ.บางบ่อ', pharmacist: 'ภญ.กมลชนก พรหมมา', state: 'REJECTED', at: '12 ต.ค. · 08:02 น.' },
+      { hospital: 'รพ.สมุทรปราการ (คลังต้นทาง)', pharmacist: 'ภก.ณัฐวุฒิ ศรีสุข', state: 'APPROVED', at: '11 ต.ค. · 14:20 น.' },
+      { hospital: 'รพ.พระประแดง (ปลายทาง 1)', pharmacist: 'ภก.วิทยา แสงทอง', state: 'APPROVED', at: '11 ต.ค. · 15:44 น.' },
+      { hospital: 'รพ.บางบ่อ (ปลายทาง 2)', pharmacist: 'ภญ.กมลชนก พรหมมา', state: 'REJECTED', at: '12 ต.ค. · 08:02 น.', comment: 'ยอดจัดสรร 80 VIAL เกินความต้องการจริง เนื่องจากเพิ่งได้รับยาจากบริษัทจัดส่งเมื่อวานนี้ เกรงว่าจะใช้ไม่ทันก่อนวันหมดอายุ ขอปรับลดยอดรับลงเหลือไม่เกิน 30 VIAL' },
     ],
-    dueAt: 'รอหารือ · เตือน REGION_ADMIN',
+    dueAt: 'รอหารือ 3 รพ. · เตือน REGION_ADMIN',
   },
   {
     id: 'AP-2026-000031',
