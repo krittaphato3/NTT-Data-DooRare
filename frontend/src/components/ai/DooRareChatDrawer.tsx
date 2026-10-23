@@ -93,7 +93,14 @@ export const DooRareChatDrawer: React.FC = () => {
   const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>(() => {
+    try {
+      const saved = sessionStorage.getItem('doorare_chat_history');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
   const [isStreaming, setIsStreaming] = useState(false);
   const [activeTool, setActiveTool] = useState<string | null>(null);
   const [proposals, setProposals] = useState<any[]>([]);
@@ -108,12 +115,22 @@ export const DooRareChatDrawer: React.FC = () => {
     scrollToBottom();
   }, [messages, activeTool, proposals]);
 
-  // Context Auto-Injector: Extracts current window location and title
+  // Persist conversation history across route navigations
+  useEffect(() => {
+    try {
+      sessionStorage.setItem('doorare_chat_history', JSON.stringify(messages));
+    } catch {}
+  }, [messages]);
+
+  // Context Auto-Injector: Extracts current window location, title, and query active ID
   const getRouteContext = (): RouteContext => {
+    const params = new URLSearchParams(window.location.search);
+    const activeId = params.get('id') || params.get('request_id') || params.get('plan_id') || undefined;
     return {
       currentPath: window.location.pathname + window.location.search,
       pageTitle: document.title,
       hospitalId: user?.hospitalId || null,
+      activeId,
     };
   };
 
