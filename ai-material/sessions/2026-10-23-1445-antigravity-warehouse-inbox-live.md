@@ -31,6 +31,10 @@
     - Restricted photo uploads so receiving warehouse (`out === false`) only has "+ เพิ่มรูป" when status is `ARRIVED` (when inspecting and confirming receipt `RECEIVED`).
     - Allowed sending warehouse (`out === true`) to upload during `WAITING_DISPATCH` (packing/loading confirmation).
     - Updated backend and db schema check constraints to allow `RECEIVED` stage photos.
+  - Fixed proxy departure action and photo upload integration (`ProxyStatusPanel.tsx` & `ShipmentDrawer.tsx`):
+    - Removed disconnected standalone "+ เพิ่มรูป" button when status is `LOADED` at sender warehouse.
+    - Integrated photo upload directly into the expanded "ออกเดินทางแทนคนขับ" (Proxy) section.
+    - Warehouse officer can input reason, optionally attach departure photo(s), and submit "ยืนยัน · ออกเดินทางแทนคนขับ" together.
 - **decisions:**
   - Used `localStorage` (`doorare_wh_packed_{taskNo}`) to track packing confirmation state per task locally without requiring extra backend schema changes, while relying on backend `transport_task.status` (`WAITING_DISPATCH`, `LOADED`, `IN_TRANSIT`, `ARRIVED`, `RECEIVED`) for end-to-end task lifecycle.
   - Completed transport tasks (`RECEIVED` or `CANCELLED`) are filtered out from the inbox outbound queue as they no longer need action from warehouse packing.
