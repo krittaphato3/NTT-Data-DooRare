@@ -6,7 +6,7 @@ const STORAGE_KEY = 'doorare_auth_session';
 
 export function getStoredToken(): string | null {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = sessionStorage.getItem(STORAGE_KEY) || localStorage.getItem(STORAGE_KEY);
     return raw ? (JSON.parse(raw).token ?? null) : null;
   } catch {
     return null;
@@ -22,6 +22,7 @@ export async function apiFetch(path: string, init: RequestInit = {}): Promise<Re
   // A rejected token (expired, or the server restarted and dropped its sessions) must not leave screens quietly on stale/mock data.
   if (res.status === 401 && token && !path.startsWith('/auth/')) {
     try {
+      sessionStorage.removeItem(STORAGE_KEY);
       localStorage.removeItem(STORAGE_KEY);
     } catch {
       /* ignore */

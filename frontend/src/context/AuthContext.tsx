@@ -59,7 +59,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     async function init() {
       await refreshHealth();
 
-      const raw = localStorage.getItem(STORAGE_KEY);
+      const raw = sessionStorage.getItem(STORAGE_KEY) || localStorage.getItem(STORAGE_KEY);
       if (raw) {
         try {
           const parsed = JSON.parse(raw);
@@ -67,6 +67,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setUser(parsed.user);
             setToken(parsed.token);
             setActiveRole(parsed.activeRole || parsed.user.role);
+            // Ensure this tab has its own copy in sessionStorage
+            sessionStorage.setItem(STORAGE_KEY, raw);
 
             // Verify with /api/v1/me in background
             const fresh = await authApi.getMe(parsed.token);
@@ -75,6 +77,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
           }
         } catch (e) {
+          sessionStorage.removeItem(STORAGE_KEY);
           localStorage.removeItem(STORAGE_KEY);
         }
       }
@@ -120,14 +123,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(res.user);
       setToken(res.token);
       setActiveRole(res.user.role);
-      localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify({
-          user: res.user,
-          token: res.token,
-          activeRole: res.user.role,
-        })
-      );
+      const sessionData = JSON.stringify({
+        user: res.user,
+        token: res.token,
+        activeRole: res.user.role,
+      });
+      sessionStorage.setItem(STORAGE_KEY, sessionData);
+      localStorage.setItem(STORAGE_KEY, sessionData);
       setDbConnected(true);
       setDbMessage('เชื่อมต่อฐานข้อมูล PostgreSQL สำเร็จ');
     }
@@ -141,6 +143,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
     setToken(null);
     setActiveRole('PHARMACIST');
+    sessionStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem(STORAGE_KEY);
   };
 
@@ -149,14 +152,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Check if user has this role
     if (user.allRoles.includes(newRole) || user.role === 'SYSTEM_ADMIN') {
       setActiveRole(newRole);
-      localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify({
-          user,
-          token,
-          activeRole: newRole,
-        })
-      );
+      const sessionData = JSON.stringify({
+        user,
+        token,
+        activeRole: newRole,
+      });
+      sessionStorage.setItem(STORAGE_KEY, sessionData);
+      localStorage.setItem(STORAGE_KEY, sessionData);
     } else {
       console.warn(`[Auth] User does not have granted role: ${newRole}`);
     }
