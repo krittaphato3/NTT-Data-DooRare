@@ -30,6 +30,10 @@ Implement Person 3 deliverables on branch `backend-byok-clinical-tools`:
 - **Task 10: Typecheck & Full Test Suite**:
   - Verified `npx tsc --noEmit` passes with 0 errors.
   - Full suite `npm test` passes 112/112 tests (100%).
+- **Final Review Fixes**:
+  - `submit_er_action_proposal`: Guarded `ER_STAFF` from requesting standalone borrow requests without `incidentId` (which target `/api/v1/borrow-requests`, restricted to `PHARMACIST`), returning a tool error instructing them to declare an incident first. Preserved standalone borrow requests for `PHARMACIST` and `SYSTEM_ADMIN`.
+  - Added unit test cases for `ER_STAFF` without incidentId, `PHARMACIST` without incidentId, and `ER_STAFF` with incidentId.
+  - Demonstrated that `interpret_lender_response` yields `UNCLEAR` with `NEEDS_CONFIRMATION` for "ไม่หมด" / "ยังไม่หมด" and `ACCEPT` for "พร้อมส่ง".
 
 ## Decisions
 - Enforced tenant isolation across all 12 tools: queries verify `context.hospitalId` ownership unless caller is `SYSTEM_ADMIN`.
