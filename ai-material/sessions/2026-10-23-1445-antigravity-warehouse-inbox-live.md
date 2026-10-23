@@ -1,0 +1,33 @@
+# Warehouse Inbox Live & Pharmacist Lender Queue Fixes
+
+- **goal:** Wire Warehouse Inbox with live transport data, implement packing confirmation workflow, direct navigation to transport tracking, and fix Pharmacist Lender Queue lot selection / partial borrow bugs.
+- **done:**
+  - Branched off `feature/backend-api` to `feature/warehouse-inbox-live`.
+  - Replaced mock items in `InboxPage.tsx` with live data fetched via `useTransport()`.
+  - Filtered out completed tasks (`RECEIVED` and `CANCELLED`) so items disappear from Inbox once transport is complete.
+  - Implemented "ยืนยันจะแพ็ก" packing confirmation button and state persisted in `localStorage`.
+  - Added direct link button "ไปที่ขนส่ง {taskNo}" in `InboxPage.tsx` and `InboxDrawer.tsx` navigating to `?page=transport`.
+  - Added direct link from Inbound tab (`InboundTable.tsx`) to `?page=transport&dir=in`.
+  - Updated `TransportTrackingPage.tsx` to read `?dir=in|out` query parameter on load.
+  - Removed mock banner in `App.tsx` for warehouse inbox.
+  - Fixed Pharmacist Lender Queue (`LenderQueuePage.tsx`):
+    - Replaced hardcoded "รอเราตอบ" badge with dynamic status computation.
+    - Updated lot pre-selection to only select lots needed up to requested quantity in FEFO order.
+    - Disabled "ให้บางส่วน" button when requested quantity is 1.
+  - Verified TypeScript compilation with `npm run build` and rebuilt Docker frontend container.
+- **decisions:**
+  - Used `localStorage` (`doorare_wh_packed_{taskNo}`) to track packing confirmation state per task locally without requiring extra backend schema changes, while relying on backend `transport_task.status` (`WAITING_DISPATCH`, `LOADED`, `IN_TRANSIT`, `ARRIVED`, `RECEIVED`) for end-to-end task lifecycle.
+  - Completed transport tasks (`RECEIVED` or `CANCELLED`) are filtered out from the inbox outbound queue as they no longer need action from warehouse packing.
+  - Deep-linked inbound shipments directly to the Inbound tab in Transport Tracking via URL param `dir=in`.
+- **files touched:**
+  - `frontend/src/App.tsx`
+  - `frontend/src/roles/pharmacist/pages/LenderQueuePage.tsx`
+  - `frontend/src/roles/warehouse/components/InboundTable.tsx`
+  - `frontend/src/roles/warehouse/components/InboxDrawer.tsx`
+  - `frontend/src/roles/warehouse/pages/InboxPage.tsx`
+  - `frontend/src/roles/warehouse/pages/TransportTrackingPage.tsx`
+- **errors encountered:**
+  - None during build (`npm run build` completed cleanly).
+- **next steps:**
+  - Commit changes to `feature/warehouse-inbox-live`.
+  - Test end-to-end flow in browser across Pharmacist, Warehouse, and Driver roles.

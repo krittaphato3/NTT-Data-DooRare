@@ -62,11 +62,16 @@ export function InboxDrawer({ item: it, urgentLeft, startDeclining, onClose, onC
           </div>
         )}
         {it.status === 'CONFIRMED' && (
-          <div role="status" className="receipt-done">
-            <Icon name="checkc" style={{ marginTop: 2 }} />
-            <span style={{ flex: 1 }}>
-              ยืนยันแล้ว · สร้างงานขนส่ง <span className="code">{it.transportId}</span> สถานะ "รอขึ้นรถ" ไปเตรียมของและขึ้นรถที่หน้าติดตามการขนส่ง
-            </span>
+          <div role="status" className="receipt-done" style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'flex-start' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Icon name="checkc" style={{ marginTop: 2 }} />
+              <span style={{ flex: 1 }}>
+                ยืนยันจะแพ็กแล้ว · งานขนส่ง <span className="code">{it.transportId}</span> พร้อมไปเตรียมของและขึ้นรถ
+              </span>
+            </div>
+            <a className="btn btn-p btn-sm" href={whHref('transport')} style={{ textDecoration: 'none' }}>
+              <Icon name="truck" /> ไปที่หน้าติดตามการขนส่ง
+            </a>
           </div>
         )}
 

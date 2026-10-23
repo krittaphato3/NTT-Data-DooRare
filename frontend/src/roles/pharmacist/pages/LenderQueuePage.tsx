@@ -306,11 +306,32 @@ function DetailPanel({
   const [sendError, setSendError] = useState<string | null>(null);
   const [selectedLots, setSelectedLots] = useState<Record<string, boolean>>(() => {
     const lots = liveLots ?? LOTS[req.drug] ?? [];
-    return Object.fromEntries(lots.filter((l) => l.fefoEligible).map((l) => [l.lotId, true]));
+    const res: Record<string, boolean> = {};
+    let needed = req.qty;
+    for (const l of lots) {
+      if (l.fefoEligible && needed > 0) {
+        res[l.lotId] = true;
+        needed -= l.qty;
+      } else {
+        res[l.lotId] = false;
+      }
+    }
+    return res;
   });
   const [lotQtys, setLotQtys] = useState<Record<string, number>>(() => {
     const lots = liveLots ?? LOTS[req.drug] ?? [];
-    return Object.fromEntries(lots.map((l) => [l.lotId, l.qty]));
+    const res: Record<string, number> = {};
+    let needed = req.qty;
+    for (const l of lots) {
+      if (l.fefoEligible && needed > 0) {
+        const take = Math.min(l.qty, needed);
+        res[l.lotId] = take;
+        needed -= take;
+      } else {
+        res[l.lotId] = 0;
+      }
+    }
+    return res;
   });
 
   const lots = liveLots ?? LOTS[req.drug] ?? [];
@@ -384,10 +405,44 @@ function DetailPanel({
             >
               {req.id}
             </span>
-            <span className="badge st-pending">
-              <Icon name="hourglass" className="ic12" />
-              รอเราตอบ
-            </span>
+            {(() => {
+              const st = req.status;
+              const stLabel =
+                st === 'waiting'
+                  ? 'รอเราตอบ'
+                  : st === 'accepted'
+                  ? 'ตอบรับแล้ว'
+                  : st === 'partial'
+                  ? 'ให้บางส่วน'
+                  : st === 'loaded' || st === 'in_transit'
+                  ? 'กำลังส่ง'
+                  : st === 'received'
+                  ? 'ผู้ยืมรับแล้ว'
+                  : 'ปฏิเสธ';
+              const stBadgeCls =
+                st === 'waiting'
+                  ? 'st-pending'
+                  : st === 'accepted' || st === 'received'
+                  ? 'st-approved'
+                  : st === 'loaded' || st === 'in_transit'
+                  ? 'st-transit'
+                  : 'st-rejected';
+              return (
+                <span className={`badge ${stBadgeCls}`}>
+                  <Icon
+                    name={
+                      st === 'waiting'
+                        ? 'hourglass'
+                        : st === 'loaded' || st === 'in_transit'
+                        ? 'truck'
+                        : 'checkc'
+                    }
+                    className="ic12"
+                  />
+                  {stLabel}
+                </span>
+              );
+            })()}
             <span className={`badge ${urgencyMeta.cls}`}>
               <Icon name={UG_ICON[req.urgency]} className="ic12" />
               {req.urgencyLabel}
@@ -713,18 +768,21 @@ function DetailPanel({
                 </button>
                 <button
                   type="button"
+                  disabled={req.qty <= 1}
+                  title={req.qty <= 1 ? 'คำขอยืม 1 หน่วย ไม่สามารถแบ่งให้บางส่วนได้' : undefined}
                   style={{
                     flex: 1,
                     height: 34,
                     borderRadius: 8,
                     fontSize: 12.5,
                     fontWeight: 600,
-                    cursor: 'pointer',
+                    cursor: req.qty <= 1 ? 'not-allowed' : 'pointer',
+                    opacity: req.qty <= 1 ? 0.5 : 1,
                     border: kind === 'partial' ? '2px solid #2563eb' : '1px solid #cbd5e1',
                     background: kind === 'partial' ? '#eff6ff' : '#ffffff',
                     color: kind === 'partial' ? '#1d4ed8' : '#334155',
                   }}
-                  onClick={() => setKind('partial')}
+                  onClick={() => req.qty > 1 && setKind('partial')}
                 >
                   ให้บางส่วน
                 </button>

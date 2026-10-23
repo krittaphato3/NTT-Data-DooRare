@@ -1,11 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useAuth } from '../../../context/AuthContext';
 import { Icon } from '../../../components/common/icons';
 import { InboundTable } from '../components/InboundTable';
 import { InboxDrawer } from '../components/InboxDrawer';
 import { RequestsTable } from '../components/RequestsTable';
 import { INBOUND_TASKS, OUTBOUND_TASKS } from '../data/inbox';
-import type { InboxFeature, RequestItem } from '../data/inbox';
+import type { InboxFeature, InboundTask, RequestItem } from '../data/inbox';
 import { whHref } from '../data/routes';
+import { useTransport } from '../data/useTransport';
+import { HOSPITALS } from '../data/transport';
 import '../transport.css';
 import '../dashboard.css';
 import '../inbox.css';
@@ -15,18 +18,42 @@ type Tab = 'out' | 'in';
 /**
  * Work inbox: everything F1 / F2 / F3 asks of the warehouse in one place.
  *  - ส่งออก: goods we pack for other hospitals. WH confirms "ยืนยันจะแพ็ก", then prepares and loads it on
- *    Transport tracking. (F3 urgent requests from other hospitals are answered on the Emergency page.)
- *  - รับเข้า: goods other hospitals are sending us. Heads-up only; WH confirms receipt when they arrive.
- * UI only: state is local mock.
+ *    Transport tracking. (Tasks that are completed / received or cancelled disappear automatically).
+ *  - รับเข้า: goods other hospitals are sending us, linked to Transport tracking (รับเข้าเรา).
  */
 export function InboxPage() {
+  const { user } = useAuth();
+  const tr = useTransport();
+  const isLive = tr.source === 'live';
+
   const [tab, setTab] = useState<Tab>('out');
-  const [items, setItems] = useState<RequestItem[]>(OUTBOUND_TASKS);
   const [selId, setSelId] = useState<string | null>(null);
   const [declineFirst, setDeclineFirst] = useState(false);
   const [feature, setFeature] = useState<'all' | InboxFeature>('all');
   const [q, setQ] = useState('');
-  const [created, setCreated] = useState(0);
+
+  // Acknowledged packs saved in localStorage per hospital
+  const storageKey = `doorare_wh_packed_${user?.hospitalId || 'default'}`;
+  const declineKey = `doorare_wh_declined_${user?.hospitalId || 'default'}`;
+
+  const [packedIds, setPackedIds] = useState<Set<string>>(() => {
+    try {
+      const saved = localStorage.getItem(storageKey);
+      return saved ? new Set(JSON.parse(saved)) : new Set<string>();
+    } catch {
+      return new Set<string>();
+    }
+  });
+
+  const [declinedMap, setDeclinedMap] = useState<Record<string, string>>(() => {
+    try {
+      const saved = localStorage.getItem(declineKey);
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+
   const [acked, setAcked] = useState<ReadonlySet<string>>(new Set());
 
   useEffect(() => {
@@ -37,23 +64,104 @@ export function InboxPage() {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
+  // Outbound items: from live transport tasks (excluding completed RECEIVED and CANCELLED)
+  const items: RequestItem[] = useMemo(() => {
+    if (!isLive) return OUTBOUND_TASKS;
+
+    return tr.shipments
+      .filter((s) => s.outbound && s.status !== 'RECEIVED' && s.status !== 'CANCELLED')
+      .map((s) => {
+        const isDeclined = Boolean(declinedMap[s.id]);
+        const isConfirmed =
+          !isDeclined &&
+          (packedIds.has(s.id) ||
+            s.status === 'LOADED' ||
+            s.status === 'IN_TRANSIT' ||
+            s.status === 'ARRIVED');
+
+        return {
+          id: s.id,
+          feature: (s.kind as InboxFeature) || 'F1',
+          ref: s.ref || s.id,
+          drug: s.drug,
+          qty: s.qty,
+          unit: s.unit || 'ชิ้น',
+          to: s.to,
+          requestedBy: HOSPITALS[s.to] ? `รพ.${HOSPITALS[s.to]}` : s.to,
+          due: s.kind === 'F1' ? 'ส่งภายใน 2 ชม.' : 'ส่งภายในวันนี้',
+          urgent: s.ref.includes('INC') || s.ref.includes('EMERGENCY'),
+          status: isDeclined ? 'DECLINED' : isConfirmed ? 'CONFIRMED' : 'NEW',
+          declineReason: declinedMap[s.id],
+          pick: s.pick ?? (s.lotCode ? [{ lot: s.lotCode, expiry: s.expiry || '–', daysLeft: 180, qty: s.qty }] : []),
+          note: s.kind === 'F1' ? 'F1 ยืม · ล็อตที่ให้ยืมต้องอายุ > 180 วัน (FEFO)' : 'F2 โอนยาใกล้หมดอายุ',
+          transportId: s.id,
+        };
+      });
+  }, [isLive, tr.shipments, packedIds, declinedMap]);
+
+  // Inbound items: from live transport tasks
+  const inTasks: InboundTask[] = useMemo(() => {
+    if (!isLive) return INBOUND_TASKS;
+
+    return tr.shipments
+      .filter((s) => !s.outbound && s.status !== 'RECEIVED' && s.status !== 'CANCELLED')
+      .map((s) => {
+        let stage = 'รพ.ต้นทางกำลังเตรียมของ';
+        if (s.status === 'LOADED') stage = 'ของขึ้นรถแล้ว · รอออกเดินทาง';
+        else if (s.status === 'IN_TRANSIT') stage = 'อยู่ระหว่างเดินทาง';
+        else if (s.status === 'ARRIVED') stage = 'ถึงปลายทางแล้ว · รอยืนยันรับ';
+
+        return {
+          id: s.id,
+          feature: (s.kind as InboxFeature) || 'F1',
+          ref: s.ref || s.id,
+          drug: s.drug,
+          qty: s.qty,
+          unit: s.unit || 'ชิ้น',
+          from: s.from,
+          status: acked.has(s.id) || s.status !== 'WAITING_DISPATCH' ? 'ACKED' : 'NEW',
+          stage,
+          eta: s.status === 'ARRIVED' ? 'ถึงแล้ว' : 'ตามรอบรถ',
+          transportId: s.id,
+        };
+      });
+  }, [isLive, tr.shipments, acked]);
+
+  const confirm = (id: string) => {
+    setPackedIds((prev) => {
+      const next = new Set(prev);
+      next.add(id);
+      try {
+        localStorage.setItem(storageKey, JSON.stringify([...next]));
+      } catch {}
+      return next;
+    });
+  };
+
+  const decline = (id: string, reason: string) => {
+    setDeclinedMap((prev) => {
+      const next = { ...prev, [id]: reason };
+      try {
+        localStorage.setItem(declineKey, JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  };
+
   const waiting = items.filter((r) => r.status === 'NEW');
   const needle = q.trim().toLowerCase();
   const hit = (...t: string[]) => !needle || t.some((x) => x.toLowerCase().includes(needle));
-  const outRows = [...items]
+
+  const outRows = items
     .filter((r) => (feature === 'all' || r.feature === feature) && hit(r.id, r.ref, r.drug))
     .sort((a, b) => Number(b.status === 'NEW') - Number(a.status === 'NEW'));
-  const inRows = INBOUND_TASKS.filter((i) => (feature === 'all' || i.feature === feature) && hit(i.id, i.ref, i.drug));
-  const toReceive = INBOUND_TASKS.filter((i) => i.stage.startsWith('ถึงปลายทาง')).length;
-  const toAck = INBOUND_TASKS.filter((i) => i.status === 'NEW' && !acked.has(i.id)).length;
+
+  const inRows = inTasks.filter((i) => (feature === 'all' || i.feature === feature) && hit(i.id, i.ref, i.drug));
+  const toReceive = inTasks.filter((i) => i.stage.startsWith('ถึงปลายทาง')).length;
+  const toAck = inTasks.filter((i) => i.status === 'NEW' && !acked.has(i.id)).length;
+
   const sel = items.find((r) => r.id === selId) ?? null;
 
-  const patch = (id: string, change: Partial<RequestItem>) => setItems((l) => l.map((x) => (x.id === id ? { ...x, ...change } : x)));
-  const confirm = (id: string) => {
-    const n = created + 1;
-    setCreated(n);
-    patch(id, { status: 'CONFIRMED', transportId: `TR-2026-0003${45 + n}` });
-  };
   const open = (id: string, declining = false) => {
     setDeclineFirst(declining);
     setSelId(id);
@@ -73,7 +181,7 @@ export function InboxPage() {
             กล่องงานเข้า <span>/ Work inbox · F1 · F2 · F3</span>
           </h1>
           <div style={{ fontSize: 13 }}>
-            รพ.สมุทรปราการ · งานของคลังจากทุก feature: ของที่เราต้องแพ็กส่งให้ รพ.อื่น และของที่ รพ.อื่นกำลังส่งมาให้เรา
+            {user?.hospitalName ?? 'รพ.สมุทรปราการ'} · งานของคลัง: ของที่เราต้องแพ็กส่งให้ รพ.อื่น และของที่ รพ.อื่นกำลังส่งมาให้เรา
           </div>
         </div>
         <div className="pagehead-actions">
@@ -89,7 +197,7 @@ export function InboxPage() {
       </section>
 
       <section className="ib-kpis" aria-label="สรุปกล่องงานเข้า">
-        <div className="ib-kpi ib-kpi-warn">
+        <div className={`ib-kpi ${waiting.length ? 'ib-kpi-warn' : 'ib-kpi-ok'}`}>
           <div className="ib-kpi-label">รอยืนยันจะแพ็ก <span className="en">TO PACK</span></div>
           <div className="ib-kpi-val num">{waiting.length} งาน</div>
           <div className="ib-kpi-sub num">F1 {count('F1')} · F2 {count('F2')} · F3 {count('F3')}</div>
@@ -101,7 +209,7 @@ export function InboxPage() {
         </div>
         <div className="ib-kpi">
           <div className="ib-kpi-label">ของที่จะรับเข้า <span className="en">INCOMING</span></div>
-          <div className="ib-kpi-val num">{INBOUND_TASKS.length} รายการ</div>
+          <div className="ib-kpi-val num">{inRows.length} รายการ</div>
           <div className="ib-kpi-sub">รอรับทราบ {toAck} · ถึงแล้วรอยืนยันรับ {toReceive}</div>
         </div>
         <div className="ib-kpi">
@@ -119,12 +227,12 @@ export function InboxPage() {
               {waiting.length > 0 && <span className="badge t-amber" style={{ fontWeight: 600, height: 20, fontSize: 11 }}>รอยืนยัน {waiting.length}</span>}
             </button>
             <button type="button" role="tab" aria-selected={tab === 'in' ? 'true' : 'false'} className={`tab ${tab === 'in' ? 'tab-on' : ''}`} onClick={() => setTab('in')}>
-              รับเข้า (จาก รพ.อื่น) <span className="cnt">{INBOUND_TASKS.length}</span>
+              รับเข้า (จาก รพ.อื่น) <span className="cnt">{inRows.length}</span>
               {toAck > 0 && <span className="badge t-blue" style={{ fontWeight: 600, height: 20, fontSize: 11 }}>รอรับทราบ {toAck}</span>}
               {toReceive > 0 && <span className="badge t-green" style={{ fontWeight: 600, height: 20, fontSize: 11 }}>ถึงแล้ว {toReceive}</span>}
             </button>
             <span className="sub" style={{ marginLeft: 6 }}>
-              {tab === 'out' ? 'กด “ยืนยันจะแพ็ก” แล้วไปเตรียมของ/ขึ้นรถที่ติดตามการขนส่ง · F3 เร่งด่วนจาก รพ.อื่นตอบที่หน้า Emergency' : 'กด “รับทราบ” แล้วงานจะไปอยู่ที่ติดตามการขนส่ง (รับเข้า) · ยืนยันรับของเมื่อของถึง'}
+              {tab === 'out' ? 'กด “ยืนยันจะแพ็ก” แล้วไปเตรียมของ/ขึ้นรถที่ติดตามการขนส่ง · เมื่อส่งของเสร็จแล้วงานจะปิดและหายไป' : 'ของที่กำลังส่งมาให้เรา · คลิกเพื่อไปยืนยันรับของที่หน้าติดตามการขนส่ง (รับเข้า)'}
             </span>
           </div>
         </div>
@@ -159,7 +267,7 @@ export function InboxPage() {
         )}
         <div className="tbl-foot">
           <span>แสดง <span className="num">{tab === 'out' ? outRows.length : inRows.length}</span> รายการ</span>
-          <span>เห็นเฉพาะงานของ รพ.สมุทรปราการ · ถ้าเตรียมไม่ได้ ส่งกลับให้เภสัชกรตัดสินใจ</span>
+          <span>เห็นเฉพาะงานของ {user?.hospitalName ?? 'รพ.เรา'} · เมื่อส่งมอบและรับเสร็จสิ้น งานจะออกจากกล่องงานเข้า</span>
         </div>
       </section>
 
@@ -169,11 +277,11 @@ export function InboxPage() {
           item={sel}
           urgentLeft="—"
           startDeclining={declineFirst}
-          kicker="กล่องงานเข้า · ยืนยันแล้วงานไปที่ติดตามการขนส่ง"
+          kicker="กล่องงานเข้า · ยืนยันแล้วไปขึ้นรถที่ติดตามการขนส่ง"
           confirmLabel="ยืนยันจะแพ็ก"
           onClose={() => setSelId(null)}
           onConfirm={() => confirm(sel.id)}
-          onDecline={(reason) => patch(sel.id, { status: 'DECLINED', declineReason: reason })}
+          onDecline={(reason) => decline(sel.id, reason)}
         />
       )}
     </>

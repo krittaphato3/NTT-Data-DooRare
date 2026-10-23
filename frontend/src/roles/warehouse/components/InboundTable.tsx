@@ -33,6 +33,7 @@ export function InboundTable({ rows, acked, onAck }: InboundTableProps) {
             const arrived = r.stage.startsWith('ถึงปลายทาง');
             const isNew = r.status === 'NEW' && !acked.has(r.id);
             const justAcked = r.status === 'NEW' && acked.has(r.id);
+            const transportInHref = `${whHref('transport')}&dir=in`;
             return (
               <tr key={r.id}>
                 <td>
@@ -59,11 +60,11 @@ export function InboundTable({ rows, acked, onAck }: InboundTableProps) {
                   {isNew ? (
                     <button className="btn btn-sm btn-p" onClick={() => onAck(r.id)}>รับทราบ</button>
                   ) : justAcked ? (
-                    <a className="btn btn-sm btn-s" href={whHref('transport')} style={{ textDecoration: 'none' }}>ดูที่ติดตามการขนส่ง</a>
+                    <a className="btn btn-sm btn-s" href={transportInHref} style={{ textDecoration: 'none' }}>ดูที่ติดตามการขนส่ง</a>
                   ) : arrived ? (
-                    <a className="btn btn-sm btn-p" href={whHref('transport')} style={{ textDecoration: 'none' }}>ยืนยันรับของ</a>
+                    <a className="btn btn-sm btn-p" href={transportInHref} style={{ textDecoration: 'none' }}>ยืนยันรับของ</a>
                   ) : r.transportId ? (
-                    <a className="btn btn-sm btn-s" href={whHref('transport')} style={{ textDecoration: 'none' }}>ดูที่ติดตามการขนส่ง</a>
+                    <a className="btn btn-sm btn-s" href={transportInHref} style={{ textDecoration: 'none' }}>ดูที่ติดตามการขนส่ง</a>
                   ) : (
                     <span className="sub">ยังไม่ขึ้นรถ</span>
                   )}

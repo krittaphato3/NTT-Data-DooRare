@@ -55,7 +55,14 @@ export function TransportTrackingPage({ role = 'WAREHOUSE_OFFICER' }: { role?: T
   // The cancel-with-consent flow has no API yet, so it stays a mock-only control.
   const canCancel = role === 'PHARMACIST' && !live;
   const online = useOnline();
-  const [dir, setDir] = useState<Direction>('out');
+  const [dir, setDir] = useState<Direction>(() => {
+    try {
+      const q = new URLSearchParams(window.location.search).get('dir');
+      return q === 'in' ? 'in' : 'out';
+    } catch {
+      return 'out';
+    }
+  });
   const [status, setStatus] = useState<TransportStatus | null>(null);
   // Nothing is selected on entry; the detail drawer opens only when a row is picked.
   const [selId, setSelId] = useState<string | null>(null);
