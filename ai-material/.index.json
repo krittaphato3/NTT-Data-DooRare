@@ -28,6 +28,13 @@
     "date": "2026-10-23"
   },
   {
+    "path": "sessions/2026-10-23-1745-antigravity-f2-meeting-discussion-ui.md",
+    "title": "Session: Feature 2 Multi-Party Meeting & Discussion UI (ASM-16 / BR-F2a-013)",
+    "summary": "Session",
+    "tags": "session",
+    "date": "2026-10-23"
+  },
+  {
     "path": "context/current-task.md",
     "title": "Current Task",
     "summary": "Current Task",
@@ -231,13 +238,6 @@
     "date": "2026-10-17"
   },
   {
-    "path": "context/runbook.md",
-    "title": "Runbook",
-    "summary": "Runbook",
-    "tags": "session",
-    "date": "2026-10-16"
-  },
-  {
     "path": "sessions/2026-10-16-1628-buffy-phase2c-return-obligations-waive.md",
     "title": "Return obligations + Waive (Phase 2C)",
     "summary": "HOSPITAL_ADMIN gets a read-only ภาระการคืน sub-tab on Borrow requests plus the API-XC-005…",
@@ -263,14 +263,21 @@
     "title": "ai-material",
     "summary": "ai-material",
     "tags": "session",
-    "date": "2026-10-14"
+    "date": "2026-10-15"
   },
   {
     "path": "context/conventions.md",
     "title": "Conventions",
     "summary": "Conventions",
     "tags": "session",
-    "date": "2026-10-14"
+    "date": "2026-10-15"
+  },
+  {
+    "path": "context/runbook.md",
+    "title": "Runbook",
+    "summary": "Runbook",
+    "tags": "session",
+    "date": "2026-10-15"
   },
   {
     "path": "decisions/0002-role-based-frontend-structure.md",

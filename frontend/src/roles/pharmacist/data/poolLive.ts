@@ -58,6 +58,7 @@ export function planToView(p: ApiPlan): AllocationPlan {
       pharmacist: a.decidedBy ?? '—',
       state: a.decision === 'PENDING' ? 'WAITING' : a.decision,
       ...(a.decidedAt ? { at: fmtThaiTime(a.decidedAt) } : {}),
+      ...(a.comment ? { comment: a.comment } : {}),
     })),
     dueAt: p.approvalDeadline && p.status === 'READY_FOR_APPROVAL' ? `ภายใน ${fmtThaiTime(p.approvalDeadline)}` : p.status === 'NEEDS_DISCUSSION' ? 'รอหารือ' : '',
     live: {

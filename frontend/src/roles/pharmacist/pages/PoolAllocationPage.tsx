@@ -55,6 +55,8 @@ export function PoolAllocationPage({ role = 'PHARMACIST' }: { role?: RoleCode })
       .finally(() => setBusy(false));
   };
   const liveApprove = (p: AllocationPlan) => p.live && run(p, decidePlan(p.live.uuid, 'APPROVED', p.version), 'บันทึกการเห็นชอบแล้ว (audit_log)');
+  const liveApproveAll = (p: AllocationPlan, noteText: string, lines?: { receiver: string; qty: number }[]) =>
+    p.live && run(p, decidePlan(p.live.uuid, 'APPROVED', p.version, noteText, true, lines), 'บันทึกมติที่ประชุมและปรับปรุงยอดจัดสรรเรียบร้อยแล้ว · เริ่มขั้นตอนขนส่ง (UI-14)');
   const liveReject = (p: AllocationPlan, comment: string) => p.live && run(p, decidePlan(p.live.uuid, 'REJECTED', p.version, comment), 'บันทึกการไม่เห็นชอบแล้ว · แผนเข้าสถานะต้องหารือ');
   const liveOption = (p: AllocationPlan, id: string, label: string) => p.live && run(p, choosePlanOption(p.live.uuid, id as ApiPlanOption, p.version), `บันทึกทางเลือกแล้ว: ${label} (audit_log)`);
   const liveCancel = (p: AllocationPlan, reason: string) => p.live && run(p, cancelPlan(p.live.uuid, reason), 'ส่งคำขอยกเลิกแล้ว · ถ้าเป็นแผนที่อนุมัติแล้วต้องให้อีกฝ่ายยินยอมด้วย');
@@ -69,6 +71,7 @@ export function PoolAllocationPage({ role = 'PHARMACIST' }: { role?: RoleCode })
 
   const pendingMine = plans.filter((p) => p.status === 'PENDING_MY_APPROVAL').length;
   const needDoc = plans.filter((p) => p.status === 'APPROVED' || p.status === 'TRANSPORTING').length;
+  const needsDiscussion = plans.filter((p) => p.status === 'NEEDS_DISCUSSION').length;
 
   const open = (id: string) => {
     setSelId(id);
@@ -154,6 +157,15 @@ export function PoolAllocationPage({ role = 'PHARMACIST' }: { role?: RoleCode })
           </div>
           <div className="pl-kpi-val num">{needDoc} แผน</div>
           <div className="pl-kpi-sub">อนุมัติครบแล้ว ระบบสร้างใบส่งของให้พิมพ์ทันที</div>
+        </div>
+        <div className="pl-kpi" style={{ borderLeftColor: '#D97706', background: needsDiscussion > 0 ? '#FFFBEB' : '#FFFFFF' }}>
+          <div className="pl-kpi-label">
+            รอนัดประชุมหารือ <span className="en">NEEDS_DISCUSSION · ASM-16</span>
+          </div>
+          <div className="pl-kpi-val num" style={{ color: needsDiscussion > 0 ? '#D97706' : undefined }}>{needsDiscussion} แผน</div>
+          <div className="pl-kpi-sub">
+            {needsDiscussion > 0 ? 'มี รพ. ปฏิเสธยอดจัดสรร · ต้องเจรจาเฉพาะ รพ. ในแผน' : 'ไม่มีแผนที่ติดข้อโต้แย้ง'}
+          </div>
         </div>
       </section>
 
@@ -295,7 +307,9 @@ export function PoolAllocationPage({ role = 'PHARMACIST' }: { role?: RoleCode })
                       <td>
                         <span className={`badge ${meta.tone}`}>{meta.label}</span>
                         {p.status === 'NEEDS_DISCUSSION' && (
-                          <div className="sub">ถูกตีกลับ · แก้แผนแล้วส่งใหม่</div>
+                          <div className="sub" style={{ color: '#D97706', fontWeight: 500, marginTop: 2 }}>
+                            ⚠ รพ.บางบ่อ ปฏิเสธยอด · รอนัดประชุม 3 รพ.
+                          </div>
                         )}
                         {!p.economical && p.status === 'PENDING_MY_APPROVAL' && (
                           <div className="pl-warn-line">⚠ เกินเกณฑ์ {COST_LIMIT_PCT}% · ต้องเลือก 1 ใน 4 ทาง</div>
@@ -326,6 +340,7 @@ export function PoolAllocationPage({ role = 'PHARMACIST' }: { role?: RoleCode })
           role={role}
           decision={decisions[sel.id]}
           onApprove={() => (live ? liveApprove(sel) : approve(sel.id))}
+          onApproveAll={(text, updatedLines) => (live ? liveApproveAll(sel, text, updatedLines) : approve(sel.id))}
           onReject={(comment) => liveReject(sel, comment)}
           onUneconomical={(label, id) => (live && id ? liveOption(sel, id, label) : decideUneconomical(sel.id, label))}
           onCancel={(reason) => liveCancel(sel, reason)}

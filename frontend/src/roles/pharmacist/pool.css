@@ -1,7 +1,7 @@
 /* UI-08 Central pool + UI-09 Allocation plan review — mockup-faithful values.
    Table, tabs, drawer base styles are the shared ops primitives in index.css. */
 
-.pl-kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.pl-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
 .pl-kpi { border: 1px solid #E2E8F0; border-left: 4px solid #2563EB; border-radius: 10px; padding: 12px 14px; background: #FFFFFF; }
 .pl-kpi-warn { border-left-color: #D97706; background: #FFFBEB; }
 .pl-kpi-label { font-size: 12.5px; font-weight: 600; color: #334155; }
@@ -39,5 +39,79 @@
 .pl-opt input { margin-top: 3px; }
 
 .pl-done { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; border-radius: 10px; background: #F0FDF4; border: 1px solid #BBF7D0; font-size: 13px; line-height: 19px; color: #14532D; }
+
+/* Meeting & Consensus Discussion Styles */
+.pl-meeting-banner {
+  background: #FFFBEB;
+  border: 1px solid #FDE68A;
+  border-left: 4px solid #D97706;
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.pl-meeting-banner-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #92400E;
+  font-weight: 600;
+  font-size: 13.5px;
+}
+.pl-meeting-banner-desc {
+  font-size: 12.5px;
+  line-height: 18px;
+  color: #78350F;
+}
+.pl-meeting-parties {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  font-size: 12px;
+}
+.pl-objection-box {
+  background: #FEF2F2;
+  border: 1px solid #FECACA;
+  border-left: 3px solid #DC2626;
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin-top: 6px;
+  font-size: 12.5px;
+  line-height: 18px;
+  color: #991B1B;
+}
+.pl-meeting-box {
+  border: 1px solid #FCD34D;
+  background: #FFFBEB;
+  border-radius: 10px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.pl-adjust-box {
+  border: 1px solid #BFDBFE;
+  background: #EFF6FF;
+  border-radius: 10px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.pl-adjust-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 13px;
+  padding: 6px 0;
+  border-bottom: 1px dashed #BFDBFE;
+}
+.pl-adjust-row:last-child {
+  border-bottom: none;
+}
 
 @media (max-width: 900px) { .pl-kpis { grid-template-columns: 1fr; } }
