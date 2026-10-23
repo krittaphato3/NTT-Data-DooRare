@@ -12,7 +12,7 @@ interface InboxDrawerProps {
   startDeclining: boolean;
   onClose: () => void;
   onConfirm: () => void;
-  onDecline: (reason: string) => void;
+  onDecline?: (reason: string) => void;
   kicker?: string;
   confirmLabel?: string;
   hideDecline?: boolean;
@@ -122,7 +122,7 @@ export function InboxDrawer({ item: it, urgentLeft, startDeclining, onClose, onC
             </select>
             <textarea className="inp" rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder={reasonKind === 'อื่นๆ' ? 'ระบุเหตุผล (บังคับ)' : 'หมายเหตุ (ถ้ามี)'} aria-label="หมายเหตุ" />
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-              <button className="btn btn-p btn-sm" disabled={!reasonOk} onClick={() => onDecline(note.trim() ? `${reasonKind} · ${note.trim()}` : reasonKind)}>
+              <button className="btn btn-p btn-sm" disabled={!reasonOk} onClick={() => onDecline?.(note.trim() ? `${reasonKind} · ${note.trim()}` : reasonKind)}>
                 ส่งกลับเภสัชกร
               </button>
               <button className="btn btn-g btn-sm" onClick={() => setDeclining(false)}>ยกเลิก</button>

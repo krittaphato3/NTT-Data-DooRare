@@ -31,8 +31,8 @@ export function InboundTable({ rows, acked, onAck }: InboundTableProps) {
         <tbody>
           {rows.map((r) => {
             const arrived = r.stage.startsWith('ถึงปลายทาง');
-            const isNew = r.status === 'NEW' && !acked.has(r.id);
-            const justAcked = r.status === 'NEW' && acked.has(r.id);
+            const isAcked = acked.has(r.id) || r.status !== 'NEW';
+            const isNew = !isAcked;
             const transportInHref = `${whHref('transport')}&dir=in&task=${encodeURIComponent(r.transportId || r.id)}`;
             return (
               <tr key={r.id}>
@@ -53,20 +53,18 @@ export function InboundTable({ rows, acked, onAck }: InboundTableProps) {
                   <Icon name="inArrow" className="ic14" style={{ verticalAlign: '-2px', color: '#1D4ED8' }} /> {HOSPITALS[r.from]}
                 </td>
                 <td style={{ fontSize: 12.5 }}>
-                  <span className={`badge ${arrived ? 't-green' : isNew ? 't-blue' : 't-grey'}`}>{justAcked ? 'รับทราบแล้ว · ไปอยู่ที่ติดตามการขนส่ง (รับเข้า)' : r.stage}</span>
+                  <span className={`badge ${arrived ? 't-green' : isNew ? 't-blue' : 't-grey'}`}>
+                    {isAcked && !arrived ? 'รับทราบแล้ว · ต้นทางกำลังเตรียมของ' : r.stage}
+                  </span>
                 </td>
                 <td className="num" style={{ fontSize: 12.5 }}>{r.eta}</td>
                 <td className="r">
                   {isNew ? (
                     <button className="btn btn-sm btn-p" onClick={() => onAck(r.id)}>รับทราบ</button>
-                  ) : justAcked ? (
-                    <a className="btn btn-sm btn-s" href={transportInHref} style={{ textDecoration: 'none' }}>ดูที่ติดตามการขนส่ง</a>
                   ) : arrived ? (
                     <a className="btn btn-sm btn-p" href={transportInHref} style={{ textDecoration: 'none' }}>ยืนยันรับของ</a>
-                  ) : r.transportId ? (
-                    <a className="btn btn-sm btn-s" href={transportInHref} style={{ textDecoration: 'none' }}>ดูที่ติดตามการขนส่ง</a>
                   ) : (
-                    <span className="sub">ยังไม่ขึ้นรถ</span>
+                    <a className="btn btn-sm btn-s" href={transportInHref} style={{ textDecoration: 'none' }}>ดูที่ติดตามการขนส่ง</a>
                   )}
                 </td>
               </tr>

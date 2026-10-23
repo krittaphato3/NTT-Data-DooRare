@@ -33,9 +33,9 @@ export function InboxPage() {
   const [feature, setFeature] = useState<'all' | InboxFeature>('all');
   const [q, setQ] = useState('');
 
-  // Acknowledged packs saved in localStorage per hospital
+  // Acknowledged packs and incoming acks saved in localStorage per hospital
   const storageKey = `doorare_wh_packed_${user?.hospitalId || 'default'}`;
-  const declineKey = `doorare_wh_declined_${user?.hospitalId || 'default'}`;
+  const ackKey = `doorare_wh_in_acked_${user?.hospitalId || 'default'}`;
 
   const [packedIds, setPackedIds] = useState<Set<string>>(() => {
     try {
@@ -46,16 +46,14 @@ export function InboxPage() {
     }
   });
 
-  const [declinedMap, setDeclinedMap] = useState<Record<string, string>>(() => {
+  const [acked, setAcked] = useState<Set<string>>(() => {
     try {
-      const saved = localStorage.getItem(declineKey);
-      return saved ? JSON.parse(saved) : {};
+      const saved = localStorage.getItem(ackKey);
+      return saved ? new Set(JSON.parse(saved)) : new Set<string>();
     } catch {
-      return {};
+      return new Set<string>();
     }
   });
-
-  const [acked, setAcked] = useState<ReadonlySet<string>>(new Set());
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -74,13 +72,11 @@ export function InboxPage() {
     return tr.shipments
       .filter((s) => s.outbound && s.status !== 'RECEIVED' && s.status !== 'CANCELLED')
       .map((s) => {
-        const isDeclined = Boolean(declinedMap[s.id]);
         const isConfirmed =
-          !isDeclined &&
-          (packedIds.has(s.id) ||
-            s.status === 'LOADED' ||
-            s.status === 'IN_TRANSIT' ||
-            s.status === 'ARRIVED');
+          packedIds.has(s.id) ||
+          s.status === 'LOADED' ||
+          s.status === 'IN_TRANSIT' ||
+          s.status === 'ARRIVED';
 
         return {
           id: s.id,
@@ -93,14 +89,13 @@ export function InboxPage() {
           requestedBy: HOSPITALS[s.to] ? `รพ.${HOSPITALS[s.to]}` : s.to,
           due: s.kind === 'F1' ? 'ส่งภายใน 2 ชม.' : 'ส่งภายในวันนี้',
           urgent: s.ref.includes('INC') || s.ref.includes('EMERGENCY'),
-          status: isDeclined ? 'DECLINED' : isConfirmed ? 'CONFIRMED' : 'NEW',
-          declineReason: declinedMap[s.id],
+          status: isConfirmed ? 'CONFIRMED' : 'NEW',
           pick: s.pick ?? (s.lotCode ? [{ lot: s.lotCode, expiry: s.expiry || '–', daysLeft: 180, qty: s.qty }] : []),
           note: s.kind === 'F1' ? 'F1 ยืม · ล็อตที่ให้ยืมต้องอายุ > 180 วัน (FEFO)' : 'F2 โอนยาใกล้หมดอายุ',
           transportId: s.id,
         };
       });
-  }, [isLive, tr.shipments, packedIds, declinedMap]);
+  }, [isLive, tr.shipments, packedIds]);
 
   // Inbound items: from live transport tasks
   const inTasks: InboundTask[] = useMemo(() => {
@@ -141,11 +136,12 @@ export function InboxPage() {
     });
   };
 
-  const decline = (id: string, reason: string) => {
-    setDeclinedMap((prev) => {
-      const next = { ...prev, [id]: reason };
+  const handleAck = (id: string) => {
+    setAcked((prev) => {
+      const next = new Set(prev);
+      next.add(id);
       try {
-        localStorage.setItem(declineKey, JSON.stringify(next));
+        localStorage.setItem(ackKey, JSON.stringify([...next]));
       } catch {}
       return next;
     });
@@ -261,7 +257,7 @@ export function InboxPage() {
             onConfirm={confirm}
           />
         ) : (
-          <InboundTable rows={inRows} acked={acked} onAck={(id) => setAcked((s) => new Set(s).add(id))} />
+          <InboundTable rows={inRows} acked={acked} onAck={handleAck} />
         )}
         <div className="tbl-foot">
           <span>แสดง <span className="num">{tab === 'out' ? outRows.length : inRows.length}</span> รายการ</span>
@@ -280,7 +276,6 @@ export function InboxPage() {
           hideDecline={true}
           onClose={() => setSelId(null)}
           onConfirm={() => confirm(sel.id)}
-          onDecline={(reason) => decline(sel.id, reason)}
         />
       )}
     </>
