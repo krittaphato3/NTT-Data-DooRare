@@ -440,3 +440,224 @@ export const getNearExpiryPoolStatusTool: IAgentTool<{
     }
   },
 };
+
+import { draftMessage } from '../../../borrow/borrow.flow.js';
+
+/**
+ * English version of borrow request draft.
+ */
+export function draftMessageEn(input: {
+  requester: string;
+  drug: string;
+  qty: number;
+  unit: string;
+  urgency: string;
+  round: number;
+  deadlineMin: number;
+}): string {
+  const hours =
+    input.deadlineMin >= 120
+      ? `${Math.round(input.deadlineMin / 60)} hours`
+      : `${Math.round(input.deadlineMin)} minutes`;
+  const urgencyLabel =
+    input.urgency === 'VERY_URGENT'
+      ? 'Very Urgent'
+      : input.urgency === 'URGENT'
+        ? 'Urgent'
+        : 'Normal';
+  return `${input.requester} requests to borrow ${input.drug} qty: ${input.qty.toLocaleString('en-US')} ${input.unit} (Round ${input.round}). Urgency: ${urgencyLabel}. Please confirm within ${hours}. Return required as identical item and quantity.`;
+}
+
+/**
+ * Tool: draft_lender_communication
+ * Formats formal Thai/English borrow requests using standardized institutional templates.
+ * Allowed Roles: PHARMACIST, SYSTEM_ADMIN
+ */
+export const draftLenderCommunicationTool: IAgentTool<{
+  requesterName: string;
+  targetHospitalName: string;
+  drugName: string;
+  quantity: number;
+  unit: string;
+  urgency?: 'NORMAL' | 'URGENT' | 'VERY_URGENT';
+  deadlineMinutes?: number;
+  round?: number;
+  language?: 'TH' | 'EN';
+}> = {
+  name: 'draft_lender_communication',
+  description: 'Formats formal Thai or English borrow request communication for candidate lender hospitals.',
+  parameters: z.object({
+    requesterName: z.string().describe('Name of the requesting hospital'),
+    targetHospitalName: z.string().describe('Name of the target lender hospital'),
+    drugName: z.string().describe('Generic drug name, dosage, and strength'),
+    quantity: z.number().positive().describe('Quantity to request'),
+    unit: z.string().describe('Unit of measurement (e.g. vials, boxes, kits)'),
+    urgency: z.enum(['NORMAL', 'URGENT', 'VERY_URGENT']).optional().default('URGENT').describe('Urgency level'),
+    deadlineMinutes: z.number().positive().optional().default(120).describe('Confirmation deadline in minutes'),
+    round: z.number().int().positive().optional().default(1).describe('Borrow round number'),
+    language: z.enum(['TH', 'EN']).optional().default('TH').describe('Communication language (TH or EN)'),
+  }),
+  allowedRoles: ['PHARMACIST', 'SYSTEM_ADMIN'],
+  execute: async (args): Promise<ToolResult> => {
+    try {
+      const language = args.language || 'TH';
+      const text =
+        language === 'EN'
+          ? draftMessageEn({
+              requester: args.requesterName,
+              drug: args.drugName,
+              qty: args.quantity,
+              unit: args.unit,
+              urgency: args.urgency || 'URGENT',
+              round: args.round || 1,
+              deadlineMin: args.deadlineMinutes || 120,
+            })
+          : draftMessage({
+              requester: args.requesterName,
+              drug: args.drugName,
+              qty: args.quantity,
+              unit: args.unit,
+              urgency: args.urgency || 'URGENT',
+              round: args.round || 1,
+              deadlineMin: args.deadlineMinutes || 120,
+            });
+
+      return {
+        success: true,
+        data: {
+          language,
+          targetHospital: args.targetHospitalName,
+          urgency: args.urgency || 'URGENT',
+          deadlineMinutes: args.deadlineMinutes || 120,
+          formattedMessage: text,
+        },
+      };
+    } catch (e: any) {
+      return {
+        success: false,
+        error: `Failed to draft lender communication: ${e.message}`,
+      };
+    }
+  },
+};
+
+/**
+ * Tool: interpret_lender_response
+ * Normalizes unstructured free-text responses from lenders into structured decisions (ACCEPT, PARTIAL, REJECT).
+ * Allowed Roles: PHARMACIST, SYSTEM_ADMIN
+ */
+export const interpretLenderResponseTool: IAgentTool<{
+  responseText: string;
+  askedQuantity: number;
+}> = {
+  name: 'interpret_lender_response',
+  description: 'Normalizes unstructured free-text responses from lender hospitals into structured decisions (ACCEPT, PARTIAL, REJECT).',
+  parameters: z.object({
+    responseText: z.string().describe('Free-text response message from lender hospital'),
+    askedQuantity: z.number().positive().describe('Original quantity asked in the borrow request'),
+  }),
+  allowedRoles: ['PHARMACIST', 'SYSTEM_ADMIN'],
+  execute: async (args): Promise<ToolResult> => {
+    try {
+      const rawText = args.responseText;
+      const flags: string[] = [];
+
+      // Guardrail G-09: Prompt injection detection
+      const injectionPattern =
+        /(ignore\s+(all\s+)?previous\s+instructions|system\s*:|override\s+all|you\s+are\s+now|developer\s+mode|as\s+an\s+ai)/i;
+      if (injectionPattern.test(rawText)) {
+        flags.push('INJECTION_SUSPECTED');
+        // When prompt injection is suspected, never trust or execute instructions
+        return {
+          success: true,
+          data: {
+            decision: 'REJECT',
+            confirmedQuantity: null,
+            askedQuantity: args.askedQuantity,
+            confidence: 'LOW',
+            notes: rawText,
+            flags,
+          },
+        };
+      }
+
+      // Cleaned text for analysis (lowercased)
+      const text = rawText.toLowerCase().trim();
+
+      // Look for quantities associated with units or partial phrasing
+      const unitQtyRegex = /(\d+(?:\.\d+)?)\s*(?:กล่อง|ขวด|หลอด|เม็ด|ชุด|amp|vial|box|unit|pack|units)/i;
+      const partialPrefixRegex =
+        /(?:ไม่พอ\s*แต่มี(?:ให้)?|มีแค่|แบ่ง(?:ให้)?ได้|ให้ได้|แต่มีให้|ส่งได้แค่|ส่งให้ได้แค่|only\s*have|have\s*only|can\s*only\s*send|can\s*give)\s*(\d+(?:\.\d+)?)/i;
+
+      let extractedQty: number | null = null;
+      const pMatch = rawText.match(partialPrefixRegex);
+      if (pMatch && pMatch[1]) {
+        extractedQty = parseFloat(pMatch[1]);
+      } else {
+        const uMatch = rawText.match(unitQtyRegex);
+        if (uMatch && uMatch[1]) {
+          extractedQty = parseFloat(uMatch[1]);
+        }
+      }
+
+      // Check for full rejection patterns (note: (?<!ทั้ง)หมด prevents matching ทั้งหมด "all")
+      const rejectPattern =
+        /(ปฏิเสธ|ไม่มี(?!.*แต่มี)|ไม่สะดวก|ไม่สามารถ|(?<!ทั้ง)หมด|ติดเคส|ไม่มีสต็อก|ไม่พอ(?!.*แต่มี)|reject|unavailable|no\s*stock|cannot|out\s*of\s*stock|declined)/i;
+
+      // Check for full accept patterns
+      const acceptPattern =
+        /(พร้อมส่ง|ได้ครบ|ยินดีให้ยืม|อนุมัติ|ส่งให้ได้|มีพอ|accept|approved|can\s*provide\s*all|full\s*quantity|available)/i;
+
+      let decision: 'ACCEPT' | 'PARTIAL' | 'REJECT';
+      let confirmedQuantity: number | null = null;
+      let confidence: 'HIGH' | 'MEDIUM' | 'LOW' = 'HIGH';
+
+      if (extractedQty !== null) {
+        if (extractedQty < args.askedQuantity) {
+          decision = 'PARTIAL';
+          confirmedQuantity = extractedQty;
+        } else if (extractedQty > args.askedQuantity) {
+          decision = 'ACCEPT';
+          confirmedQuantity = args.askedQuantity; // Cap to asked
+          flags.push('EXCEEDS_ASKED_QUANTITY');
+        } else {
+          decision = 'ACCEPT';
+          confirmedQuantity = args.askedQuantity;
+        }
+      } else if (rejectPattern.test(text) && !acceptPattern.test(text)) {
+        decision = 'REJECT';
+        confirmedQuantity = 0;
+      } else if (acceptPattern.test(text) && !rejectPattern.test(text)) {
+        decision = 'ACCEPT';
+        confirmedQuantity = args.askedQuantity;
+      } else if (rejectPattern.test(text) && acceptPattern.test(text)) {
+        // Ambiguous conflicting signals
+        decision = 'REJECT';
+        confirmedQuantity = null;
+        confidence = 'LOW';
+      } else {
+        // Unclear response
+        decision = 'REJECT';
+        confirmedQuantity = null;
+        confidence = 'LOW';
+      }
+
+      return {
+        success: true,
+        data: {
+          decision,
+          confirmedQuantity,
+          askedQuantity: args.askedQuantity,
+          confidence,
+          notes: rawText,
+          flags,
+        },
+      };
+    } catch (e: any) {
+      return {
+        success: false,
+        error: `Failed to interpret lender response: ${e.message}`,
+      };
+    }
+  },
+};
