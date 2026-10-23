@@ -7,6 +7,7 @@ import {
   getNearExpiryPoolStatusTool,
   draftLenderCommunicationTool,
   interpretLenderResponseTool,
+  submitPharmacistProposalTool,
 } from '../src/modules/ai/tools/clinical/pharmacist.tools.js';
 import { ToolRegistry } from '../src/modules/ai/tools/registry.js';
 import { query, pool } from '../src/db/client.js';
@@ -269,4 +270,139 @@ test('interpretLenderResponseTool: prompt injection defense (G-09) triggers flag
   const data = res.data as { decision: string; flags: string[]; confidence: string };
   assert.ok(data.flags.includes('INJECTION_SUSPECTED'));
   assert.notEqual(data.decision, 'ACCEPT', 'Injection attempt must never force an ACCEPT decision');
+});
+
+test('submitPharmacistProposalTool: generates CREATE_BORROW_REQUEST proposal with whitelisted endpoint', async () => {
+  assert.equal(submitPharmacistProposalTool.name, 'submit_pharmacist_proposal');
+  assert.deepEqual(submitPharmacistProposalTool.allowedRoles, ['PHARMACIST', 'SYSTEM_ADMIN']);
+
+  const hosp = (await query('SELECT id FROM hospital WHERE active = true LIMIT 1')).rows[0];
+  const drugMaster = (await query('SELECT id FROM drug_master LIMIT 1')).rows[0];
+
+  const res = await submitPharmacistProposalTool.execute(
+    {
+      actionType: 'CREATE_BORROW_REQUEST',
+      title: 'ขอยืม Botulinum จาก รพ. ศิริราช',
+      description: 'สต็อกใกล้หมดและมีเคสเร่งด่วน',
+      summary: { drug: 'Botulinum Antitoxin', quantity: 5 },
+      payload: {
+        reason: 'สต็อกต่ำกว่า ROP',
+        items: [
+          {
+            drugMasterId: drugMaster.id,
+            qtyRequested: 5,
+          },
+        ],
+      },
+    },
+    { role: 'PHARMACIST', hospitalId: hosp.id, userId: 'test-pharmacist-01' },
+  );
+
+  assert.equal(res.success, true);
+  assert.ok(res.proposal);
+  assert.equal(res.proposal?.type, 'CREATE_BORROW_REQUEST');
+  assert.equal(res.proposal?.actionApi.endpoint, '/api/v1/borrow-requests');
+  assert.equal(res.proposal?.actionApi.method, 'POST');
+  assert.equal((res.proposal?.actionApi.payload as any).items[0].qtyRequested, 5);
+});
+
+test('submitPharmacistProposalTool: generates SNOOZE_ALERT proposal and validates targetId ownership', async () => {
+  const hosp = (await query('SELECT id FROM hospital WHERE active = true LIMIT 1')).rows[0];
+  const alert = (
+    await query('SELECT id, hospital_id FROM stock_alert WHERE hospital_id = $1 LIMIT 1', [
+      hosp.id,
+    ])
+  ).rows[0];
+
+  if (alert) {
+    const res = await submitPharmacistProposalTool.execute(
+      {
+        actionType: 'SNOOZE_ALERT',
+        title: 'เลื่อนการเตือนสต็อกยา 24 ชั่วโมง',
+        description: 'กำลังรอการจัดส่งล็อตใหม่จากคลัง',
+        summary: { alertId: alert.id, hours: 24 },
+        targetId: alert.id,
+        payload: {
+          hours: 24,
+          reason: 'รอส่งมอบจากคลังกลางพรุ่งนี้เช้า',
+        },
+      },
+      { role: 'PHARMACIST', hospitalId: hosp.id },
+    );
+
+    assert.equal(res.success, true);
+    assert.ok(res.proposal);
+    assert.equal(res.proposal?.type, 'SNOOZE_ALERT');
+    assert.equal(res.proposal?.actionApi.endpoint, `/api/v1/alerts/${alert.id}/snooze`);
+    assert.equal(res.proposal?.actionApi.method, 'POST');
+    assert.equal((res.proposal?.actionApi.payload as any).hours, 24);
+  }
+});
+
+test('submitPharmacistProposalTool: generates RELEASE_NEAR_EXPIRY_POOL proposal', async () => {
+  const hosp = (await query('SELECT id FROM hospital WHERE active = true LIMIT 1')).rows[0];
+  const nearExpiryItem = (
+    await query('SELECT id FROM near_expiry_item WHERE hospital_id = $1 LIMIT 1', [hosp.id])
+  ).rows[0];
+
+  if (nearExpiryItem) {
+    const res = await submitPharmacistProposalTool.execute(
+      {
+        actionType: 'RELEASE_NEAR_EXPIRY_POOL',
+        title: 'ปล่อยยาสู่พูลกลางระดับเขต',
+        description: 'ปล่อยสต็อกยาใกล้หมดอายุ 10 หน่วยสู่พูลกลางเพื่อลดความสูญเสีย',
+        summary: { nearExpiryId: nearExpiryItem.id, qty: 10 },
+        targetId: nearExpiryItem.id,
+        payload: {
+          qty: 10,
+          note: 'ยาเหลืออายุ 90 วัน ปล่อยให้ รพ. เครือข่าย',
+        },
+      },
+      { role: 'PHARMACIST', hospitalId: hosp.id },
+    );
+
+    assert.equal(res.success, true);
+    assert.ok(res.proposal);
+    assert.equal(res.proposal?.type, 'RELEASE_NEAR_EXPIRY_POOL');
+    assert.equal(
+      res.proposal?.actionApi.endpoint,
+      `/api/v1/near-expiry/${nearExpiryItem.id}/release`,
+    );
+    assert.equal(res.proposal?.actionApi.method, 'POST');
+  }
+});
+
+test('submitPharmacistProposalTool: rejects invalid payload or missing targetId', async () => {
+  const hosp = (await query('SELECT id FROM hospital WHERE active = true LIMIT 1')).rows[0];
+
+  // Missing targetId for SNOOZE_ALERT
+  const noTargetRes = await submitPharmacistProposalTool.execute(
+    {
+      actionType: 'SNOOZE_ALERT',
+      title: 'Invalid SNOOZE',
+      description: 'Missing targetId',
+      summary: {},
+      payload: { hours: 24, reason: 'test' },
+    },
+    { role: 'PHARMACIST', hospitalId: hosp.id },
+  );
+  assert.equal(noTargetRes.success, false);
+  assert.match(noTargetRes.error || '', /targetId.*is required/i);
+
+  // Invalid payload (empty items for borrow request)
+  const invalidPayloadRes = await submitPharmacistProposalTool.execute(
+    {
+      actionType: 'CREATE_BORROW_REQUEST',
+      title: 'Invalid Borrow',
+      description: 'No items',
+      summary: {},
+      payload: {
+        reason: 'test',
+        items: [],
+      },
+    },
+    { role: 'PHARMACIST', hospitalId: hosp.id },
+  );
+  assert.equal(invalidPayloadRes.success, false);
+  assert.match(invalidPayloadRes.error || '', /Invalid proposal payload/);
 });

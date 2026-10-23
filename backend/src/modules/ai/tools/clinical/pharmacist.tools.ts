@@ -661,3 +661,187 @@ export const interpretLenderResponseTool: IAgentTool<{
     }
   },
 };
+
+/**
+ * Whitelist map for Pharmacist proposal actions.
+ * Every endpoint maps to an existing authenticated route in the backend.
+ */
+export const PHARMACIST_PROPOSAL_WHITELIST = {
+  CREATE_BORROW_REQUEST: {
+    buildEndpoint: () => '/api/v1/borrow-requests',
+    method: 'POST' as const,
+    routeSource: 'backend/src/modules/borrow/borrow.routes.ts:19',
+    payloadSchema: z.object({
+      stockAlertId: z.string().uuid().optional(),
+      reason: z.string().min(1, 'Reason is required'),
+      context: z.enum(['STOCK_ALERT', 'MANUAL']).optional(),
+      items: z
+        .array(
+          z.object({
+            drugMasterId: z.string().uuid(),
+            qtyRequested: z.number().positive(),
+            unitPriceThb: z.number().optional(),
+          }),
+        )
+        .min(1, 'At least one item is required'),
+    }),
+  },
+  SNOOZE_ALERT: {
+    buildEndpoint: (alertId?: string) => {
+      if (!alertId) throw new Error('alertId (targetId) is required for SNOOZE_ALERT');
+      return `/api/v1/alerts/${alertId}/snooze`;
+    },
+    method: 'POST' as const,
+    routeSource: 'backend/src/modules/alerts/alerts.routes.ts:18',
+    payloadSchema: z.object({
+      hours: z.number().int().min(1).max(168).default(24),
+      reason: z.string().min(3, 'Snooze reason must be at least 3 characters'),
+      version: z.number().int().positive().optional(),
+    }),
+  },
+  RELEASE_NEAR_EXPIRY_POOL: {
+    buildEndpoint: (nearExpiryId?: string) => {
+      if (!nearExpiryId) throw new Error('nearExpiryId (targetId) is required for RELEASE_NEAR_EXPIRY_POOL');
+      return `/api/v1/near-expiry/${nearExpiryId}/release`;
+    },
+    method: 'POST' as const,
+    routeSource: 'backend/src/modules/expiry/expiry.routes.ts:17',
+    payloadSchema: z.object({
+      qty: z.number().positive('Release quantity must be positive'),
+      note: z.string().optional(),
+    }),
+  },
+} as const;
+
+/**
+ * Tool: submit_pharmacist_proposal (Terminal Tool)
+ * Generates an interactive Human-In-The-Loop (HITL) proposal card for pharmacist authorization.
+ * Whitelisted actions: CREATE_BORROW_REQUEST, SNOOZE_ALERT, RELEASE_NEAR_EXPIRY_POOL
+ * Allowed Roles: PHARMACIST, SYSTEM_ADMIN
+ */
+export const submitPharmacistProposalTool: IAgentTool<{
+  actionType: 'CREATE_BORROW_REQUEST' | 'SNOOZE_ALERT' | 'RELEASE_NEAR_EXPIRY_POOL';
+  title: string;
+  description: string;
+  summary: Record<string, unknown>;
+  targetId?: string;
+  payload: Record<string, unknown>;
+}> = {
+  name: 'submit_pharmacist_proposal',
+  description:
+    'Terminal proposal tool submitting human-in-the-loop action proposals for borrow requests, alert snoozing, or near-expiry pool releases.',
+  parameters: z.object({
+    actionType: z
+      .enum(['CREATE_BORROW_REQUEST', 'SNOOZE_ALERT', 'RELEASE_NEAR_EXPIRY_POOL'])
+      .describe('Whitelisted pharmacist action type'),
+    title: z.string().describe('Title of the proposed action'),
+    description: z.string().describe('Detailed clinical explanation or rationale'),
+    summary: z.record(z.unknown()).describe('Key-value summary of proposed metrics'),
+    targetId: z
+      .string()
+      .uuid()
+      .optional()
+      .describe('Target ID required for alert snoozing (alertId) or pool release (nearExpiryId)'),
+    payload: z.record(z.unknown()).describe('Action-specific payload parameters'),
+  }),
+  allowedRoles: ['PHARMACIST', 'SYSTEM_ADMIN'],
+  execute: async (args, context: RequestContext): Promise<ToolResult> => {
+    try {
+      const isSystemAdmin = context.role === 'SYSTEM_ADMIN';
+      const hospitalId = context.hospitalId;
+
+      if (!hospitalId && !isSystemAdmin) {
+        return {
+          success: false,
+          error: 'Context hospitalId is required to submit a pharmacist proposal.',
+        };
+      }
+
+      const actionDef = PHARMACIST_PROPOSAL_WHITELIST[args.actionType];
+      if (!actionDef) {
+        return {
+          success: false,
+          error: `Action '${args.actionType}' is not in the whitelisted pharmacist actions.`,
+        };
+      }
+
+      // Validate targetId and build strict endpoint
+      let endpoint: string;
+      try {
+        endpoint = actionDef.buildEndpoint(args.targetId);
+      } catch (err: any) {
+        return {
+          success: false,
+          error: `Invalid targetId for ${args.actionType}: ${err.message}`,
+        };
+      }
+
+      // If targetId is provided, enforce hospital ownership
+      if (args.targetId) {
+        if (args.actionType === 'SNOOZE_ALERT') {
+          const alert = await query<{ hospital_id: string }>(
+            'SELECT hospital_id FROM stock_alert WHERE id = $1',
+            [args.targetId],
+          );
+          if (alert.rows.length === 0) {
+            return { success: false, error: `Stock alert '${args.targetId}' not found.` };
+          }
+          if (!isSystemAdmin && alert.rows[0].hospital_id !== hospitalId) {
+            return {
+              success: false,
+              error: 'Permission denied: Cannot snooze alert belonging to another hospital.',
+            };
+          }
+        } else if (args.actionType === 'RELEASE_NEAR_EXPIRY_POOL') {
+          const item = await query<{ hospital_id: string }>(
+            'SELECT hospital_id FROM near_expiry_item WHERE id = $1',
+            [args.targetId],
+          );
+          if (item.rows.length === 0) {
+            return { success: false, error: `Near expiry item '${args.targetId}' not found.` };
+          }
+          if (!isSystemAdmin && item.rows[0].hospital_id !== hospitalId) {
+            return {
+              success: false,
+              error: 'Permission denied: Cannot release near-expiry item belonging to another hospital.',
+            };
+          }
+        }
+      }
+
+      // Validate payload with the action's strict Zod schema
+      const parseRes = actionDef.payloadSchema.safeParse(args.payload);
+      if (!parseRes.success) {
+        return {
+          success: false,
+          error: `Invalid proposal payload for ${args.actionType}: ${parseRes.error.message}`,
+        };
+      }
+
+      // Emit HITL proposal
+      return {
+        success: true,
+        proposal: {
+          type: args.actionType,
+          title: args.title,
+          description: args.description,
+          summary: {
+            ...args.summary,
+            requestedBy: context.userId || 'current-user',
+            hospitalId: hospitalId || 'global',
+          },
+          actionApi: {
+            endpoint,
+            method: actionDef.method,
+            payload: parseRes.data as Record<string, unknown>,
+          },
+        },
+      };
+    } catch (e: any) {
+      return {
+        success: false,
+        error: `Failed to submit pharmacist proposal: ${e.message}`,
+      };
+    }
+  },
+};
