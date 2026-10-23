@@ -15,12 +15,15 @@
     - Updated lot pre-selection to only select lots needed up to requested quantity in FEFO order.
     - Disabled "ให้บางส่วน" button when requested quantity is 1.
   - Fixed white-screen (WSOD) crash on SPA rebuild: added `ErrorBoundary` to `App.tsx` and updated `nginx.conf` with explicit `no-cache` on `index.html` and 404 for missing hashed assets so browsers never execute fallback HTML as JavaScript.
+  - Removed decline button and decline KPI card from Warehouse Inbox (WH role only confirms to pack).
+  - Wired direct deep-linking from "ไปที่ขนส่ง {taskNo}" so clicking it navigates to Transport Tracking and automatically opens the detail drawer for that specific task.
   - Verified TypeScript compilation with `npm run build` and rebuilt Docker frontend container.
 - **decisions:**
   - Used `localStorage` (`doorare_wh_packed_{taskNo}`) to track packing confirmation state per task locally without requiring extra backend schema changes, while relying on backend `transport_task.status` (`WAITING_DISPATCH`, `LOADED`, `IN_TRANSIT`, `ARRIVED`, `RECEIVED`) for end-to-end task lifecycle.
   - Completed transport tasks (`RECEIVED` or `CANCELLED`) are filtered out from the inbox outbound queue as they no longer need action from warehouse packing.
   - Deep-linked inbound shipments directly to the Inbound tab in Transport Tracking via URL param `dir=in`.
   - Added ErrorBoundary at application root to gracefully catch any unhandled rendering exceptions and provide recovery actions instead of a blank screen.
+  - Deep-linked task buttons (`?task=TR-...`) automatically trigger tab direction selection and open the task's detail drawer on Transport Tracking page.
 - **files touched:**
   - `frontend/nginx.conf`
   - `frontend/src/App.tsx`
@@ -28,6 +31,7 @@
   - `frontend/src/roles/pharmacist/pages/LenderQueuePage.tsx`
   - `frontend/src/roles/warehouse/components/InboundTable.tsx`
   - `frontend/src/roles/warehouse/components/InboxDrawer.tsx`
+  - `frontend/src/roles/warehouse/components/RequestsTable.tsx`
   - `frontend/src/roles/warehouse/pages/InboxPage.tsx`
   - `frontend/src/roles/warehouse/pages/TransportTrackingPage.tsx`
 - **errors encountered:**
