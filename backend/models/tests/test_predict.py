@@ -235,6 +235,16 @@ def test_stale_input_exit_code(cfg):
     assert caught.value.details["thresholdDays"] == int(cfg.inference["stale_after_days"])
 
 
+def test_stale_threshold_env_override(cfg, monkeypatch):
+    """F1_STALE_AFTER_DAYS lifts the threshold so the scheduled job can predict on older data."""
+    monkeypatch.setenv("F1_STALE_AFTER_DAYS", "3650")
+    predict.check_stale(cfg, pd.Timestamp("2026-09-30"), date(2027, 6, 1))  # no raise
+    monkeypatch.setenv("F1_STALE_AFTER_DAYS", "10")
+    with pytest.raises(predict.PredictError) as caught:
+        predict.check_stale(cfg, pd.Timestamp("2026-09-30"), date(2026, 10, 23))
+    assert caught.value.details["thresholdDays"] == 10
+
+
 def test_schema_mismatch_exit_code(cfg):
     """A feature contract the inference frame cannot satisfy raises SCHEMA_MISMATCH (exit 6)."""
     trained, _ = predict.load_model(cfg, "WEEK")

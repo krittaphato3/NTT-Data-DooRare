@@ -1,5 +1,12 @@
 [
   {
+    "path": "sessions/2026-10-23-0825-claude-forecast-scheduled-predict-job.md",
+    "title": "Forecast scheduled predict job (Option A + Option B dynamic DB export)",
+    "summary": "Option B completed: Postgres usage & snapshot streaming export -> predict up…",
+    "tags": "session, backend, forecast, scheduler, export, aws-prep, f1",
+    "date": "2026-10-23"
+  },
+  {
     "path": "context/current-task.md",
     "title": "Current Task",
     "summary": "Current Task",
@@ -21,6 +28,13 @@
     "date": "2026-10-22"
   },
   {
+    "path": "sessions/2026-10-22-buffy-ha-qa-fixes.md",
+    "title": "HA (Step 8) QA fixes — FIX mode",
+    "summary": "HA (Step 8) QA fixes — FIX mode",
+    "tags": "session",
+    "date": "2026-10-22"
+  },
+  {
     "path": "sessions/2026-10-22-claude-backend-step6-f2.md",
     "title": "Backend step 6 - F2 near-expiry, regional pool, allocation plans, repeat expiry, value, reports",
     "summary": "Near-expiry scan and review, pool, plan approval / options / mutual-consent cancel,…",
@@ -37,7 +51,7 @@
   {
     "path": "sessions/2026-10-22-claude-demo-backfill-and-scenarios.md",
     "title": "Demo data - backfill 1-21 Oct, role scenarios for pharmacist / ER / warehouse / driver, snapshot and restore",
-    "summary": "db:snapshot / db:restore / db:demo; SQL backfill to 21 Oct, shaping of…",
+    "summary": "backfill + shape run inside db:load, db:scenarios for API scenarios (snapshot idea…",
     "tags": "session, demo, mock-data, backfill, scenarios, snapshot, reset, detailed",
     "date": "2026-10-22"
   },

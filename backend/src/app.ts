@@ -14,7 +14,7 @@ import { hospitalsRouter } from './modules/hospitals/hospitals.routes.js';
 import { inventoryRouter } from './modules/inventory/inventory.routes.js';
 import { notificationsRouter } from './modules/notifications/notifications.routes.js';
 import { centralItemsRouter, drugMasterRouter, hospitalDrugsRouter, kitTypesRouter } from './modules/catalog/catalog.routes.js';
-import { forecastsRouter } from './modules/forecasts/forecasts.routes.js';
+import { forecastsRouter, forecastJobsRouter } from './modules/forecasts/forecasts.routes.js';
 import { borrowLegsRouter } from './modules/borrow-legs/borrow-legs.routes.js';
 import { borrowJobsRouter, borrowRequestsRouter, lenderQueueRouter } from './modules/borrow/borrow.routes.js';
 import { allocationPlansRouter, expiryJobsRouter, nearExpiryRouter, poolRouter, repeatExpiryRouter } from './modules/expiry/expiry.routes.js';
@@ -44,6 +44,7 @@ app.use('/api/v1/borrow-requests', borrowRequestsRouter); // API-F1b-001..007, -
 app.use('/api/v1/lender-queue', lenderQueueRouter); // API-F1b-008
 app.use('/api/v1/jobs', borrowJobsRouter); // JOB-04 trigger
 app.use('/api/v1/jobs', expiryJobsRouter); // JOB-05..07 trigger
+app.use('/api/v1/jobs', forecastJobsRouter); // scheduled F1 predict (every 3 days) trigger
 app.use('/api/v1/near-expiry', nearExpiryRouter); // API-F2a-001..005
 app.use('/api/v1/pool', poolRouter); // API-F2a-006
 app.use('/api/v1/allocation-plans', allocationPlansRouter); // API-F2a-007..011

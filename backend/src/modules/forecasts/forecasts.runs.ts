@@ -6,6 +6,7 @@
  */
 import type { Request } from 'express';
 import { auditContext, writeAudit } from '../../core/audit.js';
+import type { AuditContext } from '../../core/audit.js';
 import { oneOf } from '../../core/pagination.js';
 import { bodyObject } from '../../core/validate.js';
 import { withTransaction } from '../../db/tx.js';
@@ -29,7 +30,7 @@ export interface RunSummary {
   alerts: EvaluateResult;
 }
 
-async function runOne(req: Request, granularity: Granularity): Promise<RunSummary> {
+async function runOne(ctx: AuditContext, granularity: Granularity): Promise<RunSummary> {
   const file = forecastsRepository.readJsonForecast(granularity);
   if (!file) throw new HttpError(404, 'NOT_FOUND', `ไม่พบไฟล์ผลพยากรณ์ ${granularity} (รัน predict ก่อน)`);
   const { payload } = file;
@@ -76,7 +77,7 @@ async function runOne(req: Request, granularity: Granularity): Promise<RunSummar
     }
 
     const alerts = await evaluateAlerts(client, runId, granularity);
-    await writeAudit(client, auditContext(req), {
+    await writeAudit(client, ctx, {
       action: 'FORECAST_RUN',
       entityType: 'forecast_run',
       entityId: runId,
@@ -86,12 +87,18 @@ async function runOne(req: Request, granularity: Granularity): Promise<RunSummar
   });
 }
 
+/** Loads the newest JSON of each granularity into the DB and re-evaluates alerts (shared by the HTTP route and the scheduled job). */
+export async function loadForecastRuns(ctx: AuditContext, which: Granularity | 'BOTH' = 'BOTH') {
+  const list: Granularity[] = which === 'BOTH' ? ['WEEK', 'MONTH'] : [which];
+  const runs: RunSummary[] = [];
+  for (const g of list) runs.push(await runOne(ctx, g));
+  return runs;
+}
+
 export async function triggerForecastRuns(req: Request) {
   const body = bodyObject(req.body ?? {});
   const which = oneOf(body.granularity, ['WEEK', 'MONTH', 'BOTH'] as const, 'granularity') ?? 'BOTH';
-  const list: Granularity[] = which === 'BOTH' ? ['WEEK', 'MONTH'] : [which];
-  const runs: RunSummary[] = [];
-  for (const g of list) runs.push(await runOne(req, g));
+  const runs = await loadForecastRuns(auditContext(req), which);
   return { ok: true, jobId: runs[0].runId, status: 'SUCCEEDED', runs };
 }
 

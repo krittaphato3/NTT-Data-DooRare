@@ -21,6 +21,34 @@ function resolveForecastsDir(): string {
   return candidates.find((candidate) => fs.existsSync(candidate)) ?? candidates[0];
 }
 
+/** `backend/models` (Python F1 module), for the scheduled predict job. `FORECAST_MODELS_DIR` wins when set. */
+function resolveModelsDir(): string {
+  if (process.env.FORECAST_MODELS_DIR) return path.resolve(process.env.FORECAST_MODELS_DIR);
+  const candidates = [path.resolve(process.cwd(), 'models'), path.resolve(process.cwd(), 'backend/models'), path.resolve(process.cwd(), '../models')];
+  return candidates.find((candidate) => fs.existsSync(path.join(candidate, 'f1_forecast'))) ?? candidates[0];
+}
+
+/** Python for the job: `FORECAST_PYTHON`, else the repo-root venv (same convention as models/scripts/run_all.sh), else `python3`. */
+function resolvePython(modelsDir: string): string {
+  if (process.env.FORECAST_PYTHON) return process.env.FORECAST_PYTHON;
+  const venv = path.resolve(modelsDir, '../../.venv/bin/python');
+  return fs.existsSync(venv) ? venv : 'python3';
+}
+
+/** Directory holding the raw pack CSVs (Option B: export DB tables into here before predict). */
+function resolvePackCsvDir(): string {
+  if (process.env.FORECAST_PACK_CSV_DIR) return path.resolve(process.env.FORECAST_PACK_CSV_DIR);
+  const candidates = [
+    path.resolve(process.cwd(), 'data/DooRare-F1-Monthly-Pack/csv'),
+    path.resolve(process.cwd(), '../data/DooRare-F1-Monthly-Pack/csv'),
+    path.resolve(process.cwd(), '../../data/DooRare-F1-Monthly-Pack/csv'),
+  ];
+  return candidates.find((c) => fs.existsSync(c)) ?? candidates[0];
+}
+
+const modelsDir = resolveModelsDir();
+const packCsvDir = resolvePackCsvDir();
+
 export const config = {
   port: Number(process.env.PORT || 3001),
   nodeEnv: process.env.NODE_ENV || 'development',
@@ -47,5 +75,21 @@ export const config = {
     dir: resolveForecastsDir(),
     /** Inputs older than this are flagged `meta.stale` (FR-F1a-013 keeps 7 d for alert suppression). */
     staleAfterDays: Number(process.env.FORECASTS_STALE_AFTER_DAYS || 30),
+    /**
+     * Scheduled predict job (every `intervalDays`): python `predict` for WEEK + MONTH, then load the JSON into the DB and
+     * re-evaluate alerts. Off unless FORECAST_JOB_ENABLED=true. It never trains. `pythonStaleAfterDays` lifts the model's
+     * own STALE_INPUT limit (F1_STALE_AFTER_DAYS) so predicting on older input keeps working.
+     */
+    job: {
+      enabled: process.env.FORECAST_JOB_ENABLED === 'true',
+      intervalDays: Number(process.env.FORECAST_JOB_INTERVAL_DAYS || 3),
+      modelsDir,
+      packCsvDir,
+      /** Option B: export latest usage_daily and stock_snapshot from DB before predicting (default true). */
+      exportFromDb: process.env.FORECAST_JOB_EXPORT_DB !== 'false',
+      python: resolvePython(modelsDir),
+      pythonStaleAfterDays: Number(process.env.FORECAST_JOB_STALE_AFTER_DAYS || 3650),
+      timeoutMs: Number(process.env.FORECAST_JOB_TIMEOUT_MS || 15 * 60_000),
+    },
   },
 };
