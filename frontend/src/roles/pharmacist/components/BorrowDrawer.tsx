@@ -50,6 +50,13 @@ export function BorrowDrawer({ request: r, tick, decision, onDecide, onClose, on
   const addLender = gate('escalateManual');
   const recordReturn = gate('updateInventory');
   const cancelRequest = gate('cancelRequest');
+  const cancelDisallowedByStatus = r.status !== 'APPROVED';
+  const cancelDisabled = !cancelRequest.allowed || cancelDisallowedByStatus;
+  const cancelHint = !cancelRequest.allowed
+    ? cancelRequest.hint
+    : cancelDisallowedByStatus
+      ? `ยกเลิกได้เฉพาะคำขอในสถานะอนุมัติแล้ว (APPROVED) ก่อนเริ่มขนส่งตามข้อกำหนด SM-1 (สถานะปัจจุบัน: ${r.status})`
+      : undefined;
   const [bg, border, fg] = BANNER[group];
   const bannerIcon: IconName = group === 'progress' ? 'clock' : groupMeta(group).icon;
   const activeLeg = r.legs.findIndex((l) => l.state === 'WAITING');
@@ -225,8 +232,8 @@ export function BorrowDrawer({ request: r, tick, decision, onDecide, onClose, on
             {group === 'progress' && (
               <button
                 className="btn btn-g"
-                disabled={!cancelRequest.allowed}
-                title={cancelRequest.hint}
+                disabled={cancelDisabled}
+                title={cancelHint}
                 onClick={() => onCancel?.(r)}
               >
                 ยกเลิกคำขอ

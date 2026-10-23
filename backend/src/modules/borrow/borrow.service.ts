@@ -17,6 +17,7 @@ import { pool, query } from '../../db/client.js';
 import { withTransaction } from '../../db/tx.js';
 import type { Db } from '../../db/tx.js';
 import { HttpError } from '../../middleware/httpError.js';
+import { holdStock } from '../../core/stock.js';
 import type { AuthSessionUser } from '../auth/auth.types.js';
 import { loadBorrowConfig } from './borrow.config.js';
 import { advanceRequest, asStoredLadder, draftMessage, effectiveQty, loadLegs, loadRequest, sendLegs, setRequestStatus } from './borrow.flow.js';
@@ -453,10 +454,17 @@ export class BorrowService {
       if (['FULFILLED', 'CLOSED_UNFULFILLED', 'CANCELLED'].includes(r.status)) {
         throw new HttpError(409, 'ALREADY_DECIDED', `ไม่สามารถยกเลิกคำขอในสถานะ ${r.status}`);
       }
+      if (!['DRAFT', 'PENDING_APPROVAL', 'APPROVED'].includes(r.status)) {
+        throw new HttpError(
+          409,
+          'SPEC_STATUS_NOT_CANCELLABLE',
+          `ไม่สามารถยกเลิกคำขอในสถานะ ${r.status} (ข้อกำหนด SM-1 อนุญาตให้ยกเลิกเฉพาะคำขอในสถานะ DRAFT, PENDING_APPROVAL หรือ APPROVED เท่านั้น)`,
+        );
+      }
 
       // Check if any leg is already loaded, in transit, or received
       const legs = await client.query(
-        `SELECT bl.id, bl.status::text AS leg_status, tt.id AS task_id, tt.status::text AS task_status
+        `SELECT bl.id, bl.status::text AS leg_status, bl.lender_hospital_id, tt.id AS task_id, tt.status::text AS task_status
            FROM borrow_leg bl
            LEFT JOIN transport_task tt ON tt.ref_type = 'BORROW_LEG' AND tt.ref_id = bl.id AND tt.status <> 'CANCELLED'
           WHERE bl.request_id = $1`,
@@ -469,6 +477,39 @@ export class BorrowService {
       );
       if (hasLoadedOrMoving) {
         throw new HttpError(409, 'CANNOT_CANCEL', 'ไม่สามารถยกเลิกคำขอได้เนื่องจากยาถูกจัดขึ้นรถหรืออยู่ระหว่างจัดส่งแล้ว');
+      }
+
+      // Release FEFO lot holds on lender's stock for accepted/partial legs
+      const lotsToRelease = await client.query(
+        `SELECT bll.leg_id, bll.lot_id, bll.qty::float8 AS qty, bl.lender_hospital_id, sl.qty_held::float8 AS current_held
+           FROM borrow_leg_lot bll
+           JOIN borrow_leg bl ON bl.id = bll.leg_id
+           JOIN stock_lot sl ON sl.id = bll.lot_id
+          WHERE bl.request_id = $1
+            AND bl.status IN ('ACCEPTED', 'PARTIAL')`,
+        [id],
+      );
+
+      for (const row of lotsToRelease.rows) {
+        const releaseQty = Math.min(row.qty, Math.max(0, row.current_held));
+        if (releaseQty > 0) {
+          await holdStock(client, row.lender_hospital_id, row.lot_id, -releaseQty);
+        }
+      }
+
+      // Notify each affected lender hospital whose leg is cancelled
+      const notifiedLenders = new Set<string>();
+      for (const l of legs.rows) {
+        if (['SENT', 'ACCEPTED', 'PARTIAL'].includes(l.leg_status) && !notifiedLenders.has(l.lender_hospital_id)) {
+          notifiedLenders.add(l.lender_hospital_id);
+          await notifyRoles(client, l.lender_hospital_id, ['PHARMACIST', 'WAREHOUSE_OFFICER'], {
+            kind: 'BORROW_LEG_CANCELLED',
+            title: `ผู้ขอยกเลิกคำขอยืม ${r.request_no}`,
+            body: `เหตุผล: ${reason}`,
+            refType: 'borrow_request',
+            refId: id,
+          });
+        }
       }
 
       // Cancel unfulfilled legs and transport tasks in WAITING_DISPATCH
