@@ -49,6 +49,7 @@ import { AdminPage } from './roles/admin/pages/AdminPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { LoginPage } from './pages/LoginPage';
+import { DooRareChatDrawer } from './components/ai/DooRareChatDrawer';
 
 
 type Page = 'dashboard' | 'inbox' | 'kit' | 'stock' | 'drugs' | 'transport' | 'requests' | 'lend' | 'incident' | 'alerts' | 'report' | 'expiry' | 'pool' | 'docs' | 'users' | 'audit' | 'config' | 'sync' | 'admin';
@@ -593,6 +594,7 @@ function AuthenticatedShell() {
           )}
         </main>
         {!ops && <Footer isAdmin={isAdmin} />}
+        <DooRareChatDrawer />
       </div>
     </div>
   );

@@ -383,5 +383,12 @@
     "summary": "Reusable setup prompt starter.",
     "tags": "session, setup",
     "date": "2026-10-09"
+  },
+  {
+    "path": "sessions/2026-10-23-2055-antigravity-agent-runtime-copilot.md",
+    "title": "Person 2 Agent Runtime & UI Copilot Implementation",
+    "summary": "Implemented complete Person 2 scope: Tool Registry, ReAct Engine loop, SSE Streaming chat API, and <DooRareChatDrawer /> frontend with HITL proposal cards.",
+    "tags": "session, ai, agent, react-engine, byok, copilot, sse, chat-drawer",
+    "date": "2026-10-23"
   }
 ]

@@ -23,6 +23,7 @@ import { transportRouter, vehiclesRouter } from './modules/transport/transport.r
 import { emergencyLegsRouter, incidentRulesRouter, incidentsRouter, kitStockRouter, kitTasksRouter, presetKitsRouter } from './modules/incidents/incidents.routes.js';
 import { agentRouter, configRouter } from './modules/admin/config.routes.js';
 import { aiConfigRouter } from './modules/ai/byok/byok.routes.js';
+import { aiChatRouter } from './modules/ai/chat/chat.routes.js';
 import { usersRouter } from './modules/admin/users.routes.js';
 import { auditRouter } from './modules/admin/audit.routes.js';
 
@@ -74,6 +75,7 @@ app.use('/api/v1/config', configRouter); // API-AD-001 / API-AD-002
 app.use('/api/v1/agent', agentRouter); // API-AD-004 (kill switch)
 app.use('/api/v1/admin/ai-config', aiConfigRouter); // Central Admin BYOK
 app.use('/api/v1/ai-config', aiConfigRouter);
+app.use('/api/v1/ai/chat', aiChatRouter); // Streaming ReAct Copilot
 app.use('/api/v1/users', usersRouter); // API-AD-006 / API-AD-007 + PATCH
 app.use('/api/v1/audit-log', auditRouter); // API-AD-003 (+ /verify)
 app.get('/api/v1/me', authController.getMe); // API-PL-001
