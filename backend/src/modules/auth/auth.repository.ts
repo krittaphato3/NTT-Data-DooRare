@@ -28,30 +28,6 @@ export class AuthRepository {
     return row;
   }
 
-  async findUserByIdPrefix(prefix: string): Promise<AppUserEntity | null> {
-    const text = `
-      SELECT 
-        u.*,
-        h.code AS hospital_code,
-        h.name_th AS hospital_name,
-        r.code AS region_code,
-        r.name_th AS region_name,
-        coalesce(array_remove(array_agg(ur.role), NULL), '{}') AS additional_roles
-      FROM app_user u
-      LEFT JOIN hospital h ON h.id = u.hospital_id
-      LEFT JOIN region r ON r.id = u.region_id
-      LEFT JOIN app_user_role ur ON ur.user_id = u.id AND ur.role <> u.role
-      WHERE u.id::text LIKE $1 || '%' AND u.active = true
-      GROUP BY u.id, h.code, h.name_th, r.code, r.name_th
-      LIMIT 1;
-    `;
-    const res = await query<AppUserEntity>(text, [prefix.trim()]);
-    if (!res.rows[0]) return null;
-    const row = res.rows[0];
-    row.additional_roles = parsePgArray(row.additional_roles);
-    return row;
-  }
-
   async findUserById(id: string): Promise<AppUserEntity | null> {
     const text = `
       SELECT 
