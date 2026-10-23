@@ -18,14 +18,24 @@
   - Removed decline button and decline KPI card from Warehouse Inbox (WH role only confirms to pack).
   - Wired direct deep-linking from "ไปที่ขนส่ง {taskNo}" so clicking it navigates to Transport Tracking and automatically opens the detail drawer for that specific task.
   - Persisted inbound "รับทราบ" state in `localStorage` (`doorare_wh_in_acked_{hospitalId}`) so acknowledged items remain acknowledged and show "ดูที่ติดตามการขนส่ง" across browser refreshes.
-  - Verified TypeScript compilation with `npm run build` and rebuilt Docker frontend container.
+  - Fixed photo attachment preview in Transport drawer (`ShipmentDrawer.tsx`):
+    - Previously showed a generic grey box with camera icon and "พร้อมแนบ" / stage label text.
+    - Updated `ShipmentDrawer.tsx` to render real thumbnail previews (`<img src="..." />`) with status badges.
+    - Added ability to remove pending photos before status submission.
+    - Added a lightbox modal overlay so clicking any photo thumbnail expands it to full size.
+    - Enabled static file serving for uploads in `backend/src/app.ts` (`/api/v1/uploads`).
+    - Added persistent Docker volume `doorare_uploads` to `docker-compose.yml`.
+    - Verified build and restarted Docker containers.
 - **decisions:**
   - Used `localStorage` (`doorare_wh_packed_{taskNo}`) to track packing confirmation state per task locally without requiring extra backend schema changes, while relying on backend `transport_task.status` (`WAITING_DISPATCH`, `LOADED`, `IN_TRANSIT`, `ARRIVED`, `RECEIVED`) for end-to-end task lifecycle.
   - Completed transport tasks (`RECEIVED` or `CANCELLED`) are filtered out from the inbox outbound queue as they no longer need action from warehouse packing.
   - Deep-linked inbound shipments directly to the Inbound tab in Transport Tracking via URL param `dir=in`.
   - Added ErrorBoundary at application root to gracefully catch any unhandled rendering exceptions and provide recovery actions instead of a blank screen.
   - Deep-linked task buttons (`?task=TR-...`) automatically trigger tab direction selection and open the task's detail drawer on Transport Tracking page.
+  - Stored and previewed uploaded photo blobs immediately on the client and mapped backend static upload URLs (`/api/v1/uploads/...`) for persisted task event photos.
 - **files touched:**
+  - `backend/src/app.ts`
+  - `docker-compose.yml`
   - `frontend/nginx.conf`
   - `frontend/src/App.tsx`
   - `frontend/src/components/common/ErrorBoundary.tsx`
@@ -33,9 +43,14 @@
   - `frontend/src/roles/warehouse/components/InboundTable.tsx`
   - `frontend/src/roles/warehouse/components/InboxDrawer.tsx`
   - `frontend/src/roles/warehouse/components/RequestsTable.tsx`
+  - `frontend/src/roles/warehouse/components/ShipmentDrawer.tsx`
+  - `frontend/src/roles/warehouse/data/transport.ts`
+  - `frontend/src/roles/warehouse/data/transportLive.ts`
   - `frontend/src/roles/warehouse/pages/InboxPage.tsx`
   - `frontend/src/roles/warehouse/pages/TransportTrackingPage.tsx`
+  - `frontend/src/roles/warehouse/transport.css`
 - **errors encountered:**
   - White screen on navigation to `?role=warehouse&page=kit` caused by browser caching the previous build's `index.html` referencing an old JS bundle hash that was replaced during container rebuild.
+  - Generic camera icon displayed instead of actual photo thumbnail preview upon selecting/uploading a file in the transport drawer.
 - **next steps:**
-  - Guide user to do a Hard Refresh (`Cmd + Shift + R` / `Ctrl + Shift + R`) in their browser.
+  - Guide user to do a Hard Refresh (`Cmd + Shift + R` / `Ctrl + Shift + R`) in their browser and test photo upload and thumbnail preview.
