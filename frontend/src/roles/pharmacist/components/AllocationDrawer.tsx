@@ -88,9 +88,14 @@ export function AllocationDrawer({ plan: p, decision, onApprove, onUneconomical,
             </div>
             <div className="pl-meeting-parties">
               <span style={{ color: '#92400E', fontWeight: 600 }}>รพ. ที่ต้องเข้าประชุมเจรจา (เฉพาะแผนนี้):</span>
-              <span className="badge t-green">รพ.สมุทรปราการ (ต้นทาง · เห็นชอบ)</span>
-              <span className="badge t-green">รพ.พระประแดง (ปลายทาง 1 · เห็นชอบ)</span>
-              <span className="badge t-red">รพ.บางบ่อ (ปลายทาง 2 · ไม่เห็นชอบ)</span>
+              {p.approvals.map((a) => (
+                <span
+                  key={a.hospital}
+                  className={`badge ${a.state === 'APPROVED' ? 't-green' : a.state === 'REJECTED' ? 't-red' : 't-amber'}`}
+                >
+                  {a.hospital} ({a.state === 'APPROVED' ? 'เห็นชอบ' : a.state === 'REJECTED' ? 'ไม่เห็นชอบ' : 'รอตอบ'})
+                </span>
+              ))}
               <span className="badge t-blue">+ ผู้ประสานงาน Region Admin</span>
             </div>
           </div>
@@ -232,12 +237,12 @@ export function AllocationDrawer({ plan: p, decision, onApprove, onUneconomical,
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, color: '#92400E', fontSize: 13.5 }}>
                 <Icon name="users" style={{ width: 16, height: 16, color: '#D97706' }} />
-                <span>การดำเนินการเจรจาจัดสรรยา (3 รพ.)</span>
+                <span>การดำเนินการเจรจาจัดสรรยา ({p.approvals.length} รพ.)</span>
               </div>
               <span className="badge t-amber">ต้องการข้อตกลงร่วม</span>
             </div>
             <div style={{ fontSize: 12.5, color: '#78350F', lineHeight: '18px' }}>
-              แผนนี้มีข้อโต้แย้งจาก รพ.บางบ่อ ท่านสามารถนัดหมายประชุมด่วนเฉพาะ 3 รพ. ในแผนนี้ และบันทึกผลการประชุมเพื่อปรับปรุงยอดจัดสรรส่งขอความเห็นชอบรอบใหม่ (v{p.version + 1})
+              แผนนี้มีข้อโต้แย้งจาก {p.approvals.filter((a) => a.state === 'REJECTED').map((a) => a.hospital).join(', ') || 'โรงพยาบาลในแผน'} ท่านสามารถนัดหมายประชุมด่วนเฉพาะ รพ. ในแผนนี้ และบันทึกผลการประชุมเพื่อปรับปรุงยอดจัดสรรส่งขอความเห็นชอบรอบใหม่ (v{p.version + 1})
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
               <button
@@ -247,7 +252,7 @@ export function AllocationDrawer({ plan: p, decision, onApprove, onUneconomical,
                 onClick={() => setShowMeetingModal((v) => !v)}
               >
                 <Icon name="calendar" />
-                {showMeetingModal ? 'ซ่อนรายละเอียดนัดหมาย' : 'นัดหมายประชุมด่วน (เฉพาะ 3 รพ.)'}
+                {showMeetingModal ? 'ซ่อนรายละเอียดนัดหมาย' : `นัดหมายประชุมด่วน (เฉพาะ ${p.approvals.length} รพ.)`}
               </button>
               <button
                 type="button"
@@ -266,14 +271,16 @@ export function AllocationDrawer({ plan: p, decision, onApprove, onUneconomical,
                   รายละเอียดการนัดหมายประชุมด่วน (Teleconference)
                 </div>
                 <div>
-                  <strong>วาระการประชุม:</strong> พิจารณาปรับลดยอดรับยา {p.drug} ของ รพ.บางบ่อ และเกลี่ยยอดคงเหลือให้ รพ.พระประแดง
+                  <strong>วาระการประชุม:</strong> พิจารณาปรับยอดจัดสรรยา {p.drug} (แผน {p.id} v{p.version}) เพื่อให้ทุกฝ่ายบรรลุข้อตกลงร่วมกัน
                 </div>
                 <div>
-                  <strong>ผู้เข้าร่วม (เฉพาะ 3 รพ. ในแผน + ผู้แทนเขต):</strong>
+                  <strong>ผู้เข้าร่วม (เฉพาะ รพ. ในแผน + ผู้แทนเขต):</strong>
                   <ul style={{ margin: '4px 0 0 16px', padding: 0, lineHeight: '20px' }}>
-                    <li>รพ.สมุทรปราการ (คลังต้นทาง) — ภก.ณัฐวุฒิ ศรีสุข</li>
-                    <li>รพ.พระประแดง (ปลายทาง 1) — ภก.วิทยา แสงทอง</li>
-                    <li>รพ.บางบ่อ (ปลายทาง 2) — ภญ.กมลชนก พรหมมา (ผู้ขอปรับลด)</li>
+                    {p.approvals.map((a) => (
+                      <li key={a.hospital}>
+                        {a.hospital} — {a.pharmacist} {a.state === 'REJECTED' ? '(ผู้ขอปรับยอด/มีข้อโต้แย้ง)' : ''}
+                      </li>
+                    ))}
                     <li>ผู้ประสานงานสำนักงานสาธารณสุขจังหวัด / เขตสุขภาพที่ 6 (Region Admin)</li>
                   </ul>
                 </div>
@@ -282,13 +289,13 @@ export function AllocationDrawer({ plan: p, decision, onApprove, onUneconomical,
                     readOnly
                     className="sel"
                     style={{ flex: 1, fontSize: 12, background: '#F8FAFC' }}
-                    value="https://meet.doorare.moph.go.th/f2-ap-2026-000039"
+                    value={`https://meet.doorare.moph.go.th/f2-${p.id.toLowerCase()}`}
                   />
                   <button
                     type="button"
                     className="btn btn-s"
                     onClick={() => {
-                      navigator.clipboard?.writeText?.('https://meet.doorare.moph.go.th/f2-ap-2026-000039');
+                      navigator.clipboard?.writeText?.(`https://meet.doorare.moph.go.th/f2-${p.id.toLowerCase()}`);
                       setCopiedLink(true);
                       setTimeout(() => setCopiedLink(false), 2500);
                     }}
@@ -297,7 +304,7 @@ export function AllocationDrawer({ plan: p, decision, onApprove, onUneconomical,
                   </button>
                 </div>
                 <div className="sub" style={{ color: '#166534', fontWeight: 500 }}>
-                  ✓ ระบบส่งข้อความแจ้งเตือนด่วนไปยังห้องแชทและ SMS ของเภสัชกรทั้ง 3 รพ. เรียบร้อยแล้ว
+                  ✓ ระบบส่งข้อความแจ้งเตือนด่วนไปยังห้องแชทและ SMS ของเภสัชกรทุก รพ. ในแผนเรียบร้อยแล้ว
                 </div>
               </div>
             )}
@@ -421,6 +428,11 @@ export function AllocationDrawer({ plan: p, decision, onApprove, onUneconomical,
               <Icon name="x" />
               ไม่เห็นชอบ · ขอแก้แผน
             </button>
+            {L && !noteOk && (
+              <div className="sub" style={{ width: '100%', color: '#D97706', fontSize: 11.5, marginTop: 2 }}>
+                ℹ หากต้องการกด "ไม่เห็นชอบ · ขอแก้แผน" กรุณาระบุเหตุผลในช่องด้านบนอย่างน้อย 3 ตัวอักษร
+              </div>
+            )}
           </div>
         ) : (
           <div className="sub">
