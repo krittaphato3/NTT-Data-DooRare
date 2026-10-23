@@ -25,7 +25,7 @@ export interface PickLot {
 }
 
 export interface TransportPhoto {
-  stage: 'LOADED' | 'ARRIVED' | 'RECEIVED';
+  stage: 'LOADED' | 'IN_TRANSIT' | 'ARRIVED' | 'RECEIVED';
   time: string;
   /** Captured offline, not yet synced (FR-F2a-016). */
   pending?: boolean;

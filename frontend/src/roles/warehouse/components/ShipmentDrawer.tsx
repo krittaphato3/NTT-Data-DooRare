@@ -93,7 +93,7 @@ export function ShipmentDrawer(p: ShipmentDrawerProps) {
     (p.isDriver
       ? ['WAITING_DISPATCH', 'LOADED', 'IN_TRANSIT'].includes(status)
       : out
-        ? status === 'WAITING_DISPATCH' || canProxy
+        ? status === 'WAITING_DISPATCH'
         : status === 'ARRIVED');
 
   return (
@@ -224,7 +224,19 @@ export function ShipmentDrawer(p: ShipmentDrawerProps) {
           </div>
         )}
 
-        {canProxy && <ProxyStatusPanel key={status} status={status} onSubmit={p.onProxy} />}
+        {canProxy && (
+          <ProxyStatusPanel
+            key={status}
+            status={status}
+            onSubmit={p.onProxy}
+            pendingPhotos={p.pendingPhotos}
+            onAddPhoto={p.onAddPhoto}
+            onRemovePendingPhoto={p.onRemovePendingPhoto}
+            onPreviewPhoto={setPreviewImgUrl}
+            busy={p.busy}
+            live={p.live}
+          />
+        )}
         {p.proxies.map((x, i) => (
           <div key={i} role="status" className="proxy-done">
             บันทึกแทนคนขับ → {x.to} · เหตุผล: “{x.reason}” · บันทึกใน audit log

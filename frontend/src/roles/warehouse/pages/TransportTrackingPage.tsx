@@ -221,7 +221,7 @@ export function TransportTrackingPage({ role = 'WAREHOUSE_OFFICER' }: { role?: T
     setActError(null);
     try {
       const currentPending = pendingPhotos[s.id] ?? [];
-      const keys = to === 'LOADED' || to === 'ARRIVED' || to === 'RECEIVED' ? currentPending.map((p) => p.key) : [];
+      const keys = to === 'LOADED' || to === 'ARRIVED' || to === 'RECEIVED' || to === 'IN_TRANSIT' ? currentPending.map((p) => p.key) : [];
       await tr.advance(s, to, { ...extra, ...(keys.length ? { photoKeys: keys } : {}) });
       currentPending.forEach((p) => {
         if (p.url.startsWith('blob:')) URL.revokeObjectURL(p.url);
