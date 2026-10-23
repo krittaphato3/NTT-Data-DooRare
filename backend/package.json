@@ -11,10 +11,12 @@
     "test:integration": "tsx --test tests/integration/admin.integration.test.ts"
   },
   "dependencies": {
+    "@types/pg-copy-streams": "^1.2.5",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.21.1",
-    "pg": "^8.13.0"
+    "pg": "^8.13.0",
+    "pg-copy-streams": "^7.0.0"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",

@@ -4,6 +4,7 @@ import { asyncHandler } from '../../middleware/asyncHandler.js';
 import { idempotent } from '../../middleware/idempotency.js';
 import { forecastsController } from './forecasts.controller.js';
 import { triggerForecastRuns } from './forecasts.runs.js';
+import { runForecastJob } from './forecasts.job.js';
 
 /**
  * API-F1a-001 / API-F1a-002 (specification/openapi.yaml).
@@ -35,3 +36,9 @@ forecastsRouter.post(
     res.status(200).json(await triggerForecastRuns(req));
   }),
 );
+
+/** Scheduled predict job trigger for operators / EventBridge (mounted at /api/v1/jobs): predict -> load -> re-evaluate alerts. */
+export const forecastJobsRouter = Router();
+forecastJobsRouter.post('/forecast-predict', requireAuth, requireRole('SYSTEM_ADMIN'), asyncHandler(async (_req, res) => {
+  res.json({ ok: true, ...(await runForecastJob()) });
+}));

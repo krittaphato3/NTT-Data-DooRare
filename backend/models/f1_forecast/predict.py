@@ -33,6 +33,7 @@ from __future__ import annotations
 
 import json
 import math
+import os
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Mapping
@@ -150,8 +151,13 @@ def check_schema(trained: model.TrainedModel, frame: pd.DataFrame) -> None:
 
 
 def check_stale(cfg: ForecastConfig, data_end: pd.Timestamp, today: date) -> None:
-    """``STALE_INPUT`` when the data end is older than ``inference.stale_after_days``."""
-    threshold = int(cfg.inference["stale_after_days"])
+    """``STALE_INPUT`` when the data end is older than ``inference.stale_after_days``.
+
+    ``F1_STALE_AFTER_DAYS`` (env) overrides the config value when set to an integer; the scheduled predict job
+    uses it so predicting on older input does not abort.
+    """
+    override = os.environ.get("F1_STALE_AFTER_DAYS", "").strip()
+    threshold = int(override) if override.lstrip("-").isdigit() else int(cfg.inference["stale_after_days"])
     days_old = (pd.Timestamp(today) - data_end.normalize()).days
     if days_old > threshold:
         raise PredictError("STALE_INPUT", f"data end {data_end.date()} is {days_old} days old "
