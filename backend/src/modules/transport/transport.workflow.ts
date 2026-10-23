@@ -342,7 +342,7 @@ export async function applyTransition(client: pg.PoolClient, ctx: AuditContext, 
              $4::transport_status, $5::timestamptz, $6, $7::text[], true, $8)`,
     [task.id, input.clientEventId ?? null, input.seq ?? null, input.toStatus, at.toISOString(), user.id, photoKeys, input.temperatureC ?? null],
   );
-  if (input.toStatus === 'LOADED' || input.toStatus === 'ARRIVED') {
+  if (input.toStatus === 'LOADED' || input.toStatus === 'ARRIVED' || input.toStatus === 'RECEIVED') {
     for (const key of photoKeys) {
       await client.query(
         `INSERT INTO transport_photo (task_id, stage, s3_key, taken_at, taken_by) VALUES ($1, $2, $3, $4::timestamptz, $5)`,

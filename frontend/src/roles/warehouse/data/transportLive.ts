@@ -52,7 +52,7 @@ export function taskToShipment(t: ApiTransportTask, now = new Date()): Shipment 
   };
   const photos: TransportPhoto[] = [];
   for (const e of t.events) {
-    if (e.toStatus !== 'LOADED' && e.toStatus !== 'ARRIVED') continue;
+    if (e.toStatus !== 'LOADED' && e.toStatus !== 'ARRIVED' && e.toStatus !== 'RECEIVED') continue;
     for (let i = 0; i < e.photoKeys.length; i += 1) {
       const key = e.photoKeys[i];
       photos.push({

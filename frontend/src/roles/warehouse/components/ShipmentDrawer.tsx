@@ -71,7 +71,6 @@ export function ShipmentDrawer(p: ShipmentDrawerProps) {
   const cancelReq = s.cancelRequest;
   const op = p.canOperate;
   const showReceipt = op && !out && status === 'ARRIVED' && p.receipt === 'open';
-  const canPhoto = op && ['WAITING_DISPATCH', 'LOADED', 'IN_TRANSIT'].includes(status) && s.photos.length + pendingCount < 10;
   const primary = !op
     ? null
     : p.isDriver
@@ -88,6 +87,14 @@ export function ShipmentDrawer(p: ShipmentDrawerProps) {
   const canRequestCancel = p.canCancel && status === 'WAITING_DISPATCH' && out && !cancelReq;
   const canProxy = !p.isDriver && op && out && (status === 'LOADED' || status === 'IN_TRANSIT');
   const showPick = op && out && status === 'WAITING_DISPATCH' && (s.pick?.length ?? 0) > 0;
+  const canPhoto =
+    op &&
+    s.photos.length + pendingCount < 10 &&
+    (p.isDriver
+      ? ['WAITING_DISPATCH', 'LOADED', 'IN_TRANSIT'].includes(status)
+      : out
+        ? status === 'WAITING_DISPATCH' || canProxy
+        : status === 'ARRIVED');
 
   return (
     <aside className="tr-drawer" aria-label="รายละเอียดงานขนส่ง">

@@ -449,7 +449,7 @@ CREATE TABLE transport_task (
 );
 CREATE TABLE transport_photo (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(), task_id uuid NOT NULL REFERENCES transport_task(id) ON DELETE CASCADE,
-  stage text NOT NULL CHECK (stage IN ('LOADED','IN_TRANSIT','ARRIVED')), s3_key text NOT NULL, client_photo_id uuid UNIQUE, taken_at timestamptz NOT NULL DEFAULT now(), received_at timestamptz NOT NULL DEFAULT now(), taken_by uuid REFERENCES app_user(id)
+  stage text NOT NULL CHECK (stage IN ('LOADED','IN_TRANSIT','ARRIVED','RECEIVED')), s3_key text NOT NULL, client_photo_id uuid UNIQUE, taken_at timestamptz NOT NULL DEFAULT now(), received_at timestamptz NOT NULL DEFAULT now(), taken_by uuid REFERENCES app_user(id)
 );
 CREATE TABLE transport_event (        -- offline-first driver events, synced idempotently (FR-F2a-016)
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(), task_id uuid NOT NULL REFERENCES transport_task(id) ON DELETE CASCADE,
