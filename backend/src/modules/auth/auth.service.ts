@@ -174,7 +174,22 @@ export class AuthService {
 
   /** `touch` = also bump `last_seen_at` (the `/me` poll marks the user online). */
   async getMe(token: string, touch = true): Promise<AuthSessionUser | null> {
-    const session = this.activeSessions.get(token);
+    let session = this.activeSessions.get(token);
+    if (!session && token.startsWith('sess_')) {
+      const parts = token.split('_');
+      if (parts[1] && parts[1].length === 8) {
+        const recovered = await this.repo.findUserByIdPrefix(parts[1]);
+        if (recovered && recovered.active) {
+          session = {
+            userId: recovered.id,
+            email: recovered.email,
+            role: recovered.role,
+            createdAt: Date.now(),
+          };
+          this.activeSessions.set(token, session);
+        }
+      }
+    }
     if (!session) return null;
 
     const user = await this.repo.findUserById(session.userId);
