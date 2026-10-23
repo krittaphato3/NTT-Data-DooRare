@@ -45,6 +45,36 @@ function MockReportsPage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
   const [period] = useState('12 เดือน · พ.ย. 68 – ต.ค. 69');
   const [emailOpen, setEmailOpen] = useState(true);
 
+  /** Client-side CSV export of report tab data (QA-PHARM-007). */
+  const exportCsv = () => {
+    let header: string[] = [];
+    let lines: (string | number)[][] = [];
+
+    if (activeTab === 'value') {
+      header = ['ตัวชี้วัด', 'ค่าปัจจุบัน', 'การเปลี่ยนแปลง', 'ช่วงฐาน', 'คำอธิบาย'];
+      lines = VALUE_KPIS.map((k) => [k.title, k.value, k.diff, k.baseline, k.desc]);
+    } else if (activeTab === 'forecast') {
+      header = ['กลุ่ม/วิธีพยากรณ์', 'จำนวนยา (รายการ)', 'สัปดาห์ (N)', 'Coverage P90', 'Coverage P95', 'Pinball P50', 'WAPE', 'Stockout Rate', 'หมายเหตุ'];
+      lines = FORECAST_SUMMARY.map((f) => [f.method, f.itemsCount, f.weeksN, f.coverageP90, f.coverageP95, f.pinballP50, f.wape, f.stockoutRate, f.note]);
+    } else if (activeTab === 'borrow') {
+      header = ['ตัวชี้วัด', 'รหัส', 'ค่า', 'คำอธิบาย'];
+      lines = BORROW_KPIS.map((b) => [b.title, b.code, b.value, b.desc]);
+    } else {
+      header = ['รหัสแผน', 'ยา', 'มูลค่า', 'ค่าขนส่ง', 'สัดส่วนค่าขนส่ง', 'สถานะ'];
+      lines = RELEASED_EXPIRY_PLANS.map((p) => [p.planId, p.drug, p.value, p.shippingCost, p.shippingRatioStr, p.statusLabel]);
+    }
+
+    const csv = [header, ...lines]
+      .map((cols) => cols.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(','))
+      .join('\r\n');
+    const url = URL.createObjectURL(new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8;' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `report-${activeTab}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="rep-container">
       {/* Page Header */}
@@ -86,11 +116,11 @@ function MockReportsPage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
                 {period} <Icon name="chev" style={{ width: 12, height: 12, marginLeft: 2 }} />
               </button>
 
-              <button className="btn btn-s btn-sm" type="button">
+              <button className="btn btn-s btn-sm" type="button" onClick={exportCsv} title="ส่งออกข้อมูลเป็น CSV">
                 <Icon name="download" style={{ width: 13, height: 13 }} /> CSV
               </button>
 
-              <button className="btn btn-s btn-sm" type="button">
+              <button className="btn btn-s btn-sm" type="button" onClick={() => window.print()} title="พิมพ์หรือบันทึกเป็น PDF">
                 <Icon name="fileText" style={{ width: 13, height: 13 }} /> PDF
               </button>
 
