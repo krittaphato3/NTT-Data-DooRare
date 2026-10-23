@@ -33,7 +33,7 @@ export function InboundTable({ rows, acked, onAck }: InboundTableProps) {
             const arrived = r.stage.startsWith('ถึงปลายทาง');
             const isNew = r.status === 'NEW' && !acked.has(r.id);
             const justAcked = r.status === 'NEW' && acked.has(r.id);
-            const transportInHref = `${whHref('transport')}&dir=in`;
+            const transportInHref = `${whHref('transport')}&dir=in&task=${encodeURIComponent(r.transportId || r.id)}`;
             return (
               <tr key={r.id}>
                 <td>
