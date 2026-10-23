@@ -566,7 +566,7 @@ export const interpretLenderResponseTool: IAgentTool<{
       const injectionPattern =
         /(ignore\s+(all\s+)?previous\s+instructions|system\s*:|override\s+all|you\s+are\s+now|developer\s+mode|as\s+an\s+ai)/i;
       if (injectionPattern.test(rawText)) {
-        flags.push('INJECTION_SUSPECTED');
+        flags.push('PROMPT_INJECTION_SUSPECTED', 'INJECTION_SUSPECTED');
         // When prompt injection is suspected, never trust or execute instructions
         return {
           success: true,
@@ -600,13 +600,13 @@ export const interpretLenderResponseTool: IAgentTool<{
         }
       }
 
-      // Check for full rejection patterns (note: (?<!ทั้ง)หมด prevents matching ทั้งหมด "all")
+      // Check for full rejection patterns (note: (?<!ไม่|ยังไม่|ทั้ง)หมด prevents matching ไม่หมด, ยังไม่หมด, ทั้งหมด)
       const rejectPattern =
-        /(ปฏิเสธ|ไม่มี(?!.*แต่มี)|ไม่สะดวก|ไม่สามารถ|(?<!ทั้ง)หมด|ติดเคส|ไม่มีสต็อก|ไม่พอ(?!.*แต่มี)|reject|unavailable|no\s*stock|cannot|out\s*of\s*stock|declined)/i;
+        /(ปฏิเสธ|ไม่มี(?!.*แต่มี)|ไม่สะดวก|ไม่สามารถ|(?<!ไม่|ยังไม่|ทั้ง)หมด|ติดเคส|ไม่มีสต็อก|ไม่พอ(?!.*แต่มี)|reject|unavailable|no\s*stock|cannot|out\s*of\s*stock|declined)/i;
 
       // Check for full accept patterns
       const acceptPattern =
-        /(พร้อมส่ง|ได้ครบ|ยินดีให้ยืม|อนุมัติ|ส่งให้ได้|มีพอ|accept|approved|can\s*provide\s*all|full\s*quantity|available)/i;
+        /(พร้อมส่ง|ได้ครบ|ยินดีให้ยืม|อนุมัติ|ส่งให้ได้|มีพอ|ไม่หมด|ยังไม่หมด|accept|approved|can\s*provide\s*all|full\s*quantity|available)/i;
 
       let decision: 'ACCEPT' | 'PARTIAL' | 'REJECT';
       let confirmedQuantity: number | null = null;
@@ -619,7 +619,7 @@ export const interpretLenderResponseTool: IAgentTool<{
         } else if (extractedQty > args.askedQuantity) {
           decision = 'ACCEPT';
           confirmedQuantity = args.askedQuantity; // Cap to asked
-          flags.push('EXCEEDS_ASKED_QUANTITY');
+          flags.push('QUANTITY_EXCEEDS_ASKED', 'EXCEEDS_ASKED_QUANTITY');
         } else {
           decision = 'ACCEPT';
           confirmedQuantity = args.askedQuantity;
