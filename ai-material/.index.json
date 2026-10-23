@@ -35,6 +35,27 @@
     "date": "2026-10-23"
   },
   {
+    "path": "sessions/2026-10-23-1830-antigravity-byok-person1.md",
+    "title": "Central Admin BYOK & Multi-Provider LLM Gateway (Person 1)",
+    "summary": "Implemented Central Admin BYOK engine, multi-provider LLM gateway (Mock, OpenAI, Anthropic, Bedrock,…",
+    "tags": "session, byok, ai, admin, bedrock, openai, anthropic, azure, person1",
+    "date": "2026-10-23"
+  },
+  {
+    "path": "sessions/2026-10-23-2055-antigravity-agent-runtime-copilot.md",
+    "title": "Session Note: 2026-10-23 20:55 - Person 2 Agent Runtime & UI Copilot Implementation",
+    "summary": "Session Note",
+    "tags": "session",
+    "date": "2026-10-23"
+  },
+  {
+    "path": "sessions/2026-10-23-2250-antigravity-clinical-emergency-tools.md",
+    "title": "Session: Clinical & Emergency AI Toolsets (Person 3 Scope)",
+    "summary": "Session",
+    "tags": "session",
+    "date": "2026-10-23"
+  },
+  {
     "path": "context/current-task.md",
     "title": "Current Task",
     "summary": "Current Task",
@@ -238,6 +259,13 @@
     "date": "2026-10-17"
   },
   {
+    "path": "context/runbook.md",
+    "title": "Runbook",
+    "summary": "Runbook",
+    "tags": "session",
+    "date": "2026-10-16"
+  },
+  {
     "path": "sessions/2026-10-16-1628-buffy-phase2c-return-obligations-waive.md",
     "title": "Return obligations + Waive (Phase 2C)",
     "summary": "HOSPITAL_ADMIN gets a read-only ภาระการคืน sub-tab on Borrow requests plus the API-XC-005…",
@@ -263,21 +291,14 @@
     "title": "ai-material",
     "summary": "ai-material",
     "tags": "session",
-    "date": "2026-10-15"
+    "date": "2026-10-14"
   },
   {
     "path": "context/conventions.md",
     "title": "Conventions",
     "summary": "Conventions",
     "tags": "session",
-    "date": "2026-10-15"
-  },
-  {
-    "path": "context/runbook.md",
-    "title": "Runbook",
-    "summary": "Runbook",
-    "tags": "session",
-    "date": "2026-10-15"
+    "date": "2026-10-14"
   },
   {
     "path": "decisions/0002-role-based-frontend-structure.md",
@@ -383,12 +404,5 @@
     "summary": "Reusable setup prompt starter.",
     "tags": "session, setup",
     "date": "2026-10-09"
-  },
-  {
-    "path": "sessions/2026-10-23-2055-antigravity-agent-runtime-copilot.md",
-    "title": "Person 2 Agent Runtime & UI Copilot Implementation",
-    "summary": "Implemented complete Person 2 scope: Tool Registry, ReAct Engine loop, SSE Streaming chat API, and <DooRareChatDrawer /> frontend with HITL proposal cards.",
-    "tags": "session, ai, agent, react-engine, byok, copilot, sse, chat-drawer",
-    "date": "2026-10-23"
   }
 ]
