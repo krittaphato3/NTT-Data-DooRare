@@ -50,13 +50,18 @@ export function BorrowDrawer({ request: r, tick, decision, onDecide, onClose, on
   const addLender = gate('escalateManual');
   const recordReturn = gate('updateInventory');
   const cancelRequest = gate('cancelRequest');
-  const cancelDisallowedByStatus = r.status !== 'APPROVED';
-  const cancelDisabled = !cancelRequest.allowed || cancelDisallowedByStatus;
+  const cancelCancellableStatus = ['DRAFT', 'PENDING_APPROVAL', 'APPROVED', 'IN_PROGRESS', 'ESCALATED'].includes(r.status);
+  const cancelHasMovingLegs = r.legs.some((l) => ['LOADED', 'IN_TRANSIT', 'RECEIVED'].includes(l.state));
+  const cancelDisabled = !cancelRequest.allowed || !cancelCancellableStatus || cancelHasMovingLegs;
   const cancelHint = !cancelRequest.allowed
     ? cancelRequest.hint
-    : cancelDisallowedByStatus
-      ? `ยกเลิกได้เฉพาะคำขอในสถานะอนุมัติแล้ว (APPROVED) ก่อนเริ่มขนส่งตามข้อกำหนด SM-1 (สถานะปัจจุบัน: ${r.status})`
-      : undefined;
+    : r.status === 'PARTIALLY_FULFILLED'
+      ? 'ไม่สามารถยกเลิกคำขอในสถานะ PARTIALLY_FULFILLED ได้เนื่องจากได้รับยาบางส่วนแล้ว'
+      : cancelHasMovingLegs
+        ? 'ไม่สามารถยกเลิกคำขอได้เนื่องจากยาถูกจัดขึ้นรถหรืออยู่ระหว่างจัดส่งแล้ว'
+        : !cancelCancellableStatus
+          ? `ไม่สามารถยกเลิกคำขอในสถานะ ${r.status}`
+          : undefined;
   const [bg, border, fg] = BANNER[group];
   const bannerIcon: IconName = group === 'progress' ? 'clock' : groupMeta(group).icon;
   const activeLeg = r.legs.findIndex((l) => l.state === 'WAITING');
@@ -229,7 +234,7 @@ export function BorrowDrawer({ request: r, tick, decision, onDecide, onClose, on
                 บันทึกการคืน
               </button>
             )}
-            {group === 'progress' && (
+            {(group === 'progress' || r.status === 'ESCALATED') && (
               <button
                 className="btn btn-g"
                 disabled={cancelDisabled}

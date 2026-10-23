@@ -163,6 +163,7 @@ Feature index:
 - A6 Context signal (e.g., many hospitals in the area raising the same drug) raises urgency by one level (Agent, with reason).
 - A7 Month-level alert escalated to week-level by officer ⇒ treated as weekly alert.
 - A8 Agent disabled ⇒ rule-based fallback plan created with `decision_source = FALLBACK`/`RULES_ONLY`.
+- A9 Borrower cancellation ⇒ allowed in `DRAFT`, `PENDING_APPROVAL`, `APPROVED`, `IN_PROGRESS`, and `ESCALATED` (provided no leg is `LOADED`, `IN_TRANSIT`, or `RECEIVED`). Unsent/pending legs cancelled, accepted lot holds released, lender notified, request moves to `CANCELLED`. Requests in `PARTIALLY_FULFILLED` cannot be cancelled.
 
 **7.9 Exception/Error Flows.**
 - E1 Agent timeout/invalid JSON/guardrail violation ⇒ fallback plan; `decision_source = FALLBACK`; logged.
