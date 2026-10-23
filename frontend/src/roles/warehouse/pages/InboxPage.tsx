@@ -9,6 +9,7 @@ import type { InboxFeature, InboundTask, RequestItem } from '../data/inbox';
 import { whHref } from '../data/routes';
 import { useTransport } from '../data/useTransport';
 import { HOSPITALS } from '../data/transport';
+import { mockFallbackEnabled } from '../../../services/dataSource';
 import '../transport.css';
 import '../dashboard.css';
 import '../inbox.css';
@@ -64,9 +65,11 @@ export function InboxPage() {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
+  const isDemo = mockFallbackEnabled();
+
   // Outbound items: from live transport tasks (excluding completed RECEIVED and CANCELLED)
   const items: RequestItem[] = useMemo(() => {
-    if (!isLive) return OUTBOUND_TASKS;
+    if (!isLive) return isDemo ? OUTBOUND_TASKS : [];
 
     return tr.shipments
       .filter((s) => s.outbound && s.status !== 'RECEIVED' && s.status !== 'CANCELLED')
@@ -101,7 +104,7 @@ export function InboxPage() {
 
   // Inbound items: from live transport tasks
   const inTasks: InboundTask[] = useMemo(() => {
-    if (!isLive) return INBOUND_TASKS;
+    if (!isLive) return isDemo ? INBOUND_TASKS : [];
 
     return tr.shipments
       .filter((s) => !s.outbound && s.status !== 'RECEIVED' && s.status !== 'CANCELLED')
