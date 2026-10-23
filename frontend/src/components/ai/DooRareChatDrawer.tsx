@@ -5,16 +5,16 @@ import { DooRareBotAvatar } from './DooRareBotAvatar';
 import { MarkdownContent } from '../common/MarkdownContent';
 import { ToolExecutionLogCard, type ToolLogEntry } from './ToolExecutionLogCard';
 import { ThinkingAccordion } from './ThinkingAccordion';
+import {
+  loadSessions,
+  saveSession,
+  deleteSession,
+  clearAllSessions,
+  formatSessionRelativeTime,
+  type ChatSession,
+  type DisplayChatMessage,
+} from '../../services/chatSessionStore';
 import './chatDrawer.css';
-
-interface DisplayChatMessage {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  thought?: string;
-  isThinking?: boolean;
-  toolLogs?: ToolLogEntry[];
-}
 
 interface ProposalCardProps {
   proposal: {
@@ -104,6 +104,16 @@ const ProposalCard: React.FC<ProposalCardProps> = ({ proposal, onActionComplete 
 export const DooRareChatDrawer: React.FC = () => {
   const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
+  const [isFullScreen, setIsFullScreen] = useState(false);
+  const [showSessionsDrawer, setShowSessionsDrawer] = useState(false);
+  const [sessions, setSessions] = useState<ChatSession[]>([]);
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+  const activeSessionIdRef = useRef<string | null>(activeSessionId);
+
+  useEffect(() => {
+    activeSessionIdRef.current = activeSessionId;
+  }, [activeSessionId]);
+
   const [input, setInput] = useState('');
   const [displayMessages, setDisplayMessages] = useState<DisplayChatMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
@@ -120,17 +130,91 @@ export const DooRareChatDrawer: React.FC = () => {
     scrollToBottom();
   }, [displayMessages, activeTool, proposals]);
 
-  // Handle drawer close: completely reset conversation history and active state
+  // Load active sessions (and auto-purge >24h) when drawer opens
+  useEffect(() => {
+    if (isOpen) {
+      setSessions(loadSessions());
+    }
+  }, [isOpen]);
+
+  // Persist session to 24h store
+  const persistCurrentSession = (
+    currentMessages: DisplayChatMessage[],
+    currentProposals: any[],
+    firstPrompt?: string,
+  ) => {
+    if (currentMessages.length === 0) return;
+    const now = Date.now();
+    const id = activeSessionIdRef.current || `sess_${now}`;
+    if (!activeSessionIdRef.current) {
+      activeSessionIdRef.current = id;
+      setActiveSessionId(id);
+    }
+
+    const titleText =
+      firstPrompt ||
+      currentMessages.find((m) => m.role === 'user')?.content ||
+      'บทสนทนาใหม่';
+    const trimmedTitle =
+      titleText.length > 36 ? `${titleText.slice(0, 36)}...` : titleText;
+
+    const existingSession = sessions.find((s) => s.id === id);
+    const sessionObj: ChatSession = {
+      id,
+      title: existingSession?.title || trimmedTitle,
+      createdAt: existingSession?.createdAt || now,
+      updatedAt: now,
+      messages: currentMessages,
+      proposals: currentProposals,
+    };
+
+    saveSession(sessionObj);
+    setSessions(loadSessions());
+  };
+
+  // Session Actions
+  const handleNewChat = () => {
+    activeSessionIdRef.current = null;
+    setActiveSessionId(null);
+    setDisplayMessages([]);
+    setProposals([]);
+    setActiveTool(null);
+    setInput('');
+    setShowSessionsDrawer(false);
+  };
+
+  const handleSelectSession = (session: ChatSession) => {
+    activeSessionIdRef.current = session.id;
+    setActiveSessionId(session.id);
+    setDisplayMessages(session.messages || []);
+    setProposals(session.proposals || []);
+    setActiveTool(null);
+    setShowSessionsDrawer(false);
+  };
+
+  const handleDeleteSession = (id: string) => {
+    deleteSession(id);
+    const updated = loadSessions();
+    setSessions(updated);
+    if (activeSessionId === id) {
+      handleNewChat();
+    }
+  };
+
+  const handleClearAll = () => {
+    if (window.confirm('คุณต้องการล้างประวัติการสนทนาทั้งหมดใน 24 ชั่วโมงหรือไม่?')) {
+      clearAllSessions();
+      setSessions([]);
+      handleNewChat();
+    }
+  };
+
+  // Handle drawer close
   const handleClose = () => {
     setIsOpen(false);
-    setDisplayMessages([]);
-    setInput('');
-    setActiveTool(null);
-    setProposals([]);
+    setIsFullScreen(false);
+    setShowSessionsDrawer(false);
     setIsStreaming(false);
-    try {
-      sessionStorage.removeItem('doorare_chat_history');
-    } catch {}
   };
 
   // Context Auto-Injector: Extracts current window location, title, and query active ID
@@ -167,7 +251,6 @@ export const DooRareChatDrawer: React.FC = () => {
 
     const updatedDisplay = [...displayMessages, userMsg, assistantPlaceholder];
     setDisplayMessages(updatedDisplay);
-    const assistantIndex = updatedDisplay.length - 1;
 
     setIsStreaming(true);
     setActiveTool(null);
@@ -191,18 +274,17 @@ export const DooRareChatDrawer: React.FC = () => {
             // Status update
           },
           onThought: (thoughtText) => {
-            setDisplayMessages((prev) => {
-              const copy = [...prev];
-              const target = copy[assistantIndex];
-              if (target) {
-                copy[assistantIndex] = {
-                  ...target,
-                  thought: (target.thought || '') + thoughtText,
-                  isThinking: true,
-                };
-              }
-              return copy;
-            });
+            setDisplayMessages((prev) =>
+              prev.map((m) =>
+                m.id === assistantMsgId
+                  ? {
+                      ...m,
+                      thought: (m.thought || '') + thoughtText,
+                      isThinking: true,
+                    }
+                  : m,
+              ),
+            );
           },
           onToolStart: (tool) => {
             const newLog: ToolLogEntry = {
@@ -213,79 +295,77 @@ export const DooRareChatDrawer: React.FC = () => {
               startTime: Date.now(),
             };
             setActiveTool(`กำลังค้นหาข้อมูลด้วย: ${tool.name}...`);
-            setDisplayMessages((prev) => {
-              const copy = [...prev];
-              const target = copy[assistantIndex];
-              if (target) {
-                const logs = [...(target.toolLogs || []), newLog];
-                copy[assistantIndex] = { ...target, toolLogs: logs };
-              }
-              return copy;
-            });
+            setDisplayMessages((prev) =>
+              prev.map((m) => {
+                if (m.id === assistantMsgId) {
+                  const existingLogs = m.toolLogs || [];
+                  if (existingLogs.some((l) => l.id === newLog.id)) return m;
+                  return { ...m, toolLogs: [...existingLogs, newLog] };
+                }
+                return m;
+              }),
+            );
           },
           onToolEnd: (res) => {
             setActiveTool(null);
-            setDisplayMessages((prev) => {
-              const copy = [...prev];
-              const target = copy[assistantIndex];
-              if (target && target.toolLogs) {
-                const logs = target.toolLogs.map((log) => {
-                  if (log.status === 'running' && (log.id === res.id || log.name === res.name || !res.id)) {
-                    return {
-                      ...log,
-                      status: res.success === false ? ('failed' as const) : ('completed' as const),
-                      result: res.data,
-                      error: res.error,
-                      durationMs: Date.now() - log.startTime,
-                    };
-                  }
-                  return log;
-                });
-                copy[assistantIndex] = { ...target, toolLogs: logs };
-              }
-              return copy;
-            });
+            setDisplayMessages((prev) =>
+              prev.map((m) => {
+                if (m.id === assistantMsgId && m.toolLogs) {
+                  const logs = m.toolLogs.map((log) => {
+                    if (log.status === 'running' && (log.id === res.id || log.name === res.name || !res.id)) {
+                      return {
+                        ...log,
+                        status: res.success === false ? ('failed' as const) : ('completed' as const),
+                        result: res.data,
+                        error: res.error,
+                        durationMs: Date.now() - log.startTime,
+                      };
+                    }
+                    return log;
+                  });
+                  return { ...m, toolLogs: logs };
+                }
+                return m;
+              }),
+            );
           },
           onToken: (token) => {
             assistantText += token;
-            setDisplayMessages((prev) => {
-              const copy = [...prev];
-              const target = copy[assistantIndex];
-              if (target) {
-                copy[assistantIndex] = { ...target, content: assistantText, isThinking: false };
-              }
-              return copy;
-            });
+            setDisplayMessages((prev) =>
+              prev.map((m) =>
+                m.id === assistantMsgId
+                  ? { ...m, content: assistantText, isThinking: false }
+                  : m,
+              ),
+            );
           },
           onProposal: (proposal) => {
             setProposals((prev) => [...prev, proposal]);
           },
           onError: (errMsg) => {
-            setDisplayMessages((prev) => {
-              const copy = [...prev];
-              const target = copy[assistantIndex];
-              if (target) {
-                copy[assistantIndex] = {
-                  ...target,
-                  isThinking: false,
-                  content: target.content
-                    ? `${target.content}\n\n⚠️ ขออภัย เกิดข้อผิดพลาด: ${errMsg}`
-                    : `⚠️ ขออภัย เกิดข้อผิดพลาด: ${errMsg}`,
-                };
-              }
-              return copy;
-            });
+            setDisplayMessages((prev) =>
+              prev.map((m) =>
+                m.id === assistantMsgId
+                  ? {
+                      ...m,
+                      isThinking: false,
+                      content: m.content
+                        ? `${m.content}\n\n⚠️ ขออภัย เกิดข้อผิดพลาด: ${errMsg}`
+                        : `⚠️ ขออภัย เกิดข้อผิดพลาด: ${errMsg}`,
+                    }
+                  : m,
+              ),
+            );
           },
           onDone: () => {
             setIsStreaming(false);
             setActiveTool(null);
             setDisplayMessages((prev) => {
-              const copy = [...prev];
-              const target = copy[assistantIndex];
-              if (target) {
-                copy[assistantIndex] = { ...target, isThinking: false };
-              }
-              return copy;
+              const updated = prev.map((m) =>
+                m.id === assistantMsgId ? { ...m, isThinking: false } : m,
+              );
+              persistCurrentSession(updated, proposals, prompt);
+              return updated;
             });
           },
         },
@@ -327,29 +407,157 @@ export const DooRareChatDrawer: React.FC = () => {
         onClick={handleClose}
       />
 
-      {/* Slide-out Drawer */}
-      <div className={`doorare-chat-drawer ${isOpen ? 'open' : ''}`}>
-        {/* Header */}
-        <div className="doorare-chat-header">
-          <div className="doorare-chat-title-group">
-            <div className="doorare-chat-avatar">
-              <DooRareBotAvatar size={32} />
+      {/* Slide-out Drawer / Full Screen Container */}
+      <div className={`doorare-chat-drawer ${isOpen ? 'open' : ''} ${isFullScreen ? 'fullscreen' : ''}`}>
+        {/* Previous Sessions Sidebar (Visible in Fullscreen OR when showSessionsDrawer is toggled in Drawer mode) */}
+        {(isFullScreen || showSessionsDrawer) && (
+          <aside className={`doorare-chat-sidebar ${showSessionsDrawer && !isFullScreen ? 'drawer-overlay' : ''}`}>
+            <div className="doorare-chat-sidebar-header">
+              <button
+                type="button"
+                className="doorare-chat-new-chat-btn"
+                onClick={handleNewChat}
+                title="เริ่มการสนทนาใหม่"
+              >
+                <span>＋</span>
+                <span>แชทใหม่ (New Chat)</span>
+              </button>
+
+              {showSessionsDrawer && !isFullScreen && (
+                <button
+                  type="button"
+                  className="doorare-chat-sidebar-close-btn"
+                  onClick={() => setShowSessionsDrawer(false)}
+                  title="ปิดประวัติการสนทนา"
+                >
+                  ✕
+                </button>
+              )}
             </div>
-            <div>
-              <div className="doorare-chat-title">DooRare AI Copilot</div>
-              <span className="doorare-chat-context-badge">
-                {user?.roleTh || user?.role || 'Guest'}
-              </span>
+
+            <div className="doorare-chat-sidebar-title-bar">
+              <span className="doorare-chat-sidebar-title-text">ประวัติการสนทนา</span>
+              {sessions.length > 0 && (
+                <button
+                  type="button"
+                  className="doorare-chat-clear-history-btn"
+                  onClick={handleClearAll}
+                  title="ล้างประวัติทั้งหมด"
+                >
+                  ล้างทั้งหมด
+                </button>
+              )}
+            </div>
+
+            <div className="doorare-chat-session-list">
+              {sessions.length === 0 ? (
+                <div className="doorare-chat-session-empty">
+                  <span style={{ fontSize: 24, marginBottom: 6 }}>🕒</span>
+                  <div>ไม่มีประวัติการสนทนาใน 24 ชั่วโมงล่าสุด</div>
+                </div>
+              ) : (
+                sessions.map((s) => (
+                  <div
+                    key={s.id}
+                    className={`doorare-chat-session-item ${s.id === activeSessionId ? 'active' : ''}`}
+                    onClick={() => handleSelectSession(s)}
+                  >
+                    <div className="doorare-chat-session-info">
+                      <div className="doorare-chat-session-name" title={s.title}>
+                        💬 {s.title}
+                      </div>
+                      <div className="doorare-chat-session-time">
+                        {formatSessionRelativeTime(s.updatedAt)}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      className="doorare-chat-session-del-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteSession(s.id);
+                      }}
+                      title="ลบการสนทนานี้"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="doorare-chat-sidebar-footer">
+              <span className="doorare-chat-retention-pill">🕒 ล้างประวัติอัตโนมัติทุก 24 ชม.</span>
+            </div>
+          </aside>
+        )}
+
+        {/* Main Chat Column */}
+        <div className="doorare-chat-main-col">
+          {/* Header */}
+          <div className="doorare-chat-header">
+            <div className="doorare-chat-title-group">
+              {!isFullScreen && (
+                <button
+                  type="button"
+                  className={`doorare-chat-sessions-toggle-btn ${showSessionsDrawer ? 'active' : ''}`}
+                  onClick={() => setShowSessionsDrawer((prev) => !prev)}
+                  title="ดูประวัติการสนทนา (24 ชม.)"
+                >
+                  <span>💬</span>
+                  {sessions.length > 0 && (
+                    <span className="doorare-sessions-badge">{sessions.length}</span>
+                  )}
+                </button>
+              )}
+
+              <div className="doorare-chat-avatar">
+                <DooRareBotAvatar size={32} />
+              </div>
+              <div>
+                <div className="doorare-chat-title">DooRare AI Copilot</div>
+                <span className="doorare-chat-context-badge">
+                  {user?.roleTh || user?.role || 'Guest'}
+                </span>
+              </div>
+            </div>
+
+            <div className="doorare-chat-header-actions">
+              <button
+                type="button"
+                className="doorare-chat-header-action-btn"
+                onClick={handleNewChat}
+                title="เริ่มแชทใหม่ (New Chat)"
+              >
+                ＋ แชทใหม่
+              </button>
+
+              <button
+                type="button"
+                className="doorare-chat-header-action-btn icon"
+                onClick={() => {
+                  setIsFullScreen((prev) => !prev);
+                  setShowSessionsDrawer(false);
+                }}
+                title={
+                  isFullScreen
+                    ? 'ย่อหน้าต่าง (Minimize to Drawer)'
+                    : 'ขยายเต็มหน้าจอ (Full Screen like ChatGPT / Claude / Gemini)'
+                }
+              >
+                {isFullScreen ? '⤡ ย่อหน้าต่าง' : '⛶ เต็มจอ'}
+              </button>
+
+              <button
+                type="button"
+                className="doorare-chat-close-btn"
+                onClick={handleClose}
+                title="ปิดหน้าต่างแชท"
+              >
+                ✕
+              </button>
             </div>
           </div>
-          <button
-            className="doorare-chat-close-btn"
-            onClick={handleClose}
-            title="ปิดหน้าต่างแชทและล้างประวัติ"
-          >
-            ✕
-          </button>
-        </div>
 
         {/* Messages Body */}
         <div className="doorare-chat-messages">
@@ -488,6 +696,7 @@ export const DooRareChatDrawer: React.FC = () => {
           </form>
         </div>
       </div>
-    </>
-  );
+    </div>
+  </>
+);
 };

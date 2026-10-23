@@ -62,29 +62,330 @@
   top: 0;
   right: 0;
   bottom: 0;
-  width: 440px;
+  width: 480px;
   max-width: 100vw;
   background: #ffffff;
   z-index: 10001;
   box-shadow: -6px 0 24px rgba(0, 0, 0, 0.12);
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   transform: translateX(100%);
-  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), width 0.25s ease;
 }
 
 .doorare-chat-drawer.open {
   transform: translateX(0);
 }
 
+.doorare-chat-drawer.fullscreen {
+  width: 100vw;
+  height: 100vh;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  max-width: 100vw;
+  box-shadow: none;
+}
+
+/* Sidebar for 24h Chat Sessions */
+.doorare-chat-sidebar {
+  width: 280px;
+  background: #f8fafc;
+  border-right: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  height: 100%;
+}
+
+.doorare-chat-sidebar.drawer-overlay {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 100%;
+  z-index: 50;
+  background: #ffffff;
+  box-shadow: 4px 0 16px rgba(0, 0, 0, 0.08);
+}
+
+.doorare-chat-sidebar-header {
+  padding: 14px 16px;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.doorare-chat-new-chat-btn {
+  flex: 1;
+  padding: 9px 14px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e293b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.doorare-chat-new-chat-btn:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+  color: #0284c7;
+}
+
+.doorare-chat-sidebar-close-btn {
+  background: none;
+  border: none;
+  font-size: 16px;
+  color: #64748b;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+}
+
+.doorare-chat-sidebar-close-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.doorare-chat-sidebar-title-bar {
+  padding: 10px 16px 6px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.doorare-chat-sidebar-title-text {
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.doorare-chat-clear-history-btn {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-size: 11px;
+  cursor: pointer;
+  padding: 2px 4px;
+}
+
+.doorare-chat-clear-history-btn:hover {
+  color: #dc2626;
+}
+
+.doorare-chat-session-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.doorare-chat-session-empty {
+  text-align: center;
+  color: #94a3b8;
+  padding: 40px 16px;
+  font-size: 12px;
+  line-height: 1.5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.doorare-chat-session-item {
+  padding: 8px 12px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: all 0.15s;
+  border: 1px solid transparent;
+}
+
+.doorare-chat-session-item:hover {
+  background: #f1f5f9;
+}
+
+.doorare-chat-session-item.active {
+  background: #e0f2fe;
+  border-color: #bae6fd;
+}
+
+.doorare-chat-session-info {
+  overflow: hidden;
+  flex: 1;
+  min-width: 0;
+}
+
+.doorare-chat-session-name {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #1e293b;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.doorare-chat-session-item.active .doorare-chat-session-name {
+  color: #0369a1;
+  font-weight: 600;
+}
+
+.doorare-chat-session-time {
+  font-size: 10.5px;
+  color: #94a3b8;
+  margin-top: 2px;
+}
+
+.doorare-chat-session-del-btn {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-size: 12px;
+  padding: 4px;
+  border-radius: 4px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s;
+  margin-left: 6px;
+  flex-shrink: 0;
+}
+
+.doorare-chat-session-item:hover .doorare-chat-session-del-btn {
+  opacity: 1;
+}
+
+.doorare-chat-session-del-btn:hover {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.doorare-chat-sidebar-footer {
+  padding: 12px;
+  border-top: 1px solid #e2e8f0;
+  text-align: center;
+}
+
+.doorare-chat-retention-pill {
+  font-size: 11px;
+  color: #64748b;
+  background: #f1f5f9;
+  padding: 4px 10px;
+  border-radius: 12px;
+}
+
+/* Main chat column */
+.doorare-chat-main-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-width: 0;
+  background: #ffffff;
+  position: relative;
+}
+
+.doorare-chat-drawer.fullscreen .doorare-chat-messages {
+  max-width: 860px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.doorare-chat-drawer.fullscreen .doorare-chat-input-area {
+  max-width: 860px;
+  margin: 0 auto;
+  width: 100%;
+  border-radius: 12px 12px 0 0;
+}
+
 /* Header */
 .doorare-chat-header {
-  padding: 16px 20px;
+  padding: 14px 20px;
   background: #f8fafc;
   border-bottom: 1px solid #e2e8f0;
   display: flex;
   align-items: center;
   justify-content: space-between;
+}
+
+.doorare-chat-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.doorare-chat-header-action-btn {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #334155;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s;
+}
+
+.doorare-chat-header-action-btn:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+  color: #0f172a;
+}
+
+.doorare-chat-header-action-btn.icon {
+  font-size: 12px;
+}
+
+.doorare-chat-sessions-toggle-btn {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.15s;
+  font-size: 14px;
+}
+
+.doorare-chat-sessions-toggle-btn:hover {
+  background: #f1f5f9;
+}
+
+.doorare-chat-sessions-toggle-btn.active {
+  background: #e0f2fe;
+  border-color: #7dd3fc;
+}
+
+.doorare-sessions-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: #0284c7;
+  color: white;
+  font-size: 9px;
+  font-weight: 700;
+  border-radius: 10px;
+  padding: 1px 5px;
 }
 
 .doorare-chat-title-group {
