@@ -448,26 +448,37 @@ export class BorrowService {
     const reason = typeof body.reason === 'string' ? body.reason.trim() : '';
     if (reason.length < 3) throw new HttpError(400, 'VALIDATION', 'ต้องระบุเหตุผลในการยกเลิก (อย่างน้อย 3 ตัวอักษร)');
     return withTransaction(async (client) => {
+      // 1. Lock the request row (SELECT ... FOR UPDATE) to avoid race conditions with lender response / dispatch
+      const locked = (
+        await client.query(`SELECT id, status::text FROM borrow_request WHERE id = $1 FOR UPDATE`, [id])
+      ).rows[0];
+      if (!locked) throw new HttpError(404, 'NOT_FOUND', 'ไม่พบคำขอยืม');
+
       const request = await loadRequest(client, id);
       assertBorrower(user, request);
       const r = request!;
+
       if (['FULFILLED', 'CLOSED_UNFULFILLED', 'CANCELLED'].includes(r.status)) {
-        throw new HttpError(409, 'ALREADY_DECIDED', `ไม่สามารถยกเลิกคำขอในสถานะ ${r.status}`);
+        throw new HttpError(409, 'ALREADY_DECIDED', `ไม่สามารถยกเลิกคำขอในสถานะ ${r.status} เนื่องจากคำขอปิดแล้ว`);
       }
-      if (!['DRAFT', 'PENDING_APPROVAL', 'APPROVED'].includes(r.status)) {
+      if (r.status === 'PARTIALLY_FULFILLED') {
         throw new HttpError(
           409,
-          'SPEC_STATUS_NOT_CANCELLABLE',
-          `ไม่สามารถยกเลิกคำขอในสถานะ ${r.status} (ข้อกำหนด SM-1 อนุญาตให้ยกเลิกเฉพาะคำขอในสถานะ DRAFT, PENDING_APPROVAL หรือ APPROVED เท่านั้น)`,
+          'CANNOT_CANCEL_PARTIAL',
+          'ไม่สามารถยกเลิกคำขอในสถานะ PARTIALLY_FULFILLED ได้เนื่องจากได้รับยาบางส่วนแล้ว (การปิดยอดค้างรับต้องดำเนินการผ่านขั้นตอนปิดยอด)',
         );
       }
+      if (!['DRAFT', 'PENDING_APPROVAL', 'APPROVED', 'IN_PROGRESS', 'ESCALATED'].includes(r.status)) {
+        throw new HttpError(409, 'INVALID_TRANSITION', `ไม่สามารถยกเลิกคำขอในสถานะ ${r.status}`);
+      }
 
-      // Check if any leg is already loaded, in transit, or received
+      // Check and lock legs for this request inside the same transaction
       const legs = await client.query(
         `SELECT bl.id, bl.status::text AS leg_status, bl.lender_hospital_id, tt.id AS task_id, tt.status::text AS task_status
            FROM borrow_leg bl
            LEFT JOIN transport_task tt ON tt.ref_type = 'BORROW_LEG' AND tt.ref_id = bl.id AND tt.status <> 'CANCELLED'
-          WHERE bl.request_id = $1`,
+          WHERE bl.request_id = $1
+          FOR UPDATE OF bl`,
         [id],
       );
 

@@ -148,7 +148,16 @@ export class LenderService {
         )
       ).rows[0];
       if (!leg || leg.lender_hospital_id !== hospitalId) throw new HttpError(404, 'NOT_FOUND', 'ไม่พบคำขอยืมที่ส่งถึงโรงพยาบาลนี้');
-      if (leg.status !== 'SENT') throw new HttpError(409, 'ALREADY_DECIDED', `คำขอนี้อยู่ในสถานะ ${leg.status} ตอบไม่ได้แล้ว`, { status: leg.status });
+      if (leg.status !== 'SENT' || leg.request_status === 'CANCELLED') {
+        throw new HttpError(
+          409,
+          'ALREADY_DECIDED',
+          leg.request_status === 'CANCELLED'
+            ? 'คำขอยืมถูกยกเลิกแล้ว ไม่สามารถตอบรับหรือปฏิเสธได้'
+            : `คำขอนี้อยู่ในสถานะ ${leg.status} ตอบไม่ได้แล้ว`,
+          { status: leg.status, requestStatus: leg.request_status },
+        );
+      }
       if (leg.deadline_at && new Date(leg.deadline_at).getTime() <= Date.now()) throw new HttpError(409, 'TIMED_OUT', 'หมดเวลาตอบแล้ว (ถือเป็นการปฏิเสธ)');
       if (!leg.drug_master_id) throw new HttpError(422, 'NOT_SUPPORTED', 'คำขอชุดยา (F3) ตอบด้วยขั้นตอนนี้ไม่ได้');
       void version; // legs have no version column; the status guard above is the concurrency check

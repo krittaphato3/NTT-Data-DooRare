@@ -592,6 +592,7 @@ Feature index:
 - A6 Context signal (e.g., many hospitals in the area raising the same drug) raises urgency by one level (Agent, with reason).
 - A7 Month-level alert escalated to week-level by officer ⇒ treated as weekly alert.
 - A8 Agent disabled ⇒ rule-based fallback plan created with `decision_source = FALLBACK`/`RULES_ONLY`.
+- A9 Borrower cancellation ⇒ allowed in `DRAFT`, `PENDING_APPROVAL`, `APPROVED`, `IN_PROGRESS`, and `ESCALATED` (provided no leg is `LOADED`, `IN_TRANSIT`, or `RECEIVED`). Unsent/pending legs cancelled, accepted lot holds released, lender notified, request moves to `CANCELLED`. Requests in `PARTIALLY_FULFILLED` cannot be cancelled.
 
 **7.9 Exception/Error Flows.**
 - E1 Agent timeout/invalid JSON/guardrail violation ⇒ fallback plan; `decision_source = FALLBACK`; logged.
@@ -1866,6 +1867,8 @@ stateDiagram-v2
   ESCALATED --> CLOSED_UNFULFILLED: admin close
   DRAFT --> CANCELLED
   APPROVED --> CANCELLED
+  IN_PROGRESS --> CANCELLED: cancel (no loaded/moving/received leg)
+  ESCALATED --> CANCELLED: cancel (no loaded/moving/received leg)
   FULFILLED --> [*]
   CLOSED_UNFULFILLED --> [*]
   CANCELLED --> [*]
@@ -1878,6 +1881,8 @@ stateDiagram-v2
 | APPROVED | IN_PROGRESS | first leg SENT | — | start timer | LEG_SENT |
 | IN_PROGRESS | FULFILLED | stop rule (F-20) | V ≥90%, E ≥100% | close alert, value record | REQ_FULFILLED |
 | IN_PROGRESS | ESCALATED | ladder empty & need>0 | — | notify admins | REQ_ESCALATED |
+| IN_PROGRESS | CANCELLED | cancel (HITL) | reason, no leg in LOADED/IN_TRANSIT/RECEIVED | cancel unfulfilled legs, release lot holds, notify lenders, close alert link | REQ_CANCELLED |
+| ESCALATED | CANCELLED | cancel (HITL) | reason, no leg in LOADED/IN_TRANSIT/RECEIVED | cancel unfulfilled legs, release lot holds, notify lenders, close alert link | REQ_CANCELLED |
 
 **Leg machine (SM-1b):** `PENDING → SENT → {ACCEPTED, PARTIAL, REJECTED, TIMED_OUT, CANCELLED}`; `ACCEPTED/PARTIAL → LOADED → IN_TRANSIT → RECEIVED`. Stock moves at LOADED (lender) and RECEIVED (borrower) — ASM-13.
 

@@ -302,6 +302,8 @@ stateDiagram-v2
   ESCALATED --> CLOSED_UNFULFILLED: admin close
   DRAFT --> CANCELLED
   APPROVED --> CANCELLED
+  IN_PROGRESS --> CANCELLED: cancel (no loaded/moving/received leg)
+  ESCALATED --> CANCELLED: cancel (no loaded/moving/received leg)
   FULFILLED --> [*]
   CLOSED_UNFULFILLED --> [*]
   CANCELLED --> [*]
@@ -314,6 +316,8 @@ stateDiagram-v2
 | APPROVED | IN_PROGRESS | first leg SENT | — | start timer | LEG_SENT |
 | IN_PROGRESS | FULFILLED | stop rule (F-20) | V ≥90%, E ≥100% | close alert, value record | REQ_FULFILLED |
 | IN_PROGRESS | ESCALATED | ladder empty & need>0 | — | notify admins | REQ_ESCALATED |
+| IN_PROGRESS | CANCELLED | cancel (HITL) | reason, no leg in LOADED/IN_TRANSIT/RECEIVED | cancel unfulfilled legs, release lot holds, notify lenders, close alert link | REQ_CANCELLED |
+| ESCALATED | CANCELLED | cancel (HITL) | reason, no leg in LOADED/IN_TRANSIT/RECEIVED | cancel unfulfilled legs, release lot holds, notify lenders, close alert link | REQ_CANCELLED |
 
 **Leg machine (SM-1b):** `PENDING → SENT → {ACCEPTED, PARTIAL, REJECTED, TIMED_OUT, CANCELLED}`; `ACCEPTED/PARTIAL → LOADED → IN_TRANSIT → RECEIVED`. Stock moves at LOADED (lender) and RECEIVED (borrower) — ASM-13.
 
