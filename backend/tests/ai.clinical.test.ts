@@ -14,6 +14,7 @@ import {
   getIncidentKitRecommendationsTool,
   draftEmergencyIncidentTool,
   trackUrgentDispatchEtaTool,
+  submitErActionProposalTool,
 } from '../src/modules/ai/tools/clinical/er.tools.js';
 import { ToolRegistry } from '../src/modules/ai/tools/registry.js';
 import { query, pool } from '../src/db/client.js';
@@ -620,4 +621,117 @@ test('trackUrgentDispatchEtaTool: tracks dispatch progress and blocks foreign ho
       assert.match(blockRes.error || '', /Permission denied/);
     }
   }
+});
+
+test('submitErActionProposalTool: configuration and role validation', () => {
+  assert.equal(submitErActionProposalTool.name, 'submit_er_action_proposal');
+  assert.deepEqual(submitErActionProposalTool.allowedRoles, ['ER_STAFF', 'SYSTEM_ADMIN']);
+});
+
+test('submitErActionProposalTool: generates DECLARE_INCIDENT proposal', async () => {
+  const hosp = (await query('SELECT id FROM hospital WHERE active = true LIMIT 1')).rows[0];
+
+  const res = await submitErActionProposalTool.execute(
+    {
+      actionType: 'DECLARE_INCIDENT',
+      title: 'ประกาศภาวะฉุกเฉินสารเคมีรั่วไหล',
+      description: 'พบผู้ป่วยสูดดมไอระเหยสารพิษเข้าห้องฉุกเฉินจำนวนมาก',
+      summary: { casualties: 15, type: 'CHEMICAL_SPILL' },
+      payload: {
+        title: 'เหตุสารเคมีรั่วไหลโรงงานนิคมฯ',
+        eventType: 'CHEMICAL_SPILL',
+        location: 'อ.เมือง จ.ระยอง',
+        patientCounts: { RED: 3, YELLOW: 5, GREEN: 7 },
+      },
+    },
+    { role: 'ER_STAFF', hospitalId: hosp.id, userId: 'test-er-01' },
+  );
+
+  assert.equal(res.success, true);
+  assert.ok(res.proposal);
+  assert.equal(res.proposal?.type, 'DECLARE_INCIDENT');
+  assert.equal(res.proposal?.actionApi.endpoint, '/api/v1/incidents');
+  assert.equal(res.proposal?.actionApi.method, 'POST');
+  assert.equal((res.proposal?.actionApi.payload as any).eventType, 'CHEMICAL_SPILL');
+});
+
+test('submitErActionProposalTool: generates DISPATCH_EMERGENCY_KITS proposal with incidentId', async () => {
+  const hosp = (await query('SELECT id FROM hospital WHERE active = true LIMIT 1')).rows[0];
+  const incident = (
+    await query('SELECT id, hospital_id FROM incident WHERE hospital_id = $1 LIMIT 1', [hosp.id])
+  ).rows[0];
+
+  if (incident) {
+    const res = await submitErActionProposalTool.execute(
+      {
+        actionType: 'DISPATCH_EMERGENCY_KITS',
+        title: 'อนุมัติแผนจ่ายชุดยาฉุกเฉิน',
+        description: 'อนุมัติการจัดส่งและจ่ายชุดยาตามแผน F3',
+        summary: { incidentId: incident.id },
+        targetId: incident.id,
+        payload: {
+          notes: 'จ่ายชุด Trauma Kit 3 ชุด และ IV Kit 5 ชุด',
+        },
+      },
+      { role: 'ER_STAFF', hospitalId: hosp.id },
+    );
+
+    assert.equal(res.success, true);
+    assert.ok(res.proposal);
+    assert.equal(res.proposal?.type, 'DISPATCH_EMERGENCY_KITS');
+    assert.equal(
+      res.proposal?.actionApi.endpoint,
+      `/api/v1/incidents/${incident.id}/plan/approve`,
+    );
+    assert.equal(res.proposal?.actionApi.method, 'POST');
+  }
+});
+
+test('submitErActionProposalTool: generates REQUEST_URGENT_ANTIDOTE proposal', async () => {
+  const hosp = (await query('SELECT id FROM hospital WHERE active = true LIMIT 1')).rows[0];
+  const drugMaster = (await query('SELECT id FROM drug_master LIMIT 1')).rows[0];
+
+  const res = await submitErActionProposalTool.execute(
+    {
+      actionType: 'REQUEST_URGENT_ANTIDOTE',
+      title: 'ขอยืม Antivenom เร่งด่วน',
+      description: 'เคสพิษงูแมวเซารุนแรง เลือดออกไม่หยุด',
+      summary: { antidote: 'Russell Viper Antivenom', quantity: 4 },
+      payload: {
+        reason: 'เคสพิษงูฉุกเฉินระดับวิกฤต',
+        urgency: 'VERY_URGENT',
+        items: [
+          {
+            drugMasterId: drugMaster.id,
+            qtyRequested: 4,
+          },
+        ],
+      },
+    },
+    { role: 'ER_STAFF', hospitalId: hosp.id },
+  );
+
+  assert.equal(res.success, true);
+  assert.ok(res.proposal);
+  assert.equal(res.proposal?.type, 'REQUEST_URGENT_ANTIDOTE');
+  assert.equal(res.proposal?.actionApi.endpoint, '/api/v1/borrow-requests');
+  assert.equal(res.proposal?.actionApi.method, 'POST');
+});
+
+test('submitErActionProposalTool: validates targetId requirement and foreign ownership', async () => {
+  const hosp = (await query('SELECT id FROM hospital WHERE active = true LIMIT 1')).rows[0];
+
+  // Missing targetId for DISPATCH_EMERGENCY_KITS
+  const noTargetRes = await submitErActionProposalTool.execute(
+    {
+      actionType: 'DISPATCH_EMERGENCY_KITS',
+      title: 'Invalid Dispatch',
+      description: 'Missing incidentId',
+      summary: {},
+      payload: {},
+    },
+    { role: 'ER_STAFF', hospitalId: hosp.id },
+  );
+  assert.equal(noTargetRes.success, false);
+  assert.match(noTargetRes.error || '', /incidentId.*is required/i);
 });

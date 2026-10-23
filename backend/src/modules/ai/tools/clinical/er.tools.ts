@@ -486,3 +486,174 @@ export const trackUrgentDispatchEtaTool: IAgentTool<{
     }
   },
 };
+
+/**
+ * Whitelist map for ER proposal actions.
+ * Every endpoint maps to an existing authenticated route in the backend.
+ */
+export const ER_PROPOSAL_WHITELIST = {
+  DECLARE_INCIDENT: {
+    buildEndpoint: () => '/api/v1/incidents',
+    method: 'POST' as const,
+    routeSource: 'backend/src/modules/incidents/incidents.routes.ts:25',
+    payloadSchema: z.object({
+      title: z.string().min(1, 'Incident title is required'),
+      eventType: z.string().default('MASS_CASUALTY'),
+      location: z.string().optional(),
+      patientCounts: z.record(z.number().int().min(0)).optional(),
+      description: z.string().optional(),
+    }),
+  },
+  DISPATCH_EMERGENCY_KITS: {
+    buildEndpoint: (incidentId?: string) => {
+      if (!incidentId) throw new Error('incidentId (targetId) is required for DISPATCH_EMERGENCY_KITS');
+      return `/api/v1/incidents/${incidentId}/plan/approve`;
+    },
+    method: 'POST' as const,
+    routeSource: 'backend/src/modules/incidents/incidents.routes.ts:33',
+    payloadSchema: z.object({
+      version: z.number().int().positive().optional(),
+      notes: z.string().optional(),
+    }),
+  },
+  REQUEST_URGENT_ANTIDOTE: {
+    buildEndpoint: (incidentId?: string) => {
+      if (incidentId) {
+        return `/api/v1/incidents/${incidentId}/emergency-borrow`;
+      }
+      return '/api/v1/borrow-requests';
+    },
+    method: 'POST' as const,
+    routeSource:
+      'backend/src/modules/incidents/incidents.routes.ts:34 (with incidentId) / backend/src/modules/borrow/borrow.routes.ts:19 (standalone)',
+    payloadSchema: z.object({
+      reason: z.string().min(1, 'Reason for urgent antidote is required'),
+      urgency: z.literal('VERY_URGENT').default('VERY_URGENT'),
+      items: z
+        .array(
+          z.object({
+            drugMasterId: z.string().uuid(),
+            qtyRequested: z.number().positive(),
+          }),
+        )
+        .min(1, 'At least one antidote item is required'),
+      incidentId: z.string().uuid().optional(),
+    }),
+  },
+} as const;
+
+/**
+ * Tool: submit_er_action_proposal (Terminal Tool)
+ * Generates an interactive Human-In-The-Loop (HITL) proposal card for ER authorization.
+ * Whitelisted actions: DECLARE_INCIDENT, DISPATCH_EMERGENCY_KITS, REQUEST_URGENT_ANTIDOTE
+ * Allowed Roles: ER_STAFF, SYSTEM_ADMIN
+ */
+export const submitErActionProposalTool: IAgentTool<{
+  actionType: 'DECLARE_INCIDENT' | 'DISPATCH_EMERGENCY_KITS' | 'REQUEST_URGENT_ANTIDOTE';
+  title: string;
+  description: string;
+  summary: Record<string, unknown>;
+  targetId?: string;
+  payload: Record<string, unknown>;
+}> = {
+  name: 'submit_er_action_proposal',
+  description:
+    'Terminal proposal tool creating human-in-the-loop action cards for declaring incidents, approving kit dispatches, or requesting urgent antidotes.',
+  parameters: z.object({
+    actionType: z
+      .enum(['DECLARE_INCIDENT', 'DISPATCH_EMERGENCY_KITS', 'REQUEST_URGENT_ANTIDOTE'])
+      .describe('Whitelisted emergency action type'),
+    title: z.string().describe('Short title for the emergency proposal'),
+    description: z.string().describe('Detailed emergency justification'),
+    summary: z.record(z.unknown()).describe('Key-value summary of casualties, kit counts, or antidotes'),
+    targetId: z
+      .string()
+      .uuid()
+      .optional()
+      .describe('Target incident UUID if linking dispatch or borrow to an incident'),
+    payload: z.record(z.unknown()).describe('Action-specific payload parameters'),
+  }),
+  allowedRoles: ['ER_STAFF', 'SYSTEM_ADMIN'],
+  execute: async (args, context: RequestContext): Promise<ToolResult> => {
+    try {
+      const isSystemAdmin = context.role === 'SYSTEM_ADMIN';
+      const hospitalId = context.hospitalId;
+
+      if (!hospitalId && !isSystemAdmin) {
+        return {
+          success: false,
+          error: 'Context hospitalId is required to submit an ER action proposal.',
+        };
+      }
+
+      const actionDef = ER_PROPOSAL_WHITELIST[args.actionType];
+      if (!actionDef) {
+        return {
+          success: false,
+          error: `Action '${args.actionType}' is not in the whitelisted ER actions.`,
+        };
+      }
+
+      // Build whitelisted endpoint
+      let endpoint: string;
+      try {
+        endpoint = actionDef.buildEndpoint(args.targetId);
+      } catch (err: any) {
+        return {
+          success: false,
+          error: `Invalid targetId for ${args.actionType}: ${err.message}`,
+        };
+      }
+
+      // If targetId (incidentId) is supplied, enforce hospital ownership
+      if (args.targetId) {
+        const inc = await query<{ hospital_id: string }>(
+          'SELECT hospital_id FROM incident WHERE id = $1',
+          [args.targetId],
+        );
+        if (inc.rows.length === 0) {
+          return { success: false, error: `Incident '${args.targetId}' not found.` };
+        }
+        if (!isSystemAdmin && inc.rows[0].hospital_id !== hospitalId) {
+          return {
+            success: false,
+            error: 'Permission denied: Cannot act on incident belonging to another hospital.',
+          };
+        }
+      }
+
+      // Validate payload schema
+      const parseRes = actionDef.payloadSchema.safeParse(args.payload);
+      if (!parseRes.success) {
+        return {
+          success: false,
+          error: `Invalid proposal payload for ${args.actionType}: ${parseRes.error.message}`,
+        };
+      }
+
+      return {
+        success: true,
+        proposal: {
+          type: args.actionType,
+          title: args.title,
+          description: args.description,
+          summary: {
+            ...args.summary,
+            requestedBy: context.userId || 'current-user',
+            hospitalId: hospitalId || 'global',
+          },
+          actionApi: {
+            endpoint,
+            method: actionDef.method,
+            payload: parseRes.data as Record<string, unknown>,
+          },
+        },
+      };
+    } catch (e: any) {
+      return {
+        success: false,
+        error: `Failed to submit ER proposal: ${e.message}`,
+      };
+    }
+  },
+};
