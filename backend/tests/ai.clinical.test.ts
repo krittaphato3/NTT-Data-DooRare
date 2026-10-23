@@ -9,6 +9,10 @@ import {
   interpretLenderResponseTool,
   submitPharmacistProposalTool,
 } from '../src/modules/ai/tools/clinical/pharmacist.tools.js';
+import {
+  getAntidoteLocatorTool,
+  getIncidentKitRecommendationsTool,
+} from '../src/modules/ai/tools/clinical/er.tools.js';
 import { ToolRegistry } from '../src/modules/ai/tools/registry.js';
 import { query, pool } from '../src/db/client.js';
 
@@ -405,4 +409,83 @@ test('submitPharmacistProposalTool: rejects invalid payload or missing targetId'
   );
   assert.equal(invalidPayloadRes.success, false);
   assert.match(invalidPayloadRes.error || '', /Invalid proposal payload/);
+});
+
+test('getAntidoteLocatorTool: configuration and role validation', () => {
+  assert.equal(getAntidoteLocatorTool.name, 'get_antidote_locator');
+  assert.deepEqual(getAntidoteLocatorTool.allowedRoles, ['ER_STAFF', 'PHARMACIST', 'SYSTEM_ADMIN']);
+
+  const valid = getAntidoteLocatorTool.parameters.safeParse({ antidoteQuery: 'botulinum', radiusMinutes: 45 });
+  assert.equal(valid.success, true);
+
+  const invalid = getAntidoteLocatorTool.parameters.safeParse({});
+  assert.equal(invalid.success, false, 'antidoteQuery is required');
+});
+
+test('getAntidoteLocatorTool: privacy check - never exposes internal lot/cost data', async () => {
+  const hosp = (await query('SELECT id FROM hospital WHERE active = true LIMIT 1')).rows[0];
+
+  const res = await getAntidoteLocatorTool.execute(
+    { antidoteQuery: 'antidote', radiusMinutes: 120 },
+    { role: 'ER_STAFF', hospitalId: hosp.id },
+  );
+
+  assert.equal(res.success, true);
+  assert.ok(res.data);
+  const data = res.data as { hospitals: Record<string, any>[] };
+  assert.ok(Array.isArray(data.hospitals));
+
+  for (const h of data.hospitals) {
+    // Whitelisted fields allowed:
+    assert.ok('hospitalName' in h);
+    assert.ok('travelMinutes' in h);
+    assert.ok('antidoteName' in h);
+    assert.ok('availableQuantity' in h);
+
+    // Forbidden internal fields:
+    assert.equal('lotNo' in h, false, 'Internal lot numbers must not be exposed');
+    assert.equal('hospitalId' in h, false, 'Internal hospital UUIDs must not be exposed');
+    assert.equal('qtyOnHand' in h, false, 'Internal raw inventory columns must not be exposed');
+    assert.equal('unitPriceThb' in h, false, 'Pricing must not be exposed');
+  }
+});
+
+test('getIncidentKitRecommendationsTool: configuration and role validation', () => {
+  assert.equal(getIncidentKitRecommendationsTool.name, 'get_incident_kit_recommendations');
+  assert.deepEqual(getIncidentKitRecommendationsTool.allowedRoles, ['ER_STAFF', 'PHARMACIST', 'SYSTEM_ADMIN']);
+
+  const parsed = getIncidentKitRecommendationsTool.parameters.safeParse({ redCasualties: 5, yellowCasualties: 10 });
+  assert.equal(parsed.success, true);
+
+  const invalid = getIncidentKitRecommendationsTool.parameters.safeParse({ redCasualties: -2 });
+  assert.equal(invalid.success, false, 'Casualties cannot be negative');
+});
+
+test('getIncidentKitRecommendationsTool: computes kit requirements from triage counts', async () => {
+  const res = await getIncidentKitRecommendationsTool.execute(
+    {
+      redCasualties: 8,
+      yellowCasualties: 15,
+      greenCasualties: 20,
+      incidentType: 'MASS_CASUALTY',
+    },
+    { role: 'ER_STAFF' },
+  );
+
+  assert.equal(res.success, true);
+  assert.ok(res.data);
+  const data = res.data as {
+    triageSummary: { red: number; yellow: number; total: number };
+    recommendedKits: { kitCode: string; estimatedQuantity: number; criticalMinimum: number }[];
+  };
+
+  assert.equal(data.triageSummary.red, 8);
+  assert.equal(data.triageSummary.yellow, 15);
+  assert.equal(data.triageSummary.total, 43);
+  assert.ok(Array.isArray(data.recommendedKits));
+  // If recipes exist in DB, verify positive kit quantities
+  for (const kit of data.recommendedKits) {
+    assert.ok(kit.estimatedQuantity >= 0);
+    assert.ok(kit.criticalMinimum >= 0);
+  }
 });
