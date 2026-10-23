@@ -53,7 +53,16 @@ export function taskToShipment(t: ApiTransportTask, now = new Date()): Shipment 
   const photos: TransportPhoto[] = [];
   for (const e of t.events) {
     if (e.toStatus !== 'LOADED' && e.toStatus !== 'ARRIVED') continue;
-    for (let i = 0; i < e.photoKeys.length; i += 1) photos.push({ stage: e.toStatus, time: fmtThaiTime(e.capturedAt, now), pending: !e.applied });
+    for (let i = 0; i < e.photoKeys.length; i += 1) {
+      const key = e.photoKeys[i];
+      photos.push({
+        stage: e.toStatus,
+        time: fmtThaiTime(e.capturedAt, now),
+        pending: !e.applied,
+        key,
+        url: key ? `/api/v1/uploads/${key}` : undefined,
+      });
+    }
   }
   const pick: PickLot[] | undefined =
     t.status === 'WAITING_DISPATCH' && t.direction === 'OUT' && lotLines.length

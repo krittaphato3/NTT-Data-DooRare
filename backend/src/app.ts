@@ -31,6 +31,9 @@ app.use(cors({ origin: config.corsOrigin, credentials: true }));
 app.use(express.json({ limit: '3mb' })); // transport photos arrive as base64 (<= 1.5 MB each)
 app.use(clientMetaMiddleware);
 
+// Static uploads serving
+app.use('/api/v1/uploads', express.static(config.uploads.dir));
+
 // API v1 routes
 app.use('/api/v1/health', healthRouter);
 app.use('/api/v1/auth', authRouter);

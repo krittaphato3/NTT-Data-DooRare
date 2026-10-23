@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { Icon } from '../../../components/common/icons';
 import { fmtQty, HOSPITALS, isOutbound, STEP_ORDER, STEPS } from '../data/transport';
 import type { Shipment, TransportStatus } from '../data/transport';
@@ -9,6 +9,11 @@ import { StatusBadge } from './StatusBadge';
 
 export type CancelDecision = 'yes' | 'no' | undefined;
 export type ReceiptState = 'open' | 'done' | undefined;
+
+export interface PendingPhotoItem {
+  key: string;
+  url?: string;
+}
 
 interface ShipmentDrawerProps {
   shipment: Shipment;
@@ -39,8 +44,9 @@ interface ShipmentDrawerProps {
   live?: boolean;
   busy?: boolean;
   error?: string | null;
-  /** Keys of photos uploaded for this task and not yet attached to a status change. */
-  pendingPhotos?: string[];
+  /** Keys or objects of photos uploaded for this task and not yet attached to a status change. */
+  pendingPhotos?: (string | PendingPhotoItem)[];
+  onRemovePendingPhoto?: (key: string) => void;
   onAddPhoto?: (file: File) => void;
   onAdvance?: (to: 'LOADED' | 'IN_TRANSIT' | 'ARRIVED' | 'RECEIVED', extra?: { qtyReceived?: number }) => void;
   onSlip?: () => void;
@@ -58,6 +64,7 @@ function returnNote(s: Shipment): string {
 export function ShipmentDrawer(p: ShipmentDrawerProps) {
   const { shipment: s, status } = p;
   const fileRef = useRef<HTMLInputElement>(null);
+  const [previewImgUrl, setPreviewImgUrl] = useState<string | null>(null);
   const pendingCount = p.pendingPhotos?.length ?? 0;
   const out = isOutbound(s);
   const idx = status === 'CANCELLED' ? -1 : STEP_ORDER.indexOf(status);
@@ -233,30 +240,82 @@ export function ShipmentDrawer(p: ShipmentDrawerProps) {
         <div>
           <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
             <h3 className="tr-h3" style={{ margin: 0 }}>
-              รูปถ่าย <span className="en">{s.photos.length} / 10 · บีบอัด ≤ 1.5 MB</span>
+              รูปถ่าย <span className="en">{s.photos.length + pendingCount} / 10 · บีบอัด ≤ 1.5 MB</span>
             </h3>
             <span className="sub">ต้องมีรูปตอนขึ้นรถและถึงปลายทาง</span>
           </div>
           <div className="photo-grid">
             {s.photos.map((ph, i) => {
               const pend = !!ph.pending && p.pending;
+              const photoUrl = ph.url || (ph.key ? `/api/v1/uploads/${ph.key}` : undefined);
               return (
-                <div key={i} className="ph" role="img" aria-label={`รูปขั้น ${ph.stage} เวลา ${ph.time}`}>
-                  <Icon name="camera" className="ic20" />
-                  <span className="code" style={{ fontSize: 10 }}>{ph.stage}</span>
-                  <span className="num" style={{ fontSize: 10.5 }}>{ph.time}</span>
+                <div key={i} className={`ph ${photoUrl ? 'ph-thumb' : ''}`} role="img" aria-label={`รูปขั้น ${ph.stage} เวลา ${ph.time}`}>
+                  {photoUrl ? (
+                    <button
+                      type="button"
+                      className="ph-preview-btn"
+                      onClick={() => setPreviewImgUrl(photoUrl)}
+                      title="คลิกเพื่อดูรูปขนาดเต็ม"
+                    >
+                      <img src={photoUrl} alt={`รูปขั้น ${ph.stage}`} className="ph-img" />
+                      <div className="ph-overlay">
+                        <span className="code ph-badge">{ph.stage}</span>
+                        <span className="num ph-time">{ph.time}</span>
+                      </div>
+                    </button>
+                  ) : (
+                    <>
+                      <Icon name="camera" className="ic20" />
+                      <span className="code" style={{ fontSize: 10 }}>{ph.stage}</span>
+                      <span className="num" style={{ fontSize: 10.5 }}>{ph.time}</span>
+                    </>
+                  )}
                   {pend && (
                     <span className="badge t-amber ph-pend">รอซิงก์</span>
                   )}
                 </div>
               );
             })}
-            {p.pendingPhotos?.map((key) => (
-              <div key={key} className="ph" role="img" aria-label="รูปที่อัปโหลดแล้ว รอแนบกับขั้นถัดไป">
-                <Icon name="camera" className="ic20" />
-                <span className="code" style={{ fontSize: 10 }}>พร้อมแนบ</span>
-              </div>
-            ))}
+            {p.pendingPhotos?.map((item) => {
+              const key = typeof item === 'string' ? item : item.key;
+              const url = typeof item === 'object' && item.url ? item.url : (key.startsWith('data:') || key.startsWith('blob:') || key.startsWith('/') ? key : `/api/v1/uploads/${key}`);
+              return (
+                <div key={key} className={`ph ${url ? 'ph-thumb' : ''}`} role="img" aria-label="รูปที่อัปโหลดแล้ว รอแนบกับขั้นถัดไป">
+                  {url ? (
+                    <button
+                      type="button"
+                      className="ph-preview-btn"
+                      onClick={() => setPreviewImgUrl(url)}
+                      title="คลิกเพื่อดูรูปขนาดเต็ม"
+                    >
+                      <img src={url} alt="รูปพร้อมแนบ" className="ph-img" />
+                      <div className="ph-overlay">
+                        <span className="code ph-badge ph-badge-pending">พร้อมแนบ</span>
+                      </div>
+                    </button>
+                  ) : (
+                    <>
+                      <Icon name="camera" className="ic20" />
+                      <span className="code" style={{ fontSize: 10 }}>พร้อมแนบ</span>
+                    </>
+                  )}
+                  {p.onRemovePendingPhoto && (
+                    <button
+                      type="button"
+                      className="ph-remove-btn"
+                      aria-label="ลบรูปนี้"
+                      title="ลบรูปนี้"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        p.onRemovePendingPhoto?.(key);
+                      }}
+                    >
+                      <Icon name="x" className="ic14" />
+                    </button>
+                  )}
+                </div>
+              );
+            })}
             {canPhoto && (
               <>
                 {p.live && (
@@ -316,6 +375,17 @@ export function ShipmentDrawer(p: ShipmentDrawerProps) {
           {canRequestCancel && <button className="btn btn-g">ขอยกเลิก (ต้องได้ความยินยอม)</button>}
         </div>
       </div>
+
+      {previewImgUrl && (
+        <div className="ph-modal-backdrop" onClick={() => setPreviewImgUrl(null)}>
+          <div className="ph-modal-content" onClick={(e) => e.stopPropagation()}>
+            <button type="button" className="ph-modal-close" onClick={() => setPreviewImgUrl(null)} aria-label="ปิดรูป">
+              <Icon name="x" className="ic20" />
+            </button>
+            <img src={previewImgUrl} alt="รูปถ่ายขนส่ง" className="ph-modal-img" />
+          </div>
+        </div>
+      )}
     </aside>
   );
 }

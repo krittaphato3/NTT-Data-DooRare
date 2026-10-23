@@ -29,6 +29,8 @@ export interface TransportPhoto {
   time: string;
   /** Captured offline, not yet synced (FR-F2a-016). */
   pending?: boolean;
+  url?: string;
+  key?: string;
 }
 
 export interface Shipment {

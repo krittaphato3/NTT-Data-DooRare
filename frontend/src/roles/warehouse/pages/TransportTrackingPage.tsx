@@ -92,7 +92,7 @@ export function TransportTrackingPage({ role = 'WAREHOUSE_OFFICER' }: { role?: T
   const [driver, setDriver] = useState('all');
   const [busy, setBusy] = useState(false);
   const [actError, setActError] = useState<string | null>(null);
-  const [photoKeys, setPhotoKeys] = useState<Record<string, string[]>>({});
+  const [pendingPhotos, setPendingPhotos] = useState<Record<string, { key: string; url: string }[]>>({});
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -184,22 +184,49 @@ export function TransportTrackingPage({ role = 'WAREHOUSE_OFFICER' }: { role?: T
   const addPhoto = async (s: Shipment, file: File) => {
     setBusy(true);
     setActError(null);
+    let previewUrl = '';
+    try {
+      previewUrl = URL.createObjectURL(file);
+    } catch {}
     try {
       const key = await tr.addPhoto(s, file);
-      setPhotoKeys((m) => ({ ...m, [s.id]: [...(m[s.id] ?? []), key] }));
+      setPendingPhotos((m) => ({
+        ...m,
+        [s.id]: [...(m[s.id] ?? []), { key, url: previewUrl || `/api/v1/uploads/${key}` }],
+      }));
     } catch (e) {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
       setActError((e as Error).message);
     } finally {
       setBusy(false);
     }
   };
+
+  const removePendingPhoto = (shipmentId: string, photoKey: string) => {
+    setPendingPhotos((m) => {
+      const list = m[shipmentId] ?? [];
+      const item = list.find((p) => p.key === photoKey);
+      if (item?.url.startsWith('blob:')) {
+        URL.revokeObjectURL(item.url);
+      }
+      return {
+        ...m,
+        [shipmentId]: list.filter((p) => p.key !== photoKey),
+      };
+    });
+  };
+
   const advance = async (s: Shipment, to: 'LOADED' | 'IN_TRANSIT' | 'ARRIVED' | 'RECEIVED', extra: { qtyReceived?: number; reason?: string } = {}) => {
     setBusy(true);
     setActError(null);
     try {
-      const keys = to === 'LOADED' || to === 'ARRIVED' ? photoKeys[s.id] ?? [] : [];
+      const currentPending = pendingPhotos[s.id] ?? [];
+      const keys = to === 'LOADED' || to === 'ARRIVED' ? currentPending.map((p) => p.key) : [];
       await tr.advance(s, to, { ...extra, ...(keys.length ? { photoKeys: keys } : {}) });
-      setPhotoKeys((m) => ({ ...m, [s.id]: [] }));
+      currentPending.forEach((p) => {
+        if (p.url.startsWith('blob:')) URL.revokeObjectURL(p.url);
+      });
+      setPendingPhotos((m) => ({ ...m, [s.id]: [] }));
       setReceipt((m) => ({ ...m, [s.id]: undefined }));
     } catch (e) {
       setActError((e as Error).message);
@@ -344,7 +371,8 @@ export function TransportTrackingPage({ role = 'WAREHOUSE_OFFICER' }: { role?: T
           live={live}
           busy={busy}
           error={actError}
-          pendingPhotos={photoKeys[sel.shipment.id]}
+          pendingPhotos={pendingPhotos[sel.shipment.id]}
+          onRemovePendingPhoto={(key) => removePendingPhoto(sel.shipment.id, key)}
           onAddPhoto={(file) => void addPhoto(sel.shipment, file)}
           onAdvance={(to, extra) => void advance(sel.shipment, to, extra)}
           onSlip={() => void openSlip(sel.shipment)}
