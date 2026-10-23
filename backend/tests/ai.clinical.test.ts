@@ -16,6 +16,8 @@ import {
   trackUrgentDispatchEtaTool,
   submitErActionProposalTool,
 } from '../src/modules/ai/tools/clinical/er.tools.js';
+import { clinicalTools } from '../src/modules/ai/tools/clinical/index.js';
+import { defaultToolRegistry, zodToJsonSchema } from '../src/modules/ai/tools/index.js';
 import { ToolRegistry } from '../src/modules/ai/tools/registry.js';
 import { query, pool } from '../src/db/client.js';
 
@@ -734,4 +736,128 @@ test('submitErActionProposalTool: validates targetId requirement and foreign own
   );
   assert.equal(noTargetRes.success, false);
   assert.match(noTargetRes.error || '', /incidentId.*is required/i);
+});
+
+test('Task 9: clinicalTools collection contains exactly 12 tools with unique names', () => {
+  assert.equal(clinicalTools.length, 12, 'Must export exactly 12 clinical tools');
+
+  const names = new Set<string>();
+  for (const tool of clinicalTools) {
+    assert.equal(names.has(tool.name), false, `Duplicate tool name detected: ${tool.name}`);
+    names.add(tool.name);
+  }
+  assert.equal(names.size, 12);
+});
+
+test('Task 9: every clinical tool converts cleanly to OpenAI JSON schema', () => {
+  for (const tool of clinicalTools) {
+    const jsonSchema = zodToJsonSchema(tool.parameters);
+    assert.equal(jsonSchema.type, 'object', `Schema for ${tool.name} must be type object`);
+    assert.ok(jsonSchema.properties, `Schema for ${tool.name} must have properties`);
+  }
+});
+
+test('Task 9: all 12 tools are registered in defaultToolRegistry', () => {
+  for (const tool of clinicalTools) {
+    const registered = defaultToolRegistry.get(tool.name);
+    assert.ok(registered, `Tool ${tool.name} must be registered in defaultToolRegistry`);
+    assert.equal(registered?.name, tool.name);
+  }
+});
+
+test('Task 9: RBAC matrix validation across roles (DRIVER, AUDITOR, PHARMACIST, ER_STAFF, HOSPITAL_ADMIN, SYSTEM_ADMIN)', async () => {
+  const pharmacistOnlyTools = [
+    'get_ranked_lender_ladder',
+    'draft_lender_communication',
+    'interpret_lender_response',
+    'submit_pharmacist_proposal',
+  ];
+
+  const erOnlyTools = ['draft_emergency_incident', 'submit_er_action_proposal'];
+
+  const sharedClinicalTools = [
+    'get_antidote_locator',
+    'get_incident_kit_recommendations',
+    'track_urgent_dispatch_eta',
+  ];
+
+  const hospitalAdminAllowedTools = [
+    'get_stock_and_alerts',
+    'get_forecast_trends',
+    'get_near_expiry_pool_status',
+  ];
+
+  // 1. DRIVER and AUDITOR denied everywhere on clinical tools
+  const unauthorizedRoles = ['DRIVER', 'AUDITOR'] as const;
+  for (const role of unauthorizedRoles) {
+    const roleDefs = defaultToolRegistry.getToolsForRole(role);
+    for (const tool of clinicalTools) {
+      assert.equal(
+        roleDefs.some((t) => t.name === tool.name),
+        false,
+        `Role ${role} must NOT have access to ${tool.name}`,
+      );
+    }
+  }
+
+  // 2. ER_STAFF denied on pharmacist-only tools
+  const erTools = defaultToolRegistry.getToolsForRole('ER_STAFF');
+  for (const name of pharmacistOnlyTools) {
+    assert.equal(
+      erTools.some((t) => t.name === name),
+      false,
+      `ER_STAFF must be denied on pharmacist-only tool ${name}`,
+    );
+  }
+
+  // 3. ER_STAFF allowed on ER tools and shared tools
+  for (const name of [...erOnlyTools, ...sharedClinicalTools]) {
+    assert.ok(
+      erTools.some((t) => t.name === name),
+      `ER_STAFF must be allowed on ${name}`,
+    );
+  }
+
+  // 4. PHARMACIST allowed on pharmacist tools and shared tools, denied on ER-only tools
+  const phTools = defaultToolRegistry.getToolsForRole('PHARMACIST');
+  for (const name of [...pharmacistOnlyTools, ...hospitalAdminAllowedTools, ...sharedClinicalTools]) {
+    assert.ok(
+      phTools.some((t) => t.name === name),
+      `PHARMACIST must be allowed on ${name}`,
+    );
+  }
+  for (const name of erOnlyTools) {
+    assert.equal(
+      phTools.some((t) => t.name === name),
+      false,
+      `PHARMACIST must be denied on ER-only tool ${name}`,
+    );
+  }
+
+  // 5. HOSPITAL_ADMIN allowed only on the 3 designated read tools
+  const haTools = defaultToolRegistry.getToolsForRole('HOSPITAL_ADMIN');
+  for (const name of hospitalAdminAllowedTools) {
+    assert.ok(
+      haTools.some((t) => t.name === name),
+      `HOSPITAL_ADMIN must be allowed on ${name}`,
+    );
+  }
+  for (const tool of clinicalTools) {
+    if (!hospitalAdminAllowedTools.includes(tool.name)) {
+      assert.equal(
+        haTools.some((t) => t.name === tool.name),
+        false,
+        `HOSPITAL_ADMIN must be denied on operational clinical tool ${tool.name}`,
+      );
+    }
+  }
+
+  // 6. SYSTEM_ADMIN allowed everywhere
+  const sysTools = defaultToolRegistry.getToolsForRole('SYSTEM_ADMIN');
+  for (const tool of clinicalTools) {
+    assert.ok(
+      sysTools.some((t) => t.name === tool.name),
+      `SYSTEM_ADMIN must have access to ${tool.name}`,
+    );
+  }
 });
