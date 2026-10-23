@@ -25,10 +25,12 @@ export interface ApiReturnObligation {
   receipts: { id: string; qty: number; lotNo: string | null; expiryDate: string | null; receivedAt: string; receivedBy: string | null }[];
 }
 
-export function listReturnObligations(params: { direction?: 'all' | 'owe' | 'owed'; status?: ApiReturnStatus; limit?: number } = {}) {
+export function listReturnObligations(params: { direction?: 'all' | 'owe' | 'owed'; status?: ApiReturnStatus; limit?: number; requestId?: string; requestNo?: string } = {}) {
   const q = new URLSearchParams({ limit: String(params.limit ?? 200) });
   if (params.direction) q.set('direction', params.direction);
   if (params.status) q.set('status', params.status);
+  if (params.requestId) q.set('requestId', params.requestId);
+  if (params.requestNo) q.set('requestNo', params.requestNo);
   return apiJsonAll<{ ok: true; items: ApiReturnObligation[]; nextCursor: string | null }>(`/return-obligations?${q}`);
 }
 

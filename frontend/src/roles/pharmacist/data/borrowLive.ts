@@ -100,7 +100,7 @@ export function borrowRequestToView(r: ApiBorrowRequest, now = Date.now(), retur
     ...(waiting?.remainingSec != null ? { countdownSec: waiting.remainingSec } : {}),
     ...(stop ? { stop } : {}),
     note: waiting ? `รอ ${waiting.lender.name} · ${legDetail(waiting, unit).split(' · ').slice(-1)[0]}` : r.status === 'ESCALATED' ? `ยังขาด ${n(r.stop?.remaining ?? 0)} · แจ้งผู้ดูแลแล้ว` : r.status === 'PENDING_APPROVAL' ? 'ร่างข้อความแล้ว · รออนุมัติ' : r.status === 'FULFILLED' ? `ครบ ${n(r.qtyFulfilled)}` : r.status === 'CANCELLED' ? (r.reason ?? 'ยกเลิก') : 'กำลังดำเนินการ',
-    action: r.status === 'PENDING_APPROVAL' ? 'approve' : r.status === 'ESCALATED' ? 'addLender' : 'detail',
+    action: r.status === 'PENDING_APPROVAL' ? 'approve' : r.status === 'ESCALATED' ? 'addLender' : (returnState === 'PENDING' || returnState === 'OVERDUE') ? 'recordReturn' : 'detail',
     banner: banner(r, waiting),
     contextLabel: r.context === 'STOCK_ALERT' ? 'STOCK_ALERT · จากแจ้งเตือนสต็อก' : r.context === 'EMERGENCY' ? 'EMERGENCY · เหตุฉุกเฉิน' : 'MANUAL · สร้างเอง (UI-10)',
     firstRound: `${n(r.firstRoundQty ?? r.qtyRequested)} ${unit}${r.rValue !== null ? ` · R = ${r.rValue}` : ''}`,

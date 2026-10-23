@@ -18,6 +18,10 @@ interface BorrowDrawerProps {
   onClose: () => void;
   /** Opens the escalate-manual confirm dialog (API-F1b-012) for an ESCALATED request. */
   onEscalate: (r: BorrowRequest) => void;
+  /** Opens the cancel confirm dialog for an in-progress request (QA-PHARM-005). */
+  onCancel?: (r: BorrowRequest) => void;
+  /** Opens the record-return dialog for a request with return obligations (QA-PHARM-005). */
+  onRecordReturn?: (r: BorrowRequest) => void;
   /** Role viewing the drawer; every action is gated through `lib/rbac.ts`. */
   role?: RoleCode;
 }
@@ -32,7 +36,7 @@ const BANNER: Record<StatusGroup, [string, string, string]> = {
 };
 
 /** UI-05 request detail (we are the borrower). Actions are local state only. */
-export function BorrowDrawer({ request: r, tick, decision, onDecide, onClose, onEscalate, role = 'PHARMACIST' }: BorrowDrawerProps) {
+export function BorrowDrawer({ request: r, tick, decision, onDecide, onClose, onEscalate, onCancel, onRecordReturn, role = 'PHARMACIST' }: BorrowDrawerProps) {
   const group = groupOf(r.status);
 
   /** Action each drawer button performs, so a role that may not act sees it disabled with a hint. */
@@ -208,13 +212,23 @@ export function BorrowDrawer({ request: r, tick, decision, onDecide, onClose, on
                 เพิ่มผู้ให้ยืม
               </button>
             )}
-            {r.action === 'recordReturn' && (
-              <button className="btn btn-p" disabled={!recordReturn.allowed} title={recordReturn.hint}>
+            {(r.action === 'recordReturn' || (r.status === 'FULFILLED' && (r.returnState === 'PENDING' || r.returnState === 'OVERDUE'))) && (
+              <button
+                className="btn btn-p"
+                disabled={!recordReturn.allowed}
+                title={recordReturn.hint}
+                onClick={() => onRecordReturn?.(r)}
+              >
                 บันทึกการคืน
               </button>
             )}
             {group === 'progress' && (
-              <button className="btn btn-g" disabled={!cancelRequest.allowed} title={cancelRequest.hint}>
+              <button
+                className="btn btn-g"
+                disabled={!cancelRequest.allowed}
+                title={cancelRequest.hint}
+                onClick={() => onCancel?.(r)}
+              >
                 ยกเลิกคำขอ
               </button>
             )}
