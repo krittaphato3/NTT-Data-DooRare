@@ -7,7 +7,7 @@ import type { ApiDashboard } from './services/catalogApi';
 import { Footer } from './components/layout/Footer';
 import { Sidebar } from './components/layout/Sidebar';
 import { TopBar } from './components/layout/TopBar';
-import { getNavForRole, HOSPITAL_ADMIN_HOME_HREF, withRole } from './data/navigation';
+import { getNavForRole, homeHrefFor, withRole } from './data/navigation';
 import { can } from './lib/rbac';
 import type { RoleCode } from './lib/rbac';
 import type { ShellNavEntry } from './data/navigation';
@@ -76,6 +76,27 @@ const SYSTEM_ADMIN_NOTIFICATIONS = [
 const HA_READ_ONLY_PAGES: Page[] = [
   'dashboard', 'alerts', 'requests', 'lend', 'expiry', 'pool', 'incident', 'transport', 'docs', 'report',
 ];
+
+/**
+ * Allowlist of `route.page` values each role may access.
+ * Roles that use a fully dedicated shell branch (System Admin, Driver, ER, Warehouse) are not
+ * listed here — they are handled by their own guard branches before this map is consulted.
+ *
+ * Source of truth: `data/navigation.ts` ROLE_NAV + HA_READ_ONLY_PAGES above.
+ * nav key → route.page mapping:
+ *   dash→dashboard, alerts→alerts, req→requests, lend→lend, exp→expiry,
+ *   pool→pool, inc→incident, tr→transport, doc→docs, rep→report,
+ *   usr→users, cfg→config, aud→audit, adm→admin
+ */
+const ROLE_PAGE_ALLOWLIST: Partial<Record<string, Page[]>> = {
+  // ROLE_NAV.PHARMACIST: ['dash','alerts','req','lend','exp','pool','inc','tr','doc','rep']
+  PHARMACIST:          ['dashboard', 'alerts', 'requests', 'lend', 'expiry', 'pool', 'incident', 'transport', 'docs', 'report'],
+  // ROLE_NAV.PROCUREMENT_OFFICER: ['dash','alerts','req','doc','rep']
+  PROCUREMENT_OFFICER: ['dashboard', 'alerts', 'requests', 'docs', 'report'],
+  // ROLE_NAV.HOSPITAL_ADMIN: shared pharmacist pages + admin pages
+  HOSPITAL_ADMIN:      ['dashboard', 'alerts', 'requests', 'lend', 'expiry', 'pool', 'incident', 'transport', 'docs', 'report', 'users', 'config', 'audit'],
+  // System Admin, Warehouse, Driver, ER_STAFF handled by dedicated shell branches — not listed.
+};
 
 /** Pharmacist on the ops-style top bar (UI-05 mockup: scope pill, agent pill, TH/EN). */
 const PHARMACIST_OPS_USER = { ...USER, scopeLabel: 'เห็นเฉพาะข้อมูล รพ.สมุทรปราการ' };
@@ -414,6 +435,21 @@ function AuthenticatedShell() {
     ((onUsers || onAudit || onConfig) && !hospitalAdmin && !isSystemAdminRole) ||
     (hospitalAdmin && !isHospitalAdminPageAllowed);
 
+  /* Allowlist guard: roles with a ROLE_PAGE_ALLOWLIST entry may only open pages in that list.
+     System Admin, Driver, ER, and Warehouse are handled by their own shell branches above and
+     are NOT listed in ROLE_PAGE_ALLOWLIST, so this block never fires for them.
+     QA-PHARM-001: ?page=admin must render AccessDenied for PHARMACIST.
+     QA-PHARM-002: warehouse/driver pages (inbox, kit, stock, drugs, sync) must render AccessDenied
+                   instead of silently falling through to Dashboard. */
+  const roleAllowlist = ROLE_PAGE_ALLOWLIST[effectiveRole];
+  const isDeniedByAllowlist =
+    !isSystemAdminRole &&
+    !isDriverRole &&
+    !warehouse &&
+    !isEr &&
+    roleAllowlist !== undefined &&
+    !roleAllowlist.includes(route.page);
+
   // Real user profile for TopBar
   const currentUserProfile = user
     ? {
@@ -516,11 +552,13 @@ function AuthenticatedShell() {
             )
           ) : isEr ? (
             <ErPageSwitch page={erPage} />
-          ) : isDeniedAdminPage ? (
-            /* Guard for a Hospital Admin page outside the allowed set, and for any other role
-               arriving on users/audit/config via URL. The operational screens render read-only
-               through their `role` prop; this card covers anything else. */
-            <AccessDenied homeHref={HOSPITAL_ADMIN_HOME_HREF} />
+          ) : isDeniedAdminPage || isDeniedByAllowlist ? (
+            /* Guard for a Hospital Admin page outside the allowed set, for any other role
+               arriving on users/audit/config via URL, and for any role arriving on a page key
+               that is not in their ROLE_PAGE_ALLOWLIST (QA-PHARM-001, QA-PHARM-002).
+               homeHrefFor() sends each role to their own home, not hardcoded HA home
+               (QA-PHARM-003). */
+            <AccessDenied homeHref={homeHrefFor(effectiveRole)} />
           ) : warehouse ? (
             onTransport ? <TransportTrackingPage role="WAREHOUSE_OFFICER" /> : onInbox ? <InboxPage /> : onKit ? <KitPage /> : onDocs ? <DocumentsPage role="WAREHOUSE_OFFICER" /> : onStock || onAlerts ? <WhStockPage /> : onRequests ? <WhBorrowPage /> : onExpiry ? <WhExpiryPage /> : onDrugs ? <WhDrugsPage /> : <WarehouseDashboardPage />
           ) : onTransport ? (
