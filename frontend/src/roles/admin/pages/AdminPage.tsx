@@ -7,6 +7,7 @@ import { AuditLogTab } from '../components/AuditLogTab';
 import { HospitalDetailView } from '../components/HospitalDetailView';
 import { HospitalListTab } from '../components/HospitalListTab';
 import { SystemConfigTab } from '../components/SystemConfigTab';
+import { AiConfigTab } from '../components/AiConfigTab';
 import * as authApi from '../../../services/authApi';
 import { createHospital, getHospitals, updateHospital } from '../../../services/catalogApi';
 import { mockFallbackEnabled, onLoadFailure, onLoadSuccess } from '../../../services/dataSource';
@@ -19,6 +20,7 @@ function initialTab(): AdminTab {
     if (t === 'hospitals') return 'hospitals';
     if (t === 'accounts') return 'accounts';
     if (t === 'config' || t === 'cfg') return 'config';
+    if (t === 'ai-config' || t === 'ai') return 'ai-config';
     if (t === 'audit' || t === 'aud') return 'audit';
   } catch {}
   return 'dashboard';
@@ -231,6 +233,10 @@ export function AdminPage({ query = '', onQuery }: AdminPageProps) {
 
       {activeTab === 'config' && (
         <SystemConfigTab onShowToast={showToast} />
+      )}
+
+      {activeTab === 'ai-config' && (
+        <AiConfigTab onShowToast={showToast} />
       )}
 
       {activeTab === 'audit' && (

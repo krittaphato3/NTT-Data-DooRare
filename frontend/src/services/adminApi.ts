@@ -244,3 +244,97 @@ export async function listAudit(params: Record<string, string> = {}, cursor?: st
 export async function verifyAudit(): Promise<ApiAuditVerifyResponse> {
   return apiJson<ApiAuditVerifyResponse>('/audit-log/verify');
 }
+
+export type ApiAiProviderType = 'MOCK' | 'AWS_BEDROCK' | 'OPENAI' | 'ANTHROPIC' | 'AZURE_OPENAI' | 'CUSTOM';
+
+export interface ApiMaskedCredentials {
+  hasApiKey: boolean;
+  apiKeyMasked?: string;
+  awsRegion?: string;
+  awsAccessKeyIdMasked?: string;
+  hasAwsSecretKey?: boolean;
+  azureEndpoint?: string;
+  azureDeploymentName?: string;
+  customEndpoint?: string;
+  customApiPath?: string;
+  customHeaders?: Record<string, string>;
+}
+
+export interface ApiAiConfig {
+  provider: ApiAiProviderType;
+  modelPrimary: string;
+  modelFast: string;
+  monthlyBudgetUsd: number;
+  estimatedSpendUsd: number;
+  credentials: ApiMaskedCredentials;
+  agentEnabled: boolean;
+  updatedAt?: string;
+}
+
+export interface ApiAiConfigResponse {
+  ok: boolean;
+  data: ApiAiConfig;
+}
+
+export interface ApiAiConfigUpdateRequest {
+  provider?: ApiAiProviderType;
+  modelPrimary?: string;
+  modelFast?: string;
+  monthlyBudgetUsd?: number;
+  credentials?: {
+    apiKey?: string;
+    awsRegion?: string;
+    awsAccessKeyId?: string;
+    awsSecretAccessKey?: string;
+    azureEndpoint?: string;
+    azureDeploymentName?: string;
+    customEndpoint?: string;
+    customApiPath?: string;
+    customHeaders?: Record<string, string>;
+  };
+  reason: string;
+}
+
+export interface ApiTestAiConnectionRequest {
+  provider?: ApiAiProviderType;
+  modelId?: string;
+  credentials?: {
+    apiKey?: string;
+    awsRegion?: string;
+    awsAccessKeyId?: string;
+    awsSecretAccessKey?: string;
+    azureEndpoint?: string;
+    azureDeploymentName?: string;
+    customEndpoint?: string;
+    customApiPath?: string;
+    customHeaders?: Record<string, string>;
+  };
+}
+
+export interface ApiTestAiConnectionResponse {
+  ok: boolean;
+  success: boolean;
+  latencyMs: number;
+  provider: ApiAiProviderType;
+  modelId: string;
+  message: string;
+}
+
+export async function getAiConfig(): Promise<ApiAiConfigResponse> {
+  return apiJson<ApiAiConfigResponse>('/admin/ai-config');
+}
+
+export async function updateAiConfig(body: ApiAiConfigUpdateRequest): Promise<ApiAiConfigResponse> {
+  return apiJson<ApiAiConfigResponse>('/admin/ai-config', {
+    method: 'PUT',
+    body: JSON.stringify(body),
+  });
+}
+
+export async function testAiConnection(body?: ApiTestAiConnectionRequest): Promise<ApiTestAiConnectionResponse> {
+  return apiJson<ApiTestAiConnectionResponse>('/admin/ai-config/test-connection', {
+    method: 'POST',
+    body: JSON.stringify(body || {}),
+  });
+}
+

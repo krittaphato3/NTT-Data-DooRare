@@ -1,6 +1,6 @@
 import { Icon } from '../../../components/common/icons';
 
-export type AdminTab = 'dashboard' | 'hospitals' | 'accounts' | 'config' | 'audit';
+export type AdminTab = 'dashboard' | 'hospitals' | 'accounts' | 'config' | 'ai-config' | 'audit';
 
 interface AdminHeaderProps {
   activeTab: AdminTab;
@@ -90,6 +90,15 @@ export function AdminHeader({
         >
           <Icon name="gear" style={{ width: 18, height: 18 }} />
           <span>ตั้งค่า · Kill switch</span>
+        </button>
+
+        <button
+          type="button"
+          className={`admin-tab-btn ${activeTab === 'ai-config' ? 'active' : ''}`}
+          onClick={() => onTabChange('ai-config')}
+        >
+          <Icon name="sparkle" style={{ width: 18, height: 18 }} />
+          <span>ตั้งค่า AI (BYOK)</span>
         </button>
 
         <button
