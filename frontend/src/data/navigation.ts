@@ -62,7 +62,7 @@ const CATALOGUE: Record<string, NavDef> = {
 
 /** Role → nav keys (`'|'` renders the admin group header) — mockup `ROLES` verbatim. */
 export const ROLE_NAV: Record<string, string[]> = {
-  PHARMACIST: ['dash', 'alerts', 'req', 'lend', 'exp', 'pool', 'inc', 'tr', 'doc', 'rep'],
+  PHARMACIST: ['dash', 'alerts', 'req', 'lend', 'exp', 'pool', 'inc', 'tr', 'doc', 'rep', 'aud'],
   PROCUREMENT_OFFICER: ['dash', 'alerts', 'req', 'doc', 'rep'],
   WAREHOUSE_OFFICER: ['dash', 'tr', 'inc', 'doc'],
   DRIVER: ['tr'],

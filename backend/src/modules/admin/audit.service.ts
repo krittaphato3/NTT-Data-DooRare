@@ -67,6 +67,12 @@ function shortText(raw: unknown, name: string, max = 80): string | undefined {
 
 export class AuditService {
   async list(user: AuthSessionUser, raw: Record<string, unknown>) {
+    if (user.role === 'PHARMACIST' && raw.hospitalId !== undefined) {
+      if (!isUuid(raw.hospitalId) || raw.hospitalId !== user.hospitalId) {
+        throw new HttpError(403, 'FORBIDDEN', 'เภสัชกรดูได้เฉพาะบันทึกตรวจสอบของโรงพยาบาลตนเอง');
+      }
+    }
+
     const page = parsePage(raw);
     const params: unknown[] = [];
     const where: string[] = [];
@@ -119,6 +125,23 @@ export class AuditService {
     const problems = await query<{ problems: string }>(`SELECT audit_chain_verify() AS problems`);
     const count = Number(problems.rows[0]?.problems ?? 0);
     return { ok: true, data: { problems: count, intact: count === 0, checkedAt: new Date().toISOString() } };
+  }
+
+  async detail(user: AuthSessionUser, rawId: string, raw: Record<string, unknown> = {}) {
+    const id = Number(rawId);
+    if (!Number.isInteger(id) || id <= 0) throw new HttpError(400, 'INVALID_QUERY', 'id ต้องเป็นจำนวนเต็มบวก');
+    const includeContext = raw.includeContext !== 'false';
+    const row = (await query(`${SELECT} WHERE a.id = $1`, [id])).rows[0];
+    if (!row) throw new HttpError(404, 'NOT_FOUND', 'ไม่พบบันทึกการตรวจสอบ');
+
+    if (user.hospitalId) {
+      const isOwnHospital = row.hospital_id === user.hospitalId || (row.entity_type === 'hospital' && row.entity_id === user.hospitalId);
+      if (!isOwnHospital) {
+        throw new HttpError(404, 'NOT_FOUND', 'ไม่พบบันทึกการตรวจสอบ');
+      }
+    }
+
+    return { ok: true, id: String(row.id), data: view(row, includeContext) };
   }
 }
 
