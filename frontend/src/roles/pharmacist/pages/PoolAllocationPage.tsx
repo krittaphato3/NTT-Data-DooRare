@@ -55,6 +55,8 @@ export function PoolAllocationPage({ role = 'PHARMACIST' }: { role?: RoleCode })
       .finally(() => setBusy(false));
   };
   const liveApprove = (p: AllocationPlan) => p.live && run(p, decidePlan(p.live.uuid, 'APPROVED', p.version), 'บันทึกการเห็นชอบแล้ว (audit_log)');
+  const liveApproveAll = (p: AllocationPlan, noteText: string) =>
+    p.live && run(p, decidePlan(p.live.uuid, 'APPROVED', p.version, noteText, true), 'บันทึกมติที่ประชุมและอนุมัติผ่านทุก รพ. เรียบร้อยแล้ว · เริ่มขั้นตอนขนส่ง (UI-14)');
   const liveReject = (p: AllocationPlan, comment: string) => p.live && run(p, decidePlan(p.live.uuid, 'REJECTED', p.version, comment), 'บันทึกการไม่เห็นชอบแล้ว · แผนเข้าสถานะต้องหารือ');
   const liveOption = (p: AllocationPlan, id: string, label: string) => p.live && run(p, choosePlanOption(p.live.uuid, id as ApiPlanOption, p.version), `บันทึกทางเลือกแล้ว: ${label} (audit_log)`);
   const liveCancel = (p: AllocationPlan, reason: string) => p.live && run(p, cancelPlan(p.live.uuid, reason), 'ส่งคำขอยกเลิกแล้ว · ถ้าเป็นแผนที่อนุมัติแล้วต้องให้อีกฝ่ายยินยอมด้วย');
@@ -338,6 +340,7 @@ export function PoolAllocationPage({ role = 'PHARMACIST' }: { role?: RoleCode })
           role={role}
           decision={decisions[sel.id]}
           onApprove={() => (live ? liveApprove(sel) : approve(sel.id))}
+          onApproveAll={(text) => (live ? liveApproveAll(sel, text) : approve(sel.id))}
           onReject={(comment) => liveReject(sel, comment)}
           onUneconomical={(label, id) => (live && id ? liveOption(sel, id, label) : decideUneconomical(sel.id, label))}
           onCancel={(reason) => liveCancel(sel, reason)}

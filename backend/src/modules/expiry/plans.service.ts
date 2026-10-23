@@ -222,7 +222,14 @@ export class PlansService {
       if (!OPEN_FOR_APPROVAL.includes(plan.status)) throw new HttpError(409, 'ALREADY_DECIDED', `แผนอยู่ในสถานะ ${plan.status} ตัดสินใจไม่ได้`);
       assertVersion(plan, version);
       if (decision === 'APPROVED' && !plan.economical && !plan.option_chosen) throw new HttpError(409, 'OPTION_REQUIRED', 'ค่าขนส่งเกินเกณฑ์ ต้องให้เภสัชกรเจ้าของยาเลือกทางเลือกก่อน (BR-F2a-011)');
-      await client.query(`UPDATE plan_approval SET decision = $3::approval_decision, decided_by = $4, decided_at = now(), comment = $5 WHERE plan_id = $1 AND hospital_id = $2`, [id, hospitalId, decision, user.id, comment || null]);
+      if (body.approveAll && decision === 'APPROVED') {
+        await client.query(
+          `UPDATE plan_approval SET decision = 'APPROVED', decided_by = $2, decided_at = now(), comment = COALESCE(comment, 'เห็นชอบตามมติที่ประชุม') WHERE plan_id = $1`,
+          [id, user.id],
+        );
+      } else {
+        await client.query(`UPDATE plan_approval SET decision = $3::approval_decision, decided_by = $4, decided_at = now(), comment = $5 WHERE plan_id = $1 AND hospital_id = $2`, [id, hospitalId, decision, user.id, comment || null]);
+      }
       const ctx = auditContext(req);
       await writeAudit(client, ctx, { action: `PLAN_${decision}`, entityType: 'allocation_plan', entityId: id, reason: comment || null, after: { hospital: hospitalId, planNo: plan.plan_no } });
       let next = plan.status;

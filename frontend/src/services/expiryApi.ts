@@ -115,7 +115,7 @@ export const withdrawNearExpiry = (id: string, reason: string) => post<One<ApiNe
 
 export const listPool = () => apiJsonAll<{ ok: true; items: ApiPoolEntry[]; nextCursor: string | null }>('/pool?limit=200');
 export const listPlans = () => apiJsonAll<{ ok: true; items: ApiPlan[]; nextCursor: string | null }>('/allocation-plans?limit=200');
-export const decidePlan = (id: string, decision: 'APPROVED' | 'REJECTED', version: number, comment?: string) => post<One<ApiPlan>>(`/allocation-plans/${id}/decision`, { decision, version, comment });
+export const decidePlan = (id: string, decision: 'APPROVED' | 'REJECTED', version: number, comment?: string, approveAll?: boolean) => post<One<ApiPlan>>(`/allocation-plans/${id}/decision`, { decision, version, comment, approveAll });
 export const choosePlanOption = (id: string, option: ApiPlanOption, version: number, reason?: string) => post<One<ApiPlan>>(`/allocation-plans/${id}/option`, { option, version, reason });
 export const cancelPlan = (id: string, reason: string) => post<One<ApiPlan> & { state: 'CANCEL_REQUESTED' | 'CANCELLED' }>(`/allocation-plans/${id}/cancel`, { reason });
 

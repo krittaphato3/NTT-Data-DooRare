@@ -9,6 +9,7 @@ interface AllocationDrawerProps {
   plan: AllocationPlan;
   decision?: string;
   onApprove: () => void;
+  onApproveAll?: (resolutionNote: string) => void;
   onUneconomical: (label: string, optionId?: string) => void;
   /** Live plans only (API-F2a-009 / -011). */
   onReject?: (comment: string) => void;
@@ -21,9 +22,11 @@ interface AllocationDrawerProps {
 }
 
 /** UI-09 Allocation plan review — F-22 feasibility, F-23 economics, approval chain. */
-export function AllocationDrawer({ plan: p, decision, onApprove, onUneconomical, onReject, onCancel, busy = false, error = null, onClose, role = 'PHARMACIST' }: AllocationDrawerProps) {
+export function AllocationDrawer({ plan: p, decision, onApprove, onApproveAll, onUneconomical, onReject, onCancel, busy = false, error = null, onClose, role = 'PHARMACIST' }: AllocationDrawerProps) {
   const [note, setNote] = useState('');
+  const [cancelNote, setCancelNote] = useState('');
   const noteOk = note.trim().length >= 3;
+  const cancelNoteOk = cancelNote.trim().length >= 3;
   const L = p.live;
   /* Approving a plan and choosing the uneconomical-exit route both belong to the pharmacist. */
   const mayApprove = mayActFor(role, 'PHARMACIST', 'approveAllocation');
@@ -35,9 +38,12 @@ export function AllocationDrawer({ plan: p, decision, onApprove, onUneconomical,
   const [showMeetingModal, setShowMeetingModal] = useState(false);
   const [showAdjustForm, setShowAdjustForm] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
-  const [adjustedPhraPradaeng, setAdjustedPhraPradaeng] = useState(90);
-  const [adjustedBangBo, setAdjustedBangBo] = useState(30);
-  const adjustedTotal = adjustedPhraPradaeng + adjustedBangBo;
+  const initialLines = (L?.lines && L.lines.length > 0)
+    ? L.lines.map((l) => ({ receiver: l.receiver, qty: l.qty }))
+    : [{ receiver: p.to || 'รพ.ปลายทาง', qty: p.qty }];
+  const [lines, setLines] = useState(initialLines);
+  const adjustedTotal = lines.reduce((sum, l) => sum + (Number(l.qty) || 0), 0);
+  const isMatch = adjustedTotal === p.qty;
 
   const effectiveRatio = withMerge && p.merge ? p.merge.newRatioPct : p.costRatioPct;
   const effectiveCost = withMerge && p.merge ? p.merge.newCost : p.transportCost;
@@ -309,60 +315,58 @@ export function AllocationDrawer({ plan: p, decision, onApprove, onUneconomical,
               </div>
             )}
 
-            {/* Adjust Quantities Form */}
+            {/* Adjust Quantities Form & Approve Resolution */}
             {showAdjustForm && (
               <div className="pl-adjust-box">
                 <div style={{ fontWeight: 600, color: '#1E3A8A', fontSize: 13 }}>
                   ปรับปรุงยอดจัดสรรตามมติที่ประชุม (ยอดรวมในคลัง {p.qty} {p.unit})
                 </div>
                 <div style={{ fontSize: 12, color: '#475569' }}>
-                  แก้ไขจำนวนยาที่แต่ละ รพ. จะได้รับตามที่ตกลงร่วมกัน เพื่อสร้างแผนฉบับใหม่ v{p.version + 1}
+                  แก้ไขจำนวนยาที่แต่ละ รพ. จะได้รับตามที่ตกลงร่วมกันในที่ประชุม เพื่ออนุมัติเห็นชอบทั้งสองฝ่าย
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <div className="pl-adjust-row">
-                    <span>รพ.พระประแดง (ปลายทาง 1):</span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <input
-                        type="number"
-                        className="sel"
-                        style={{ width: 80, textAlign: 'right' }}
-                        value={adjustedPhraPradaeng}
-                        onChange={(e) => setAdjustedPhraPradaeng(Number(e.target.value))}
-                      />
-                      <span>{p.unit}</span>
+                  {lines.map((line, idx) => (
+                    <div key={line.receiver} className="pl-adjust-row">
+                      <span>{line.receiver}:</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <input
+                          type="number"
+                          className="sel"
+                          style={{ width: 90, textAlign: 'right' }}
+                          value={line.qty}
+                          onChange={(e) => {
+                            const val = Number(e.target.value) || 0;
+                            setLines((prev) => prev.map((item, i) => i === idx ? { ...item, qty: val } : item));
+                          }}
+                        />
+                        <span>{p.unit}</span>
+                      </div>
                     </div>
-                  </div>
-                  <div className="pl-adjust-row">
-                    <span>รพ.บางบ่อ (ปลายทาง 2 - ขอไม่เกิน 30):</span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <input
-                        type="number"
-                        className="sel"
-                        style={{ width: 80, textAlign: 'right' }}
-                        value={adjustedBangBo}
-                        onChange={(e) => setAdjustedBangBo(Number(e.target.value))}
-                      />
-                      <span>{p.unit}</span>
-                    </div>
-                  </div>
+                  ))}
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 12.5, fontWeight: 600, color: adjustedTotal === p.qty ? '#166534' : '#DC2626' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 12.5, fontWeight: 600, color: isMatch ? '#166534' : '#DC2626' }}>
                   <span>ยอดรวมที่จัดสรร:</span>
-                  <span>{adjustedTotal} / {p.qty} {p.unit} {adjustedTotal === p.qty ? '(ตรงตามยอดคลัง)' : '(ยอดรวมไม่ตรงกับคลัง!)'}</span>
+                  <span>{adjustedTotal} / {p.qty} {p.unit} {isMatch ? '(ตรงตามยอดคลัง)' : '(ยอดรวมไม่ตรงกับคลัง!)'}</span>
                 </div>
-                <button
-                  type="button"
-                  className="btn btn-p"
-                  disabled={adjustedTotal !== p.qty || busy}
-                  onClick={() => {
-                    onUneconomical(
-                      `บันทึกผลการประชุม 3 รพ. เรียบร้อย: รพ.พระประแดง ${adjustedPhraPradaeng} ${p.unit}, รพ.บางบ่อ ${adjustedBangBo} ${p.unit} · เสนอแผน v${p.version + 1} รอขอความเห็นชอบรอบใหม่`,
-                    );
-                  }}
-                >
-                  <Icon name="send" />
-                  ยืนยันมติที่ประชุม & เสนอแผนฉบับใหม่ (v{p.version + 1})
-                </button>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 4 }}>
+                  <button
+                    type="button"
+                    className="btn btn-p"
+                    style={{ flex: 1, minWidth: 200 }}
+                    disabled={!isMatch || busy}
+                    onClick={() => {
+                      const desc = lines.map((l) => `${l.receiver} ${l.qty} ${p.unit}`).join(', ');
+                      if (onApproveAll) {
+                        onApproveAll(`เห็นชอบตามมติที่ประชุม: ${desc}`);
+                      } else {
+                        onUneconomical(`บันทึกผลการประชุมเรียบร้อย: ${desc} · อนุมัติผ่านทุก รพ.`);
+                      }
+                    }}
+                  >
+                    <Icon name="check" />
+                    ยืนยันมติที่ประชุม & อนุมัติผ่านทุก รพ. ทันที
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -448,8 +452,8 @@ export function AllocationDrawer({ plan: p, decision, onApprove, onUneconomical,
           <div className="pl-decide">
             <h3 className="tr-h3">ยกเลิกแผน <span className="en">FR-F2a-018</span></h3>
             {L?.cancelRequestedBy && <div className="sub">มี รพ.ขอยกเลิกแล้ว · รออีกฝ่าย (เจ้าของยา) ยินยอมด้วยการกดยกเลิกจาก รพ.ของตน</div>}
-            <input className="sel" style={{ width: '100%' }} placeholder="เหตุผล (อย่างน้อย 3 ตัวอักษร)" value={note} onChange={(e) => setNote(e.target.value)} />
-            <button className="btn btn-g" disabled={!mayApprove || busy || !noteOk} onClick={() => onCancel?.(note.trim())}>
+            <input className="sel" style={{ width: '100%' }} placeholder="เหตุผล (อย่างน้อย 3 ตัวอักษร)" value={cancelNote} onChange={(e) => setCancelNote(e.target.value)} />
+            <button className="btn btn-g" disabled={!mayApprove || busy || !cancelNoteOk} onClick={() => onCancel?.(cancelNote.trim())}>
               {p.status === 'TRANSPORTING' || p.status === 'APPROVED' || p.status === 'AUTO_APPROVED' ? 'ขอยกเลิก / ยินยอมยกเลิก (ต้องสองฝ่าย)' : 'ยกเลิกแผน'}
             </button>
           </div>
