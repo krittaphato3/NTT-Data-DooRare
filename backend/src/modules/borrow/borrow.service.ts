@@ -432,6 +432,86 @@ export class BorrowService {
     });
   }
 
+  /**
+   * Cancel an in-progress or approved request (spec §7.15 POST /borrow-requests/{id}/cancel).
+   * Pharmacist of borrower only.
+   * If any leg is LOADED / IN_TRANSIT / RECEIVED or transport task is already moving goods,
+   * cancel is BLOCKED (409 CANNOT_CANCEL) per spec AC-F2a-08 / §03.
+   * If not loaded, unsent/pending/waiting legs and tasks are cancelled.
+   */
+  async cancel(req: Request, rawId: string) {
+    const user = req.user!;
+    mustBePharmacistOf(user);
+    const id = uuidParam(rawId, 'id');
+    const body = bodyObject(req.body ?? {});
+    const reason = typeof body.reason === 'string' ? body.reason.trim() : '';
+    if (reason.length < 3) throw new HttpError(400, 'VALIDATION', 'ต้องระบุเหตุผลในการยกเลิก (อย่างน้อย 3 ตัวอักษร)');
+    return withTransaction(async (client) => {
+      const request = await loadRequest(client, id);
+      assertBorrower(user, request);
+      const r = request!;
+      if (['FULFILLED', 'CLOSED_UNFULFILLED', 'CANCELLED'].includes(r.status)) {
+        throw new HttpError(409, 'ALREADY_DECIDED', `ไม่สามารถยกเลิกคำขอในสถานะ ${r.status}`);
+      }
+
+      // Check if any leg is already loaded, in transit, or received
+      const legs = await client.query(
+        `SELECT bl.id, bl.status::text AS leg_status, tt.id AS task_id, tt.status::text AS task_status
+           FROM borrow_leg bl
+           LEFT JOIN transport_task tt ON tt.ref_type = 'BORROW_LEG' AND tt.ref_id = bl.id AND tt.status <> 'CANCELLED'
+          WHERE bl.request_id = $1`,
+        [id],
+      );
+
+      const hasLoadedOrMoving = legs.rows.some((l) =>
+        ['LOADED', 'IN_TRANSIT', 'RECEIVED'].includes(l.leg_status) ||
+        ['LOADED', 'IN_TRANSIT', 'ARRIVED', 'RECEIVED'].includes(l.task_status),
+      );
+      if (hasLoadedOrMoving) {
+        throw new HttpError(409, 'CANNOT_CANCEL', 'ไม่สามารถยกเลิกคำขอได้เนื่องจากยาถูกจัดขึ้นรถหรืออยู่ระหว่างจัดส่งแล้ว');
+      }
+
+      // Cancel unfulfilled legs and transport tasks in WAITING_DISPATCH
+      await client.query(
+        `UPDATE borrow_leg
+            SET status = 'CANCELLED'::leg_status,
+                reject_reason = COALESCE(reject_reason, $2)
+          WHERE request_id = $1 AND status IN ('PENDING', 'SENT', 'ACCEPTED', 'PARTIAL')`,
+        [id, `ยกเลิกตามคำขอ: ${reason}`],
+      );
+
+      await client.query(
+        `UPDATE transport_task
+            SET status = 'CANCELLED'::transport_status,
+                cancel_reason = $2,
+                updated_at = now()
+          WHERE ref_type = 'BORROW_LEG'
+            AND ref_id IN (SELECT id FROM borrow_leg WHERE request_id = $1)
+            AND status = 'WAITING_DISPATCH'`,
+        [id, reason],
+      );
+
+      await setRequestStatus(client, r, 'CANCELLED', auditContext(req), 'REQ_CANCELLED', { reason });
+      await client.query(`UPDATE borrow_request SET reason = COALESCE(reason || ' | ', '') || $2 WHERE id = $1`, [id, `ยกเลิก: ${reason}`]);
+
+      if (r.stock_alert_id) {
+        await client.query(
+          `UPDATE stock_alert SET status = 'ACKNOWLEDGED', updated_at = now(), version = version + 1 WHERE id = $1 AND status = 'LINKED_TO_REQUEST'`,
+          [r.stock_alert_id],
+        );
+      }
+
+      const run = (await client.query(`SELECT id FROM agent_run WHERE ref_type = 'borrow_request' AND ref_id = $1 ORDER BY created_at DESC LIMIT 1`, [id])).rows[0];
+      await client.query(
+        `INSERT INTO decision_log (agent_run_id, ref_type, ref_id, decision, rationale, human_actor_id, human_action) VALUES ($1, 'borrow_request', $2, 'CANCELLED', $3, $4, 'cancel')`,
+        [run?.id ?? null, id, reason, user.id],
+      );
+
+      const data = await requestView(client, await loadDetail(client, id), user);
+      return { ok: true, id, version: data.version, data };
+    });
+  }
+
   /** API-F1b-012: after an escalation, add a lender by hand (no Si, but the same guardrails on quantity and eligibility basics). */
   async escalateManual(req: Request, rawId: string) {
     const user = req.user!;

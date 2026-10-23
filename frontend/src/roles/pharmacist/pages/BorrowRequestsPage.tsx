@@ -7,6 +7,7 @@ import { USER } from '../../../data/session';
 import { can, HOSPITAL_ADMIN_ROLE, mayActFor } from '../../../lib/rbac';
 import type { RoleCode } from '../../../lib/rbac';
 import { useTick } from '../../../lib/time';
+import { Modal } from '../../hospital-admin/components/Modal';
 import { ReasonDialog } from '../../hospital-admin/components/ReasonDialog';
 import { appendAuditEntry } from '../../hospital-admin/data/audit';
 import { HOSPITAL_ADMIN_USER } from '../../hospital-admin/data/session';
@@ -19,13 +20,14 @@ import { ObligationTable, ObligationTiles } from '../components/ObligationTable'
 import { BORROW_REQUESTS, GROUPS, groupOf, isOpenRequest, LENDER_QUEUE } from '../data/borrow';
 import { isOpenLeg } from '../data/lender';
 import { useBorrowRequests } from '../data/useBorrowRequests';
-import { approveBorrowRequest, escalateManual as escalateManualApi, rejectBorrowRequest } from '../../../services/borrowApi';
+import { approveBorrowRequest, cancelBorrowRequest, escalateManual as escalateManualApi, rejectBorrowRequest } from '../../../services/borrowApi';
 import { mockFallbackEnabled } from '../../../services/dataSource';
 import { getHospitals } from '../../../services/catalogApi';
 import type { ApiHospital } from '../../../services/catalogApi';
 import type { BorrowContext, BorrowRequest, StatusGroup, Urgency } from '../data/borrow';
 import { dueLabel, obligationCounts, obligationFromApi, outstandingOf, RETURN_OBLIGATIONS } from '../data/obligations';
-import { listReturnObligations, waiveReturn } from '../../../services/returnsApi';
+import { listReturnObligations, recordReturn as apiRecordReturn, waiveReturn } from '../../../services/returnsApi';
+import type { ApiReturnObligation } from '../../../services/returnsApi';
 import type { ObligationState, ReturnObligation } from '../data/obligations';
 import '../borrow.css';
 
@@ -90,6 +92,11 @@ export function BorrowRequestsPage({ role = 'PHARMACIST' }: { role?: RoleCode })
   const [manualOpen, setManualOpen] = useState(false);
   const [createdNotice, setCreatedNotice] = useState<string | null>(null);
   const [rejectTarget, setRejectTarget] = useState<BorrowRequest | null>(null);
+  const [cancelTarget, setCancelTarget] = useState<BorrowRequest | null>(null);
+  const [returnTarget, setReturnTarget] = useState<BorrowRequest | null>(null);
+  const [returnObligation, setReturnObligation] = useState<ApiReturnObligation | null>(null);
+  const [returnQty, setReturnQty] = useState('');
+  const [returnSubmitting, setReturnSubmitting] = useState(false);
   const [hospitals, setHospitals] = useState<ApiHospital[]>([]);
   const [escLender, setEscLender] = useState('');
   const [escQty, setEscQty] = useState('');
@@ -183,6 +190,146 @@ export function BorrowRequestsPage({ role = 'PHARMACIST' }: { role?: RoleCode })
   const confirmReject = (reason: string) => {
     if (!rejectTarget?.uuid) return;
     rejectBorrowRequest(rejectTarget.uuid, reason).then(() => { setRejectTarget(null); return live.reload(); }).catch((e: Error) => { setActionError(e.message); setRejectTarget(null); });
+  };
+
+  /** Cancel an in-progress or approved borrow request (QA-PHARM-005, spec §7.15). */
+  const confirmCancel = (reason: string) => {
+    if (!cancelTarget) return;
+    if (isLive && cancelTarget.uuid) {
+      cancelBorrowRequest(cancelTarget.uuid, reason)
+        .then(() => {
+          setCancelTarget(null);
+          setCreatedNotice(`ยกเลิกคำขอ ${cancelTarget.id} เรียบร้อยแล้ว`);
+          return live.reload();
+        })
+        .catch((e: Error) => {
+          setActionError(e.message);
+          setCancelTarget(null);
+        });
+      return;
+    }
+    setDecision((m) => ({ ...m, [cancelTarget.id]: 'reject' }));
+    setCancelTarget(null);
+    setCreatedNotice(`ยกเลิกคำขอ ${cancelTarget.id} เรียบร้อยแล้ว`);
+  };
+
+  /** Open return dialog: fetches the debtor obligation for this borrow request (QA-PHARM-005). */
+  const handleOpenRecordReturn = (r: BorrowRequest) => {
+    setReturnTarget(r);
+    setReturnObligation(null);
+    setReturnQty('');
+    setActionError(null);
+
+    if (isLive) {
+      const lookup = r.uuid
+        ? listReturnObligations({ direction: 'owe', requestId: r.uuid })
+        : listReturnObligations({ direction: 'owe', requestNo: r.id });
+
+      lookup
+        .then((res) => {
+          const open = res.items.find((o) => ['OPEN', 'REMINDED', 'OVERDUE'].includes(o.status));
+          if (open) {
+            setReturnObligation(open);
+            setReturnQty(String(open.qtyRemaining));
+          } else {
+            setActionError('ไม่พบภาระการคืนที่ค้างชำระสำหรับคำขอนี้');
+            setReturnTarget(null);
+          }
+        })
+        .catch((e: Error) => {
+          setActionError(e.message);
+          setReturnTarget(null);
+        });
+      return;
+    }
+
+    const mock = obligations.find((o) => o.requestId === r.id);
+    if (mock) {
+      setReturnObligation({
+        id: mock.id,
+        legId: mock.leg,
+        requestNo: r.id,
+        roundNo: 1,
+        status: mock.state === 'OVERDUE' ? 'OVERDUE' : 'OPEN',
+        returnMode: 'IN_KIND',
+        direction: 'OWE',
+        drug: { id: null, name: mock.drug, baseUnit: mock.unit, ved: 'E' },
+        qty: mock.qty,
+        qtyReturned: mock.qtyReturned,
+        qtyRemaining: mock.qty - mock.qtyReturned,
+        dueDate: mock.dueDate,
+        pastDue: mock.state === 'OVERDUE',
+        returnedAt: null,
+        waived: null,
+        debtor: { id: '', code: 'HA', name: 'รพ.สมุทรปราการ' },
+        creditor: { id: '', code: '', name: mock.creditor },
+        receipts: [],
+      });
+      setReturnQty(String(mock.qty - mock.qtyReturned));
+    } else {
+      setReturnObligation({
+        id: `RO-${r.id}`,
+        legId: 'leg-1',
+        requestNo: r.id,
+        roundNo: 1,
+        status: 'OPEN',
+        returnMode: 'IN_KIND',
+        direction: 'OWE',
+        drug: { id: null, name: r.drug, baseUnit: r.unit, ved: r.ved },
+        qty: r.qty,
+        qtyReturned: 0,
+        qtyRemaining: r.qty,
+        dueDate: '2026-11-15',
+        pastDue: false,
+        returnedAt: null,
+        waived: null,
+        debtor: { id: '', code: 'HA', name: 'รพ.สมุทรปราการ' },
+        creditor: { id: '', code: '', name: r.lender[0] ?? 'รพ.คู่สัญญา' },
+        receipts: [],
+      });
+      setReturnQty(String(r.qty));
+    }
+  };
+
+  /** Submit return: records physical return of goods FEFO (API-XC-004). */
+  const handleConfirmRecordReturn = () => {
+    if (!returnObligation) return;
+    const qtyNum = Number(returnQty);
+    if (!qtyNum || qtyNum <= 0) {
+      setActionError('กรุณาระบุจำนวนที่ถูกต้อง');
+      return;
+    }
+    if (qtyNum > returnObligation.qtyRemaining) {
+      setActionError(`คืนได้ไม่เกินที่ค้างอยู่ (${returnObligation.qtyRemaining} ${returnObligation.drug.baseUnit || ''})`);
+      return;
+    }
+    setReturnSubmitting(true);
+    setActionError(null);
+
+    if (isLive && !returnObligation.id.startsWith('RO-')) {
+      apiRecordReturn(returnObligation.id, qtyNum)
+        .then(() => {
+          setReturnTarget(null);
+          setReturnObligation(null);
+          setCreatedNotice(`บันทึกการคืน ${returnObligation.requestNo} จำนวน ${qtyNum} ${returnObligation.drug.baseUnit || ''} เรียบร้อยแล้ว`);
+          return live.reload();
+        })
+        .catch((e: Error) => setActionError(e.message))
+        .finally(() => setReturnSubmitting(false));
+      return;
+    }
+
+    setReturnSubmitting(false);
+    setObligations((list) =>
+      list.map((o) =>
+        o.id === returnObligation.id || o.requestId === returnObligation.requestNo
+          ? { ...o, qtyReturned: o.qtyReturned + qtyNum, state: o.qtyReturned + qtyNum >= o.qty ? 'RETURNED' : o.state }
+          : o
+      )
+    );
+    setReturnTarget(null);
+    setReturnObligation(null);
+    setCreatedNotice(`บันทึกการคืน ${returnObligation.requestNo} จำนวน ${qtyNum} ${returnObligation.drug.baseUnit || ''} เรียบร้อยแล้ว`);
   };
 
   /**
@@ -452,6 +599,8 @@ export function BorrowRequestsPage({ role = 'PHARMACIST' }: { role?: RoleCode })
           decision={isLive ? undefined : decision[sel.id]}
           onDecide={decide}
           onEscalate={setEscalateTarget}
+          onCancel={setCancelTarget}
+          onRecordReturn={handleOpenRecordReturn}
           onClose={() => setDrawerOpen(false)}
           role={role}
         />
@@ -496,6 +645,79 @@ export function BorrowRequestsPage({ role = 'PHARMACIST' }: { role?: RoleCode })
           onConfirm={confirmReject}
           onClose={() => setRejectTarget(null)}
         />
+      )}
+
+      {/* Cancel in-progress borrow request (QA-PHARM-005, spec §7.15). */}
+      {cancelTarget && (
+        <ReasonDialog
+          title="ยกเลิกคำขอยืม · cancel (API-F1b-006 / §7.15)"
+          detail={
+            <div>
+              <b className="code">{cancelTarget.id}</b> · {cancelTarget.drug} · {cancelTarget.qty} {cancelTarget.unit}
+              <div style={{ marginTop: 8 }}>
+                สถานะปัจจุบัน: <b>{cancelTarget.status}</b>
+              </div>
+              <div style={{ marginTop: 8, color: '#991B1B' }}>
+                การยกเลิกคำขอจะยกเลิกการส่งคำขอและคำขอขนส่งในรอบที่ยังไม่ได้จัดขึ้นรถ (LOADED) และไม่สามารถย้อนกลับได้
+              </div>
+            </div>
+          }
+          confirmLabel="ยืนยันยกเลิกคำขอ"
+          onConfirm={confirmCancel}
+          onClose={() => setCancelTarget(null)}
+        />
+      )}
+
+      {/* Record return dialog (QA-PHARM-005, API-XC-004). */}
+      {returnTarget && returnObligation && (
+        <Modal label="บันทึกการคืนยา / Record Return (API-XC-004)" onClose={() => { setReturnTarget(null); setReturnObligation(null); }}>
+          <h2 className="sec-h">บันทึกการคืนยา <span className="en">UI-05 · API-XC-004</span></h2>
+          <div style={{ marginTop: 10, fontSize: 13, lineHeight: '20px', color: '#475569' }}>
+            บันทึกการคืนยาให้แก่โรงพยาบาลผู้ให้ยืม ระบบจะตัดสต็อกยาตามลำดับหมดอายุก่อน (FEFO) อัตโนมัติ
+          </div>
+          <dl className="dlr" style={{ marginTop: 12 }}>
+            <dt>เลขคำขอยืม</dt>
+            <dd><b className="code">{returnObligation.requestNo}</b></dd>
+            <dt>ยา / เวชภัณฑ์</dt>
+            <dd>{returnObligation.drug.name} ({returnObligation.drug.baseUnit})</dd>
+            <dt>ผู้ให้ยืม (เจ้าหนี้)</dt>
+            <dd>{returnObligation.creditor.name}</dd>
+            <dt>ยืมมาทั้งหมด</dt>
+            <dd>{returnObligation.qty} {returnObligation.drug.baseUnit}</dd>
+            <dt>คืนแล้ว</dt>
+            <dd>{returnObligation.qtyReturned} {returnObligation.drug.baseUnit}</dd>
+            <dt>ยอดคงค้างคืน</dt>
+            <dd><strong style={{ color: '#0F2A5C' }}>{returnObligation.qtyRemaining} {returnObligation.drug.baseUnit}</strong></dd>
+            <dt>กำหนดคืน</dt>
+            <dd>{returnObligation.dueDate}</dd>
+          </dl>
+          <div className="ha-field" style={{ marginTop: 14 }}>
+            <label className="ha-label" htmlFor="ret-qty">
+              จำนวนที่คืน ({returnObligation.drug.baseUnit}) <span aria-hidden="true">*</span>
+            </label>
+            <input
+              id="ret-qty"
+              className="ha-input"
+              type="number"
+              min={0.001}
+              max={returnObligation.qtyRemaining}
+              step="any"
+              value={returnQty}
+              onChange={(e) => setReturnQty(e.target.value)}
+              autoFocus
+            />
+          </div>
+          <div className="ha-dialog-foot" style={{ marginTop: 16 }}>
+            <button className="btn btn-g" onClick={() => { setReturnTarget(null); setReturnObligation(null); }}>ยกเลิก</button>
+            <button
+              className="btn btn-p"
+              disabled={returnSubmitting || !Number(returnQty) || Number(returnQty) <= 0 || Number(returnQty) > returnObligation.qtyRemaining}
+              onClick={handleConfirmRecordReturn}
+            >
+              {returnSubmitting ? 'กำลังบันทึก...' : 'ยืนยันบันทึกการคืน'}
+            </button>
+          </div>
+        </Modal>
       )}
 
       {/* escalate-manual (API-F1b-012): only reachable from an ESCALATED request. */}
