@@ -524,6 +524,15 @@ test('interpretLenderResponseTool: follow-up tests for "ไม่หมด" and 
   assert.equal(res3.success, true);
   assert.equal((res3.data as any).decision, 'ACCEPT');
   assert.equal((res3.data as any).confirmedQuantity, 4);
+
+  // Test explicit agreement standalone "พร้อมส่ง" -> ACCEPT
+  const res4 = await interpretLenderResponseTool.execute(
+    { responseText: 'พร้อมส่ง', askedQuantity: 5 },
+    { role: 'PHARMACIST' },
+  );
+  assert.equal(res4.success, true);
+  assert.equal((res4.data as any).decision, 'ACCEPT');
+  assert.equal((res4.data as any).confirmedQuantity, 5);
 });
 
 test('draftEmergencyIncidentTool: configuration and role validation', () => {
@@ -640,7 +649,7 @@ test('trackUrgentDispatchEtaTool: tracks dispatch progress and blocks foreign ho
 
 test('submitErActionProposalTool: configuration and role validation', () => {
   assert.equal(submitErActionProposalTool.name, 'submit_er_action_proposal');
-  assert.deepEqual(submitErActionProposalTool.allowedRoles, ['ER_STAFF', 'SYSTEM_ADMIN']);
+  assert.deepEqual(submitErActionProposalTool.allowedRoles, ['ER_STAFF', 'PHARMACIST', 'SYSTEM_ADMIN']);
 });
 
 test('submitErActionProposalTool: generates DECLARE_INCIDENT proposal', async () => {
@@ -706,11 +715,11 @@ test('submitErActionProposalTool: generates REQUEST_URGENT_ANTIDOTE proposal (st
   const hosp = (await query('SELECT id FROM hospital WHERE active = true LIMIT 1')).rows[0];
   const drugMaster = (await query('SELECT id FROM drug_master LIMIT 1')).rows[0];
 
-  // Case 1: Standalone (no incidentId) -> POST /api/v1/borrow-requests
-  const resStandalone = await submitErActionProposalTool.execute(
+  // Case 1: Standalone (no incidentId) by ER_STAFF -> fails with tool error instructing to DECLARE_INCIDENT
+  const resErStandalone = await submitErActionProposalTool.execute(
     {
       actionType: 'REQUEST_URGENT_ANTIDOTE',
-      title: 'ขอยืม Antivenom เร่งด่วน',
+      title: 'ขอยืม Antivenom เร่งด่วน (ER Staff)',
       description: 'เคสพิษงูแมวเซารุนแรง เลือดออกไม่หยุด',
       summary: { antidote: 'Russell Viper Antivenom', quantity: 4 },
       payload: {
@@ -727,13 +736,40 @@ test('submitErActionProposalTool: generates REQUEST_URGENT_ANTIDOTE proposal (st
     { role: 'ER_STAFF', hospitalId: hosp.id },
   );
 
-  assert.equal(resStandalone.success, true);
-  assert.ok(resStandalone.proposal);
-  assert.equal(resStandalone.proposal?.type, 'REQUEST_URGENT_ANTIDOTE');
-  assert.equal(resStandalone.proposal?.actionApi.endpoint, '/api/v1/borrow-requests');
-  assert.equal(resStandalone.proposal?.actionApi.method, 'POST');
+  assert.equal(resErStandalone.success, false);
+  assert.match(
+    resErStandalone.error || '',
+    /ER_STAFF cannot create standalone borrow requests directly without an active incident.*DECLARE_INCIDENT/i,
+  );
 
-  // Case 2: Linked to an incident -> POST /api/v1/incidents/:id/emergency-borrow
+  // Case 2: Standalone (no incidentId) by PHARMACIST -> generates card for POST /api/v1/borrow-requests
+  const resPhStandalone = await submitErActionProposalTool.execute(
+    {
+      actionType: 'REQUEST_URGENT_ANTIDOTE',
+      title: 'ขอยืม Antivenom เร่งด่วน (Pharmacist)',
+      description: 'เคสพิษงูแมวเซารุนแรง เลือดออกไม่หยุด',
+      summary: { antidote: 'Russell Viper Antivenom', quantity: 4 },
+      payload: {
+        reason: 'เคสพิษงูฉุกเฉินระดับวิกฤต',
+        urgency: 'VERY_URGENT',
+        items: [
+          {
+            drugMasterId: drugMaster.id,
+            qtyRequested: 4,
+          },
+        ],
+      },
+    },
+    { role: 'PHARMACIST', hospitalId: hosp.id },
+  );
+
+  assert.equal(resPhStandalone.success, true);
+  assert.ok(resPhStandalone.proposal);
+  assert.equal(resPhStandalone.proposal?.type, 'REQUEST_URGENT_ANTIDOTE');
+  assert.equal(resPhStandalone.proposal?.actionApi.endpoint, '/api/v1/borrow-requests');
+  assert.equal(resPhStandalone.proposal?.actionApi.method, 'POST');
+
+  // Case 3: Linked to an incident by ER_STAFF -> generates card for POST /api/v1/incidents/:id/emergency-borrow
   const incident = (
     await query('SELECT id FROM incident WHERE hospital_id = $1 LIMIT 1', [hosp.id])
   ).rows[0];
@@ -823,12 +859,13 @@ test('Task 9: RBAC matrix validation across roles (DRIVER, AUDITOR, PHARMACIST, 
     'submit_pharmacist_proposal',
   ];
 
-  const erOnlyTools = ['draft_emergency_incident', 'submit_er_action_proposal'];
+  const erOnlyTools = ['draft_emergency_incident'];
 
   const sharedClinicalTools = [
     'get_antidote_locator',
     'get_incident_kit_recommendations',
     'track_urgent_dispatch_eta',
+    'submit_er_action_proposal',
   ];
 
   const hospitalAdminAllowedTools = [

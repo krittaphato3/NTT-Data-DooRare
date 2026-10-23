@@ -575,7 +575,7 @@ export const submitErActionProposalTool: IAgentTool<{
       .describe('Target incident UUID if linking dispatch or borrow to an incident'),
     payload: z.record(z.string(), z.unknown()).describe('Action-specific payload parameters'),
   }),
-  allowedRoles: ['ER_STAFF', 'SYSTEM_ADMIN'],
+  allowedRoles: ['ER_STAFF', 'PHARMACIST', 'SYSTEM_ADMIN'],
   execute: async (args, context: RequestContext): Promise<ToolResult> => {
     try {
       const isSystemAdmin = context.role === 'SYSTEM_ADMIN';
@@ -599,6 +599,15 @@ export const submitErActionProposalTool: IAgentTool<{
       // Resolve effective incidentId (from targetId or payload.incidentId)
       const effectiveIncidentId =
         args.targetId || (typeof args.payload?.incidentId === 'string' ? args.payload.incidentId : undefined);
+
+      // Special RBAC constraint: ER_STAFF cannot call standalone /api/v1/borrow-requests (PHARMACIST-only)
+      if (args.actionType === 'REQUEST_URGENT_ANTIDOTE' && context.role === 'ER_STAFF' && !effectiveIncidentId) {
+        return {
+          success: false,
+          error:
+            'ER_STAFF cannot create standalone borrow requests directly without an active incident. Please declare an emergency incident first (DECLARE_INCIDENT) and retry with the returned incidentId.',
+        };
+      }
 
       // Build whitelisted endpoint
       let endpoint: string;
