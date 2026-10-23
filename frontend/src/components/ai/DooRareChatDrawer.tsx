@@ -93,14 +93,7 @@ export const DooRareChatDrawer: React.FC = () => {
   const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
-  const [messages, setMessages] = useState<ChatMessage[]>(() => {
-    try {
-      const saved = sessionStorage.getItem('doorare_chat_history');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [activeTool, setActiveTool] = useState<string | null>(null);
   const [proposals, setProposals] = useState<any[]>([]);
@@ -115,12 +108,18 @@ export const DooRareChatDrawer: React.FC = () => {
     scrollToBottom();
   }, [messages, activeTool, proposals]);
 
-  // Persist conversation history across route navigations
-  useEffect(() => {
+  // Handle drawer close: completely reset conversation history and active state
+  const handleClose = () => {
+    setIsOpen(false);
+    setMessages([]);
+    setInput('');
+    setActiveTool(null);
+    setProposals([]);
+    setIsStreaming(false);
     try {
-      sessionStorage.setItem('doorare_chat_history', JSON.stringify(messages));
+      sessionStorage.removeItem('doorare_chat_history');
     } catch {}
-  }, [messages]);
+  };
 
   // Context Auto-Injector: Extracts current window location, title, and query active ID
   const getRouteContext = (): RouteContext => {
@@ -220,7 +219,7 @@ export const DooRareChatDrawer: React.FC = () => {
       {/* Backdrop Overlay */}
       <div
         className={`doorare-chat-overlay ${isOpen ? 'open' : ''}`}
-        onClick={() => setIsOpen(false)}
+        onClick={handleClose}
       />
 
       {/* Slide-out Drawer */}
@@ -240,8 +239,8 @@ export const DooRareChatDrawer: React.FC = () => {
           </div>
           <button
             className="doorare-chat-close-btn"
-            onClick={() => setIsOpen(false)}
-            title="ปิดหน้าต่างแชท"
+            onClick={handleClose}
+            title="ปิดหน้าต่างแชทและล้างประวัติ"
           >
             ✕
           </button>
@@ -269,10 +268,21 @@ export const DooRareChatDrawer: React.FC = () => {
             </div>
           ))}
 
+          {/* Thinking / Typing Animated Dots Indicator */}
+          {isStreaming && (!messages[messages.length - 1] || messages[messages.length - 1].role === 'user') && (
+            <div className="doorare-chat-msg-row assistant">
+              <div className="doorare-typing-bubble" title="AI กำลังคิดคำตอบ...">
+                <span className="doorare-typing-dot" />
+                <span className="doorare-typing-dot" />
+                <span className="doorare-typing-dot" />
+              </div>
+            </div>
+          )}
+
           {/* Active Tool Indicator */}
           {activeTool && (
             <div className="doorare-chat-tool-indicator">
-              <span>⚙️</span>
+              <span className="doorare-tool-spinner" />
               <span>{activeTool}</span>
             </div>
           )}

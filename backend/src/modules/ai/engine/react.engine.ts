@@ -123,10 +123,16 @@ export class ReActEngine {
       // Step 1: Query LLM with current conversation state & available tools
       const response: LLMResponse = await provider.chat(conversation, tools);
 
-      // If the LLM generates conversational text
+      // If the LLM generates conversational text, stream it word by word for smooth real-time typing effect
       if (response.content) {
         finalResponse = response.content;
-        await onEvent({ type: 'token', token: response.content });
+        // Break text into natural chunks/words for fluid SSE streaming animation
+        const tokens = response.content.match(/\S+\s*|\s+/g) || [response.content];
+        for (const t of tokens) {
+          await onEvent({ type: 'token', token: t });
+          // Micro delay to emulate realistic real-time token generation stream
+          await new Promise((resolve) => setTimeout(resolve, 15));
+        }
       }
 
       // Step 2: Check if LLM requested any tool calls
