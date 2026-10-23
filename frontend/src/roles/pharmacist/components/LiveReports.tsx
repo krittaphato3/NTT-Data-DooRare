@@ -102,7 +102,24 @@ export function LiveReports({ role = 'PHARMACIST' }: { role?: RoleCode }) {
           <Table report={value ? { ok: true, id: 'value', name: 'มูลค่ารายเดือน', generatedAt: '', columns: [{ key: 'period', label: 'เดือน' }, { key: 'transferred', label: 'โอนก่อนหมดอายุ (บาท)' }, { key: 'writeoff', label: 'หมดอายุจริง (บาท)' }, { key: 'stockout', label: 'วันขาดสต็อก' }], rows: value.byMonth.map((m) => ({ period: m.period.slice(0, 7), transferred: m.transferredValueThb, writeoff: m.expiredWriteOffThb, stockout: m.stockoutItemDays })) } : null} />
         </section>
       )}
-      {tab === 'forecast' && <section className="card" style={{ padding: 16 }}>ความแม่นยำพยากรณ์ (pinball loss, coverage) ยังไม่มีข้อมูลจากระบบหลังบ้าน</section>}
+      {tab === 'forecast' && (
+        <section className="card" style={{ padding: 32, textAlign: 'center' }}>
+          <div style={{ width: 48, height: 48, borderRadius: '50%', background: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', color: '#1D4ED8' }}>
+            <Icon name="chart" className="ic24" />
+          </div>
+          <h3 style={{ margin: '0 0 8px', fontSize: 16, fontWeight: 600, color: '#0F2A5C' }}>
+            ความแม่นยำโมเดลพยากรณ์ (RPT-01 · F-19)
+          </h3>
+          <p style={{ margin: '0 auto 16px', maxWidth: 480, fontSize: 13, lineHeight: '20px', color: '#64748B' }}>
+            ยังไม่มีข้อมูลตัวชี้วัดความแม่นยำ (Pinball loss, Coverage P90/P95, WAPE) จากระบบหลังบ้าน
+            ระบบจะแสดงผลการประเมินหลังจากงานพยากรณ์รอบสัปดาห์ (JOB-01) เก็บประวัติย้อนหลังครบ 12 สัปดาห์
+          </p>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#94A3B8', background: '#F8FAFC', padding: '6px 14px', borderRadius: 999, border: '1px solid #E2E8F0' }}>
+            <Icon name="hourglass" className="ic16" />
+            <span>รอการประเมินผลรอบสัปดาห์ถัดไป</span>
+          </div>
+        </section>
+      )}
       {tab === 'borrow' && <section className="card" style={{ padding: 16 }}><Table report={borrow} /></section>}
       {tab === 'expiry' && (
         <section className="card" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 16 }}>
