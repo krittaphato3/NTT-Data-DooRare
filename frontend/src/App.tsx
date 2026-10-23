@@ -89,8 +89,8 @@ const HA_READ_ONLY_PAGES: Page[] = [
  *   usr→users, cfg→config, aud→audit, adm→admin
  */
 const ROLE_PAGE_ALLOWLIST: Partial<Record<string, Page[]>> = {
-  // ROLE_NAV.PHARMACIST: ['dash','alerts','req','lend','exp','pool','inc','tr','doc','rep']
-  PHARMACIST:          ['dashboard', 'alerts', 'requests', 'lend', 'expiry', 'pool', 'incident', 'transport', 'docs', 'report'],
+  // ROLE_NAV.PHARMACIST: ['dash','alerts','req','lend','exp','pool','inc','tr','doc','rep','aud']
+  PHARMACIST:          ['dashboard', 'alerts', 'requests', 'lend', 'expiry', 'pool', 'incident', 'transport', 'docs', 'report', 'audit'],
   // ROLE_NAV.PROCUREMENT_OFFICER: ['dash','alerts','req','doc','rep']
   PROCUREMENT_OFFICER: ['dashboard', 'alerts', 'requests', 'docs', 'report'],
   // ROLE_NAV.HOSPITAL_ADMIN: shared pharmacist pages + admin pages
@@ -427,12 +427,11 @@ function AuthenticatedShell() {
   const onReadOnlyView = HA_READ_ONLY_PAGES.includes(route.page);
   const isHospitalAdminPageAllowed =
     (onUsers && mayManageUsers) || (onAudit && mayViewAudit) || (onConfig && mayConfigure) || onReadOnlyView;
-  /* users/audit/config are served only to HOSPITAL_ADMIN (own hospital) and SYSTEM_ADMIN by
-     API-AD-006 / API-AD-003 / API-AD-001, so no other role may render them even by typing the URL.
-     The `hospitalAdmin` guard below only protects the Hospital Admin's own navigation; without this
-     clause a PHARMACIST (viewAudit/configureRules are true for them) would still reach those screens. */
+  /* users/config are served only to HOSPITAL_ADMIN (own hospital) and SYSTEM_ADMIN by
+     API-AD-006 / API-AD-001, so no other role may render them even by typing the URL.
+     Audit log is open to PHARMACIST (own hospital, spec §5.2) and HOSPITAL_ADMIN/SYSTEM_ADMIN. */
   const isDeniedAdminPage =
-    ((onUsers || onAudit || onConfig) && !hospitalAdmin && !isSystemAdminRole) ||
+    ((onUsers || onConfig) && !hospitalAdmin && !isSystemAdminRole) ||
     (hospitalAdmin && !isHospitalAdminPageAllowed);
 
   /* Allowlist guard: roles with a ROLE_PAGE_ALLOWLIST entry may only open pages in that list.
@@ -584,7 +583,7 @@ function AuthenticatedShell() {
           ) : onUsers ? (
             <UserManagementPage />
           ) : onAudit ? (
-            <AuditLogPage />
+            <AuditLogPage role={viewerRole} />
           ) : (
             <DashboardPage
               isAdmin={isAdmin}

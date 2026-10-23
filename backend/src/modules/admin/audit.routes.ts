@@ -12,6 +12,9 @@ export const auditRouter = Router();
 auditRouter.get('/verify', requireAuth, requireRole('SYSTEM_ADMIN'), asyncHandler(async (req, res) => {
   res.status(200).json(await auditService.verify(req));
 }));
-auditRouter.get('/', requireAuth, requireRole('HOSPITAL_ADMIN', 'SYSTEM_ADMIN'), asyncHandler(async (req, res) => {
+auditRouter.get('/', requireAuth, requireRole('HOSPITAL_ADMIN', 'SYSTEM_ADMIN', 'PHARMACIST', 'AUDITOR'), asyncHandler(async (req, res) => {
   res.status(200).json(await auditService.list(req.user!, req.query));
+}));
+auditRouter.get('/:id', requireAuth, requireRole('HOSPITAL_ADMIN', 'SYSTEM_ADMIN', 'PHARMACIST', 'AUDITOR'), asyncHandler(async (req, res) => {
+  res.status(200).json(await auditService.detail(req.user!, req.params.id, req.query));
 }));
