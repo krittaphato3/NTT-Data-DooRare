@@ -35,6 +35,7 @@ export interface LLMUsage {
 
 export interface LLMResponse {
   content: string | null;
+  thought?: string | null;
   toolCalls?: ToolCall[];
   usage?: LLMUsage;
   model: string;

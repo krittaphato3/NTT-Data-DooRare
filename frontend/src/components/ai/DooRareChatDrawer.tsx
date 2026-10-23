@@ -4,12 +4,15 @@ import { streamAiChat, type ChatMessage, type RouteContext } from '../../service
 import { DooRareBotAvatar } from './DooRareBotAvatar';
 import { MarkdownContent } from '../common/MarkdownContent';
 import { ToolExecutionLogCard, type ToolLogEntry } from './ToolExecutionLogCard';
+import { ThinkingAccordion } from './ThinkingAccordion';
 import './chatDrawer.css';
 
 interface DisplayChatMessage {
   id: string;
   role: 'user' | 'assistant';
   content: string;
+  thought?: string;
+  isThinking?: boolean;
   toolLogs?: ToolLogEntry[];
 }
 
@@ -157,6 +160,8 @@ export const DooRareChatDrawer: React.FC = () => {
       id: assistantMsgId,
       role: 'assistant',
       content: '',
+      thought: '',
+      isThinking: true,
       toolLogs: [],
     };
 
@@ -184,6 +189,20 @@ export const DooRareChatDrawer: React.FC = () => {
         {
           onStatus: (_st) => {
             // Status update
+          },
+          onThought: (thoughtText) => {
+            setDisplayMessages((prev) => {
+              const copy = [...prev];
+              const target = copy[assistantIndex];
+              if (target) {
+                copy[assistantIndex] = {
+                  ...target,
+                  thought: (target.thought || '') + thoughtText,
+                  isThinking: true,
+                };
+              }
+              return copy;
+            });
           },
           onToolStart: (tool) => {
             const newLog: ToolLogEntry = {
@@ -233,7 +252,7 @@ export const DooRareChatDrawer: React.FC = () => {
               const copy = [...prev];
               const target = copy[assistantIndex];
               if (target) {
-                copy[assistantIndex] = { ...target, content: assistantText };
+                copy[assistantIndex] = { ...target, content: assistantText, isThinking: false };
               }
               return copy;
             });
@@ -248,6 +267,7 @@ export const DooRareChatDrawer: React.FC = () => {
               if (target) {
                 copy[assistantIndex] = {
                   ...target,
+                  isThinking: false,
                   content: target.content
                     ? `${target.content}\n\n⚠️ ขออภัย เกิดข้อผิดพลาด: ${errMsg}`
                     : `⚠️ ขออภัย เกิดข้อผิดพลาด: ${errMsg}`,
@@ -259,6 +279,14 @@ export const DooRareChatDrawer: React.FC = () => {
           onDone: () => {
             setIsStreaming(false);
             setActiveTool(null);
+            setDisplayMessages((prev) => {
+              const copy = [...prev];
+              const target = copy[assistantIndex];
+              if (target) {
+                copy[assistantIndex] = { ...target, isThinking: false };
+              }
+              return copy;
+            });
           },
         },
       );
@@ -339,6 +367,14 @@ export const DooRareChatDrawer: React.FC = () => {
 
           {displayMessages.map((msg) => (
             <div key={msg.id} className={`doorare-chat-msg-row ${msg.role}`}>
+              {/* Harness Thinking / Chain-of-Thought Accordion */}
+              {msg.role === 'assistant' && (msg.thought || msg.isThinking) && (
+                <ThinkingAccordion
+                  thought={msg.thought || ''}
+                  isThinking={Boolean(msg.isThinking && isStreaming)}
+                />
+              )}
+
               {/* Harness Tool Logs above assistant bubble */}
               {msg.toolLogs && msg.toolLogs.length > 0 && (
                 <div className="doorare-chat-tools-container">
@@ -361,6 +397,7 @@ export const DooRareChatDrawer: React.FC = () => {
             (!displayMessages[displayMessages.length - 1] ||
               displayMessages[displayMessages.length - 1].role === 'user' ||
               (!displayMessages[displayMessages.length - 1].content &&
+                !displayMessages[displayMessages.length - 1].thought &&
                 (!displayMessages[displayMessages.length - 1].toolLogs ||
                   displayMessages[displayMessages.length - 1].toolLogs?.length === 0))) && (
               <div className="doorare-chat-msg-row assistant">

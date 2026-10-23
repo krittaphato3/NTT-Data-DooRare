@@ -24,6 +24,7 @@ export interface RouteContext {
 export interface StreamEventCallbacks {
   onStatus?: (data: { message: string; role?: string }) => void;
   onToken?: (text: string) => void;
+  onThought?: (text: string) => void;
   onToolStart?: (tool: { id?: string; name: string; args?: Record<string, unknown> }) => void;
   onToolEnd?: (res: { id?: string; name?: string; success?: boolean; data?: unknown; error?: string }) => void;
   onProposal?: (proposal: any) => void;
@@ -96,6 +97,9 @@ export async function streamAiChat(
                 break;
               case 'token':
                 callbacks.onToken?.(parsed.text || '');
+                break;
+              case 'thought':
+                callbacks.onThought?.(parsed.text || '');
                 break;
               case 'tool_start':
                 callbacks.onToolStart?.(parsed);

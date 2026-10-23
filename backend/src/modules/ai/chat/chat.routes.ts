@@ -82,6 +82,9 @@ aiChatRouter.post('/', requireAuth, async (req: Request, res: Response) => {
           case 'token':
             sendSseEvent(res, 'token', { text: event.token });
             break;
+          case 'thought':
+            sendSseEvent(res, 'thought', { text: event.thought });
+            break;
           case 'tool_start':
             sendSseEvent(res, 'tool_start', {
               id: event.toolCall?.id,

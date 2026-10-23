@@ -49,6 +49,7 @@ export class MockProvider implements ILLMProvider {
         const tool = tools.find((t) => t.name.includes('antidote') || t.name.includes('locator')) || tools[0];
         return {
           model,
+          thought: 'ตรวจพบคำขอค้นหายาแก้พิษฉุกเฉิน กำลังประเมินรัศมีการขนส่ง 60 นาที และตรวจสอบคลังยาของโรงพยาบาลพันธมิตรในเขตสุขภาพที่ 6...',
           content: null,
           toolCalls: [
             {
@@ -68,6 +69,7 @@ export class MockProvider implements ILLMProvider {
         const tool = tools.find((t) => t.name.includes('stock') || t.name.includes('ladder')) || tools[0];
         return {
           model,
+          thought: 'วิเคราะห์ระดับสต็อกยาและจุดสั่งซื้อซ้ำ (ROP) เปรียบเทียบปริมาณคงคลังและอัตราการใช้ย้อนหลัง...',
           content: null,
           toolCalls: [
             {
@@ -87,6 +89,7 @@ export class MockProvider implements ILLMProvider {
     // Default simulated conversational response
     return {
       model,
+      thought: 'ประมวลผลคำขอของผู้ใช้และสังเคราะห์ข้อมูลตามแนวทางความปลอดภัยด้านยา...',
       content: `[Mock AI Response (${model})]: Processed request for "${lastMessage?.content || ''}". System operating in offline mock simulation mode.`,
       usage: {
         promptTokens: 24,

@@ -740,3 +740,140 @@
   border-radius: 4px;
 }
 
+/* ========================================================
+   Harness Thinking Accordion Styles
+   ======================================================== */
+
+.doorare-thinking-card {
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background-color: #f8fafc;
+  overflow: hidden;
+  margin-bottom: 8px;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.doorare-thinking-card.thinking {
+  border-color: #93c5fd;
+  background-color: #f0f9ff;
+  box-shadow: 0 0 0 1px rgba(147, 197, 253, 0.3);
+}
+
+.doorare-thinking-card.completed {
+  border-color: #e2e8f0;
+  background-color: #f8fafc;
+}
+
+.doorare-thinking-card.completed .doorare-thinking-header {
+  padding: 5px 10px;
+}
+
+.doorare-thinking-card.completed .doorare-thinking-title {
+  font-size: 11.5px;
+  color: #475569;
+  font-weight: 500;
+}
+
+.doorare-thinking-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  cursor: pointer;
+  user-select: none;
+  background: inherit;
+  transition: background-color 0.15s;
+}
+
+.doorare-thinking-header:hover {
+  background-color: #f1f5f9;
+}
+
+.doorare-thinking-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.doorare-thinking-icon {
+  font-size: 13px;
+  display: inline-block;
+}
+
+.doorare-thinking-icon.pulse {
+  animation: thinkingPulse 1.6s infinite ease-in-out;
+}
+
+@keyframes thinkingPulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.85;
+  }
+  50% {
+    transform: scale(1.15);
+    opacity: 1;
+  }
+}
+
+.doorare-thinking-title {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #334155;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.doorare-thinking-timer {
+  font-size: 10.5px;
+  color: #0284c7;
+  font-weight: 500;
+}
+
+.doorare-thinking-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.doorare-thinking-live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #0284c7;
+  animation: liveBlink 0.9s infinite alternate;
+}
+
+@keyframes liveBlink {
+  0% {
+    opacity: 0.3;
+    transform: scale(0.8);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+}
+
+.doorare-thinking-chevron {
+  font-size: 9px;
+  color: #94a3b8;
+}
+
+.doorare-thinking-body {
+  padding: 8px 12px;
+  border-top: 1px solid #e2e8f0;
+  background-color: #ffffff;
+}
+
+.doorare-thinking-content {
+  font-size: 12px;
+  line-height: 1.55;
+  color: #475569;
+  border-left: 2px solid #cbd5e1;
+  padding-left: 10px;
+  white-space: pre-wrap;
+  font-family: inherit;
+}
+
+

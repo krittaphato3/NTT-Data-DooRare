@@ -223,9 +223,26 @@ export class CustomProvider implements ILLMProvider {
 
     // Standard choices structure
     const choice = data.choices?.[0];
+    let content = choice?.message?.content ?? choice?.text ?? null;
+    let thought: string | null =
+      choice?.message?.reasoning_content ||
+      choice?.message?.reasoning ||
+      choice?.message?.thought ||
+      null;
+
+    // Check if content contains <think> or <thought> tags (e.g. DeepSeek-R1 / Gemini)
+    if (content && typeof content === 'string') {
+      const thinkMatch = content.match(/<(think|thought)>([\s\S]*?)<\/\1>/i);
+      if (thinkMatch) {
+        thought = (thought ? `${thought}\n` : '') + thinkMatch[2].trim();
+        content = content.replace(/<(think|thought)>[\s\S]*?<\/\1>/gi, '').trim();
+      }
+    }
+
     return {
       model,
-      content: choice?.message?.content ?? choice?.text ?? null,
+      content,
+      thought,
       toolCalls: choice?.message?.tool_calls?.map((tc: any) => ({
         id: tc.id,
         type: 'function',

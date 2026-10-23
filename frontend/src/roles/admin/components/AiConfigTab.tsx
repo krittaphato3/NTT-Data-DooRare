@@ -72,6 +72,7 @@ export function AiConfigTab({ onShowToast }: AiConfigTabProps) {
   const [customEndpoint, setCustomEndpoint] = useState('');
   const [customApiPath, setCustomApiPath] = useState('/chat/completions');
   const [isCustomPathInput, setIsCustomPathInput] = useState(false);
+  const [streamingEnabled, setStreamingEnabled] = useState(true);
 
   // Modals & Action states
   const [isSaving, setIsSaving] = useState(false);
@@ -104,6 +105,7 @@ export function AiConfigTab({ onShowToast }: AiConfigTabProps) {
         setModelPrimary(c.modelPrimary);
         setModelFast(c.modelFast);
         setMonthlyBudget(c.monthlyBudgetUsd);
+        setStreamingEnabled(c.streamingEnabled !== false);
         setApiKey(c.credentials.apiKeyMasked || '');
         setAwsRegion(c.credentials.awsRegion || 'ap-southeast-1');
         setAwsAccessKey(c.credentials.awsAccessKeyIdMasked || '');
@@ -180,6 +182,7 @@ export function AiConfigTab({ onShowToast }: AiConfigTabProps) {
         modelPrimary,
         modelFast,
         monthlyBudgetUsd: Number(monthlyBudget),
+        streamingEnabled,
         credentials: {
           apiKey: apiKey && !apiKey.includes('...') ? apiKey : undefined,
           awsRegion,
@@ -443,6 +446,80 @@ export function AiConfigTab({ onShowToast }: AiConfigTabProps) {
                 }}
               />
             </div>
+          </div>
+
+          {/* Real-time Streaming Toggle */}
+          <div
+            style={{
+              gridColumn: 'span 2',
+              marginTop: 8,
+              borderTop: '1px solid #E2E8F0',
+              paddingTop: 16,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: 12,
+            }}
+          >
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 16 }}>⚡</span>
+                <label style={{ fontSize: 13.5, fontWeight: 700, color: '#1E293B', cursor: 'pointer' }} onClick={() => setStreamingEnabled(!streamingEnabled)}>
+                  โหมดสตรีมมิ่งข้อความสด (Real-Time Token Streaming)
+                </label>
+                <span
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 700,
+                    padding: '2px 8px',
+                    borderRadius: 12,
+                    backgroundColor: streamingEnabled ? '#DCFCE7' : '#F1F5F9',
+                    color: streamingEnabled ? '#15803D' : '#64748B',
+                  }}
+                >
+                  {streamingEnabled ? 'เปิดใช้งาน (Default ON)' : 'ปิดการทำงาน (OFF)'}
+                </span>
+              </div>
+              <p style={{ margin: '4px 0 0 0', fontSize: 12.5, color: '#64748B', lineHeight: 1.4 }}>
+                แสดงผลคำตอบและกระบวนการคิดวิเคราะห์แบบเรียลไทม์ (Token-by-Token) เพื่อประสบการณ์ใช้งานที่ลื่นไหลเหมือน ChatGPT / Claude หากปิดจะส่งคำตอบทั้งหมดในคราวเดียว
+              </p>
+            </div>
+
+            <label style={{ position: 'relative', display: 'inline-block', width: 44, height: 24, cursor: 'pointer', flexShrink: 0 }}>
+              <input
+                type="checkbox"
+                checked={streamingEnabled}
+                onChange={(e) => setStreamingEnabled(e.target.checked)}
+                style={{ opacity: 0, width: 0, height: 0 }}
+              />
+              <span
+                style={{
+                  position: 'absolute',
+                  cursor: 'pointer',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  backgroundColor: streamingEnabled ? '#2563EB' : '#CBD5E1',
+                  transition: '0.2s',
+                  borderRadius: 24,
+                }}
+              >
+                <span
+                  style={{
+                    position: 'absolute',
+                    height: 18,
+                    width: 18,
+                    left: streamingEnabled ? 23 : 3,
+                    bottom: 3,
+                    backgroundColor: 'white',
+                    transition: '0.2s',
+                    borderRadius: '50%',
+                  }}
+                />
+              </span>
+            </label>
           </div>
         </div>
       </div>

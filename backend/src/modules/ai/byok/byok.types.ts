@@ -31,6 +31,7 @@ export interface AIConfig {
   modelFast: string;
   monthlyBudgetUsd: number;
   estimatedSpendUsd: number;
+  streamingEnabled?: boolean;
   credentials: AICredentials;
 }
 
@@ -53,6 +54,7 @@ export interface AIConfigResponse {
   modelFast: string;
   monthlyBudgetUsd: number;
   estimatedSpendUsd: number;
+  streamingEnabled: boolean;
   credentials: MaskedAICredentials;
   agentEnabled: boolean;
   updatedAt?: string;
@@ -63,6 +65,7 @@ export interface AIConfigUpdateRequest {
   modelPrimary?: string;
   modelFast?: string;
   monthlyBudgetUsd?: number;
+  streamingEnabled?: boolean;
   credentials?: {
     apiKey?: string;
     awsRegion?: string;

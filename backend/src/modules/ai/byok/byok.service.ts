@@ -38,6 +38,7 @@ export class ByokService {
         'anthropic.claude-3-5-haiku-20241022-v1:0',
       monthlyBudgetUsd: Number(process.env.DEFAULT_AI_MONTHLY_BUDGET || 100),
       estimatedSpendUsd: 0,
+      streamingEnabled: true,
       credentials: {
         apiKey: process.env.OPENAI_API_KEY || process.env.ANTHROPIC_API_KEY || '',
         awsRegion: process.env.AWS_REGION || 'ap-southeast-1',
@@ -96,6 +97,7 @@ export class ByokService {
       modelFast: config.modelFast,
       monthlyBudgetUsd: config.monthlyBudgetUsd,
       estimatedSpendUsd: config.estimatedSpendUsd,
+      streamingEnabled: config.streamingEnabled !== false,
       credentials: maskCredentials(config.credentials),
       agentEnabled,
       updatedAt,
@@ -168,6 +170,10 @@ export class ByokService {
             ? body.monthlyBudgetUsd
             : currentConfig.monthlyBudgetUsd,
         estimatedSpendUsd: currentConfig.estimatedSpendUsd,
+        streamingEnabled:
+          typeof body.streamingEnabled === 'boolean'
+            ? body.streamingEnabled
+            : currentConfig.streamingEnabled !== false,
         credentials: newCredentials,
       };
 
@@ -210,6 +216,7 @@ export class ByokService {
         modelFast: updatedConfig.modelFast,
         monthlyBudgetUsd: updatedConfig.monthlyBudgetUsd,
         estimatedSpendUsd: updatedConfig.estimatedSpendUsd,
+        streamingEnabled: updatedConfig.streamingEnabled !== false,
         credentials: maskCredentials(updatedConfig.credentials),
         agentEnabled,
         updatedAt: new Date(written.updated_at).toISOString(),

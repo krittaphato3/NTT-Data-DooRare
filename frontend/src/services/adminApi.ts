@@ -266,6 +266,7 @@ export interface ApiAiConfig {
   modelFast: string;
   monthlyBudgetUsd: number;
   estimatedSpendUsd: number;
+  streamingEnabled?: boolean;
   credentials: ApiMaskedCredentials;
   agentEnabled: boolean;
   updatedAt?: string;
@@ -281,6 +282,7 @@ export interface ApiAiConfigUpdateRequest {
   modelPrimary?: string;
   modelFast?: string;
   monthlyBudgetUsd?: number;
+  streamingEnabled?: boolean;
   credentials?: {
     apiKey?: string;
     awsRegion?: string;

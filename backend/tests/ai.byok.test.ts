@@ -175,6 +175,7 @@ test('byok.service: returns default configuration with mock defaults', async () 
   assert.ok(defaults.provider);
   assert.ok(defaults.modelPrimary);
   assert.ok(defaults.monthlyBudgetUsd >= 0);
+  assert.equal(defaults.streamingEnabled, true, 'streaming must be enabled by default');
 });
 
 test('byok.service: validates reason requirement on update', async () => {
