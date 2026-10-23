@@ -174,3 +174,269 @@ export const getForecastTrendsTool: IAgentTool<{
     }
   },
 };
+
+/**
+ * Tool: get_ranked_lender_ladder
+ * Retrieves candidate lender hospitals scored by distance, available stock, and composite priority score (Si).
+ * Allowed Roles: PHARMACIST, SYSTEM_ADMIN
+ */
+export const getRankedLenderLadderTool: IAgentTool<{
+  requestId?: string;
+  drugMasterId?: string;
+  quantityNeeded?: number;
+  urgency?: 'NORMAL' | 'URGENT' | 'VERY_URGENT';
+}> = {
+  name: 'get_ranked_lender_ladder',
+  description: 'Scores and retrieves candidate lender hospitals ranked by composite score (Si), distance, and stock safety for a borrow request.',
+  parameters: z.object({
+    requestId: z.string().uuid().optional().describe('UUID of an existing borrow request to fetch its calculated ladder'),
+    drugMasterId: z.string().uuid().optional().describe('UUID of canonical drug if calculating ladder on demand'),
+    quantityNeeded: z.number().positive().optional().describe('Quantity needed if calculating ladder on demand'),
+    urgency: z.enum(['NORMAL', 'URGENT', 'VERY_URGENT']).optional().default('URGENT').describe('Borrow urgency level (default URGENT)'),
+  }),
+  allowedRoles: ['PHARMACIST', 'SYSTEM_ADMIN'],
+  execute: async (args, context: RequestContext): Promise<ToolResult> => {
+    try {
+      const hospitalId = context.hospitalId;
+      const isSystemAdmin = context.role === 'SYSTEM_ADMIN';
+
+      if (!hospitalId && !isSystemAdmin) {
+        return {
+          success: false,
+          error: 'Context hospitalId is required for lender ladder calculation.',
+        };
+      }
+
+      // Case 1: Inspect existing borrow request
+      if (args.requestId) {
+        const reqRes = await query<{
+          id: string;
+          request_no: string;
+          borrower_hospital_id: string;
+          status: string;
+          urgency: string;
+          ladder: any;
+          first_round_qty: number;
+          stop_threshold: number;
+        }>(
+          `SELECT id, request_no, borrower_hospital_id, status::text AS status, urgency::text AS urgency,
+                  ladder, first_round_qty::float8 AS first_round_qty, stop_threshold::float8 AS stop_threshold
+             FROM borrow_request
+            WHERE id = $1`,
+          [args.requestId],
+        );
+
+        if (reqRes.rows.length === 0) {
+          return { success: false, error: `Borrow request '${args.requestId}' not found.` };
+        }
+
+        const req = reqRes.rows[0];
+        if (!isSystemAdmin && req.borrower_hospital_id !== hospitalId) {
+          return {
+            success: false,
+            error: 'Permission denied: Cannot access borrow request belonging to another hospital.',
+          };
+        }
+
+        return {
+          success: true,
+          data: {
+            requestId: req.id,
+            requestNo: req.request_no,
+            status: req.status,
+            urgency: req.urgency,
+            firstRoundQty: req.first_round_qty,
+            stopThreshold: req.stop_threshold,
+            ladder: req.ladder,
+          },
+        };
+      }
+
+      // Case 2: On-demand candidate ranking
+      const requesterHospId = hospitalId || (
+        await query<{ id: string }>('SELECT id FROM hospital WHERE active = true LIMIT 1')
+      ).rows[0]?.id;
+
+      if (!requesterHospId) {
+        return { success: false, error: 'Requester hospital ID could not be identified.' };
+      }
+
+      const params: unknown[] = [requesterHospId];
+      let drugJoin = '';
+      if (args.drugMasterId) {
+        params.push(args.drugMasterId);
+        drugJoin = `
+          LEFT JOIN hospital_drug hd ON hd.hospital_id = h.id AND hd.drug_master_id = $${params.length}
+          LEFT JOIN stock_lot sl ON sl.hospital_drug_id = hd.id AND sl.hospital_id = h.id AND sl.expiry_date > current_date
+        `;
+      } else {
+        drugJoin = `
+          LEFT JOIN hospital_drug hd ON hd.hospital_id = h.id
+          LEFT JOIN stock_lot sl ON sl.hospital_drug_id = hd.id AND sl.hospital_id = h.id AND sl.expiry_date > current_date
+        `;
+      }
+
+      const sql = `
+        SELECT h.id AS "hospitalId",
+               h.code,
+               COALESCE(h.name_th, h.name_en) AS "name",
+               h.active,
+               h.has_cold_chain AS "hasColdChain",
+               COALESCE(d.travel_minutes_override, d.travel_minutes)::float8 AS "transitMinutes",
+               COALESCE(sum(sl.qty_on_hand - sl.qty_held), 0)::float8 AS "usableStock"
+          FROM hospital h
+          LEFT JOIN hospital_distance d ON d.from_hospital_id = h.id AND d.to_hospital_id = $1
+          ${drugJoin}
+         WHERE h.id <> $1 AND h.active = true
+         GROUP BY h.id, h.code, h.name_th, h.name_en, h.active, h.has_cold_chain, d.travel_minutes_override, d.travel_minutes
+         ORDER BY d.travel_minutes ASC NULLS LAST, "usableStock" DESC
+         LIMIT 10
+      `;
+
+      const res = await query(sql, params);
+      const candidates = res.rows.map((row, idx) => {
+        const transit = row.transitMinutes ?? 999;
+        const stock = row.usableStock ?? 0;
+        // Simple composite scoring Si for presentation: higher usable stock, lower transit
+        const score = Math.max(0, Math.round(((stock * 10) / (transit + 10)) * 100) / 100);
+        return {
+          rank: idx + 1,
+          hospitalId: row.hospitalId,
+          hospitalCode: row.code,
+          hospitalName: row.name,
+          transitMinutes: transit,
+          hasColdChain: row.hasColdChain,
+          usableStock: stock,
+          scoreSi: score,
+        };
+      });
+
+      return {
+        success: true,
+        data: {
+          requesterHospitalId: requesterHospId,
+          urgency: args.urgency || 'URGENT',
+          quantityNeeded: args.quantityNeeded || null,
+          candidateCount: candidates.length,
+          candidates,
+        },
+      };
+    } catch (e: any) {
+      return {
+        success: false,
+        error: `Failed to calculate ranked lender ladder: ${e.message}`,
+      };
+    }
+  },
+};
+
+/**
+ * Tool: get_near_expiry_pool_status
+ * Retrieves near-expiry stock items, regional pool entries, days to expiry, and salvage benefits.
+ * Allowed Roles: PHARMACIST, HOSPITAL_ADMIN, SYSTEM_ADMIN
+ */
+export const getNearExpiryPoolStatusTool: IAgentTool<{
+  hospitalId?: string;
+  status?: 'DETECTED' | 'IN_POOL' | 'ALL';
+  limit?: number;
+}> = {
+  name: 'get_near_expiry_pool_status',
+  description: 'Retrieves near-expiry stock items, regional pool entries, days to expiry, and salvage benefits.',
+  parameters: z.object({
+    hospitalId: z.string().uuid().optional().describe('Optional hospital UUID (defaults to context hospital)'),
+    status: z.enum(['DETECTED', 'IN_POOL', 'ALL']).optional().default('ALL').describe('Filter items by status'),
+    limit: z.number().int().positive().max(50).optional().default(20).describe('Max results to return (default 20)'),
+  }),
+  allowedRoles: ['PHARMACIST', 'HOSPITAL_ADMIN', 'SYSTEM_ADMIN'],
+  execute: async (args, context: RequestContext): Promise<ToolResult> => {
+    try {
+      const isSystemAdmin = context.role === 'SYSTEM_ADMIN';
+      const targetHospitalId = args.hospitalId || context.hospitalId;
+
+      if (!targetHospitalId && !isSystemAdmin) {
+        return {
+          success: false,
+          error: 'Context hospitalId is required to query near-expiry pool status.',
+        };
+      }
+
+      if (args.hospitalId && !isSystemAdmin && args.hospitalId !== context.hospitalId) {
+        return {
+          success: false,
+          error: 'Permission denied: Cannot access near-expiry pool of another hospital.',
+        };
+      }
+
+      const params: unknown[] = [];
+      const where: string[] = [];
+
+      if (targetHospitalId) {
+        params.push(targetHospitalId);
+        where.push(`ne.hospital_id = $${params.length}`);
+      }
+
+      const filterStatus = args.status || 'ALL';
+      if (filterStatus === 'DETECTED') {
+        where.push("ne.status = 'DETECTED'");
+      } else if (filterStatus === 'IN_POOL') {
+        where.push("ne.status = 'RELEASED_TO_POOL'");
+      }
+
+      const whereClause = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
+      params.push(args.limit || 20);
+      const limitParamIdx = params.length;
+
+      const sql = `
+        SELECT ne.id AS "nearExpiryId",
+               ne.hospital_id AS "hospitalId",
+               ne.status::text AS "nearExpiryStatus",
+               ne.days_left AS "daysLeft",
+               ne.value_thb::float8 AS "valueThb",
+               ne.created_at AS "detectedAt",
+               sl.lot_no AS "lotNo",
+               sl.expiry_date AS "expiryDate",
+               (sl.expiry_date - current_date)::int AS "daysToExpiry",
+               sl.qty_on_hand::float8 AS "totalLotQty",
+               sl.qty_held::float8 AS "reservedQty",
+               (sl.qty_on_hand - sl.qty_held)::float8 AS "freeQty",
+               pe.id AS "poolEntryId",
+               pe.qty_available::float8 AS "releasedToPoolQty",
+               hd.local_code AS "localCode",
+               hd.local_name AS "localName",
+               hd.unit_price_thb::float8 AS "unitPriceThb",
+               concat_ws(' ', dm.generic_name, dm.strength, dm.dosage_form) AS "drugName",
+               dm.base_unit AS "baseUnit",
+               COALESCE(ne.value_thb, (sl.qty_on_hand - sl.qty_held) * COALESCE(hd.unit_price_thb, 0))::float8 AS "estimatedSalvageValueThb"
+          FROM near_expiry_item ne
+          JOIN stock_lot sl ON sl.id = ne.lot_id
+          JOIN hospital_drug hd ON hd.id = sl.hospital_drug_id
+          LEFT JOIN drug_master dm ON dm.id = hd.drug_master_id
+          LEFT JOIN pool_entry pe ON pe.near_expiry_item_id = ne.id
+         ${whereClause}
+         ORDER BY (sl.expiry_date - current_date) ASC, ne.created_at DESC
+         LIMIT $${limitParamIdx}
+      `;
+
+      const res = await query(sql, params);
+      const totalSalvage = res.rows.reduce(
+        (acc, r) => acc + (r.estimatedSalvageValueThb || 0),
+        0,
+      );
+
+      return {
+        success: true,
+        data: {
+          hospitalId: targetHospitalId || null,
+          itemCount: res.rows.length,
+          totalEstimatedSalvageThb: Math.round(totalSalvage * 100) / 100,
+          items: res.rows,
+        },
+      };
+    } catch (e: any) {
+      return {
+        success: false,
+        error: `Failed to retrieve near-expiry pool status: ${e.message}`,
+      };
+    }
+  },
+};
