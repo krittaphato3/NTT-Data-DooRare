@@ -26,6 +26,11 @@
     - Enabled static file serving for uploads in `backend/src/app.ts` (`/api/v1/uploads`).
     - Added persistent Docker volume `doorare_uploads` to `docker-compose.yml`.
     - Verified build and restarted Docker containers.
+  - Fixed photo upload permissions by direction & role in `ShipmentDrawer.tsx`:
+    - Previously, "+ เพิ่มรูป" was visible to the receiving warehouse officer even while goods were still at origin or in transit (`WAITING_DISPATCH`, `LOADED`, `IN_TRANSIT`).
+    - Restricted photo uploads so receiving warehouse (`out === false`) only has "+ เพิ่มรูป" when status is `ARRIVED` (when inspecting and confirming receipt `RECEIVED`).
+    - Allowed sending warehouse (`out === true`) to upload during `WAITING_DISPATCH` (packing/loading confirmation).
+    - Updated backend and db schema check constraints to allow `RECEIVED` stage photos.
 - **decisions:**
   - Used `localStorage` (`doorare_wh_packed_{taskNo}`) to track packing confirmation state per task locally without requiring extra backend schema changes, while relying on backend `transport_task.status` (`WAITING_DISPATCH`, `LOADED`, `IN_TRANSIT`, `ARRIVED`, `RECEIVED`) for end-to-end task lifecycle.
   - Completed transport tasks (`RECEIVED` or `CANCELLED`) are filtered out from the inbox outbound queue as they no longer need action from warehouse packing.
