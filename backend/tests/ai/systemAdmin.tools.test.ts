@@ -347,7 +347,7 @@ test('systemAdmin.tools: get_system_configuration_status redaction and DB cross-
   assert.equal(data.returnedConfigCount, data.settings.length);
 
   // Sensitive key redaction
-  const sensitiveRegex = /secret|key|token|password|credential/i;
+  const sensitiveRegex = /secret|key|token|password|credential|byok|auth/i;
   for (const s of data.settings) {
     assert.equal(
       sensitiveRegex.test(s.key),

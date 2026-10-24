@@ -304,6 +304,7 @@ test('hospitalAdmin.tools: Anomaly detection result shape and thresholds', async
 
   const validCodes = new Set([
     'HIGH_STOCKOUT_RATE',
+    'STOCKOUT_FREQUENCY_SPIKE',
     'UNUSUAL_WAIVER_VOLUME',
     'FREQUENT_EMERGENCY_ESCALATION',
     'PROLONGED_TRANSPORT_DELAY',

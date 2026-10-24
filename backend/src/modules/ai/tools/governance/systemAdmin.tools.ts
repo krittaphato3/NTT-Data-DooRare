@@ -170,7 +170,7 @@ export const verifyAuditChainIntegrityTool: IAgentTool<Record<string, never>> = 
 
 // --- TOOL 4: get_system_configuration_status ---
 
-const SENSITIVE_CONFIG_KEY_REGEX = /secret|key|token|password|credential/i;
+const SENSITIVE_CONFIG_KEY_REGEX = /secret|key|token|password|credential|byok|auth/i;
 
 /**
  * Tool: get_system_configuration_status

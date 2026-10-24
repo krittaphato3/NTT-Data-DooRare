@@ -327,7 +327,7 @@ test('regionAdmin.tools: Directives secret redaction and policy scoping', async 
   assert.ok(data.sources.includes('config_setting'));
 
   // Policies never include sensitive keys
-  const sensitiveRegex = /secret|key|token|password/i;
+  const sensitiveRegex = /secret|key|token|password|credential|byok|auth/i;
   for (const pol of data.policies) {
     assert.equal(
       sensitiveRegex.test(pol.key),

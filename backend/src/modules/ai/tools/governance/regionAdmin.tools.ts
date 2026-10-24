@@ -528,7 +528,7 @@ export const simulatePoolAllocationTool: IAgentTool<{
 
 // --- TOOL 4: get_regional_directives ---
 
-const SENSITIVE_KEY_PATTERN = /secret|key|token|password/i;
+const SENSITIVE_KEY_PATTERN = /secret|key|token|password|credential|byok|auth/i;
 
 /**
  * Tool: get_regional_directives
