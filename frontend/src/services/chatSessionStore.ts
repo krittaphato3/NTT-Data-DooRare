@@ -22,6 +22,16 @@ const STORAGE_KEY = 'doorare_chat_sessions_v1';
 const RETENTION_MS = 24 * 60 * 60 * 1000; // 24 Hours in milliseconds
 
 /**
+ * Strips leading emojis or legacy chat icon artifacts from a session title.
+ */
+function sanitizeTitle(title: string): string {
+  if (!title) return 'บทสนทนา';
+  return title
+    .replace(/^[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F600}-\u{1F64F}\s]+/u, '')
+    .trim() || 'บทสนทนา';
+}
+
+/**
  * Loads all active sessions from localStorage, automatically purging any session older than 24 hours.
  */
 export function loadSessions(): ChatSession[] {
@@ -32,12 +42,15 @@ export function loadSessions(): ChatSession[] {
     const parsed: ChatSession[] = JSON.parse(raw);
     const now = Date.now();
 
-    // 24-Hour Auto-Clean Filter
-    const activeSessions = parsed.filter(
-      (s) => s.updatedAt && now - s.updatedAt < RETENTION_MS,
-    );
+    // 24-Hour Auto-Clean Filter & Title Sanitization (remove any emoji artifacts)
+    const activeSessions = parsed
+      .filter((s) => s.updatedAt && now - s.updatedAt < RETENTION_MS)
+      .map((s) => ({
+        ...s,
+        title: sanitizeTitle(s.title),
+      }));
 
-    // If any expired sessions were pruned, write the cleaned list back to storage
+    // If any expired sessions were pruned or titles sanitized, write the cleaned list back to storage
     if (activeSessions.length !== parsed.length) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(activeSessions));
     }
