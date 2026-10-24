@@ -631,9 +631,10 @@ export const submitDataAdminProposalTool: IAgentTool<{
       .describe('Canonical drug_master UUID for VERIFY_DRUG_MAPPING'),
     baseUnitsPerPack: z
       .number()
+      .int()
       .positive()
       .optional()
-      .describe('Hospital pack size in base units (required for VERIFY_DRUG_MAPPING)'),
+      .describe('Hospital pack size in base units (positive integer; required for VERIFY_DRUG_MAPPING)'),
     unitConversionFactor: z
       .number()
       .positive()
@@ -677,18 +678,12 @@ export const submitDataAdminProposalTool: IAgentTool<{
             error: 'mappingId is required for VERIFY_DRUG_MAPPING.',
           };
         }
-        if (args.baseUnitsPerPack === undefined || args.baseUnitsPerPack <= 0) {
-          return {
-            success: false,
-            error: 'baseUnitsPerPack (positive number) is required for VERIFY_DRUG_MAPPING.',
-          };
-        }
-
         const mapRes = await query<{
           id: string;
           status: string;
           version: number;
           drug_master_id: string | null;
+          base_units_per_pack: string | number | null;
           local_name: string;
           hospital_name: string;
         }>(
@@ -696,6 +691,7 @@ export const submitDataAdminProposalTool: IAgentTool<{
                   dm.status::text AS status,
                   dm.version,
                   dm.drug_master_id,
+                  dm.base_units_per_pack,
                   hd.local_name,
                   h.name_th AS hospital_name
              FROM drug_mapping dm
@@ -720,11 +716,21 @@ export const submitDataAdminProposalTool: IAgentTool<{
 
         const effectiveDrugMasterId = args.drugMasterId || mapRow.drug_master_id;
         const expectedVersion = args.version ?? mapRow.version;
-        const baseUnitsPerPack = args.baseUnitsPerPack;
+        const prefilledBaseUnits =
+          mapRow.base_units_per_pack != null ? toNumber(mapRow.base_units_per_pack, 0) : undefined;
+        const effectiveBaseUnitsPerPack =
+          args.baseUnitsPerPack ?? (prefilledBaseUnits && prefilledBaseUnits > 0 ? prefilledBaseUnits : undefined);
+
+        if (effectiveBaseUnitsPerPack === undefined || effectiveBaseUnitsPerPack <= 0) {
+          return {
+            success: false,
+            error: 'baseUnitsPerPack (positive integer) is required for VERIFY_DRUG_MAPPING.',
+          };
+        }
 
         const actionPayload: Record<string, unknown> = {
           version: expectedVersion,
-          baseUnitsPerPack,
+          baseUnitsPerPack: effectiveBaseUnitsPerPack,
           unitConversionFactor: args.unitConversionFactor ?? 1,
           ...(effectiveDrugMasterId ? { drugMasterId: effectiveDrugMasterId } : {}),
           ...(args.localPackUnit ? { localPackUnit: args.localPackUnit } : {}),
@@ -739,7 +745,7 @@ export const submitDataAdminProposalTool: IAgentTool<{
           hospitalName: mapRow.hospital_name,
           currentStatus: mapRow.status,
           drugMasterId: effectiveDrugMasterId,
-          baseUnitsPerPack,
+          baseUnitsPerPack: effectiveBaseUnitsPerPack,
           ...(alreadyDecided ? { warning: `Mapping is currently already in status '${mapRow.status}'.` } : {}),
         };
 
