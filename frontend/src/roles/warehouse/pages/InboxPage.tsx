@@ -80,18 +80,23 @@ export function InboxPage() {
 
         return {
           id: s.id,
-          feature: (s.kind as InboxFeature) || 'F1',
+          feature: s.emergency ? 'F3' : ((s.kind as InboxFeature) || 'F1'),
           ref: s.ref || s.id,
           drug: s.drug,
           qty: s.qty,
           unit: s.unit || 'ชิ้น',
+          from: s.from,
           to: s.to,
-          requestedBy: HOSPITALS[s.to] ? `รพ.${HOSPITALS[s.to]}` : s.to,
-          due: s.kind === 'F1' ? 'ส่งภายใน 2 ชม.' : 'ส่งภายในวันนี้',
-          urgent: s.ref.includes('INC') || s.ref.includes('EMERGENCY'),
+          requestedBy: HOSPITALS[s.to] ?? s.to,
+          due: s.emergency ? 'ส่งทันที (เหตุฉุกเฉิน)' : s.kind === 'F1' ? 'ส่งภายใน 2 ชม.' : 'ส่งภายในวันนี้',
+          urgent: !!s.emergency,
           status: isConfirmed ? 'CONFIRMED' : 'NEW',
           pick: s.pick ?? (s.lotCode ? [{ lot: s.lotCode, expiry: s.expiry || '–', daysLeft: 180, qty: s.qty }] : []),
-          note: s.kind === 'F1' ? 'F1 ยืม · ล็อตที่ให้ยืมต้องอายุ > 180 วัน (FEFO)' : 'F2 โอนยาใกล้หมดอายุ',
+          note: s.emergency
+            ? 'F3 ยืมฉุกเฉิน · ผู้ให้ยืมยืนยันแล้ว แพ็กและส่งออกก่อนงานอื่น'
+            : s.kind === 'F1'
+              ? 'F1 ยืม · ล็อตที่ให้ยืมต้องอายุ > 180 วัน (FEFO)'
+              : 'F2 โอนยาใกล้หมดอายุ',
           transportId: s.id,
         };
       });
@@ -111,7 +116,7 @@ export function InboxPage() {
 
         return {
           id: s.id,
-          feature: (s.kind as InboxFeature) || 'F1',
+          feature: s.emergency ? 'F3' : ((s.kind as InboxFeature) || 'F1'),
           ref: s.ref || s.id,
           drug: s.drug,
           qty: s.qty,

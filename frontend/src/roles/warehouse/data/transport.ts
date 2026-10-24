@@ -46,6 +46,8 @@ export interface Shipment {
   lastSeq?: number;
   vehiclePlate?: string;
   kind: ShipmentKind;
+  /** Live data: an F3 emergency borrow leg (kind stays F1). */
+  emergency?: boolean;
   ref: string;
   drug: string;
   qty: number;
