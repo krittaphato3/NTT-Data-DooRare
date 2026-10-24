@@ -246,6 +246,7 @@ test('systemAdmin.tools: test_llm_connectivity execution, mocking, and secret re
     byokService.testConnection = async (req: any) => {
       capturedReq = req;
       return {
+        ok: true,
         success: true,
         provider: 'MOCK',
         modelId: 'mock-model-test',
