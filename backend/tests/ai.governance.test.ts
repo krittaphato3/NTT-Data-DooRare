@@ -4,6 +4,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { pool } from '../src/db/client.js';
+import { defaultToolRegistry } from '../src/modules/ai/tools/index.js';
+import { byokService } from '../src/modules/ai/byok/byok.service.js';
 
 // Make pool.end idempotent so multiple after() hooks across test files do not throw "Called end on pool more than once"
 const origPoolEnd = pool.end.bind(pool);
@@ -58,3 +60,28 @@ test('governance bridge: every *.test.ts file in tests/ai/ is explicitly importe
     );
   }
 });
+
+test('governance bridge: mock-leak guard verifies all tool and service mocks are restored', () => {
+  // 1. Verify every registered tool's execute function has no residual mock
+  const tools = defaultToolRegistry.getAll();
+  for (const tool of tools) {
+    assert.equal(
+      (tool.execute as any).mock,
+      undefined,
+      `Tool '${tool.name}' execute method must not leak mock state`,
+    );
+  }
+
+  // 2. Verify byokService methods have no residual mock
+  assert.equal(
+    (byokService.getConfig as any).mock,
+    undefined,
+    'byokService.getConfig must not leak mock state',
+  );
+  assert.equal(
+    (byokService.testConnection as any).mock,
+    undefined,
+    'byokService.testConnection must not leak mock state',
+  );
+});
+

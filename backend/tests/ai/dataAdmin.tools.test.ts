@@ -567,6 +567,56 @@ test('dataAdmin.tools: submit_data_admin_proposal verification, actions, and no-
     assertNoSecrets(res);
   });
 
+  // Action 1 (Extended): VERIFY_DRUG_MAPPING on already decided mappings
+  await t.test('VERIFY_DRUG_MAPPING on mapping in status VERIFIED returns warning', async (sub) => {
+    const verifiedRes = await query<{ id: string; status: string }>(
+      `SELECT id, status::text FROM drug_mapping WHERE status = 'VERIFIED' LIMIT 1`,
+    );
+    if (verifiedRes.rows.length === 0) {
+      sub.skip('No VERIFIED drug_mapping records found in database');
+      return;
+    }
+    const mappingId = verifiedRes.rows[0].id;
+    const res = await defaultToolRegistry.executeTool(
+      'submit_data_admin_proposal',
+      {
+        action: 'VERIFY_DRUG_MAPPING',
+        mappingId,
+      },
+      ctx('DATA_ADMIN'),
+    );
+    assert.equal(res.success, true);
+    const data = res.data as any;
+    assert.equal(data.currentStatus, 'VERIFIED');
+    assert.match(data.warning ?? '', /Mapping is currently already in status 'VERIFIED'/i);
+    assert.ok(res.proposal?.actionApi?.endpoint);
+  });
+
+  await t.test('VERIFY_DRUG_MAPPING on mapping in status REJECTED returns warning', async (sub) => {
+    const rejectedRes = await query<{ id: string; status: string }>(
+      `SELECT id, status::text FROM drug_mapping WHERE status = 'REJECTED' LIMIT 1`,
+    );
+    if (rejectedRes.rows.length === 0) {
+      sub.skip('No REJECTED drug_mapping records found in database');
+      return;
+    }
+    const mappingId = rejectedRes.rows[0].id;
+    const res = await defaultToolRegistry.executeTool(
+      'submit_data_admin_proposal',
+      {
+        action: 'VERIFY_DRUG_MAPPING',
+        mappingId,
+        baseUnitsPerPack: 10,
+      },
+      ctx('DATA_ADMIN'),
+    );
+    assert.equal(res.success, true);
+    const data = res.data as any;
+    assert.equal(data.currentStatus, 'REJECTED');
+    assert.match(data.warning ?? '', /Mapping is currently already in status 'REJECTED'/i);
+    assert.ok(res.proposal?.actionApi?.endpoint);
+  });
+
   // 3. Action: UPDATE_CENTRAL_ITEM
   await t.test('UPDATE_CENTRAL_ITEM generates proposal with exact snake_case payload', async () => {
     const res = await defaultToolRegistry.executeTool(
@@ -612,6 +662,91 @@ test('dataAdmin.tools: submit_data_admin_proposal verification, actions, and no-
     );
 
     assertNoSecrets(res);
+  });
+
+  await t.test('UPDATE_CENTRAL_ITEM validates each required field in execute', async () => {
+    // Missing itemType
+    const resMissingType = await defaultToolRegistry.executeTool(
+      'submit_data_admin_proposal',
+      {
+        action: 'UPDATE_CENTRAL_ITEM',
+        internalCode: 'SUP-0001',
+        genericName: 'Syringe',
+        baseUnit: 'piece',
+      },
+      ctx('DATA_ADMIN'),
+    );
+    assert.equal(resMissingType.success, false);
+    assert.match(
+      resMissingType.error ?? '',
+      /itemType \(SUPPLY or BLOOD\) is required for UPDATE_CENTRAL_ITEM/i,
+    );
+
+    // Missing internalCode
+    const resMissingCode = await defaultToolRegistry.executeTool(
+      'submit_data_admin_proposal',
+      {
+        action: 'UPDATE_CENTRAL_ITEM',
+        itemType: 'SUPPLY',
+        genericName: 'Syringe',
+        baseUnit: 'piece',
+      },
+      ctx('DATA_ADMIN'),
+    );
+    assert.equal(resMissingCode.success, false);
+    assert.match(
+      resMissingCode.error ?? '',
+      /internalCode is required for UPDATE_CENTRAL_ITEM/i,
+    );
+
+    // Missing genericName
+    const resMissingName = await defaultToolRegistry.executeTool(
+      'submit_data_admin_proposal',
+      {
+        action: 'UPDATE_CENTRAL_ITEM',
+        itemType: 'SUPPLY',
+        internalCode: 'SUP-0001',
+        baseUnit: 'piece',
+      },
+      ctx('DATA_ADMIN'),
+    );
+    assert.equal(resMissingName.success, false);
+    assert.match(
+      resMissingName.error ?? '',
+      /genericName is required for UPDATE_CENTRAL_ITEM/i,
+    );
+
+    // Missing baseUnit
+    const resMissingUnit = await defaultToolRegistry.executeTool(
+      'submit_data_admin_proposal',
+      {
+        action: 'UPDATE_CENTRAL_ITEM',
+        itemType: 'SUPPLY',
+        internalCode: 'SUP-0001',
+        genericName: 'Syringe',
+      },
+      ctx('DATA_ADMIN'),
+    );
+    assert.equal(resMissingUnit.success, false);
+    assert.match(
+      resMissingUnit.error ?? '',
+      /baseUnit is required for UPDATE_CENTRAL_ITEM/i,
+    );
+
+    // itemType outside enum is rejected by executeTool
+    const resInvalidType = await defaultToolRegistry.executeTool(
+      'submit_data_admin_proposal',
+      {
+        action: 'UPDATE_CENTRAL_ITEM',
+        itemType: 'MEDICATION' as any,
+        internalCode: 'SUP-0001',
+        genericName: 'Syringe',
+        baseUnit: 'piece',
+      },
+      ctx('DATA_ADMIN'),
+    );
+    assert.equal(resInvalidType.success, false);
+    assert.match(resInvalidType.error ?? '', /Invalid tool arguments for 'submit_data_admin_proposal'/i);
   });
 
   // NO-MUTATION PROOF: Row counts must remain strictly identical

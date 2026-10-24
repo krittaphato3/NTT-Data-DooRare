@@ -1,3 +1,20 @@
+/**
+ * VACUITY AND TEST RIGOR STATEMENT:
+ * The seed database currently contains 0 rows in the `audit_log` table (count = 0).
+ * Classification of test cases in this file:
+ * - Test 1 (audit_chain_verify): VACUOUS on seed data (returns 0 trivially when table is empty,
+ *   though it validates the function runs and returns expected data type).
+ * - Test 2 (SQL decomposition): VACUOUS on seed data (all 4 sub-queries return 0 trivially).
+ * - Test 3 (PostgreSQL sha256 vs Node crypto): NON-VACUOUS (pure DB evaluation of multi-byte
+ *   Thai UTF-8 strings and tamper sensitivity independent of table state).
+ * - Test 4 (Bounded window topology): NON-VACUOUS in design, but VACUOUS in execution on seed DB;
+ *   explicitly isolates window assertions in a conditional subtest that skips when row count is 0.
+ * - Test 5 (verify_tamper_evidence tool): VACUOUS regarding row content, but NON-VACUOUS
+ *   regarding registry execution, RBAC gate, and output contract consistency.
+ * - Test 6 (Synthetic chain verification): NON-VACUOUS (pure unit verification of intact chain,
+ *   field modification, middle-row deletion, row reordering, and forks).
+ */
+
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
