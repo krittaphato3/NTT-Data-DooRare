@@ -1767,3 +1767,212 @@ test('submitProcurementProposalTool: ACKNOWLEDGE_REORDER_ALERT proposal, pharmac
 });
 
 
+
+// --- PHASE 4: LOGISTICS TOOLS BARREL, REGISTRY & RBAC MATRIX TESTS ---
+
+import { defaultToolRegistry, zodToJsonSchema } from '../src/modules/ai/tools/index.js';
+import { logisticsTools } from '../src/modules/ai/tools/logistics/index.js';
+
+test('Phase 4: logisticsTools collection contains exactly 15 tools with unique names and no collisions with other registry tools', () => {
+  assert.equal(logisticsTools.length, 15, 'logisticsTools must contain exactly 15 tools');
+
+  const names = new Set<string>();
+  for (const tool of logisticsTools) {
+    assert.equal(names.has(tool.name), false, `Duplicate logistics tool name: ${tool.name}`);
+    names.add(tool.name);
+  }
+  assert.equal(names.size, 15);
+
+  // Check no name collides with other tools already in registry
+  const logisticsNames = new Set(logisticsTools.map((t) => t.name));
+  const allRegistered = defaultToolRegistry.getAll();
+  const nonLogisticsTools = allRegistered.filter((t) => !logisticsNames.has(t.name));
+  for (const nonLog of nonLogisticsTools) {
+    assert.equal(
+      logisticsNames.has(nonLog.name),
+      false,
+      `Name collision detected with non-logistics tool: ${nonLog.name}`,
+    );
+  }
+});
+
+test('Phase 4: every logistics tool is registered in defaultToolRegistry and converts cleanly to OpenAI JSON schema', () => {
+  for (const tool of logisticsTools) {
+    const registered = defaultToolRegistry.get(tool.name);
+    assert.ok(registered, `Tool ${tool.name} must be registered in defaultToolRegistry`);
+    assert.equal(registered?.name, tool.name);
+
+    const jsonSchema = zodToJsonSchema(tool.parameters);
+    assert.equal(jsonSchema.type, 'object', `Schema for ${tool.name} must be type object`);
+    assert.ok(jsonSchema.properties, `Schema for ${tool.name} must have properties`);
+  }
+});
+
+test('Phase 4: registered allowedRoles of each logistics tool exactly equals the required RBAC matrix', () => {
+  const EXPECTED_ROLE_MATRIX: Record<string, string[]> = {
+    get_fefo_pick_list: ['WAREHOUSE_OFFICER', 'HOSPITAL_ADMIN', 'SYSTEM_ADMIN'],
+    check_cold_chain_compliance: ['WAREHOUSE_OFFICER', 'DRIVER', 'HOSPITAL_ADMIN', 'SYSTEM_ADMIN'],
+    get_kit_packing_checklist: ['WAREHOUSE_OFFICER', 'ER_STAFF', 'SYSTEM_ADMIN'],
+    verify_batch_barcode: ['WAREHOUSE_OFFICER', 'SYSTEM_ADMIN'],
+    submit_warehouse_confirmation_proposal: ['WAREHOUSE_OFFICER', 'SYSTEM_ADMIN'],
+    get_assigned_trip_manifest: ['DRIVER', 'WAREHOUSE_OFFICER', 'SYSTEM_ADMIN'],
+    report_traffic_delay_voice: ['DRIVER', 'SYSTEM_ADMIN'],
+    log_transit_temperature_alert: ['DRIVER', 'SYSTEM_ADMIN'],
+    find_emergency_cold_storage_refuge: ['DRIVER', 'WAREHOUSE_OFFICER', 'SYSTEM_ADMIN'],
+    submit_driver_status_proposal: ['DRIVER', 'SYSTEM_ADMIN'],
+    get_reorder_recommendation_list: ['PROCUREMENT_OFFICER', 'HOSPITAL_ADMIN', 'SYSTEM_ADMIN'],
+    get_vendor_contract_terms: ['PROCUREMENT_OFFICER', 'HOSPITAL_ADMIN', 'SYSTEM_ADMIN'],
+    analyze_borrow_vs_purchase_cost: ['PROCUREMENT_OFFICER', 'HOSPITAL_ADMIN', 'SYSTEM_ADMIN'],
+    draft_rfq_purchase_order: ['PROCUREMENT_OFFICER', 'SYSTEM_ADMIN'],
+    submit_procurement_proposal: ['PROCUREMENT_OFFICER', 'SYSTEM_ADMIN'],
+  };
+
+  for (const tool of logisticsTools) {
+    const registered = defaultToolRegistry.get(tool.name);
+    assert.ok(registered, `Tool ${tool.name} must be in defaultToolRegistry`);
+    const actualRoles = [...registered.allowedRoles].sort();
+    const expectedRoles = [...EXPECTED_ROLE_MATRIX[tool.name]].sort();
+    assert.deepEqual(
+      actualRoles,
+      expectedRoles,
+      `allowedRoles for '${tool.name}' does not match exact specification matrix`,
+    );
+  }
+});
+
+test('Phase 4: comprehensive RBAC matrix evaluation across all 10 roles', () => {
+  const EXPECTED_ROLE_MATRIX: Record<string, string[]> = {
+    get_fefo_pick_list: ['WAREHOUSE_OFFICER', 'HOSPITAL_ADMIN', 'SYSTEM_ADMIN'],
+    check_cold_chain_compliance: ['WAREHOUSE_OFFICER', 'DRIVER', 'HOSPITAL_ADMIN', 'SYSTEM_ADMIN'],
+    get_kit_packing_checklist: ['WAREHOUSE_OFFICER', 'ER_STAFF', 'SYSTEM_ADMIN'],
+    verify_batch_barcode: ['WAREHOUSE_OFFICER', 'SYSTEM_ADMIN'],
+    submit_warehouse_confirmation_proposal: ['WAREHOUSE_OFFICER', 'SYSTEM_ADMIN'],
+    get_assigned_trip_manifest: ['DRIVER', 'WAREHOUSE_OFFICER', 'SYSTEM_ADMIN'],
+    report_traffic_delay_voice: ['DRIVER', 'SYSTEM_ADMIN'],
+    log_transit_temperature_alert: ['DRIVER', 'SYSTEM_ADMIN'],
+    find_emergency_cold_storage_refuge: ['DRIVER', 'WAREHOUSE_OFFICER', 'SYSTEM_ADMIN'],
+    submit_driver_status_proposal: ['DRIVER', 'SYSTEM_ADMIN'],
+    get_reorder_recommendation_list: ['PROCUREMENT_OFFICER', 'HOSPITAL_ADMIN', 'SYSTEM_ADMIN'],
+    get_vendor_contract_terms: ['PROCUREMENT_OFFICER', 'HOSPITAL_ADMIN', 'SYSTEM_ADMIN'],
+    analyze_borrow_vs_purchase_cost: ['PROCUREMENT_OFFICER', 'HOSPITAL_ADMIN', 'SYSTEM_ADMIN'],
+    draft_rfq_purchase_order: ['PROCUREMENT_OFFICER', 'SYSTEM_ADMIN'],
+    submit_procurement_proposal: ['PROCUREMENT_OFFICER', 'SYSTEM_ADMIN'],
+  };
+
+  const ALL_ROLES = [
+    'SYSTEM_ADMIN',
+    'REGION_ADMIN',
+    'HOSPITAL_ADMIN',
+    'PHARMACIST',
+    'PROCUREMENT_OFFICER',
+    'WAREHOUSE_OFFICER',
+    'ER_STAFF',
+    'DRIVER',
+    'DATA_ADMIN',
+    'AUDITOR',
+  ] as const;
+
+  for (const role of ALL_ROLES) {
+    const roleTools = defaultToolRegistry.getToolsForRole(role);
+    for (const tool of logisticsTools) {
+      const isAllowedExpected = EXPECTED_ROLE_MATRIX[tool.name].includes(role);
+      const isAllowedActual = roleTools.some((t) => t.name === tool.name);
+      assert.equal(
+        isAllowedActual,
+        isAllowedExpected,
+        `Role '${role}' access to '${tool.name}': expected ${isAllowedExpected}, got ${isAllowedActual}`,
+      );
+    }
+  }
+
+  // Explicit constraint checks:
+  // 1. DRIVER denied all procurement tools
+  const driverToolsList = defaultToolRegistry.getToolsForRole('DRIVER');
+  for (const tool of procurementTools) {
+    assert.equal(
+      driverToolsList.some((t) => t.name === tool.name),
+      false,
+      `DRIVER must be denied access to procurement tool ${tool.name}`,
+    );
+  }
+
+  // 2. PROCUREMENT_OFFICER denied all driver tools and warehouse tools
+  const procToolsList = defaultToolRegistry.getToolsForRole('PROCUREMENT_OFFICER');
+  for (const tool of [...driverTools, ...warehouseTools]) {
+    assert.equal(
+      procToolsList.some((t) => t.name === tool.name),
+      false,
+      `PROCUREMENT_OFFICER must be denied access to logistics tool ${tool.name}`,
+    );
+  }
+
+  // 3. AUDITOR, DATA_ADMIN, REGION_ADMIN and PHARMACIST denied all 15
+  const fullyDeniedRoles = ['AUDITOR', 'DATA_ADMIN', 'REGION_ADMIN', 'PHARMACIST'] as const;
+  for (const role of fullyDeniedRoles) {
+    const roleDefs = defaultToolRegistry.getToolsForRole(role);
+    for (const tool of logisticsTools) {
+      assert.equal(
+        roleDefs.some((t) => t.name === tool.name),
+        false,
+        `Role ${role} must be denied access to logistics tool ${tool.name}`,
+      );
+    }
+  }
+});
+
+test('Phase 4: defaultToolRegistry.executeTool returns permission error for unauthorized roles without running tool SQL', async () => {
+  // Driver denied on warehouse get_fefo_pick_list
+  const fefoRes = await defaultToolRegistry.executeTool(
+    'get_fefo_pick_list',
+    { hospitalDrugId: '00000000-0000-0000-0000-000000000001', requiredQuantity: 10 },
+    { role: 'DRIVER', hospitalId: '00000000-0000-0000-0000-000000000001' },
+  );
+  assert.equal(fefoRes.success, false);
+  assert.match(fefoRes.error || '', /Permission denied.*DRIVER.*get_fefo_pick_list/i);
+
+  // Pharmacist denied on driver get_assigned_trip_manifest
+  const manifestRes = await defaultToolRegistry.executeTool(
+    'get_assigned_trip_manifest',
+    {},
+    { role: 'PHARMACIST', hospitalId: '00000000-0000-0000-0000-000000000001' },
+  );
+  assert.equal(manifestRes.success, false);
+  assert.match(manifestRes.error || '', /Permission denied.*PHARMACIST.*get_assigned_trip_manifest/i);
+
+  // Auditor denied on procurement get_reorder_recommendation_list
+  const reorderRes = await defaultToolRegistry.executeTool(
+    'get_reorder_recommendation_list',
+    {},
+    { role: 'AUDITOR', hospitalId: '00000000-0000-0000-0000-000000000001' },
+  );
+  assert.equal(reorderRes.success, false);
+  assert.match(reorderRes.error || '', /Permission denied.*AUDITOR.*get_reorder_recommendation_list/i);
+
+  // Region admin denied on draft_rfq_purchase_order
+  const rfqRes = await defaultToolRegistry.executeTool(
+    'draft_rfq_purchase_order',
+    { lines: [{ drugName: 'Test', quantity: 1, unitPrice: 100 }] },
+    { role: 'REGION_ADMIN', hospitalId: '00000000-0000-0000-0000-000000000001' },
+  );
+  assert.equal(rfqRes.success, false);
+  assert.match(rfqRes.error || '', /Permission denied.*REGION_ADMIN.*draft_rfq_purchase_order/i);
+
+  // Data admin denied on submit_warehouse_confirmation_proposal
+  const whProposalRes = await defaultToolRegistry.executeTool(
+    'submit_warehouse_confirmation_proposal',
+    { actionType: 'CONFIRM_DISPATCH', targetId: '00000000-0000-0000-0000-000000000001', title: 'T', description: 'D', summary: {}, payload: {} },
+    { role: 'DATA_ADMIN', hospitalId: '00000000-0000-0000-0000-000000000001' },
+  );
+  assert.equal(whProposalRes.success, false);
+  assert.match(whProposalRes.error || '', /Permission denied.*DATA_ADMIN.*submit_warehouse_confirmation_proposal/i);
+
+  // Anonymous (undefined role) denied on all logistics tools
+  const anonRes = await defaultToolRegistry.executeTool(
+    'verify_batch_barcode',
+    { barcode: 'TEST' },
+    { hospitalId: '00000000-0000-0000-0000-000000000001' },
+  );
+  assert.equal(anonRes.success, false);
+  assert.match(anonRes.error || '', /Permission denied.*ANONYMOUS.*verify_batch_barcode/i);
+});
+
