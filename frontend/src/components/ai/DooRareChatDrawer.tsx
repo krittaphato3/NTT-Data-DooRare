@@ -597,24 +597,6 @@ export const DooRareChatDrawer: React.FC = () => {
               </button>
             </div>
 
-            {/* Quick Navigation Items (Gemini-style) */}
-            <div className="doorare-sidebar-nav-items">
-              <a
-                href={user?.role === 'ER_STAFF' ? '?page=incidents' : '?page=requests'}
-                className="doorare-sidebar-nav-link"
-              >
-                <Icon name="inbox" style={{ width: 15, height: 15 }} />
-                <span>คำขอยืมยาฉุกเฉิน</span>
-              </a>
-              <a
-                href="?page=alerts"
-                className="doorare-sidebar-nav-link"
-              >
-                <Icon name="bell" style={{ width: 15, height: 15 }} />
-                <span>แจ้งเตือนสต็อกยา</span>
-              </a>
-            </div>
-
             {/* Recent Chats Section */}
             <div className="doorare-chat-sidebar-section-header">
               <span className="doorare-chat-sidebar-title-text">ล่าสุด</span>
