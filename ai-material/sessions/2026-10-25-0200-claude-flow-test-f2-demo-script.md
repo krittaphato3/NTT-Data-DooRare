@@ -10,8 +10,8 @@
 - F1: BR-2026-000607 approved in the UI (HA), accepted in the UI (HC lender queue), shipment moved via API, HA received 142 (request PARTIALLY_FULFILLED, next leg asked automatically).
 - F3: ER requested close, pharmacist co-signed (API) -> RECONCILED.
 
-## Bug fixed
-- `AllocationDrawer`: after the owner picked the cost option the approve / reject buttons disappeared until a reload (the "decision saved" banner replaced them). Banner now replaces the controls only when the viewer has nothing left to approve.
+## Bug found (fix reverted at the user's request)
+- `AllocationDrawer`: after the owner picks the cost option (plans over 20 %) the approve / reject buttons disappear until a page reload (the "decision saved" banner replaces them). A one-line fix existed (f659ab5) but the user chose not to include it; the drawer is back to the original. Workaround in a demo: reload the page after choosing the option.
 
 ## Observations (not fixed)
 - Round with the free LLM takes ~35-40 s per lot (4 lots ~2.5 min).
@@ -22,4 +22,4 @@
 - Local DB now has leftover DEMO-F2 near-expiry lots (HB / HC waiting) from repeated script runs.
 
 ## Next
-- Not pushed. Branch feat/demo-scenarios-f2 has the script commit + this fix.
+- Not pushed. Branch feat/demo-scenarios-f2 has the script commit; the drawer fix was reverted.
