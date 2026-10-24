@@ -4,6 +4,7 @@
 #   load   load db/mock/csv into an empty database + create views
 #   reset  drop the DB volume, recreate the schema, load mock data
 #   scenarios  leave pending work for pharmacist / ER / warehouse / driver through the API (backend must be running; once per fresh DB)
+#   scenarios-f2  add fresh near-expiry lots with real receivers and release some to the pool (backend must be running; can be repeated)
 #   psql   open psql   (host: 127.0.0.1:5442, user doorare, password doorare_dev, db doorare)
 set -euo pipefail
 export MSYS_NO_PATHCONV=1
@@ -39,6 +40,8 @@ case "${1:-}" in
   reset) $DC rm -sfv db >/dev/null; docker volume rm -f doorare_pgdata >/dev/null; $DC up -d db; wait_ready; load ;;
   scenarios) curl -fs http://127.0.0.1:${PORT:-3001}/api/v1/health >/dev/null || { echo "start the backend first (cd backend && npx tsx src/index.ts)" >&2; exit 1; }
              (cd backend && API=http://127.0.0.1:${PORT:-3001}/api/v1 npx tsx scripts/demo-scenarios.ts) ;;
+  scenarios-f2) curl -fs http://127.0.0.1:${PORT:-3001}/api/v1/health >/dev/null || { echo "start the backend first (cd backend && npx tsx src/index.ts)" >&2; exit 1; }
+             (cd backend && API=http://127.0.0.1:${PORT:-3001}/api/v1 npx tsx scripts/demo-f2.ts) ;;
   psql)  exec $DC exec db psql -U doorare -d doorare ;;
-  *)     echo "usage: $0 {up|load|reset|scenarios|psql}" >&2; exit 1 ;;
+  *)     echo "usage: $0 {up|load|reset|scenarios|scenarios-f2|psql}" >&2; exit 1 ;;
 esac

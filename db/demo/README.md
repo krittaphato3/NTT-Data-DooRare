@@ -13,6 +13,11 @@ cd backend && npx tsx src/index.ts      # start the backend (separate terminal)
 npm run db:scenarios    # pending work per role through the API (once per fresh DB, ~1 minute)
 ```
 
+- `npm run db:scenarios-f2` (backend running) adds fresh near-expiry lots that other hospitals can really use, runs the scan, lets the owner
+  pharmacists release the first lot of each hospital and leaves the others waiting for a live decision. Unlike `db:scenarios` it can be
+  repeated; every run uses new lot names `DEMO-F2-<code><run>-<k>`. Then open the pool and press the allocation round. Settings: `HOSPITALS`
+  (default HA,HB,HC), `LOTS_PER_HOSPITAL` (2), `RELEASE` (1). It needs a direct DB connection (it inserts the stock lots) as well as the API
+  (`API`, `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`).
 - `db:reset` always gives the same starting point again (this is how you "reset"). `db:load` does the same on an empty DB.
 - `db:scenarios` refuses to run twice on the same DB (it looks for requests whose reason starts `DEMO:`): run `db:reset` first.
 - The CSV (`db/mock/csv/`) is not in git: copy it from the mock zip or run `python3 db/mock/generate.py`.
