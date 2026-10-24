@@ -13,43 +13,77 @@ interface AiConfigTabProps {
   onShowToast: (msg: string) => void;
 }
 
-const PROVIDERS: { id: ApiAiProviderType; name: string; desc: string; icon: any }[] = [
+const PROVIDERS: {
+  id: ApiAiProviderType;
+  name: string;
+  tag: string;
+  tagColor: string;
+  desc: string;
+  icon: any;
+}[] = [
   {
     id: 'MOCK',
     name: 'Mock Simulation (Offline)',
+    tag: 'Local Dev · $0 Cost',
+    tagColor: '#64748B',
     desc: 'จำลองการประมวลผลภายในระบบ ไม่คิดค่า Token เหมาะสำหรับการทดสอบ Local',
     icon: 'box',
   },
   {
     id: 'OPENAI',
     name: 'OpenAI (Direct API)',
+    tag: 'Official OpenAI',
+    tagColor: '#10B981',
     desc: 'เชื่อมต่อตรงไปยัง OpenAI API (GPT-4o, GPT-4o-mini) ด้วย API Key',
     icon: 'spark',
   },
   {
     id: 'ANTHROPIC',
     name: 'Anthropic (Claude Direct)',
-    desc: 'เชื่อมต่อตรงไปยัง Anthropic Messages API (Claude 3.5 Sonnet / Haiku)',
+    tag: 'Claude 3.5 Sonnet',
+    tagColor: '#8B5CF6',
+    desc: 'เชื่อมต่อตรงไปยัง Anthropic Messages API ด้วย API Key',
     icon: 'sparkle',
   },
   {
     id: 'AWS_BEDROCK',
     name: 'Amazon Bedrock (AWS Cloud)',
+    tag: 'AWS Healthcare Cloud',
+    tagColor: '#F59E0B',
     desc: 'ประมวลผลผ่าน AWS Bedrock Runtime (IAM Execution Role หรือ AWS Access Keys)',
     icon: 'layers',
   },
   {
     id: 'AZURE_OPENAI',
     name: 'Azure OpenAI Service',
+    tag: 'Microsoft Enterprise',
+    tagColor: '#0284C7',
     desc: 'เชื่อมต่อผ่าน Microsoft Azure Enterprise Endpoint และ Custom Deployment',
     icon: 'shield',
   },
   {
     id: 'CUSTOM',
-    name: 'Custom API Endpoint (OpenAI-Compatible)',
+    name: 'Custom API Endpoint',
+    tag: 'vLLM / OmniRoute / Ollama',
+    tagColor: '#6366F1',
     desc: 'เชื่อมต่อผ่าน Custom Base URL เช่น vLLM, Ollama, OpenRouter, LiteLLM หรือ Private Gateway',
     icon: 'gear',
   },
+];
+
+const POPULAR_PRIMARY_MODELS = [
+  { id: 'anthropic.claude-3-5-sonnet-20241022-v2:0', label: 'Claude 3.5 Sonnet (AWS Bedrock / Anthropic)', badge: 'Recommended' },
+  { id: 'gpt-4o', label: 'GPT-4o (OpenAI / Azure)', badge: 'High Intelligence' },
+  { id: 'antigravity/gemini-3.8-flash-tiered', label: 'Gemini 3.8 Flash Tiered (OmniRoute / Google)', badge: 'Fast Reasoning' },
+  { id: 'deepseek-ai/DeepSeek-R1', label: 'DeepSeek-R1 (OpenRouter / Self-Hosted)', badge: 'Deep Reasoning' },
+  { id: 'custom', label: '✏️ ระบุ Model ID อื่นๆ เอง (Custom Model)...', badge: 'Custom' },
+];
+
+const POPULAR_FAST_MODELS = [
+  { id: 'anthropic.claude-3-5-haiku-20241022-v1:0', label: 'Claude 3.5 Haiku (AWS Bedrock / Anthropic)', badge: '< 8s Emergency' },
+  { id: 'gpt-4o-mini', label: 'GPT-4o Mini (OpenAI / Azure)', badge: 'Cost Efficient' },
+  { id: 'antigravity/gemini-3.8-flash-tiered', label: 'Gemini 3.8 Flash Tiered (OmniRoute)', badge: 'High Speed' },
+  { id: 'custom', label: '✏️ ระบุ Fast Model ID อื่นๆ เอง...', badge: 'Custom' },
 ];
 
 export function AiConfigTab({ onShowToast }: AiConfigTabProps) {
@@ -61,6 +95,8 @@ export function AiConfigTab({ onShowToast }: AiConfigTabProps) {
   const [selectedProvider, setSelectedProvider] = useState<ApiAiProviderType>('MOCK');
   const [modelPrimary, setModelPrimary] = useState('');
   const [modelFast, setModelFast] = useState('');
+  const [isCustomPrimary, setIsCustomPrimary] = useState(false);
+  const [isCustomFast, setIsCustomFast] = useState(false);
   const [monthlyBudget, setMonthlyBudget] = useState(100);
   const [apiKey, setApiKey] = useState('');
   const [showKey, setShowKey] = useState(false);
@@ -104,6 +140,8 @@ export function AiConfigTab({ onShowToast }: AiConfigTabProps) {
         setSelectedProvider(c.provider);
         setModelPrimary(c.modelPrimary);
         setModelFast(c.modelFast);
+        setIsCustomPrimary(!POPULAR_PRIMARY_MODELS.some((m) => m.id === c.modelPrimary && m.id !== 'custom'));
+        setIsCustomFast(!POPULAR_FAST_MODELS.some((m) => m.id === c.modelFast && m.id !== 'custom'));
         setMonthlyBudget(c.monthlyBudgetUsd);
         setStreamingEnabled(c.streamingEnabled !== false);
         setApiKey(c.credentials.apiKeyMasked || '');
@@ -319,7 +357,7 @@ export function AiConfigTab({ onShowToast }: AiConfigTabProps) {
           </p>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 14 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))', gap: 14 }}>
           {PROVIDERS.map((p) => {
             const isSelected = selectedProvider === p.id;
             return (
@@ -327,39 +365,70 @@ export function AiConfigTab({ onShowToast }: AiConfigTabProps) {
                 key={p.id}
                 onClick={() => setSelectedProvider(p.id)}
                 style={{
-                  border: isSelected ? '2px solid #2563EB' : '1px solid #E2E8F0',
-                  borderRadius: 8,
+                  border: isSelected ? '2px solid #1D4ED8' : '1px solid #E2E8F0',
+                  borderRadius: 10,
                   padding: 16,
                   cursor: 'pointer',
                   backgroundColor: isSelected ? '#EFF6FF' : '#FFFFFF',
-                  transition: 'all 0.2s ease',
+                  boxShadow: isSelected ? '0 4px 12px rgba(29, 78, 216, 0.12)' : '0 1px 3px rgba(0,0,0,0.03)',
+                  transition: 'all 0.18s ease',
                   position: 'relative',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between',
                 }}
               >
-                {isSelected && (
-                  <span
-                    style={{
-                      position: 'absolute',
-                      top: 10,
-                      right: 10,
-                      backgroundColor: '#2563EB',
-                      color: '#FFF',
-                      fontSize: 10,
-                      fontWeight: 700,
-                      padding: '2px 8px',
-                      borderRadius: 12,
-                    }}
-                  >
-                    ใช้งานอยู่ (Active)
-                  </span>
-                )}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-                  <Icon name={p.icon as any} style={{ width: 20, height: 20, color: isSelected ? '#2563EB' : '#64748B' }} />
-                  <span style={{ fontWeight: 600, fontSize: 14, color: isSelected ? '#1E40AF' : '#1E293B' }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div
+                        style={{
+                          width: 32,
+                          height: 32,
+                          borderRadius: 8,
+                          background: isSelected ? '#DBEAFE' : '#F1F5F9',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <Icon name={p.icon as any} style={{ width: 18, height: 18, color: isSelected ? '#1D4ED8' : '#64748B' }} />
+                      </div>
+                      <span
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 700,
+                          color: p.tagColor,
+                          background: `${p.tagColor}15`,
+                          padding: '2px 8px',
+                          borderRadius: 9999,
+                        }}
+                      >
+                        {p.tag}
+                      </span>
+                    </div>
+
+                    <div
+                      style={{
+                        width: 18,
+                        height: 18,
+                        borderRadius: '50%',
+                        border: `2px solid ${isSelected ? '#1D4ED8' : '#CBD5E1'}`,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        background: isSelected ? '#1D4ED8' : '#FFFFFF',
+                      }}
+                    >
+                      {isSelected && <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#FFFFFF' }} />}
+                    </div>
+                  </div>
+
+                  <div style={{ fontWeight: 700, fontSize: 14, color: isSelected ? '#1E40AF' : '#0F2A5C', marginBottom: 4 }}>
                     {p.name}
-                  </span>
+                  </div>
+                  <p style={{ margin: 0, fontSize: 12, color: '#64748B', lineHeight: 1.45 }}>{p.desc}</p>
                 </div>
-                <p style={{ margin: 0, fontSize: 12, color: '#64748B', lineHeight: 1.4 }}>{p.desc}</p>
               </div>
             );
           })}
@@ -376,35 +445,97 @@ export function AiConfigTab({ onShowToast }: AiConfigTabProps) {
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
           <div>
-            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#334155', marginBottom: 6 }}>
-              Primary Complex Reasoning Model (โมเดลวิเคราะห์เชิงลึก / บันไดจัดสรรยา)
-            </label>
-            <input
-              type="text"
-              className="admin-input"
-              value={modelPrimary}
-              onChange={(e) => setModelPrimary(e.target.value)}
-              placeholder="e.g. anthropic.claude-3-5-sonnet-20241022-v2:0 หรือ gpt-4o"
-              style={{ width: '100%' }}
-            />
-            <span style={{ fontSize: 11, color: '#64748B' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+              <label style={{ fontSize: 13, fontWeight: 700, color: '#0F2A5C' }}>
+                Primary Complex Reasoning Model (โมเดลวิเคราะห์เชิงลึก)
+              </label>
+              <button
+                type="button"
+                style={{ background: 'none', border: 'none', color: '#1D4ED8', fontSize: 11.5, cursor: 'pointer', padding: 0, fontWeight: 600 }}
+                onClick={() => setIsCustomPrimary(!isCustomPrimary)}
+              >
+                {isCustomPrimary ? '📋 เลือกจาก Presets แนะนำ' : '✏️ ระบุ Model ID เอง'}
+              </button>
+            </div>
+
+            {!isCustomPrimary ? (
+              <select
+                className="admin-input"
+                style={{ width: '100%', height: 38 }}
+                value={POPULAR_PRIMARY_MODELS.some((m) => m.id === modelPrimary) ? modelPrimary : 'custom'}
+                onChange={(e) => {
+                  if (e.target.value === 'custom') {
+                    setIsCustomPrimary(true);
+                  } else {
+                    setModelPrimary(e.target.value);
+                  }
+                }}
+              >
+                {POPULAR_PRIMARY_MODELS.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.label} [{m.badge}]
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input
+                type="text"
+                className="admin-input"
+                value={modelPrimary}
+                onChange={(e) => setModelPrimary(e.target.value)}
+                placeholder="e.g. anthropic.claude-3-5-sonnet-20241022-v2:0 หรือ gpt-4o"
+                style={{ width: '100%', height: 38, fontFamily: 'monospace' }}
+              />
+            )}
+            <span style={{ fontSize: 11, color: '#64748B', display: 'block', marginTop: 4 }}>
               ใช้สำหรับ F1 lender scoring, F2 near-expiry pool reallocations
             </span>
           </div>
 
           <div>
-            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#334155', marginBottom: 6 }}>
-              Fast Emergency Model (โมเดลฉุกเฉินตอบสนองเร็ว &lt; 8 วินาที)
-            </label>
-            <input
-              type="text"
-              className="admin-input"
-              value={modelFast}
-              onChange={(e) => setModelFast(e.target.value)}
-              placeholder="e.g. anthropic.claude-3-5-haiku-20241022-v1:0 หรือ gpt-4o-mini"
-              style={{ width: '100%' }}
-            />
-            <span style={{ fontSize: 11, color: '#64748B' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+              <label style={{ fontSize: 13, fontWeight: 700, color: '#0F2A5C' }}>
+                Fast Emergency Model (โมเดลฉุกเฉินตอบสนองเร็ว &lt; 8 วินาที)
+              </label>
+              <button
+                type="button"
+                style={{ background: 'none', border: 'none', color: '#1D4ED8', fontSize: 11.5, cursor: 'pointer', padding: 0, fontWeight: 600 }}
+                onClick={() => setIsCustomFast(!isCustomFast)}
+              >
+                {isCustomFast ? '📋 เลือกจาก Presets แนะนำ' : '✏️ ระบุ Fast Model ID เอง'}
+              </button>
+            </div>
+
+            {!isCustomFast ? (
+              <select
+                className="admin-input"
+                style={{ width: '100%', height: 38 }}
+                value={POPULAR_FAST_MODELS.some((m) => m.id === modelFast) ? modelFast : 'custom'}
+                onChange={(e) => {
+                  if (e.target.value === 'custom') {
+                    setIsCustomFast(true);
+                  } else {
+                    setModelFast(e.target.value);
+                  }
+                }}
+              >
+                {POPULAR_FAST_MODELS.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.label} [{m.badge}]
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input
+                type="text"
+                className="admin-input"
+                value={modelFast}
+                onChange={(e) => setModelFast(e.target.value)}
+                placeholder="e.g. anthropic.claude-3-5-haiku-20241022-v1:0 หรือ gpt-4o-mini"
+                style={{ width: '100%', height: 38, fontFamily: 'monospace' }}
+              />
+            )}
+            <span style={{ fontSize: 11, color: '#64748B', display: 'block', marginTop: 4 }}>
               ใช้สำหรับ F3 ค้นหายาต้านพิษฉุกเฉิน (Antidotes) และ Incident Triage
             </span>
           </div>
@@ -424,7 +555,7 @@ export function AiConfigTab({ onShowToast }: AiConfigTabProps) {
               />
               <span style={{ fontSize: 13, color: '#64748B' }}>USD / เดือน</span>
             </div>
-            <span style={{ fontSize: 11, color: '#64748B' }}>
+            <span style={{ fontSize: 11, color: '#64748B', display: 'block', marginTop: 4 }}>
               เมื่อค่าใช้จ่ายถึงเพดาน ระบบจะแจ้งเตือนและตัดกลับสู่ Safe Templates
             </span>
           </div>
@@ -433,19 +564,36 @@ export function AiConfigTab({ onShowToast }: AiConfigTabProps) {
             <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#334155', marginBottom: 6 }}>
               ประมาณการใช้งานสะสมในเดือนนี้
             </label>
-            <div style={{ fontSize: 18, fontWeight: 700, color: '#1E40AF', marginTop: 4 }}>
-              ${config?.estimatedSpendUsd?.toFixed(2) || '0.00'} / ${monthlyBudget} USD
-            </div>
-            <div style={{ width: '100%', backgroundColor: '#E2E8F0', height: 6, borderRadius: 3, marginTop: 8 }}>
-              <div
-                style={{
-                  width: `${Math.min(100, ((config?.estimatedSpendUsd || 0) / (monthlyBudget || 1)) * 100)}%`,
-                  backgroundColor: '#2563EB',
-                  height: '100%',
-                  borderRadius: 3,
-                }}
-              />
-            </div>
+            {(() => {
+              const spend = config?.estimatedSpendUsd || 0;
+              const budget = monthlyBudget || 1;
+              const percent = Math.min(100, (spend / budget) * 100);
+              const remaining = Math.max(0, budget - spend);
+              const barColor = percent > 85 ? '#EF4444' : percent > 50 ? '#F59E0B' : '#10B981';
+              return (
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                    <div style={{ fontSize: 18, fontWeight: 700, color: '#0F2A5C' }}>
+                      ${spend.toFixed(2)} / ${budget.toFixed(2)} USD
+                    </div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: barColor }}>
+                      คงเหลือ ${remaining.toFixed(2)} USD ({percent.toFixed(1)}% ใช้ไป)
+                    </div>
+                  </div>
+                  <div style={{ width: '100%', backgroundColor: '#E2E8F0', height: 8, borderRadius: 4, marginTop: 8, overflow: 'hidden' }}>
+                    <div
+                      style={{
+                        width: `${percent}%`,
+                        backgroundColor: barColor,
+                        height: '100%',
+                        borderRadius: 4,
+                        transition: 'width 0.4s ease',
+                      }}
+                    />
+                  </div>
+                </div>
+              );
+            })()}
           </div>
 
           {/* Real-time Streaming Toggle */}
@@ -797,11 +945,31 @@ export function AiConfigTab({ onShowToast }: AiConfigTabProps) {
                 fontWeight: 600,
                 backgroundColor: testResult.success ? '#DCFCE7' : '#FEE2E2',
                 color: testResult.success ? '#15803D' : '#B91C1C',
+                border: `1px solid ${testResult.success ? '#86EFAC' : '#FCA5A5'}`,
               }}
             >
-              <span>{testResult.success ? '🟢 เชื่อมต่อสำเร็จ' : '🔴 เชื่อมต่อล้มเหลว'}</span>
+              <span>
+                {testResult.success
+                  ? testResult.latencyMs < 500
+                    ? '⚡ ความเร็วสูงพิเศษ'
+                    : testResult.latencyMs < 1500
+                    ? '🟢 เชื่อมต่อสำเร็จ'
+                    : '🟡 ปานกลาง'
+                  : '🔴 เชื่อมต่อล้มเหลว'}
+              </span>
               <span>({testResult.latencyMs} ms)</span>
-              <span style={{ fontSize: 11, fontWeight: 400, opacity: 0.85 }}>[{testResult.modelId}]</span>
+              <span
+                style={{
+                  fontSize: 11,
+                  fontWeight: 500,
+                  opacity: 0.85,
+                  background: 'rgba(0,0,0,0.06)',
+                  padding: '1px 6px',
+                  borderRadius: 4,
+                }}
+              >
+                [{testResult.modelId}]
+              </span>
             </div>
           )}
         </div>
