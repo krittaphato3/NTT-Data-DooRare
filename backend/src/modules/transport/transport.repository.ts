@@ -19,6 +19,7 @@ export const TASK_SELECT = `
          tt.vehicle_id, v.plate AS vehicle_plate, v.has_cold_box,
          tt.eta_at, tt.created_at, tt.loaded_at, tt.departed_at, tt.arrived_at, tt.received_at, tt.updated_at,
          tt.cancel_requested_by, cr.code AS cancel_requested_code, tt.cancel_consent_by, cc.code AS cancel_consent_code, tt.cancel_reason,
+         br.context::text AS borrow_context,
          CASE WHEN tt.ref_type = 'BORROW_LEG' THEN br.request_no || ' · รอบ ' || bl.round_no
               ELSE ap.plan_no || ' · บรรทัด ' || (SELECT count(*) FROM allocation_line x WHERE x.plan_id = al.plan_id AND x.id <= al.id)
          END AS ref_label

@@ -78,6 +78,7 @@ export function taskToShipment(t: ApiTransportTask, now = new Date()): Shipment 
     refType: t.refType,
     refId: t.refId,
     kind: t.kind,
+    emergency: t.emergency || undefined,
     ref: t.refLabel ?? '',
     drug: first?.drugName ?? '–',
     qty,

@@ -30,6 +30,8 @@ export interface RequestItem {
   drug: string;
   qty: number;
   unit: string;
+  /** Live data: the sending hospital (the mock fixtures all leave from HA). */
+  from?: HospitalCode;
   to: HospitalCode;
   requestedBy: string;
   due: string;

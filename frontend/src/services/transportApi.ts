@@ -39,6 +39,8 @@ export interface ApiTransportTask {
   taskNo: string | null;
   version: number;
   kind: 'F1' | 'F2';
+  /** Leg of an F3 emergency borrow request (kind stays F1). */
+  emergency: boolean;
   refType: 'BORROW_LEG' | 'ALLOCATION_LINE';
   refId: string;
   refLabel: string | null;

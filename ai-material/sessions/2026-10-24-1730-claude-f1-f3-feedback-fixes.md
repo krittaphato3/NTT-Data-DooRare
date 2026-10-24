@@ -19,6 +19,7 @@ summary: Alert link/duplicates/snooze, F2 agent+manual plans+objection, F3 add i
   - Copilot Approve sends one `Idempotency-Key` per card (every idempotent route, e.g. create borrow request, failed with 400 before).
   - `simulate_pool_allocation` (REGION_ADMIN) now uses `demandCandidates` / `ruleSplit` (F-22 order, as plans are checked).
   - Pharmacist Copilot can propose `SEND_POOL_TO_AGENT` and `OBJECT_ALLOCATION_PLAN` (test `ai.f2.proposals.test.ts`).
+- Warehouse inbox showed F3 emergency legs as "F1 ยืม": `GET /transport-tasks` now returns `emergency` (borrow_request.context; `kind` stays F1 for slips/filters). Inbox: F3 badge/due/note/urgent, real sender (`from`, was hard-coded HA), no "รพ.รพ." (test `transport.emergency.test.ts`).
 
 ## Decisions
 - `decisions/0005-f2-f3-feedback-rules.md`.
