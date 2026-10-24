@@ -591,6 +591,7 @@ export const auditVedClassificationsTool: IAgentTool<{
 export const submitDataAdminProposalTool: IAgentTool<{
   action: 'VERIFY_DRUG_MAPPING' | 'REJECT_DRUG_MAPPING' | 'UPDATE_CENTRAL_ITEM';
   mappingId?: string;
+  version?: number;
   drugMasterId?: string;
   baseUnitsPerPack?: number;
   unitConversionFactor?: number;
@@ -617,6 +618,12 @@ export const submitDataAdminProposalTool: IAgentTool<{
       .uuid()
       .optional()
       .describe('UUID of drug_mapping (for VERIFY/REJECT)'),
+    version: z
+      .number()
+      .int()
+      .positive()
+      .optional()
+      .describe('Expected drug_mapping version (defaults to current version)'),
     drugMasterId: z
       .string()
       .uuid()
@@ -626,7 +633,7 @@ export const submitDataAdminProposalTool: IAgentTool<{
       .number()
       .positive()
       .optional()
-      .describe('Hospital pack size in base units (required for API-F2b-004 verification)'),
+      .describe('Hospital pack size in base units (required for VERIFY_DRUG_MAPPING)'),
     unitConversionFactor: z
       .number()
       .positive()
@@ -670,6 +677,12 @@ export const submitDataAdminProposalTool: IAgentTool<{
             error: 'mappingId is required for VERIFY_DRUG_MAPPING.',
           };
         }
+        if (args.baseUnitsPerPack === undefined || args.baseUnitsPerPack <= 0) {
+          return {
+            success: false,
+            error: 'baseUnitsPerPack (positive number) is required for VERIFY_DRUG_MAPPING.',
+          };
+        }
 
         const mapRes = await query<{
           id: string;
@@ -706,10 +719,11 @@ export const submitDataAdminProposalTool: IAgentTool<{
         const endpoint = buildEndpoint(actionDef.endpointTemplate, { id: mapRow.id });
 
         const effectiveDrugMasterId = args.drugMasterId || mapRow.drug_master_id;
-        const baseUnitsPerPack = args.baseUnitsPerPack ?? 1;
+        const expectedVersion = args.version ?? mapRow.version;
+        const baseUnitsPerPack = args.baseUnitsPerPack;
 
         const actionPayload: Record<string, unknown> = {
-          version: mapRow.version,
+          version: expectedVersion,
           baseUnitsPerPack,
           unitConversionFactor: args.unitConversionFactor ?? 1,
           ...(effectiveDrugMasterId ? { drugMasterId: effectiveDrugMasterId } : {}),
