@@ -548,7 +548,6 @@ export const DooRareChatDrawer: React.FC = () => {
             <div className="doorare-chat-session-list">
               {sessions.length === 0 ? (
                 <div className="doorare-chat-session-empty">
-                  <span style={{ fontSize: 24, marginBottom: 6 }}>🕒</span>
                   <div>ไม่มีประวัติการสนทนาใน 24 ชั่วโมงล่าสุด</div>
                 </div>
               ) : (
@@ -560,7 +559,7 @@ export const DooRareChatDrawer: React.FC = () => {
                   >
                     <div className="doorare-chat-session-info">
                       <div className="doorare-chat-session-name" title={s.title}>
-                        💬 {s.title}
+                        {s.title}
                       </div>
                       <div className="doorare-chat-session-time">
                         {formatSessionRelativeTime(s.updatedAt)}
@@ -583,7 +582,7 @@ export const DooRareChatDrawer: React.FC = () => {
             </div>
 
             <div className="doorare-chat-sidebar-footer">
-              <span className="doorare-chat-retention-pill">🕒 ล้างประวัติอัตโนมัติทุก 24 ชม.</span>
+              <span className="doorare-chat-retention-pill">ล้างประวัติอัตโนมัติทุก 24 ชม.</span>
             </div>
           </aside>
         )}
@@ -600,7 +599,9 @@ export const DooRareChatDrawer: React.FC = () => {
                   onClick={() => setShowSessionsDrawer((prev) => !prev)}
                   title="ดูประวัติการสนทนา (24 ชม.)"
                 >
-                  <span>💬</span>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                  </svg>
                   {sessions.length > 0 && (
                     <span className="doorare-sessions-badge">{sessions.length}</span>
                   )}
@@ -650,7 +651,7 @@ export const DooRareChatDrawer: React.FC = () => {
                     : 'ขยายเต็มหน้าจอ (Full Screen like ChatGPT / Claude / Gemini)'
                 }
               >
-                {isFullScreen ? '⤡ ย่อหน้าต่าง' : '⛶ เต็มจอ'}
+                {isFullScreen ? '⤡ ย่อ' : '⛶ เต็มจอ'}
               </button>
 
               <button
@@ -689,7 +690,11 @@ export const DooRareChatDrawer: React.FC = () => {
                       className="doorare-starter-card"
                       onClick={() => handleQuickPrompt(chip)}
                     >
-                      <span className="doorare-starter-icon">⚡</span>
+                      <span className="doorare-starter-icon">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+                        </svg>
+                      </span>
                       <span className="doorare-starter-text">{chip}</span>
                     </div>
                   ))}
@@ -803,7 +808,7 @@ export const DooRareChatDrawer: React.FC = () => {
                 <div className="doorare-input-badge">
                   <span className="doorare-badge-dot" />
                   <span className="doorare-badge-text">
-                    {user?.hospitalName ? `📍 ${user.hospitalName}` : '🌐 ส่วนกลาง เขตสุขภาพที่ 6'}
+                    {user?.hospitalName ? user.hospitalName : 'ส่วนกลาง เขตสุขภาพที่ 6'}
                   </span>
                 </div>
                 {isStreaming ? (
@@ -833,7 +838,7 @@ export const DooRareChatDrawer: React.FC = () => {
               </div>
             </div>
             <div className="doorare-chat-disclaimer">
-              🔒 ประมวลผลด้วย AI เพื่อความปลอดภัยทางคลินิก · โปรดตรวจสอบความถูกต้องของข้อมูล
+              ประมวลผลด้วย AI เพื่อความปลอดภัยทางคลินิก · โปรดตรวจสอบความถูกต้องของข้อมูล
             </div>
           </div>
       </div>

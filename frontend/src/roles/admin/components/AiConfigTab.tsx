@@ -76,14 +76,14 @@ const POPULAR_PRIMARY_MODELS = [
   { id: 'gpt-4o', label: 'GPT-4o (OpenAI / Azure)', badge: 'High Intelligence' },
   { id: 'antigravity/gemini-3.8-flash-tiered', label: 'Gemini 3.8 Flash Tiered (OmniRoute / Google)', badge: 'Fast Reasoning' },
   { id: 'deepseek-ai/DeepSeek-R1', label: 'DeepSeek-R1 (OpenRouter / Self-Hosted)', badge: 'Deep Reasoning' },
-  { id: 'custom', label: '✏️ ระบุ Model ID อื่นๆ เอง (Custom Model)...', badge: 'Custom' },
+  { id: 'custom', label: 'ระบุ Model ID อื่นๆ เอง (Custom Model)...', badge: 'Custom' },
 ];
 
 const POPULAR_FAST_MODELS = [
   { id: 'anthropic.claude-3-5-haiku-20241022-v1:0', label: 'Claude 3.5 Haiku (AWS Bedrock / Anthropic)', badge: '< 8s Emergency' },
   { id: 'gpt-4o-mini', label: 'GPT-4o Mini (OpenAI / Azure)', badge: 'Cost Efficient' },
   { id: 'antigravity/gemini-3.8-flash-tiered', label: 'Gemini 3.8 Flash Tiered (OmniRoute)', badge: 'High Speed' },
-  { id: 'custom', label: '✏️ ระบุ Fast Model ID อื่นๆ เอง...', badge: 'Custom' },
+  { id: 'custom', label: 'ระบุ Fast Model ID อื่นๆ เอง...', badge: 'Custom' },
 ];
 
 export function AiConfigTab({ onShowToast }: AiConfigTabProps) {
@@ -454,7 +454,7 @@ export function AiConfigTab({ onShowToast }: AiConfigTabProps) {
                 style={{ background: 'none', border: 'none', color: '#1D4ED8', fontSize: 11.5, cursor: 'pointer', padding: 0, fontWeight: 600 }}
                 onClick={() => setIsCustomPrimary(!isCustomPrimary)}
               >
-                {isCustomPrimary ? '📋 เลือกจาก Presets แนะนำ' : '✏️ ระบุ Model ID เอง'}
+                {isCustomPrimary ? 'เลือกจาก Presets แนะนำ' : 'ระบุ Model ID เอง'}
               </button>
             </div>
 
@@ -502,7 +502,7 @@ export function AiConfigTab({ onShowToast }: AiConfigTabProps) {
                 style={{ background: 'none', border: 'none', color: '#1D4ED8', fontSize: 11.5, cursor: 'pointer', padding: 0, fontWeight: 600 }}
                 onClick={() => setIsCustomFast(!isCustomFast)}
               >
-                {isCustomFast ? '📋 เลือกจาก Presets แนะนำ' : '✏️ ระบุ Fast Model ID เอง'}
+                {isCustomFast ? 'เลือกจาก Presets แนะนำ' : 'ระบุ Fast Model ID เอง'}
               </button>
             </div>
 
@@ -612,7 +612,6 @@ export function AiConfigTab({ onShowToast }: AiConfigTabProps) {
           >
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 16 }}>⚡</span>
                 <label style={{ fontSize: 13.5, fontWeight: 700, color: '#1E293B', cursor: 'pointer' }} onClick={() => setStreamingEnabled(!streamingEnabled)}>
                   โหมดสตรีมมิ่งข้อความสด (Real-Time Token Streaming)
                 </label>
@@ -838,7 +837,7 @@ export function AiConfigTab({ onShowToast }: AiConfigTabProps) {
                   <option value="/responses">/responses (Direct Response Endpoint)</option>
                   <option value="/v1/chat/completions">/v1/chat/completions (Full V1 Chat)</option>
                   <option value="/api/generate">/api/generate (Ollama / LLM Generate)</option>
-                  <option value="custom">✏️ ระบุ Path อื่นๆ เอง (Custom Path...)</option>
+                  <option value="custom">ระบุ Path อื่นๆ เอง (Custom Path...)</option>
                 </select>
               </div>
 
@@ -951,11 +950,11 @@ export function AiConfigTab({ onShowToast }: AiConfigTabProps) {
               <span>
                 {testResult.success
                   ? testResult.latencyMs < 500
-                    ? '⚡ ความเร็วสูงพิเศษ'
+                    ? 'ความเร็วสูงพิเศษ'
                     : testResult.latencyMs < 1500
-                    ? '🟢 เชื่อมต่อสำเร็จ'
-                    : '🟡 ปานกลาง'
-                  : '🔴 เชื่อมต่อล้มเหลว'}
+                    ? 'เชื่อมต่อสำเร็จ'
+                    : 'ปานกลาง'
+                  : 'เชื่อมต่อล้มเหลว'}
               </span>
               <span>({testResult.latencyMs} ms)</span>
               <span

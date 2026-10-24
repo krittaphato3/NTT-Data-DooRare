@@ -50,7 +50,11 @@ export const ToolExecutionLogCard: React.FC<ToolExecutionLogCardProps> = ({ tool
         title="คลิกเพื่อดูพารามิเตอร์และผลลัพธ์ของ Tool"
       >
         <div className="doorare-tool-log-title-wrap">
-          <span className="doorare-tool-icon">🛠️</span>
+          <span className="doorare-tool-icon">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+            </svg>
+          </span>
           <span className="doorare-tool-name">{tool.name}</span>
           {!isExpanded && argsSummary && (
             <span className="doorare-tool-args-preview">({argsSummary})</span>
@@ -82,7 +86,7 @@ export const ToolExecutionLogCard: React.FC<ToolExecutionLogCardProps> = ({ tool
         <div className="doorare-tool-log-body">
           {/* Input Parameters Section */}
           <div className="doorare-tool-section">
-            <div className="doorare-tool-section-label">📥 Input Parameters (Arguments):</div>
+            <div className="doorare-tool-section-label">Input Parameters (Arguments):</div>
             <pre className="doorare-tool-code-preview">
               <code>
                 {tool.args && Object.keys(tool.args).length > 0
@@ -95,7 +99,7 @@ export const ToolExecutionLogCard: React.FC<ToolExecutionLogCardProps> = ({ tool
           {/* Output / Observation Section */}
           <div className="doorare-tool-section">
             <div className="doorare-tool-section-label">
-              📤 Output / Observation (ผลลัพธ์จากระบบ):
+              Output / Observation (ผลลัพธ์จากระบบ):
             </div>
             {tool.status === 'running' ? (
               <div className="doorare-tool-running-placeholder">
