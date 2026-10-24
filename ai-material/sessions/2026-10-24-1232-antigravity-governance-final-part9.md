@@ -181,12 +181,20 @@ Provide a strictly evidence-based capstone session note and verification record 
     - Conditional test: `hospitalAdmin.tools: APPROVE_INCIDENT_PLAN proposal success-path` with explicit payload assertions (`assert.equal(resApprove.success, true)`, `assert.equal(resApprove.data.requiresHumanApproval, true)`, endpoint, method, and `planId`) and row-count stability assertions on `incident` and `emergency_plan`.
 - **Part 8b (`commits 0f7638e, 041d067`)**:
   - Created `dataAdmin.tools.test.ts` (106 static asserts) and `auditor.tools.test.ts` (109 static asserts) covering schema validation, queries against real seed data, pure helpers (`detectCustodyGaps`, `analyzeAuditWindow`), and proposal contracts.
+  - Assertion edits during development (from the Part 8b report, not recoverable from git as intermediate edits preceded initial commit):
+    - `get_unmapped_catalog_items`: `status: 'all'` removed (Zod enum allows only `UNMATCHED`, `SUGGESTED`, `NO_MAPPING_ROW`; omitted means all).
+    - `get_mapping_suggestions` fake UUID: `00000000-0000-0000-0000-000000000099` -> `a0000000-0000-4000-8000-000000000099` (RFC 4122 v4 UUID format required by Zod; default UUID validator rejected the former).
+    - `audit_ved_classifications`: `data.assumptions.vedNotNullInSchema === true` -> `data.assumptions.missingVedCheckSkipped.includes('NOT NULL')`.
 - **Part 8c (`commits c7f4748, 149d29a`)**:
   - `systemAdmin.tools.test.ts`: Added `ok: true` property to `byokService.testConnection` mock response.
-  - `helpers.ts`: Added `toNumber` conversion helper.
+  - `helpers.ts`: Added `toNumber` export / conversion helper.
   - Created `rbac-matrix.test.ts` (55 static asserts) testing 510 combinations across 10 roles x 51 tools, and `audit-integrity.test.ts` (24 static asserts) testing database SHA-256 vs Node crypto and synthetic chain corruption.
+  - Assertion edits during development (from the Part 8c report, not recoverable from git as intermediate edits preceded initial commit):
+    - `rbac-matrix.test.ts`: `allTools[0].name` (which was the wildcard `ping_system`) -> first tool without `'*'` in `allowedRoles` (`nonWildcardTool`).
+    - `rbac-matrix.test.ts`: `getToolsForRole('pharmacist')` and `('HACKER')` expectation `[]` -> names equal `['ping_system']` (real registry behavior: wildcard tool is visible to any non-empty role string).
+    - `audit-integrity.test.ts`: `analysis.totalRows` (property does not exist on `AuditWindowAnalysis`) -> `assert.ok(analysis.edgeRows >= 0)` (later replaced in Part 9 by the partition identity).
 - **Part 8d (`commit 2283a75`)**:
-  - `dataAdmin.tools.test.ts`: Added subtests for `VERIFY_DRUG_MAPPING` warnings on already `VERIFIED` and `REJECTED` mappings, and 5 subtests asserting validation on required fields for `UPDATE_CENTRAL_ITEM` (`itemType`, `internalCode`, `genericName`, `baseUnit`, invalid enum).
+  - `dataAdmin.tools.test.ts`: Added subtests for `VERIFY_DRUG_MAPPING` warnings on already `VERIFIED` and `REJECTED` mappings, and 1 subtest (`UPDATE_CENTRAL_ITEM validates each required field in execute`) covering 5 validation cases for `UPDATE_CENTRAL_ITEM` (`itemType`, `internalCode`, `genericName`, `baseUnit`, invalid enum).
   - `audit-integrity.test.ts`: Added vacuity and test rigor classification comment header.
   - `ai.governance.test.ts`: Added `mock-leak guard` test verifying no residual mocks on `tool.execute` or `byokService`.
 - **Part 9 (`commit 9901718`)**:
