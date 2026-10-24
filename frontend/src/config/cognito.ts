@@ -6,7 +6,7 @@ export const COGNITO_CONFIG = {
   region: 'us-east-1',
   domain: 'https://us-east-1yqc7bshfl.auth.us-east-1.amazoncognito.com',
   authority: 'https://cognito-idp.us-east-1.amazonaws.com/us-east-1_Yqc7bshFl',
-  redirectUri: 'https://d84l1y8p4kdic.cloudfront.net',
+  redirectUri: 'https://d27x5bphqn4glk.cloudfront.net',
   scope: 'phone openid email',
   responseType: 'code',
 };
@@ -16,8 +16,7 @@ export const COGNITO_CONFIG = {
  */
 export const getRedirectUri = (): string => {
   if (typeof window === 'undefined') return COGNITO_CONFIG.redirectUri;
-  const isCloudFront = window.location.hostname.includes('cloudfront.net');
-  return isCloudFront ? COGNITO_CONFIG.redirectUri : window.location.origin;
+  return window.location.origin;
 };
 
 export const cognitoAuthConfig: AuthProviderProps = {
