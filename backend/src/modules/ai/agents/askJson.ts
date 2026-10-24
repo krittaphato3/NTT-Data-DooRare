@@ -52,6 +52,8 @@ export async function askJson<T>(opts: {
   validate: (raw: string | null) => JsonCheck<T>;
   timeoutMs: number;
   maxTokens?: number;
+  /** `fast` uses the BYOK fast model when one is set (F3: a smaller, faster model, spec §14.2). */
+  modelTier?: 'primary' | 'fast';
   /** Replaces the BYOK provider (tests). */
   provider?: ILLMProvider;
 }): Promise<JsonAgentResult<T>> {
@@ -63,7 +65,7 @@ export async function askJson<T>(opts: {
     if (!agentEnabled) return { ...base, status: 'SKIPPED', modelId: null, flags: ['AGENT_DISABLED'] };
     if (config.provider === 'MOCK') return { ...base, status: 'FALLBACK', modelId: 'MOCK', flags: ['NO_LLM_CONFIGURED'] };
     provider = providerFactory.getProvider({ config, agentEnabled });
-    model = config.modelPrimary;
+    model = (opts.modelTier === 'fast' && config.modelFast) || config.modelPrimary;
   }
   const started = Date.now();
   const rec = { ...base, modelId: (model ?? provider.providerType) as string | null };
@@ -76,10 +78,13 @@ export async function askJson<T>(opts: {
       const left = opts.timeoutMs - (Date.now() - started);
       if (left <= 0) throw new Error(`timeout after ${opts.timeoutMs} ms`);
       rec.steps += 1;
+      let timer: ReturnType<typeof setTimeout> | undefined;
       const res = await Promise.race([
         provider.chat(messages, [], { model, temperature: 0, maxTokens: opts.maxTokens ?? 1800 }),
-        new Promise<never>((_, reject) => setTimeout(() => reject(new Error(`timeout after ${opts.timeoutMs} ms`)), left)),
-      ]);
+        new Promise<never>((_, reject) => {
+          timer = setTimeout(() => reject(new Error(`timeout after ${opts.timeoutMs} ms`)), left);
+        }),
+      ]).finally(() => clearTimeout(timer));
       rec.tokensIn += res.usage?.promptTokens ?? 0;
       rec.tokensOut += res.usage?.completionTokens ?? 0;
       if (res.model) rec.modelId = res.model;

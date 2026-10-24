@@ -17,6 +17,7 @@ import type { IntakeState } from './IntakeForm';
 import { ErrorNote, IncidentHeader, Warnings } from './IncidentHeader';
 import { AddPlanItem } from './AddPlanItem';
 import { AgentExtrasPanel } from './AgentExtrasPanel';
+import { AgentPlanBanner, AgentPlanCard, usePlanAgent } from './AgentPlanCard';
 import { LiveBorrowConfirm } from './LiveBorrowConfirm';
 import { LiveExtrasTable, LiveKitTable, PlanNotes } from './PlanTables';
 import { classMeta, errorText, num } from './format';
@@ -98,6 +99,9 @@ export function LiveIncidentFlow({ role = 'ER_STAFF' }: { role?: RoleCode }) {
   const [names, setNames] = useState<Record<string, string>>({});
   const [sent, setSent] = useState<ApiSendResult | null>(null);
   const resumed = useRef(false);
+  // AGT-F3-001: the agent assesses the rule plan in the background while staff look at it
+  const agent = usePlanAgent(step === 2 ? incidentId : undefined, access.mayWrite);
+  const appliedRun = useRef<string | null>(null);
 
   const go = (id: number) => {
     setStep(id);
@@ -258,6 +262,26 @@ export function LiveIncidentFlow({ role = 'ER_STAFF' }: { role?: RoleCode }) {
     void refreshPreview({ ...edits, removeExtras: (edits.removeExtras ?? []).filter((c) => c !== drugMasterId), setExtras: { ...edits.setExtras, [drugMasterId]: qty } });
   const restore = (key: string, kind: 'kit' | 'extra') =>
     void refreshPreview(kind === 'kit' ? { ...edits, removeKits: (edits.removeKits ?? []).filter((c) => c !== key) } : { ...edits, removeExtras: (edits.removeExtras ?? []).filter((c) => c !== key) });
+  /** Removes several lines in one edit (the agent's removals); a line staff set a quantity for is left alone. */
+  const removeLines = (lines: { key: string; kind: 'kit' | 'extra' }[]) => {
+    const kits = lines.filter((l) => l.kind === 'kit' && !(l.key in (edits.setKits ?? {}))).map((l) => l.key);
+    const extras = lines.filter((l) => l.kind === 'extra' && !(l.key in (edits.setExtras ?? {}))).map((l) => l.key);
+    if (kits.length === 0 && extras.length === 0) return;
+    const packOverrides = Object.fromEntries(Object.entries(edits.packOverrides ?? {}).filter(([code]) => !kits.includes(code)));
+    void refreshPreview({ ...edits, packOverrides, removeKits: [...new Set([...(edits.removeKits ?? []), ...kits])], removeExtras: [...new Set([...(edits.removeExtras ?? []), ...extras])] });
+  };
+  const agentRemovals = () =>
+    (agent.latest?.status === 'OK' ? agent.latest.lines : [])
+      .filter((l) => l.decision === 'REMOVE' && (preview?.kits.some((k) => k.code === l.key) || preview?.extras.some((e) => e.key === l.key)))
+      .map((l) => ({ key: l.key, kind: l.kind === 'KIT' ? ('kit' as const) : ('extra' as const) }));
+
+  // an assessment that finished while staff are on the plan step: its removals are applied once (they show as "removed", restorable)
+  useEffect(() => {
+    if (!agent.fresh || appliedRun.current === agent.fresh || !preview || busy || !access.mayWrite || agent.stale) return;
+    appliedRun.current = agent.fresh;
+    removeLines(agentRemovals());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [agent.fresh, preview, busy]);
 
   const dirty = JSON.stringify(edits) !== JSON.stringify(emptyEdits());
   const total = intakeTotal(intake);
@@ -273,7 +297,7 @@ export function LiveIncidentFlow({ role = 'ER_STAFF' }: { role?: RoleCode }) {
       <ErPageHeading
         title={incident ? `รับเหตุและวางแผน · ${incident.incidentNo}` : 'รับเหตุและวางแผน'}
         titleEn="/ Incident → plan → borrow"
-        subtitle="UI-11 · UI-12 · กู้ภัยแจ้ง ER กรอกข้อมูล → ระบบคำนวณแผนตามกฎ (Agent ยังไม่เชื่อมต่อ) → ตรวจ/แก้ → ตรวจสต็อก → ส่งคำขอยืม"
+        subtitle="UI-11 · UI-12 · กู้ภัยแจ้ง ER กรอกข้อมูล → ระบบคำนวณแผนตามกฎ → Agent ตัดรายการที่ไม่เกี่ยวกับเหตุและถามเจ้าหน้าที่ → ตรวจ/แก้ → ตรวจสต็อก → ส่งคำขอยืม"
       />
       <FlowStepper steps={STEPS} current={step} reached={reached} onGo={go} />
       <ErrorNote message={error} />
@@ -335,6 +359,14 @@ export function LiveIncidentFlow({ role = 'ER_STAFF' }: { role?: RoleCode }) {
             <div className="card" style={{ padding: '14px 18px', fontSize: 12.5, color: '#64748b' }}>{busy ? 'ระบบกำลังคำนวณแผน…' : 'ยังไม่มีแผน'}</div>
           ) : (
             <>
+              {incident && (
+                <AgentPlanBanner
+                  incident={incident}
+                  agent={agent}
+                  removedByAgent={(agent.latest?.lines ?? []).filter((l) => l.decision === 'REMOVE' && removed.some((r) => r.key === l.key)).length}
+                  questions={(agent.latest?.lines ?? []).filter((l) => l.decision === 'ASK').length}
+                />
+              )}
               <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap' }}>
                 <div style={{ flex: '1 1 640px', minWidth: 320, display: 'flex', flexDirection: 'column', gap: 16 }}>
                   <LiveKitTable plan={preview} editable={access.mayWrite} onPack={editPack} onRemove={removeKit} />
@@ -370,13 +402,16 @@ export function LiveIncidentFlow({ role = 'ER_STAFF' }: { role?: RoleCode }) {
                   <PlanNotes plan={preview} />
                 </div>
                 <div style={{ flex: '1 1 300px', minWidth: 280, display: 'flex', flexDirection: 'column', gap: 14 }}>
-                  <div className="card" style={{ padding: '14px 16px' }}>
-                    <div style={{ fontSize: 13.5, fontWeight: 700, color: '#0f2a5c', marginBottom: 6 }}>การประเมิน</div>
-                    <div style={{ fontSize: 12, color: '#475569', lineHeight: '18px' }}>
-                      ชุดและรายการนอกชุดมาจากกฎต่อผู้ป่วยตามระดับคัดแยก (Preset Kit / incident rules) · ปริมาณทั้งหมดคำนวณโดยโค้ด (F-27) · รายการนอกชุดที่ควรเตรียมเพิ่ม ขอความเห็นจาก Agent ได้ในกล่อง "ข้อเสนอของ Agent" ด้านซ้าย (ไม่รอ ไม่เปลี่ยนแผนเอง)
-                    </div>
-                    <div style={{ fontSize: 11.5, color: '#94a3b8', marginTop: 8 }}>เจ้าหน้าที่ตรวจ เพิ่ม ลดหรือเอาออกได้ก่อนยืนยัน (BR-F3-008)</div>
-                  </div>
+                  <AgentPlanCard
+                    agent={agent}
+                    plan={preview}
+                    removed={removed}
+                    mayWrite={access.mayWrite}
+                    busy={busy}
+                    onRemove={(key, kind) => removeLines([{ key, kind }])}
+                    onRestore={restore}
+                    onApplyAll={() => removeLines(agentRemovals())}
+                  />
                   <div className="card" style={{ padding: '14px 16px' }}>
                     <div style={{ fontSize: 13.5, fontWeight: 700, color: '#0f2a5c', marginBottom: 8 }}>สรุปความต้องการ</div>
                     <table className="qt">
