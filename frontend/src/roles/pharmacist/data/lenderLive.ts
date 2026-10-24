@@ -58,7 +58,9 @@ export function lenderItemToView(i: ApiLenderItem, now = Date.now()): LenderView
       receivedDate: fmtThaiTime(i.sentAt),
       urgency: u.key,
       urgencyLabel: u.label,
-      status: STATUS[i.status],
+      // a timed-out emergency request that still lacks goods stays answerable (late confirmation, first one wins)
+      status: i.canAnswerLate ? 'waiting' : STATUS[i.status],
+      ...(i.canAnswerLate ? { lateAnswer: true } : {}),
       trigger: i.context,
       round: i.round,
       ...(i.remainingSec !== null ? { deadlineSecs: i.remainingSec, deadlineLabel: `ตอบภายใน ${fmtThaiTime(i.deadlineAt)} น.` } : {}),

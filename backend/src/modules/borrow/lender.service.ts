@@ -18,7 +18,7 @@ import type { Db } from '../../db/tx.js';
 import { HttpError } from '../../middleware/httpError.js';
 import type { AuthSessionUser } from '../auth/auth.types.js';
 import { loadBorrowConfig } from './borrow.config.js';
-import { advanceRequest } from './borrow.flow.js';
+import { advanceRequest, LATE_ANSWER_REQUEST, lateAnswerSql } from './borrow.flow.js';
 import { findListing, latestForecast, usableStock } from './borrow.inputs.js';
 
 const QUEUE_GROUPS: Record<string, string[]> = {
@@ -60,24 +60,26 @@ const QUEUE_SELECT = `
          (SELECT hd.ved::text FROM hospital_drug hd WHERE hd.hospital_id = br.borrower_hospital_id AND hd.drug_master_id = i.drug_master_id LIMIT 1) AS ved,
          br.borrower_hospital_id, bh.code AS borrower_code, COALESCE(bh.name_th, bh.name_en) AS borrower_name,
          i.drug_master_id, COALESCE(NULLIF(concat_ws(' ', dm.generic_name, dm.strength, dm.dosage_form), ''), kt.name) AS drug_name, COALESCE(dm.base_unit, 'ชุด') AS base_unit, COALESCE(dm.is_cold_chain, kt.needs_cold_chain, false) AS cold_chain,
-         tt.id AS task_id, tt.task_no, tt.status::text AS task_status
+         tt.id AS task_id, tt.task_no, tt.status::text AS task_status, COALESCE(${lateAnswerSql('$2')}, false) AS late_ok
     FROM borrow_leg bl
     JOIN borrow_request br ON br.id = bl.request_id
     JOIN LATERAL (SELECT x.* FROM borrow_request_item x WHERE x.request_id = bl.request_id ORDER BY (x.id = bl.request_item_id) DESC, x.id LIMIT 1) i ON true
     LEFT JOIN drug_master dm ON dm.id = i.drug_master_id
     LEFT JOIN kit_type kt ON kt.id = i.kit_type_id
     JOIN hospital bh ON bh.id = br.borrower_hospital_id
+    LEFT JOIN incident inc ON inc.id = br.incident_id
     LEFT JOIN transport_task tt ON tt.ref_type = 'BORROW_LEG' AND tt.ref_id = bl.id AND tt.status <> 'CANCELLED'`;
 
 export class LenderService {
   async queue(user: AuthSessionUser, raw: Record<string, unknown>) {
     const hospitalId = mustBeLender(user);
     const page = parsePage(raw);
-    const params: unknown[] = [hospitalId];
+    const params: unknown[] = [hospitalId, LATE_ANSWER_REQUEST];
     const where = ['bl.lender_hospital_id = $1'];
     if (typeof raw.status === 'string') {
-      const statuses = QUEUE_GROUPS[raw.status] ?? raw.status.split(',');
-      where.push(`bl.status::text = ANY($${params.push(statuses)}::text[])`);
+      const statuses = `bl.status::text = ANY($${params.push(QUEUE_GROUPS[raw.status] ?? raw.status.split(','))}::text[])`;
+      // F3: a timed-out emergency leg that can still be confirmed late stays pending for the lender
+      where.push(raw.status === 'pending' ? `(${statuses} OR ${lateAnswerSql('$2')})` : statuses);
     }
     params.push(page.limit + 1, page.offset);
     const rows = (
@@ -101,6 +103,8 @@ export class LenderService {
         requestNo: l.request_no,
         round: Number(l.round_no),
         status: l.status,
+        /** F3 only: TIMED_OUT but the emergency request still lacks goods, so it can be confirmed late (POST /emergency-legs/{id}/confirm). */
+        canAnswerLate: Boolean(l.late_ok),
         urgency: l.urgency,
         reason: l.reason,
         context: l.context,

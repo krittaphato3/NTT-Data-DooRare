@@ -73,7 +73,10 @@ const SELECT_ROW = `
          f.coverage_ok,
          f.computed_at,
          r.model_version
-    FROM v_latest_forecast f
+    -- v_latest_forecast keeps one row per period: each predict run adds a period, so take the newest period of every series
+    -- (otherwise a drug is listed once per run, e.g. twice on the stock-alert screen).
+    FROM (SELECT DISTINCT ON (hospital_id, hospital_drug_id, granularity) * FROM v_latest_forecast
+           ORDER BY hospital_id, hospital_drug_id, granularity, period_start DESC NULLS LAST, computed_at DESC) f
     JOIN hospital h        ON h.id = f.hospital_id
     JOIN hospital_drug hd  ON hd.id = f.hospital_drug_id
     LEFT JOIN drug_master dm ON dm.id = hd.drug_master_id

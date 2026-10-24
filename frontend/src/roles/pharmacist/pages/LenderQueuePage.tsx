@@ -21,6 +21,7 @@ import { mockFallbackEnabled } from '../../../services/dataSource';
 import { useLenderQueue } from '../data/useLenderQueue';
 import { useBorrowRequests } from '../data/useBorrowRequests';
 import { respondToLeg } from '../../../services/borrowApi';
+import { confirmEmergencyLeg } from '../../../services/incidentApi';
 
 const UG_ICON: Record<string, IconName> = {
   critical: 'tri',
@@ -815,6 +816,11 @@ function DetailPanel({
             flex: 'none',
           }}
         >
+          {req.lateAnswer && (
+            <div role="status" style={{ fontSize: 12, color: '#92400e', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, padding: '6px 10px' }}>
+              คำขอฉุกเฉินนี้หมดเวลาตอบแล้ว ระบบขอโรงพยาบาลอื่นต่อ แต่ยังได้ของไม่ครบ · ยังยืนยันช้าได้ (ใครยืนยันก่อนได้ก่อน)
+            </div>
+          )}
           {/* A role that may not answer still sees the pending decision, disabled with the owner named. */}
           {!mayRespond && (
             <button
@@ -872,23 +878,26 @@ function DetailPanel({
                 >
                   ให้บางส่วน
                 </button>
-                <button
-                  type="button"
-                  style={{
-                    flex: 1,
-                    height: 34,
-                    borderRadius: 8,
-                    fontSize: 12.5,
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    border: kind === 'decline' ? '2px solid #dc2626' : '1px solid #cbd5e1',
-                    background: kind === 'decline' ? '#fef2f2' : '#ffffff',
-                    color: kind === 'decline' ? '#dc2626' : '#334155',
-                  }}
-                  onClick={() => setKind('decline')}
-                >
-                  ปฏิเสธ
-                </button>
+                {/* a late answer only confirms: the request has already moved on to other hospitals */}
+                {!req.lateAnswer && (
+                  <button
+                    type="button"
+                    style={{
+                      flex: 1,
+                      height: 34,
+                      borderRadius: 8,
+                      fontSize: 12.5,
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      border: kind === 'decline' ? '2px solid #dc2626' : '1px solid #cbd5e1',
+                      background: kind === 'decline' ? '#fef2f2' : '#ffffff',
+                      color: kind === 'decline' ? '#dc2626' : '#334155',
+                    }}
+                    onClick={() => setKind('decline')}
+                  >
+                    ปฏิเสธ
+                  </button>
+                )}
               </div>
 
               <button
@@ -952,7 +961,12 @@ function DetailPanel({
                     const body = kind === 'full' ? { decision: 'ACCEPT' as const } : kind === 'partial' ? { decision: 'PARTIAL' as const, qty: totalLotQty, lots: chosen } : { decision: 'REJECT' as const, reason: declineReason.trim() };
                     setSending(true);
                     setSendError(null);
-                    respondToLeg(req.legId!, body)
+                    // F3 urgent requests go through the emergency confirmation (first confirmation wins, kits / FEFO picked by the server)
+                    const answer =
+                      req.trigger === 'EMERGENCY'
+                        ? confirmEmergencyLeg(req.legId!, body.decision === 'ACCEPT' ? { decision: 'CONFIRM' } : body.decision === 'PARTIAL' ? { decision: 'PARTIAL', qty: body.qty } : { decision: 'REJECT', reason: body.reason })
+                        : respondToLeg(req.legId!, body);
+                    answer
                       .then(() => { setPhase('done'); onResponded?.(); })
                       .catch((e: Error) => setSendError(e.message))
                       .finally(() => setSending(false));

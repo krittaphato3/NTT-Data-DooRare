@@ -1,13 +1,16 @@
 import { useEffect, useState } from 'react';
 import { Icon } from '../../../components/common/icons';
+import { useAuth } from '../../../context/AuthContext';
 import { homeHrefFor } from '../../../data/navigation';
+import { mayActFor } from '../../../lib/rbac';
 import type { RoleCode } from '../../../lib/rbac';
 import { AllocationDrawer } from '../components/AllocationDrawer';
-import { cancelPlan, choosePlanOption, decidePlan } from '../../../services/expiryApi';
+import { ManualPlanDialog } from '../components/ManualPlanDialog';
+import { cancelPlan, choosePlanOption, decidePlan, objectPlan, sendPoolToAgent } from '../../../services/expiryApi';
 import type { ApiPlanOption } from '../../../services/expiryApi';
 import { usePoolAndPlans } from '../data/useExpiryF2';
 import { COST_LIMIT_PCT, planStatusMeta } from '../data/pool';
-import type { AllocationPlan, PlanStatus } from '../data/pool';
+import type { AllocationPlan, PlanStatus, PoolLot } from '../data/pool';
 import '../pool.css';
 
 type PoolTab = 'pool' | 'plans';
@@ -60,6 +63,32 @@ export function PoolAllocationPage({ role = 'PHARMACIST' }: { role?: RoleCode })
   const liveReject = (p: AllocationPlan, comment: string) => p.live && run(p, decidePlan(p.live.uuid, 'REJECTED', p.version, comment), 'บันทึกการไม่เห็นชอบแล้ว · แผนเข้าสถานะต้องหารือ');
   const liveOption = (p: AllocationPlan, id: string, label: string) => p.live && run(p, choosePlanOption(p.live.uuid, id as ApiPlanOption, p.version), `บันทึกทางเลือกแล้ว: ${label} (audit_log)`);
   const liveCancel = (p: AllocationPlan, reason: string) => p.live && run(p, cancelPlan(p.live.uuid, reason), 'ส่งคำขอยกเลิกแล้ว · ถ้าเป็นแผนที่อนุมัติแล้วต้องให้อีกฝ่ายยินยอมด้วย');
+  const liveObject = (p: AllocationPlan, reason: string) => p.live && run(p, objectPlan(p.live.uuid, reason), 'ยื่นคัดค้านแล้ว · แผนเข้าสถานะต้องหารือ และแจ้งทุก รพ.ในแผน');
+
+  /* F2: the owner pharmacist turns a pool lot into a plan, by the allocation agent or by hand. */
+  const { user } = useAuth();
+  const mayPlan = mayActFor(role, 'PHARMACIST', 'approveAllocation');
+  const [manualFor, setManualFor] = useState<PoolLot | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const planCreated = (planNo: string, status: string, detail = '') => {
+    setNotice(`สร้างแผน ${planNo} แล้ว · ${status === 'READY_FOR_APPROVAL' ? 'รอ รพ.ที่เกี่ยวข้องเห็นชอบ' : 'อนุมัติอัตโนมัติ (เครือข่ายเดียวกัน) · เริ่มขั้นตอนขนส่ง'}${detail}`);
+    setTab('plans');
+    return data.reload();
+  };
+  const toAgent = (l: PoolLot) => {
+    if (!l.live) return;
+    setBusy(true);
+    setActionError(null);
+    setNotice(null);
+    sendPoolToAgent(l.live.uuid)
+      .then(({ data: r }) => {
+        const a = r.agent;
+        const how = a.status === 'OK' ? ` · Agent (${a.model ?? '—'}): ${a.summary ?? ''}` : ` · ใช้สูตร F-22 แทน Agent (${[a.status, ...a.flags].join(', ')})${a.summary ? `: ${a.summary}` : ''}`;
+        return planCreated(r.plan.planNo, r.plan.status, how);
+      })
+      .catch((e: Error) => setActionError(e.message))
+      .finally(() => setBusy(false));
+  };
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -169,6 +198,12 @@ export function PoolAllocationPage({ role = 'PHARMACIST' }: { role?: RoleCode })
         </div>
       </section>
 
+      {(notice || (actionError && !drawerOpen)) && (
+        <div className="card" role={actionError && !drawerOpen ? 'alert' : 'status'} style={{ padding: '10px 16px', fontSize: 13, color: actionError && !drawerOpen ? '#B91C1C' : '#0F2A5C' }}>
+          {actionError && !drawerOpen ? actionError : notice}
+        </div>
+      )}
+
       <section className="card" style={{ padding: 0 }}>
         <div className="tr-card-head">
           <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
@@ -207,6 +242,7 @@ export function PoolAllocationPage({ role = 'PHARMACIST' }: { role?: RoleCode })
                   <th style={{ width: 170 }}>หมดอายุ</th>
                   <th>ปล่อยโดย</th>
                   <th style={{ width: 120 }}>สถานะ</th>
+                  {live && <th style={{ width: 230 }}>จัดสรร</th>}
                 </tr>
               </thead>
               <tbody>
@@ -238,7 +274,30 @@ export function PoolAllocationPage({ role = 'PHARMACIST' }: { role?: RoleCode })
                     </td>
                     <td>
                       <span className="badge t-teal">ถูกกันไว้</span>
+                      {l.live?.planNo && <div className="sub code">{l.live.status === 'ALLOCATED' ? 'กำลังขนส่ง' : 'ในแผน'} {l.live.planNo}</div>}
                     </td>
+                    {live && (
+                      <td>
+                        {!l.live || l.live.originId !== user?.hospitalId ? (
+                          <span className="sub">เจ้าของล็อตเป็นผู้จัดสรร</span>
+                        ) : l.live.status === 'ALLOCATED' ? (
+                          <span className="sub">ส่วนที่เหลือ {l.live.qtyAvailable.toLocaleString()} {l.unit} จัดสรรได้เมื่อแผนก่อนหน้าส่งถึง</span>
+                        ) : l.live.qtyAvailable > 0 ? (
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                            <button className="btn btn-p btn-sm" disabled={!mayPlan || busy} onClick={() => toAgent(l)} title="ส่งข้อมูลล็อตและผู้รับที่โค้ดคำนวณให้ Agent เสนอการแบ่ง · โค้ดตรวจ F-22/F-23 ก่อนบันทึก">
+                              <Icon name="sparkle" />
+                              {busy ? 'กำลังส่ง…' : 'ให้ Agent จัดสรร'}
+                            </button>
+                            <button className="btn btn-s btn-sm" disabled={!mayPlan || busy} onClick={() => setManualFor(l)}>
+                              สร้างแผนเอง
+                            </button>
+                            <span className="sub num" style={{ width: '100%' }}>เหลือจัดสรร {l.live.qtyAvailable.toLocaleString()} {l.unit}</span>
+                          </div>
+                        ) : (
+                          <span className="sub">อยู่ในแผนครบจำนวนแล้ว</span>
+                        )}
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -306,9 +365,12 @@ export function PoolAllocationPage({ role = 'PHARMACIST' }: { role?: RoleCode })
                       </td>
                       <td>
                         <span className={`badge ${meta.tone}`}>{meta.label}</span>
+                        {p.live && !p.live.involved && <span className="badge t-amber" style={{ marginLeft: 4 }}>{p.live.canObject ? 'คัดค้านได้' : 'ดูอย่างเดียว'}</span>}
                         {p.status === 'NEEDS_DISCUSSION' && (
                           <div className="sub" style={{ color: '#D97706', fontWeight: 500, marginTop: 2 }}>
-                            ⚠ รพ.บางบ่อ ปฏิเสธยอด · รอนัดประชุม 3 รพ.
+                            ⚠ {live
+                              ? `${p.approvals.filter((a) => a.state === 'REJECTED').map((a) => a.hospital).join(', ') || 'มี รพ.'} ไม่เห็นชอบ/คัดค้าน · รอนัดประชุม ${p.approvals.length} รพ.`
+                              : 'รพ.บางบ่อ ปฏิเสธยอด · รอนัดประชุม 3 รพ.'}
                           </div>
                         )}
                         {!p.economical && p.status === 'PENDING_MY_APPROVAL' && (
@@ -344,9 +406,22 @@ export function PoolAllocationPage({ role = 'PHARMACIST' }: { role?: RoleCode })
           onReject={(comment) => liveReject(sel, comment)}
           onUneconomical={(label, id) => (live && id ? liveOption(sel, id, label) : decideUneconomical(sel.id, label))}
           onCancel={(reason) => liveCancel(sel, reason)}
+          onObject={(reason) => liveObject(sel, reason)}
           busy={busy}
           error={actionError}
           onClose={() => setDrawerOpen(false)}
+        />
+      )}
+
+      {manualFor?.live && (
+        <ManualPlanDialog
+          poolId={manualFor.live.uuid}
+          lotLabel={`${manualFor.drug} · ${manualFor.id}`}
+          onClose={() => setManualFor(null)}
+          onCreated={(planNo, status) => {
+            setManualFor(null);
+            void planCreated(planNo, status);
+          }}
         />
       )}
     </>

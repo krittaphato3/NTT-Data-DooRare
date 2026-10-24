@@ -96,6 +96,18 @@ async function apply(
   else if (changed.rowCount) result.updated += 1;
 }
 
+/**
+ * SM-8 SNOOZED -> OPEN as soon as the snooze is over. Without this the alert stays hidden until the next 6-hourly
+ * re-evaluation, so a 4-hour snooze could last 10 hours. Run once a minute with the borrow timers.
+ */
+export async function reopenSnoozedAlerts(client: pg.PoolClient): Promise<number> {
+  const reopened = await client.query(
+    `UPDATE stock_alert SET status = 'OPEN', snoozed_until = NULL, updated_at = now(), version = version + 1
+      WHERE status = 'SNOOZED' AND snoozed_until <= now()`,
+  );
+  return reopened.rowCount ?? 0;
+}
+
 /** Evaluates the forecasts of one run (one granularity) for every hospital it covers. */
 export async function evaluateAlerts(client: pg.PoolClient, runId: string, granularity: Granularity): Promise<EvaluateResult> {
   const result: EvaluateResult = { evaluated: 0, opened: 0, updated: 0, closed: 0, reopened: 0 };

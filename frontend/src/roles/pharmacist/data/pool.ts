@@ -16,6 +16,8 @@ export interface PoolLot {
   from: string;
   releasedBy: string;
   releasedAt: string;
+  /** Live rows only: pool entry uuid, owner hospital and the quantity not yet in a plan. */
+  live?: { uuid: string; originId: string; qtyAvailable: number; status: 'HELD' | 'IN_PLAN' | 'ALLOCATED'; planNo: string | null };
 }
 
 export type PlanStatus =
@@ -54,6 +56,10 @@ export interface AllocationPlan {
     cancelRequestedBy: string | null;
     lines: { receiver: string; qty: number; km: number; cost: number; taskNo: string | null }[];
     openForApproval: boolean;
+    /** The viewer's hospital is in the plan; `isParty` = origin or receiver (an objector is involved but not a party). */
+    involved: boolean;
+    isParty: boolean;
+    canObject: boolean;
   };
   version: number;
   status: PlanStatus;
@@ -77,7 +83,8 @@ export interface AllocationPlan {
   daysLeft: number;
   /** merge candidate that would drop the ratio under the limit */
   merge?: { transportId: string; drug: string; to: string; newCost: number; newRatioPct: number };
-  agent: { run: string; confidence: 'สูง' | 'ปานกลาง' | 'ต่ำ'; note: string };
+  /** `title` overrides the box heading (live: agent model / fallback / hand-made plan); confidence '—' = no agent judgement. */
+  agent: { run: string; confidence: 'สูง' | 'ปานกลาง' | 'ต่ำ' | '—'; note: string; title?: string };
   approvals: PlanApproval[];
   dueAt: string;
   decided?: { option: UneconomicalOption['id']; at: string };

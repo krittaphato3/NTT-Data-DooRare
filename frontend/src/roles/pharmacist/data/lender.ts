@@ -38,6 +38,8 @@ export interface BorrowRequest {
   deadlineLabel?: string; // e.g. "ตอบภายใน 23:40 น."
   deadlinePct?: number;  // percent of window used
   message: string;       // requester note
+  /** F3: answered through POST /emergency-legs/{id}/confirm; `lateAnswer` = timed out but the request still lacks goods. */
+  lateAnswer?: boolean;
 }
 
 export interface LendableStock {

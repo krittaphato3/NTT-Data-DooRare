@@ -188,7 +188,7 @@ export function AlertsPanel({ query, hospital, role = 'PHARMACIST' }: AlertsPane
                       disabled={!mayAct}
                       title={mayAct ? undefined : hint}
                       onClick={() => {
-                        if (a.alertId) window.location.search = withRole(a.req ? '?page=requests' : '?page=alerts', role);
+                        if (a.alertId) window.location.search = withRole(a.req ? `?page=requests&request=${encodeURIComponent(a.req)}` : '?page=alerts', role);
                       }}
                     >
                       {a.action}

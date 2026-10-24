@@ -240,7 +240,7 @@ export function StockAlertTable({ rows, acked, snoozed, created, onAction, role 
                           key={a.cond}
                           className="link"
                           style={{ fontSize: 12.5 }}
-                          title={a.cond === 'snooze' ? 'เลื่อนการแจ้งเตือน 4 ชั่วโมง' : undefined}
+                          title={a.cond === 'snooze' ? 'ซ่อนแจ้งเตือนนี้ชั่วคราว (1-168 ชม. พร้อมเหตุผล) · ครบเวลาแล้วกลับมาเป็น “เปิด” เอง' : undefined}
                           onClick={() => onAction(row, a.cond)}
                         >
                           {a.label}

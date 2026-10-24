@@ -2,6 +2,8 @@
  * Regional pool (API-F2a-006) and allocation plans (API-F2a-007..011, SM-5, FL-14).
  * Approval: every involved hospital's pharmacist; any rejection or a missed deadline => NEEDS_DISCUSSION; all approved => transport tasks.
  * Uneconomical plans (F-23) need the owner pharmacist's option first (BR-F2a-010/011). Cancelling after approval needs two hospitals (BR-F2a-018).
+ * A plan comes from the allocation agent (allocation.agent.ts) or is written by the owner pharmacist (`createManual`); while it is
+ * open, any other hospital of the region can see it and object with a reason (`objection`), which also means NEEDS_DISCUSSION.
  */
 import type { Request } from 'express';
 import type pg from 'pg';
@@ -10,13 +12,14 @@ import type { AuditContext } from '../../core/audit.js';
 import { notifyRoles } from '../../core/notify.js';
 import { parsePage, toPage } from '../../core/pagination.js';
 import { releaseHeld } from '../../core/stock.js';
-import { bodyObject, optionalNumber, uuidParam } from '../../core/validate.js';
+import { bodyObject, isUuid, optionalNumber, uuidParam } from '../../core/validate.js';
 import { pool, query } from '../../db/client.js';
 import { withTransaction } from '../../db/tx.js';
 import type { Db } from '../../db/tx.js';
 import { HttpError } from '../../middleware/httpError.js';
 import type { AuthSessionUser } from '../auth/auth.types.js';
-import { startTransport } from './matching.js';
+import { createPlanFromAgentProposal, demandCandidates, loadPoolLot, poolLotBlocker, startTransport } from './matching.js';
+import type { AgentProposal, PoolLot } from './matching.js';
 
 /** FL-12 / schema `allocation_plan.option_chosen`: the four options offered for an uneconomical lot (BR-F2a-010 / -011). */
 export const OPTIONS = [
@@ -30,7 +33,7 @@ const APPROVED_STATES = ['AUTO_APPROVED', 'APPROVED', 'TRANSPORTING'];
 
 const PLAN_SELECT = `
   SELECT ap.id, ap.plan_no, ap.status::text AS status, ap.version, ap.total_value_thb::float8 AS total_value, ap.total_transport_cost_thb::float8 AS total_cost,
-         ap.cost_ratio::float8 AS cost_ratio, ap.economical, ap.option_chosen, ap.approval_deadline, ap.created_at, ap.updated_at, ap.agent_run_id,
+         ap.cost_ratio::float8 AS cost_ratio, ap.economical, ap.option_chosen, ap.approval_deadline, ap.created_at, ap.updated_at, ap.agent_run_id, ap.region_id,
          pe.id AS pool_id, ne.id AS item_id, ne.hospital_id AS origin_id, oh.code AS origin_code, COALESCE(oh.name_th, oh.name_en) AS origin_name,
          sl.lot_no, sl.expiry_date::text AS expiry_date, (sl.expiry_date - current_date) AS days_left, hd.local_code, hd.ved::text AS ved, COALESCE(hd.unit_price_thb, 0)::float8 AS unit_price,
          COALESCE(NULLIF(concat_ws(' ', dm.generic_name, dm.strength, dm.dosage_form), ''), hd.local_name) AS drug_name, COALESCE(dm.base_unit, hd.local_unit) AS unit,
@@ -70,6 +73,10 @@ async function planViews(db: Db, rows: Record<string, any>[], viewer: AuthSessio
     ).rows;
     const mine = approvals.find((a) => a.hospital_id === viewer.hospitalId);
     const task = lines.find((l) => l.task_id);
+    const agent = p.agent_run_id
+      ? (await db.query(`SELECT status, model_id, output->>'summary_th' AS summary, output->>'confidence' AS confidence, output->'flags' AS flags FROM agent_run WHERE id = $1`, [p.agent_run_id])).rows[0]
+      : null;
+    const kindOf = (hospitalId: string) => (hospitalId === p.origin_id ? 'ORIGIN' : lines.some((l) => l.receiver_hospital_id === hospitalId) ? 'RECEIVER' : 'OBJECTOR');
     const requested = lines.length
       ? (await db.query(`SELECT cancel_requested_by FROM transport_task WHERE ref_type = 'ALLOCATION_LINE' AND ref_id = ANY($1::uuid[]) AND status <> 'CANCELLED' AND cancel_requested_by IS NOT NULL LIMIT 1`, [lines.map((l) => l.id)])).rows[0]
       : null;
@@ -91,9 +98,18 @@ async function planViews(db: Db, rows: Record<string, any>[], viewer: AuthSessio
       economical: p.economical,
       option: p.option_chosen,
       options: p.economical ? [] : OPTIONS.map(({ id, label }) => ({ id, label })),
-      approvals: approvals.map((a) => ({ hospital: { id: a.hospital_id, code: a.code, name: a.name }, decision: a.decision, decidedAt: a.decided_at ? new Date(a.decided_at).toISOString() : null, decidedBy: a.decided_by, comment: a.comment })),
+      approvals: approvals.map((a) => ({ hospital: { id: a.hospital_id, code: a.code, name: a.name }, kind: kindOf(a.hospital_id), decision: a.decision, decidedAt: a.decided_at ? new Date(a.decided_at).toISOString() : null, decidedBy: a.decided_by, comment: a.comment })),
       myDecision: mine ? mine.decision : null,
       isOrigin: viewer.hospitalId === p.origin_id,
+      /** The viewer's hospital takes part (origin, receiver or an objector); others of the region only see open plans and may object. */
+      involved: Boolean(mine),
+      myKind: mine ? kindOf(mine.hospital_id) : null,
+      canObject:
+        !mine && Boolean(viewer.hospitalId) &&
+        (OPEN_FOR_APPROVAL.includes(p.status) || (APPROVED_STATES.includes(p.status) && lines.every((l) => !l.task_id || l.task_status === 'WAITING_DISPATCH'))),
+      agent: agent
+        ? { status: agent.status as string, model: agent.model_id as string | null, summary: agent.summary as string | null, confidence: agent.confidence as string | null, flags: (agent.flags ?? []) as string[] }
+        : null,
       approvalDeadline: p.approval_deadline ? new Date(p.approval_deadline).toISOString() : null,
       cancelRequestedBy: requested?.cancel_requested_by ?? null,
       agentRunId: p.agent_run_id,
@@ -105,14 +121,58 @@ async function planViews(db: Db, rows: Record<string, any>[], viewer: AuthSessio
   return out.map(({ _task, ...rest }) => rest);
 }
 
-async function loadPlan(db: Db, id: string, user: AuthSessionUser, lock = false) {
+/** Region of the signed-in user: the user's own region, else the region of the user's hospital. */
+async function viewerRegion(db: Db, user: AuthSessionUser): Promise<string | null> {
+  if (user.regionId) return user.regionId;
+  if (!user.hospitalId) return null;
+  return (await db.query(`SELECT region_id FROM hospital WHERE id = $1`, [user.hospitalId])).rows[0]?.region_id ?? null;
+}
+
+/**
+ * A plan the user may see. Involved hospitals always; with `regionRead`, any hospital of the plan's region while the plan can still
+ * be objected to (OBJECTABLE). Every action other than an objection needs an involved hospital.
+ */
+async function loadPlan(db: Db, id: string, user: AuthSessionUser, lock = false, regionRead = false) {
   const row = (await db.query(`${PLAN_SELECT} WHERE ap.id = $1 ${lock ? 'FOR UPDATE OF ap' : ''}`, [id])).rows[0];
   if (!row) throw new HttpError(404, 'NOT_FOUND', 'ไม่พบแผนจัดสรร');
   if (user.hospitalId) {
     const involved = (await db.query(`SELECT 1 FROM plan_approval WHERE plan_id = $1 AND hospital_id = $2`, [id, user.hospitalId])).rowCount;
-    if (!involved) throw new HttpError(404, 'NOT_FOUND', 'ไม่พบแผนจัดสรร');
+    const regionOk =
+      regionRead && !involved && row.region_id === (await viewerRegion(db, user)) &&
+      Boolean((await db.query(`SELECT ${OBJECTABLE} AS ok FROM allocation_plan ap WHERE ap.id = $1`, [id])).rows[0]?.ok);
+    if (!involved && !regionOk) throw new HttpError(404, 'NOT_FOUND', 'ไม่พบแผนจัดสรร');
   }
   return row;
+}
+
+/** §14.6: the human action on an agent-made plan. */
+async function logDecision(db: Db, plan: { id: string; agent_run_id: string | null }, decision: string, rationale: string | null, userId: string, action: string): Promise<void> {
+  if (!plan.agent_run_id) return;
+  await db.query(
+    `INSERT INTO decision_log (agent_run_id, ref_type, ref_id, decision, rationale, human_actor_id, human_action) VALUES ($1, 'allocation_plan', $2, $3, $4, $5, $6)`,
+    [plan.agent_run_id, plan.id, decision, rationale, userId, action],
+  );
+}
+
+/** Body of a hand-made split: 1-20 distinct receivers with whole positive quantities. */
+function parseLines(raw: unknown): AgentProposal['lines'] {
+  if (!Array.isArray(raw) || raw.length === 0 || raw.length > 20) throw new HttpError(400, 'VALIDATION', 'lines ต้องมี 1-20 รายการ');
+  const lines = raw.map((l) => {
+    const o = bodyObject(l);
+    const qty = Number(o.qty);
+    if (!isUuid(o.receiverHospitalId) || !Number.isInteger(qty) || qty <= 0) throw new HttpError(400, 'VALIDATION', 'แต่ละรายการต้องมี receiverHospitalId และ qty เป็นจำนวนเต็มบวก');
+    return { receiverHospitalId: o.receiverHospitalId as string, qty };
+  });
+  if (new Set(lines.map((l) => l.receiverHospitalId)).size !== lines.length) throw new HttpError(400, 'VALIDATION', 'โรงพยาบาลผู้รับซ้ำกัน');
+  return lines;
+}
+
+/** A pool lot of the user's region (404 otherwise, like the pool listing). */
+async function poolLotOfRegion(db: Db, user: AuthSessionUser, rawId: string, lock = false): Promise<PoolLot> {
+  const pool = await loadPoolLot(db, uuidParam(rawId, 'id'), lock);
+  const region = await viewerRegion(db, user);
+  if (!pool || (region && pool.region_id !== region)) throw new HttpError(404, 'NOT_FOUND', 'ไม่พบล็อตในคลังกลาง');
+  return pool;
 }
 
 async function involvedHospitals(db: Db, planId: string): Promise<string[]> {
@@ -126,6 +186,40 @@ async function notifyInvolved(db: Db, planId: string, kind: string, title: strin
 function assertVersion(row: { version: number }, version: number | undefined): void {
   if (version !== undefined && version !== Number(row.version)) throw new HttpError(409, 'VERSION_CONFLICT', 'แผนถูกแก้ไขโดยผู้อื่นแล้ว กรุณารีเฟรช', { currentVersion: Number(row.version) });
 }
+
+/** Live transport tasks of a plan's lines, locked. */
+async function lockPlanTasks(client: pg.PoolClient, planId: string): Promise<{ id: string; status: string; cancel_requested_by: string | null }[]> {
+  return (
+    await client.query(
+      `SELECT tt.id, tt.status::text AS status, tt.cancel_requested_by FROM transport_task tt JOIN allocation_line al ON al.id = tt.ref_id
+        WHERE tt.ref_type = 'ALLOCATION_LINE' AND al.plan_id = $1 AND tt.status <> 'CANCELLED' FOR UPDATE OF tt`,
+      [planId],
+    )
+  ).rows;
+}
+
+/** Cancels transport tasks that have not left yet (WAITING_DISPATCH), with their CANCELLED event. */
+async function cancelTasks(client: pg.PoolClient, taskIds: string[], userId: string, by: { consentBy?: string; reason?: string }): Promise<void> {
+  await client.query(
+    `UPDATE transport_task SET status = 'CANCELLED', cancel_consent_by = COALESCE($2, cancel_consent_by), cancel_reason = COALESCE($3, cancel_reason), updated_at = now(), version = version + 1 WHERE id = ANY($1::uuid[])`,
+    [taskIds, by.consentBy ?? null, by.reason ?? null],
+  );
+  for (const id of taskIds) {
+    await client.query(
+      `INSERT INTO transport_event (task_id, client_event_id, seq, to_status, captured_at, actor_id, photo_keys, applied) VALUES ($1, gen_random_uuid(), (SELECT COALESCE(max(seq), 0) + 1 FROM transport_event WHERE task_id = $1), 'CANCELLED', now(), $2, '{}', true)`,
+      [id, userId],
+    );
+  }
+}
+
+/**
+ * SQL on `ap`: a plan another hospital of the region may still object to - open for approval, or approved (also auto-approved
+ * inside one network) while none of its goods has left (every transport task still WAITING_DISPATCH, as for a cancel, BR-F2a-018).
+ */
+const OBJECTABLE = `(ap.status IN ('READY_FOR_APPROVAL', 'NEEDS_DISCUSSION')
+  OR (ap.status IN ('AUTO_APPROVED', 'APPROVED', 'TRANSPORTING') AND NOT EXISTS (
+        SELECT 1 FROM allocation_line al JOIN transport_task tt ON tt.ref_type = 'ALLOCATION_LINE' AND tt.ref_id = al.id
+         WHERE al.plan_id = ap.id AND tt.status NOT IN ('WAITING_DISPATCH', 'CANCELLED'))))`;
 
 /** The pool's lot goes back to waiting for a new plan: quantity of the cancelled lines returns to `qty_available`. */
 async function returnLinesToPool(client: pg.PoolClient, planId: string, poolId: string): Promise<number> {
@@ -181,8 +275,12 @@ export class PlansService {
 
   async list(user: AuthSessionUser, raw: Record<string, unknown>) {
     const page = parsePage(raw);
-    const params: unknown[] = [user.hospitalId ?? null];
-    const where = ['($1::uuid IS NULL OR EXISTS (SELECT 1 FROM plan_approval pa WHERE pa.plan_id = ap.id AND pa.hospital_id = $1::uuid))'];
+    const params: unknown[] = [user.hospitalId ?? null, await viewerRegion(pool, user)];
+    // involved plans, plus the plans of the region another hospital may still object to
+    const where = [
+      `($1::uuid IS NULL OR EXISTS (SELECT 1 FROM plan_approval pa WHERE pa.plan_id = ap.id AND pa.hospital_id = $1::uuid)
+        OR (ap.region_id = $2::uuid AND ${OBJECTABLE}))`,
+    ];
     if (typeof raw.status === 'string') {
       const groups: Record<string, string[]> = {
         open: ['READY_FOR_APPROVAL', 'NEEDS_DISCUSSION'],
@@ -200,9 +298,108 @@ export class PlansService {
 
   async detail(user: AuthSessionUser, rawId: string) {
     const id = uuidParam(rawId, 'id');
-    const row = await loadPlan(pool, id, user);
+    const row = await loadPlan(pool, id, user, false, true);
     const data = (await planViews(pool, [row], user))[0];
     return { ok: true, id, version: data.version, data };
+  }
+
+  /** `GET /pool/{id}/candidates`: who can use the lot before expiry and how much (F-22), for a hand-made plan or to check the agent. */
+  async candidates(user: AuthSessionUser, rawId: string) {
+    const lot = await poolLotOfRegion(pool, user, rawId);
+    const { life, candidates } = await demandCandidates(pool, lot);
+    return {
+      ok: true,
+      data: {
+        poolEntryId: lot.id,
+        drug: { name: lot.drug_name, unit: lot.unit },
+        lotNo: lot.lot_no,
+        daysLeft: life,
+        qtyAvailable: lot.qty_available,
+        unitPrice: lot.unit_price,
+        isOrigin: lot.origin_id === user.hospitalId,
+        blocker: poolLotBlocker(lot),
+        candidates: candidates.map((c) => ({
+          hospital: { id: c.hospitalId, code: c.code, name: c.name },
+          maxQty: c.cap?.qty ?? 0,
+          deficit: c.cap?.deficit ?? Math.max(0, Math.round((c.totalTarget - c.stock - c.incoming) * 1000) / 1000),
+          usePerDay: c.usePerDay,
+          daysOfStock: Math.round((c.stock / c.usePerDay) * 10) / 10,
+          distanceKm: c.km,
+          transitDays: Math.round(c.transitDays * 100) / 100,
+          transportCostThb: c.transportCostThb,
+          canUseBeforeExpiry: c.cap !== null,
+        })),
+      },
+    };
+  }
+
+  /** `POST /allocation-plans`: the origin pharmacist writes the split by hand; the code checks every line against F-22 like an agent's. */
+  async createManual(req: Request) {
+    const user = req.user!;
+    const hospitalId = mustBePharmacist(user);
+    const body = bodyObject(req.body);
+    if (!isUuid(body.poolEntryId)) throw new HttpError(400, 'VALIDATION', 'ต้องระบุ poolEntryId');
+    const lines = parseLines(body.lines);
+    return withTransaction(async (client) => {
+      const lot = await poolLotOfRegion(client, user, body.poolEntryId as string, true);
+      if (lot.origin_id !== hospitalId) throw new HttpError(403, 'FORBIDDEN', 'เฉพาะเภสัชกรของโรงพยาบาลเจ้าของล็อตสร้างแผนจัดสรรได้');
+      const blocker = poolLotBlocker(lot);
+      if (blocker) throw new HttpError(409, 'NOT_ALLOCATABLE', blocker);
+      const { candidates } = await demandCandidates(client, lot);
+      for (const l of lines) {
+        const c = candidates.find((x) => x.hospitalId === l.receiverHospitalId);
+        if (!c?.cap) throw new HttpError(422, 'NOT_A_CANDIDATE', `${c?.name ?? 'โรงพยาบาลนี้'} ใช้ยานี้ไม่ทันก่อนหมดอายุ หรือไม่มีรายการยาที่จับคู่แล้ว/ผลพยากรณ์`);
+        if (l.qty > c.cap.qty) throw new HttpError(422, 'OVER_CAP', `${c.name} ใช้ได้ก่อนหมดอายุไม่เกิน ${c.cap.qty} ${lot.unit} (F-22)`);
+      }
+      const total = lines.reduce((s, l) => s + l.qty, 0);
+      if (total > lot.qty_available) throw new HttpError(422, 'OVER_POOL', `รวม ${total} เกินจำนวนที่เหลือในคลังกลาง (${lot.qty_available} ${lot.unit})`);
+      const created = await createPlanFromAgentProposal(client, lot.id, { agentRunId: null, lines }, auditContext(req));
+      if (!created) throw new HttpError(409, 'NOT_ALLOCATABLE', 'สร้างแผนไม่ได้ กรุณารีเฟรชแล้วลองใหม่');
+      const fresh = await loadPlan(client, created.planId, user);
+      const data = (await planViews(client, [fresh], user))[0];
+      return { ok: true, id: created.planId, version: data.version, data };
+    });
+  }
+
+  /**
+   * `POST /allocation-plans/{id}/objection`: a hospital of the region that is not in the plan objects with a reason. It joins the
+   * plan's approvals as REJECTED, so the plan needs discussion (ASM-16) and the objection is settled at the meeting ("เห็นชอบตามมติ"
+   * re-creates the transport). An approved plan (also auto-approved inside one network) can be objected to until its goods leave:
+   * its WAITING_DISPATCH tasks are cancelled and the lot waits in the pool for the meeting.
+   */
+  async objection(req: Request, rawId: string) {
+    const user = req.user!;
+    const hospitalId = mustBePharmacist(user);
+    const id = uuidParam(rawId, 'id');
+    const reason = typeof req.body?.reason === 'string' ? req.body.reason.trim() : '';
+    if (reason.length < 3) throw new HttpError(400, 'VALIDATION', 'ต้องระบุเหตุผลที่คัดค้าน (อย่างน้อย 3 ตัวอักษร)');
+    if (reason.length > 1000) throw new HttpError(400, 'VALIDATION', 'เหตุผลยาวเกิน 1000 ตัวอักษร');
+    return withTransaction(async (client) => {
+      const plan = await loadPlan(client, id, user, true, true);
+      if ((await client.query(`SELECT 1 FROM plan_approval WHERE plan_id = $1 AND hospital_id = $2`, [id, hospitalId])).rowCount) {
+        throw new HttpError(409, 'ALREADY_INVOLVED', 'โรงพยาบาลของคุณอยู่ในแผนนี้แล้ว ใช้ปุ่ม “ไม่เห็นชอบ” แทน');
+      }
+      let stoppedTasks = 0;
+      if (APPROVED_STATES.includes(plan.status)) {
+        const tasks = await lockPlanTasks(client, id);
+        if (tasks.some((t) => t.status !== 'WAITING_DISPATCH')) throw new HttpError(409, 'TOO_LATE', 'ของขึ้นรถแล้ว คัดค้านแผนนี้ไม่ได้');
+        await cancelTasks(client, tasks.map((t) => t.id), user.id, { reason: `คัดค้านแผน: ${reason}` });
+        await client.query(`UPDATE near_expiry_item SET status = 'RELEASED_TO_POOL', updated_at = now(), version = version + 1 WHERE id = $1 AND status = 'ALLOCATED'`, [plan.item_id]);
+        stoppedTasks = tasks.length;
+        for (const h of await involvedHospitals(client, id)) {
+          await notifyRoles(client, h, ['WAREHOUSE_OFFICER'], { kind: 'TRANSFER_HELD', title: `พักงานขนส่งแผน ${plan.plan_no}: มีโรงพยาบาลคัดค้าน รอที่ประชุม`, body: reason, refType: 'allocation_plan', refId: id });
+        }
+      }
+      await client.query(`INSERT INTO plan_approval (plan_id, hospital_id, decision, decided_by, decided_at, comment) VALUES ($1, $2, 'REJECTED', $3, now(), $4)`, [id, hospitalId, user.id, reason]);
+      await client.query(`UPDATE allocation_plan SET status = 'NEEDS_DISCUSSION', updated_at = now(), version = version + 1 WHERE id = $1`, [id]);
+      await writeAudit(client, auditContext(req), { action: 'PLAN_OBJECTED', entityType: 'allocation_plan', entityId: id, reason, before: { status: plan.status }, after: { hospital: hospitalId, planNo: plan.plan_no, stoppedTasks } });
+      await logDecision(client, plan, 'OBJECTED', reason, user.id, 'object');
+      const name = (await client.query(`SELECT COALESCE(name_th, name_en) AS name FROM hospital WHERE id = $1`, [hospitalId])).rows[0]?.name ?? 'โรงพยาบาลในเขต';
+      await notifyInvolved(client, id, 'PLAN_OBJECTION', `${name} คัดค้านแผนจัดสรร ${plan.plan_no} · ต้องหารือ`, reason);
+      const fresh = await loadPlan(client, id, user);
+      const data = (await planViews(client, [fresh], user))[0];
+      return { ok: true, id, version: data.version, data };
+    });
   }
 
   /** API-F2a-009: approve / reject as an involved hospital (If-Match semantics via `version`). */
@@ -248,6 +445,7 @@ export class PlansService {
       }
       const ctx = auditContext(req);
       await writeAudit(client, ctx, { action: `PLAN_${decision}`, entityType: 'allocation_plan', entityId: id, reason: comment || null, after: { hospital: hospitalId, planNo: plan.plan_no } });
+      await logDecision(client, plan, decision, comment || null, user.id, decision === 'APPROVED' ? (body.approveAll ? 'approve_meeting' : 'approve') : 'reject');
       let next = plan.status;
       let started = 0;
       if (decision === 'REJECTED') {
@@ -334,13 +532,16 @@ export class PlansService {
     return withTransaction(async (client) => {
       const plan = await loadPlan(client, id, user, true);
       const ctx = auditContext(req);
+      // a hospital that only objected takes part in the discussion, but the plan is cancelled by its owner or a receiver
+      const party = plan.origin_id === hospitalId || (await client.query(`SELECT 1 FROM allocation_line WHERE plan_id = $1 AND receiver_hospital_id = $2`, [id, hospitalId])).rowCount;
+      if (!party) throw new HttpError(403, 'FORBIDDEN', 'ยกเลิกแผนได้เฉพาะโรงพยาบาลเจ้าของยาและโรงพยาบาลผู้รับ');
       if (OPEN_FOR_APPROVAL.includes(plan.status)) {
         await client.query(`UPDATE allocation_plan SET status = 'CANCELLED', updated_at = now(), version = version + 1 WHERE id = $1`, [id]);
         await returnLinesToPool(client, id, plan.pool_id);
         await writeAudit(client, ctx, { action: 'PLAN_CANCELLED', entityType: 'allocation_plan', entityId: id, reason, before: { status: plan.status } });
         await notifyInvolved(client, id, 'PLAN_CANCELLED', `แผนจัดสรร ${plan.plan_no} ถูกยกเลิก`, reason);
       } else if (APPROVED_STATES.includes(plan.status)) {
-        const tasks = (await client.query(`SELECT tt.id, tt.status::text AS status, tt.cancel_requested_by FROM transport_task tt JOIN allocation_line al ON al.id = tt.ref_id WHERE tt.ref_type = 'ALLOCATION_LINE' AND al.plan_id = $1 AND tt.status <> 'CANCELLED' FOR UPDATE OF tt`, [id])).rows;
+        const tasks = await lockPlanTasks(client, id);
         if (tasks.length === 0 || tasks.some((t) => t.status !== 'WAITING_DISPATCH')) throw new HttpError(409, 'NOT_CANCELLABLE', 'ยกเลิกได้เฉพาะตอนงานขนส่งทั้งหมดยังรอขึ้นรถ (BR-F2a-018)');
         const requestedBy = tasks.find((t) => t.cancel_requested_by)?.cancel_requested_by as string | undefined;
         if (!requestedBy) {
@@ -353,13 +554,7 @@ export class PlansService {
         }
         if (requestedBy === hospitalId) throw new HttpError(409, 'ALREADY_REQUESTED', 'โรงพยาบาลของคุณขอยกเลิกไปแล้ว รออีกฝ่ายยินยอม');
         if (hospitalId !== plan.origin_id && requestedBy !== plan.origin_id) throw new HttpError(403, 'FORBIDDEN', 'การยกเลิกต้องมีโรงพยาบาลเจ้าของยาร่วมยินยอม');
-        await client.query(`UPDATE transport_task SET status = 'CANCELLED', cancel_consent_by = $2, updated_at = now(), version = version + 1 WHERE id = ANY($1::uuid[])`, [tasks.map((t) => t.id), hospitalId]);
-        for (const t of tasks) {
-          await client.query(
-            `INSERT INTO transport_event (task_id, client_event_id, seq, to_status, captured_at, actor_id, photo_keys, applied) VALUES ($1, gen_random_uuid(), (SELECT COALESCE(max(seq), 0) + 1 FROM transport_event WHERE task_id = $1), 'CANCELLED', now(), $2, '{}', true)`,
-            [t.id, user.id],
-          );
-        }
+        await cancelTasks(client, tasks.map((t) => t.id), user.id, { consentBy: hospitalId });
         await client.query(`UPDATE allocation_plan SET status = 'CANCELLED', updated_at = now(), version = version + 1 WHERE id = $1`, [id]);
         await returnLinesToPool(client, id, plan.pool_id);
         await client.query(`UPDATE near_expiry_item SET status = 'RELEASED_TO_POOL', updated_at = now(), version = version + 1 WHERE id = $1 AND status = 'ALLOCATED'`, [plan.item_id]);

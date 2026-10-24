@@ -3,6 +3,7 @@ import { asyncHandler } from '../../middleware/asyncHandler.js';
 import { requireAuth, requireRole } from '../../middleware/auth.js';
 import { idempotent } from '../../middleware/idempotency.js';
 import { withTransaction } from '../../db/tx.js';
+import { agentPlan } from './allocation.agent.js';
 import { nearExpiryService } from './nearExpiry.service.js';
 import { plansService, processPlanTimeouts } from './plans.service.js';
 import { repeatService } from './repeat.service.js';
@@ -21,8 +22,12 @@ nearExpiryRouter.post('/:id/withdraw', requireAuth, pharmacist, asyncHandler(asy
 
 export const poolRouter = Router();
 poolRouter.get('/', requireAuth, requireRole('PHARMACIST', 'HOSPITAL_ADMIN', 'WAREHOUSE_OFFICER', 'SYSTEM_ADMIN'), asyncHandler(async (req, res) => res.json(await plansService.pool(req.user!, req.query))));
+poolRouter.get('/:id/candidates', requireAuth, requireRole('PHARMACIST', 'HOSPITAL_ADMIN'), asyncHandler(async (req, res) => res.json(await plansService.candidates(req.user!, req.params.id))));
+poolRouter.post('/:id/agent-plan', requireAuth, pharmacist, idempotent(), asyncHandler(async (req, res) => res.status(201).json(await agentPlan(req, req.params.id)))); // AGT-F2-001
 
 export const allocationPlansRouter = Router();
+allocationPlansRouter.post('/', requireAuth, pharmacist, idempotent(), asyncHandler(async (req, res) => res.status(201).json(await plansService.createManual(req))));
+allocationPlansRouter.post('/:id/objection', requireAuth, pharmacist, idempotent(), asyncHandler(async (req, res) => res.json(await plansService.objection(req, req.params.id))));
 allocationPlansRouter.get('/', requireAuth, requireRole('PHARMACIST', 'HOSPITAL_ADMIN', 'WAREHOUSE_OFFICER', 'SYSTEM_ADMIN'), asyncHandler(async (req, res) => res.json(await plansService.list(req.user!, req.query))));
 allocationPlansRouter.get('/:id', requireAuth, requireRole('PHARMACIST', 'HOSPITAL_ADMIN', 'WAREHOUSE_OFFICER', 'SYSTEM_ADMIN'), asyncHandler(async (req, res) => res.json(await plansService.detail(req.user!, req.params.id))));
 allocationPlansRouter.post('/:id/decision', requireAuth, pharmacist, idempotent(), asyncHandler(async (req, res) => res.json(await plansService.decision(req, req.params.id))));

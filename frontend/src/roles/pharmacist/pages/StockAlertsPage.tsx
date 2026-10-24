@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Icon } from '../../../components/common/icons';
-import { homeHrefFor } from '../../../data/navigation';
+import { homeHrefFor, withRole } from '../../../data/navigation';
 import type { RoleCode } from '../../../lib/rbac';
 import { createBorrowRequest, proposeBorrowRequest } from '../../../services/borrowApi';
 import { StockAlertSummary } from '../components/StockAlertSummary';
@@ -132,6 +132,11 @@ export function StockAlertsPage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
   };
 
   const handleAction = (row: StockAlertRow, cond: RowActionCond) => {
+    // ตรวจสอบและอนุมัติ / ดูคำขอ / the BR link: the linked request is approved on "คำขอยืมของเรา", opened on that request.
+    if (cond === 'request' && row.alert?.brNo) {
+      window.location.search = withRole(`?page=requests&request=${encodeURIComponent(row.alert.brNo)}`, role);
+      return;
+    }
     if (live) {
       // Live: the server owns the alert state (SM-8). Creating a borrow request waits for the F1b API.
       if (cond === 'ack' && row.alert) void runAction(() => sa.ack(row.alert!.alertId));

@@ -72,3 +72,8 @@ Relevant files: `frontend/src/App.tsx`, `frontend/src/roles/pharmacist/pages/Das
 - Note: the live `doorare` DB is still **v1.4 and empty** (no `app_user_role`/`login_event`), and `db/mock/csv` was missing; the suite now rejects a pre-v1.5 copy with an explicit missing-object list.
 - Repeatable verification added: `backend/tests/integration/admin.integration.test.ts` + README + `test:integration` script; `npm test` stays DB-free.
 - Not committed. Next: frontend wiring of HA screens / SA tabs (separate task); optional REGION lookup in `core/settings.ts`; agent runtime consuming the kill switch.
+
+## Branch fix/feature-feedback-f1-f3 (from backend-byok)
+
+- Team feedback fixes F1 alerts / F2 pool plans + objections + allocation agent / F3 add item + late emergency answers. See `sessions/2026-10-24-1730-claude-f1-f3-feedback-fixes.md`, `decisions/0005-f2-f3-feedback-rules.md`.
+- Not committed / pushed. Next: review, run the allocation agent against a real BYOK provider, PR into backend-byok.

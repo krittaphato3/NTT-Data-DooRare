@@ -155,6 +155,21 @@ export function BorrowRequestsPage({ role = 'PHARMACIST' }: { role?: RoleCode })
     () => (live.source === 'mock' ? BORROW_REQUESTS.map((r) => withEscalation(withDecision(r, decision[r.id]), escalations)) : live.requests),
     [live.source, live.requests, decision, escalations],
   );
+
+  // `?request=BR-…` (from the stock-alert screen): open that request once the list has loaded.
+  const [linkedRequest, setLinkedRequest] = useState(() => new URLSearchParams(window.location.search).get('request'));
+  useEffect(() => {
+    if (!linkedRequest || live.source === 'loading') return;
+    const linked = all.find((r) => r.id === linkedRequest);
+    if (linked) {
+      // also when it is already finished (the default list shows only requests still in progress)
+      setGroup(groupOf(linked.status));
+      setQ(linkedRequest);
+      setSelId(linkedRequest);
+      setDrawerOpen(true);
+    }
+    setLinkedRequest(null);
+  }, [linkedRequest, live.source, all]);
   const inPeriod = all.filter((r) => r.daysAgo <= days);
   const counts = Object.fromEntries(GROUPS.map((g) => [g.id, inPeriod.filter((r) => groupOf(r.status) === g.id).length])) as Record<StatusGroup, number>;
   const pendingAll = all.filter((r) => groupOf(r.status) === 'pending').length;

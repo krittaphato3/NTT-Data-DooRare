@@ -68,14 +68,50 @@ export interface ApiPlan {
   economical: boolean;
   option: ApiPlanOption | null;
   options: { id: ApiPlanOption; label: string }[];
-  approvals: { hospital: { id: string; code: string; name: string }; decision: 'PENDING' | 'APPROVED' | 'REJECTED'; decidedAt: string | null; decidedBy: string | null; comment: string | null }[];
+  approvals: { hospital: { id: string; code: string; name: string }; kind: ApiPlanPartyKind; decision: 'PENDING' | 'APPROVED' | 'REJECTED'; decidedAt: string | null; decidedBy: string | null; comment: string | null }[];
   myDecision: 'PENDING' | 'APPROVED' | 'REJECTED' | null;
   isOrigin: boolean;
+  /** The viewer's hospital takes part; other hospitals of the region only see plans they may still object to. */
+  involved: boolean;
+  myKind: ApiPlanPartyKind | null;
+  canObject: boolean;
+  /** AGT-F2-001 run behind the plan (null = written by the owner pharmacist). */
+  agent: { status: 'OK' | 'FALLBACK' | 'SKIPPED' | string; model: string | null; summary: string | null; confidence: 'HIGH' | 'MEDIUM' | 'LOW' | null; flags: string[] } | null;
   approvalDeadline: string | null;
   cancelRequestedBy: string | null;
   agentRunId: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export type ApiPlanPartyKind = 'ORIGIN' | 'RECEIVER' | 'OBJECTOR';
+
+/** `GET /pool/{id}/candidates`: receivers the code finds for a pool lot, with the F-22 quantity each can use before expiry. */
+export interface ApiPoolCandidates {
+  poolEntryId: string;
+  drug: { name: string; unit: string };
+  lotNo: string;
+  daysLeft: number;
+  qtyAvailable: number;
+  unitPrice: number;
+  isOrigin: boolean;
+  blocker: string | null;
+  candidates: {
+    hospital: { id: string; code: string; name: string };
+    maxQty: number;
+    deficit: number;
+    usePerDay: number;
+    daysOfStock: number;
+    distanceKm: number;
+    transitDays: number;
+    transportCostThb: number;
+    canUseBeforeExpiry: boolean;
+  }[];
+}
+
+export interface ApiAgentPlanResult {
+  plan: { planId: string; planNo: string; status: string };
+  agent: { runId: string; status: 'OK' | 'FALLBACK' | 'SKIPPED'; model: string | null; summary: string | null; confidence: string | null; flags: string[] };
 }
 
 export interface ApiRepeatFlag {
@@ -117,6 +153,11 @@ export const listPool = () => apiJsonAll<{ ok: true; items: ApiPoolEntry[]; next
 export const listPlans = () => apiJsonAll<{ ok: true; items: ApiPlan[]; nextCursor: string | null }>('/allocation-plans?limit=200');
 export const decidePlan = (id: string, decision: 'APPROVED' | 'REJECTED', version: number, comment?: string, approveAll?: boolean, lines?: { receiver: string; qty: number }[]) => post<One<ApiPlan>>(`/allocation-plans/${id}/decision`, { decision, version, comment, approveAll, lines });
 export const choosePlanOption = (id: string, option: ApiPlanOption, version: number, reason?: string) => post<One<ApiPlan>>(`/allocation-plans/${id}/option`, { option, version, reason });
+export const getPoolCandidates = (id: string) => apiJson<{ ok: true; data: ApiPoolCandidates }>(`/pool/${id}/candidates`);
+/** AGT-F2-001: the allocation agent proposes the split (the code checks it, or uses its own F-22 split as fallback). */
+export const sendPoolToAgent = (id: string) => post<{ ok: true; data: ApiAgentPlanResult }>(`/pool/${id}/agent-plan`);
+export const createAllocationPlan = (poolEntryId: string, lines: { receiverHospitalId: string; qty: number }[]) => post<One<ApiPlan>>('/allocation-plans', { poolEntryId, lines });
+export const objectPlan = (id: string, reason: string) => post<One<ApiPlan>>(`/allocation-plans/${id}/objection`, { reason });
 export const cancelPlan = (id: string, reason: string) => post<One<ApiPlan> & { state: 'CANCEL_REQUESTED' | 'CANCELLED' }>(`/allocation-plans/${id}/cancel`, { reason });
 
 export const listRepeatExpiry = () => apiJson<{ ok: true; items: ApiRepeatFlag[] }>('/repeat-expiry');

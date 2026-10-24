@@ -78,6 +78,8 @@ export interface ApiLenderItem {
   requestNo: string;
   round: number;
   status: ApiLegStatus;
+  /** F3 only: TIMED_OUT but the emergency request still lacks goods, so it can be confirmed late. */
+  canAnswerLate: boolean;
   urgency: ApiUrgency;
   reason: string | null;
   context: 'STOCK_ALERT' | 'MANUAL' | 'EMERGENCY';

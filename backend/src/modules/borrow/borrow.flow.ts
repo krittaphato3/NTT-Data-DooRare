@@ -13,6 +13,16 @@ import { usableStock } from './borrow.inputs.js';
 import type { LadderEntry } from './borrow.ladder.js';
 
 export const CONFIRMED_STATUSES = ['ACCEPTED', 'PARTIAL', 'LOADED', 'IN_TRANSIT'] as const;
+
+/**
+ * F3 late answer: a timed-out emergency leg can still be confirmed while its request is open or escalated, the incident is
+ * active and goods are still missing (the first confirmation still wins). `lateAnswerSql` reads aliases `bl`, `br`, `i`, `inc`.
+ */
+export const LATE_ANSWER_REQUEST: readonly string[] = ['APPROVED', 'IN_PROGRESS', 'PARTIALLY_FULFILLED', 'ESCALATED'];
+export const lateAnswerSql = (statusesParam: string): string =>
+  `(br.context = 'EMERGENCY' AND bl.status = 'TIMED_OUT' AND br.status::text = ANY(${statusesParam}::text[]) AND inc.status = 'ACTIVE'
+    AND i.qty_requested > (SELECT COALESCE(sum(CASE WHEN x.status = 'RECEIVED' THEN COALESCE(x.qty_received, 0) ELSE COALESCE(x.qty_accepted, 0) END), 0)
+                             FROM borrow_leg x WHERE x.request_id = br.id AND x.status::text IN ('${[...CONFIRMED_STATUSES, 'RECEIVED'].join("', '")}')))`;
 const OPEN_REQUEST = ['APPROVED', 'IN_PROGRESS', 'PARTIALLY_FULFILLED', 'ESCALATED'];
 
 export interface StoredLadder {
