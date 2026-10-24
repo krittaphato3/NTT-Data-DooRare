@@ -10,6 +10,8 @@ export const ThinkingAccordion: React.FC<ThinkingAccordionProps> = ({ thought, i
   const [isExpanded, setIsExpanded] = useState<boolean>(isThinking);
   const [elapsedSec, setElapsedSec] = useState<number>(1);
   const [finalDurationSec, setFinalDurationSec] = useState<number | null>(null);
+  const [copied, setCopied] = useState<boolean>(false);
+  const startTimeRef = useRef<number>(Date.now());
   const prevIsThinkingRef = useRef<boolean>(isThinking);
 
   // When model finishes thinking and text appears, shrink to minimized form
@@ -25,17 +27,28 @@ export const ThinkingAccordion: React.FC<ThinkingAccordionProps> = ({ thought, i
   useEffect(() => {
     let timer: ReturnType<typeof setInterval> | null = null;
     if (isThinking) {
-      const start = Date.now();
+      startTimeRef.current = Date.now();
+      setElapsedSec(1);
       timer = setInterval(() => {
-        setElapsedSec(Math.max(1, Math.floor((Date.now() - start) / 1000)));
+        const secs = Math.max(1, Math.floor((Date.now() - startTimeRef.current) / 1000));
+        setElapsedSec(secs);
       }, 500);
-    } else if (elapsedSec > 0 && finalDurationSec === null) {
-      setFinalDurationSec(elapsedSec);
+    } else {
+      const totalSec = Math.max(1, Math.floor((Date.now() - startTimeRef.current) / 1000));
+      setFinalDurationSec(totalSec);
     }
     return () => {
       if (timer) clearInterval(timer);
     };
-  }, [isThinking, elapsedSec, finalDurationSec]);
+  }, [isThinking]);
+
+  const handleCopy = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!thought) return;
+    navigator.clipboard.writeText(thought);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   if (!thought && !isThinking) return null;
 
@@ -66,6 +79,16 @@ export const ThinkingAccordion: React.FC<ThinkingAccordionProps> = ({ thought, i
         </div>
 
         <div className="doorare-thinking-meta">
+          {thought && !isThinking && (
+            <button
+              type="button"
+              className="doorare-thinking-copy-btn"
+              onClick={handleCopy}
+              title="คัดลอกกระบวนการคิด"
+            >
+              {copied ? '✓ คัดลอกแล้ว' : 'คัดลอก'}
+            </button>
+          )}
           {isThinking && <span className="doorare-thinking-live-dot" />}
           <span className="doorare-thinking-chevron">{isExpanded ? '▲' : '▼'}</span>
         </div>

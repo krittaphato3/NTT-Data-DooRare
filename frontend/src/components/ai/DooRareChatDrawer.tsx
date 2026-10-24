@@ -34,6 +34,7 @@ interface ProposalCardProps {
 const ProposalCard: React.FC<ProposalCardProps> = ({ proposal, onActionComplete }) => {
   const [loading, setLoading] = useState(false);
   const [decided, setDecided] = useState<'approved' | 'declined' | null>(null);
+  const [showTechnicalDetails, setShowTechnicalDetails] = useState(false);
 
   const handleApprove = async () => {
     setLoading(true);
@@ -60,29 +61,83 @@ const ProposalCard: React.FC<ProposalCardProps> = ({ proposal, onActionComplete 
 
   if (decided) {
     return (
-      <div className="doorare-chat-proposal-card" style={{ opacity: 0.85 }}>
+      <div className="doorare-chat-proposal-card decided">
         <div className="doorare-proposal-header">
-          {decided === 'approved' ? '✅ อนุมัติข้อเสนอแล้ว' : '🚫 ปฏิเสธข้อเสนอแล้ว'}
+          {decided === 'approved' ? '✅ อนุมัติข้อเสนอเรียบร้อย' : '🚫 ปฏิเสธข้อเสนอแล้ว'}
         </div>
         <div className="doorare-proposal-desc">{proposal.title}</div>
       </div>
     );
   }
 
+  const s = proposal.summary || {};
+  const drug = (s.drug || s.item_code || s.itemCode || s.drug_name || s.name) as string | undefined;
+  const qty = (s.qty || s.quantity || s.required_qty || s.lendable_qty) as number | string | undefined;
+  const lender = (s.lender_hospital_name || s.candidate_lender || s.lender || s.hospital_name || s.hospital) as string | undefined;
+  const eta = (s.transit_minutes || s.eta_minutes || s.eta) as number | string | undefined;
+  const score = (s.score || s.si || s.match_score) as number | string | undefined;
+
   return (
     <div className="doorare-chat-proposal-card">
       <div className="doorare-proposal-header">
-        <span>⚡ Human-In-The-Loop Proposal</span>
+        <span className="doorare-proposal-tag">📋 ข้อเสนอเพื่อการตัดสินใจ (HITL Proposal)</span>
       </div>
-      <div style={{ fontWeight: 600, fontSize: '13px', color: '#0f172a', marginBottom: '4px' }}>
-        {proposal.title}
-      </div>
+      <div className="doorare-proposal-title">{proposal.title}</div>
       <div className="doorare-proposal-desc">{proposal.description}</div>
-      <div className="doorare-proposal-summary">
-        {JSON.stringify(proposal.summary, null, 2)}
+
+      {/* Structured Clinical Badges */}
+      <div className="doorare-proposal-badges-grid">
+        {drug && (
+          <div className="doorare-prop-badge">
+            <span className="doorare-prop-badge-k">รหัสยา:</span>
+            <span className="doorare-prop-badge-v">{String(drug)}</span>
+          </div>
+        )}
+        {qty !== undefined && (
+          <div className="doorare-prop-badge">
+            <span className="doorare-prop-badge-k">จำนวน:</span>
+            <span className="doorare-prop-badge-v highlight">{String(qty)}</span>
+          </div>
+        )}
+        {lender && (
+          <div className="doorare-prop-badge">
+            <span className="doorare-prop-badge-k">โรงพยาบาล:</span>
+            <span className="doorare-prop-badge-v">{String(lender)}</span>
+          </div>
+        )}
+        {eta !== undefined && (
+          <div className="doorare-prop-badge">
+            <span className="doorare-prop-badge-k">เวลาขนส่ง:</span>
+            <span className="doorare-prop-badge-v">{String(eta)} นาที</span>
+          </div>
+        )}
+        {score !== undefined && (
+          <div className="doorare-prop-badge">
+            <span className="doorare-prop-badge-k">คะแนน Si:</span>
+            <span className="doorare-prop-badge-v">{String(score)}</span>
+          </div>
+        )}
       </div>
+
+      <div style={{ marginTop: 6 }}>
+        <button
+          type="button"
+          className="doorare-proposal-details-toggle"
+          onClick={() => setShowTechnicalDetails(!showTechnicalDetails)}
+        >
+          {showTechnicalDetails ? '▴ ซ่อนข้อมูลดิบ (JSON)' : '▾ ดูข้อมูลทางเทคนิค (JSON)'}
+        </button>
+      </div>
+
+      {showTechnicalDetails && (
+        <pre className="doorare-proposal-raw-json">
+          <code>{JSON.stringify(proposal.summary, null, 2)}</code>
+        </pre>
+      )}
+
       <div className="doorare-proposal-actions">
         <button
+          type="button"
           className="doorare-proposal-btn-approve"
           onClick={handleApprove}
           disabled={loading}
@@ -90,6 +145,7 @@ const ProposalCard: React.FC<ProposalCardProps> = ({ proposal, onActionComplete 
           {loading ? 'กำลังอนุมัติ...' : 'อนุมัติ (Approve)'}
         </button>
         <button
+          type="button"
           className="doorare-proposal-btn-decline"
           onClick={handleDecline}
           disabled={loading}
@@ -105,6 +161,7 @@ export const DooRareChatDrawer: React.FC = () => {
   const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [isFullScreen, setIsFullScreen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [showSessionsDrawer, setShowSessionsDrawer] = useState(false);
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
@@ -119,15 +176,33 @@ export const DooRareChatDrawer: React.FC = () => {
   const [isStreaming, setIsStreaming] = useState(false);
   const [activeTool, setActiveTool] = useState<string | null>(null);
   const [proposals, setProposals] = useState<any[]>([]);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [copiedMsgId, setCopiedMsgId] = useState<string | null>(null);
 
-  // Auto scroll to bottom
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const isAtBottomRef = useRef<boolean>(true);
+
+  // Auto-grow textarea based on input content (up to 140px)
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${Math.min(140, Math.max(42, textareaRef.current.scrollHeight))}px`;
+    }
+  }, [input]);
+
+  // Track user scroll position so streaming does not yank viewport if user scrolled up
+  const handleScroll = () => {
+    if (!chatContainerRef.current) return;
+    const { scrollTop, scrollHeight, clientHeight } = chatContainerRef.current;
+    isAtBottomRef.current = scrollHeight - scrollTop - clientHeight < 60;
   };
 
   useEffect(() => {
-    scrollToBottom();
+    if (isAtBottomRef.current && messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'auto' });
+    }
   }, [displayMessages, activeTool, proposals]);
 
   // Load active sessions (and auto-purge >24h) when drawer opens
@@ -209,8 +284,29 @@ export const DooRareChatDrawer: React.FC = () => {
     }
   };
 
+  const handleCopyMessage = (msgId: string, text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedMsgId(msgId);
+    setTimeout(() => {
+      setCopiedMsgId((cur) => (cur === msgId ? null : cur));
+    }, 2000);
+  };
+
+  const handleStopGeneration = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    setIsStreaming(false);
+    setActiveTool(null);
+  };
+
   // Handle drawer close
   const handleClose = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
     setIsOpen(false);
     setIsFullScreen(false);
     setShowSessionsDrawer(false);
@@ -497,7 +593,7 @@ export const DooRareChatDrawer: React.FC = () => {
           {/* Header */}
           <div className="doorare-chat-header">
             <div className="doorare-chat-title-group">
-              {!isFullScreen && (
+              {!isFullScreen ? (
                 <button
                   type="button"
                   className={`doorare-chat-sessions-toggle-btn ${showSessionsDrawer ? 'active' : ''}`}
@@ -508,6 +604,15 @@ export const DooRareChatDrawer: React.FC = () => {
                   {sessions.length > 0 && (
                     <span className="doorare-sessions-badge">{sessions.length}</span>
                   )}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="doorare-chat-header-action-btn"
+                  onClick={() => setIsSidebarCollapsed((prev) => !prev)}
+                  title={isSidebarCollapsed ? 'แสดงแถบประวัติการสนทนา' : 'ซ่อนแถบประวัติ'}
+                >
+                  {isSidebarCollapsed ? '▶ ประวัติ' : '◀ ซ่อนแถบ'}
                 </button>
               )}
 
@@ -559,71 +664,101 @@ export const DooRareChatDrawer: React.FC = () => {
             </div>
           </div>
 
-        {/* Messages Body */}
-        <div className="doorare-chat-messages">
-          {displayMessages.length === 0 && (
-            <div style={{ textAlign: 'center', color: '#64748b', marginTop: '40px', padding: '0 20px' }}>
-              <div style={{ fontSize: '32px', marginBottom: '12px' }}>🤖</div>
-              <div style={{ fontWeight: 600, color: '#1e293b', marginBottom: '6px' }}>
-                สวัสดีครับ ผมคือผู้ช่วย DooRare Copilot
-              </div>
-              <div style={{ fontSize: '13px', lineHeight: 1.5 }}>
-                ถามข้อมูลยา สต็อก ค้นหาแหล่งยืมยา หรือคำนวณของนอกเซ็ตฉุกเฉินได้ทันทีครับ
-              </div>
-            </div>
-          )}
+          {/* Messages Body */}
+          <div
+            ref={chatContainerRef}
+            className="doorare-chat-messages"
+            onScroll={handleScroll}
+          >
+            {displayMessages.length === 0 && (
+              <div className="doorare-chat-empty-state">
+                <div className="doorare-empty-avatar">
+                  <DooRareBotAvatar size={48} />
+                </div>
+                <div className="doorare-empty-title">
+                  สวัสดีครับ ผมคือผู้ช่วย DooRare AI Copilot
+                </div>
+                <div className="doorare-empty-desc">
+                  พร้อมช่วยเหลือข้อมูลยา สต็อก ค้นหาแหล่งยืมยา ประเมินชุดยาอุบัติภัย หรือวิเคราะห์คำขอยืมฉุกเฉิน
+                </div>
 
-          {displayMessages.map((msg) => (
-            <div key={msg.id} className={`doorare-chat-msg-row ${msg.role}`}>
-              {/* Harness Thinking / Chain-of-Thought Accordion */}
-              {msg.role === 'assistant' && (msg.thought || msg.isThinking) && (
-                <ThinkingAccordion
-                  thought={msg.thought || ''}
-                  isThinking={Boolean(msg.isThinking && isStreaming)}
-                />
-              )}
-
-              {/* Harness Tool Logs above assistant bubble */}
-              {msg.toolLogs && msg.toolLogs.length > 0 && (
-                <div className="doorare-chat-tools-container">
-                  {msg.toolLogs.map((tool) => (
-                    <ToolExecutionLogCard key={tool.id} tool={tool} />
+                <div className="doorare-empty-starter-grid">
+                  {quickChips.map((chip, idx) => (
+                    <div
+                      key={idx}
+                      className="doorare-starter-card"
+                      onClick={() => handleQuickPrompt(chip)}
+                    >
+                      <span className="doorare-starter-icon">⚡</span>
+                      <span className="doorare-starter-text">{chip}</span>
+                    </div>
                   ))}
-                </div>
-              )}
-
-              {msg.content ? (
-                <div className={`doorare-chat-bubble ${msg.role}`}>
-                  <MarkdownContent content={msg.content} />
-                </div>
-              ) : null}
-            </div>
-          ))}
-
-          {/* Thinking / Typing Animated Dots Indicator */}
-          {isStreaming &&
-            (!displayMessages[displayMessages.length - 1] ||
-              displayMessages[displayMessages.length - 1].role === 'user' ||
-              (!displayMessages[displayMessages.length - 1].content &&
-                !displayMessages[displayMessages.length - 1].thought &&
-                (!displayMessages[displayMessages.length - 1].toolLogs ||
-                  displayMessages[displayMessages.length - 1].toolLogs?.length === 0))) && (
-              <div className="doorare-chat-msg-row assistant">
-                <div className="doorare-typing-bubble" title="AI กำลังคิดคำตอบ...">
-                  <span className="doorare-typing-dot" />
-                  <span className="doorare-typing-dot" />
-                  <span className="doorare-typing-dot" />
                 </div>
               </div>
             )}
 
-          {/* Active Tool Indicator (Transient status pill) */}
-          {activeTool && (
-            <div className="doorare-chat-tool-indicator">
-              <span className="doorare-tool-spinner" />
-              <span>{activeTool}</span>
-            </div>
-          )}
+            {displayMessages.map((msg) => (
+              <div key={msg.id} className={`doorare-chat-msg-row ${msg.role}`}>
+                <div className="doorare-msg-row-inner">
+                  {msg.role === 'assistant' && (
+                    <div className="doorare-msg-avatar">
+                      <DooRareBotAvatar size={28} />
+                    </div>
+                  )}
+
+                  <div className="doorare-msg-content-col">
+                    {/* Harness Thinking / Chain-of-Thought Accordion */}
+                    {msg.role === 'assistant' && (msg.thought || msg.isThinking) && (
+                      <ThinkingAccordion
+                        thought={msg.thought || ''}
+                        isThinking={Boolean(msg.isThinking && isStreaming)}
+                      />
+                    )}
+
+                    {/* Harness Tool Logs above assistant bubble */}
+                    {msg.toolLogs && msg.toolLogs.length > 0 && (
+                      <div className="doorare-chat-tools-container">
+                        {msg.toolLogs.map((tool) => (
+                          <ToolExecutionLogCard key={tool.id} tool={tool} />
+                        ))}
+                      </div>
+                    )}
+
+                    {msg.content ? (
+                      <div className={`doorare-chat-bubble ${msg.role}`}>
+                        <MarkdownContent content={msg.content} />
+                        {msg.role === 'assistant' && (
+                          <div className="doorare-bubble-actions">
+                            <button
+                              type="button"
+                              className="doorare-bubble-copy-btn"
+                              onClick={() => handleCopyMessage(msg.id, msg.content)}
+                              title="คัดลอกคำตอบ"
+                            >
+                              {copiedMsgId === msg.id ? '✓ คัดลอกแล้ว' : 'คัดลอก'}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ) : isStreaming && msg.role === 'assistant' && !msg.isThinking && !msg.thought ? (
+                      <div className="doorare-typing-bubble" title="AI กำลังพิมพ์คำตอบ...">
+                        <span className="doorare-typing-dot" />
+                        <span className="doorare-typing-dot" />
+                        <span className="doorare-typing-dot" />
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+            ))}
+
+            {/* Active Tool Indicator (Transient status pill) */}
+            {activeTool && (
+              <div className="doorare-chat-tool-indicator">
+                <span className="doorare-tool-spinner" />
+                <span>{activeTool}</span>
+              </div>
+            )}
 
           {/* Render HITL Proposals */}
           {proposals.map((prop, idx) => (
@@ -646,55 +781,61 @@ export const DooRareChatDrawer: React.FC = () => {
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Input & Quick Chips Footer */}
-        <div className="doorare-chat-input-area">
-          {/* Quick Prompts */}
-          <div className="doorare-chat-quick-chips">
-            {quickChips.map((chip, idx) => (
-              <button
-                key={idx}
-                className="doorare-quick-chip"
-                onClick={() => handleQuickPrompt(chip)}
+          {/* Input Area */}
+          <div className="doorare-chat-input-area">
+            <div className="doorare-input-capsule">
+              <textarea
+                ref={textareaRef}
+                className="doorare-input-textarea"
+                placeholder="ถามข้อมูลยา สต็อก คำนวณเบิกยืม หรือขอให้ Copilot ช่วยดำเนินการ... (Shift+Enter เพื่อขึ้นบรรทัดใหม่)"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSend();
+                  }
+                }}
+                rows={1}
                 disabled={isStreaming}
-              >
-                {chip}
-              </button>
-            ))}
+              />
+              <div className="doorare-input-bottom-bar">
+                <div className="doorare-input-badge">
+                  <span className="doorare-badge-dot" />
+                  <span className="doorare-badge-text">
+                    {user?.hospitalName ? `📍 ${user.hospitalName}` : '🌐 ส่วนกลาง เขตสุขภาพที่ 6'}
+                  </span>
+                </div>
+                {isStreaming ? (
+                  <button
+                    type="button"
+                    className="doorare-chat-stop-btn"
+                    onClick={handleStopGeneration}
+                    title="หยุดการตอบกลับ (Stop)"
+                  >
+                    <span className="doorare-stop-icon" />
+                    <span>หยุด</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="doorare-chat-send-btn"
+                    disabled={!input.trim()}
+                    onClick={() => handleSend()}
+                    title="ส่งข้อความ (Enter)"
+                  >
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <line x1="22" y1="2" x2="11" y2="13" />
+                      <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+            </div>
+            <div className="doorare-chat-disclaimer">
+              🔒 ประมวลผลด้วย AI เพื่อความปลอดภัยทางคลินิก · โปรดตรวจสอบความถูกต้องของข้อมูล
+            </div>
           </div>
-
-          <form
-            className="doorare-chat-input-form"
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleSend();
-            }}
-          >
-            <textarea
-              className="doorare-chat-input-box"
-              placeholder="พิมพ์คำถาม หรือขอให้ Copilot ช่วยดำเนินการ..."
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSend();
-                }
-              }}
-              rows={1}
-            />
-            <button
-              type="submit"
-              className="doorare-chat-send-btn"
-              disabled={isStreaming || !input.trim()}
-              title="ส่งข้อความ"
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <line x1="22" y1="2" x2="11" y2="13" />
-                <polygon points="22 2 15 22 11 13 2 9 22 2" />
-              </svg>
-            </button>
-          </form>
-        </div>
       </div>
     </div>
   </>

@@ -149,6 +149,56 @@ export const MarkdownContent: React.FC<MarkdownContentProps> = ({ content, class
       continue;
     }
 
+    // Markdown Table: | Col 1 | Col 2 |
+    if (
+      trimmed.startsWith('|') &&
+      trimmed.endsWith('|') &&
+      i + 1 < lines.length &&
+      lines[i + 1].trim().startsWith('|') &&
+      /^\|(\s*:?-+:?\s*\|)+$/.test(lines[i + 1].trim())
+    ) {
+      flushList();
+      const parseRow = (r: string) =>
+        r
+          .trim()
+          .slice(1, -1)
+          .split('|')
+          .map((c) => c.trim());
+
+      const headers = parseRow(trimmed);
+      i++; // Skip delimiter row
+
+      const rows: string[][] = [];
+      while (i + 1 < lines.length && lines[i + 1].trim().startsWith('|') && lines[i + 1].trim().endsWith('|')) {
+        i++;
+        rows.push(parseRow(lines[i]));
+      }
+
+      elements.push(
+        <div key={`table-${i}`} className="doorare-md-table-wrap">
+          <table className="doorare-md-table">
+            <thead>
+              <tr>
+                {headers.map((h, colIdx) => (
+                  <th key={colIdx}>{renderInlineMarkdown(h)}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row, rowIdx) => (
+                <tr key={rowIdx}>
+                  {row.map((cell, cellIdx) => (
+                    <td key={cellIdx}>{renderInlineMarkdown(cell)}</td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>,
+      );
+      continue;
+    }
+
     // Headings: #, ##, ###
     if (trimmed.startsWith('# ')) {
       flushList();

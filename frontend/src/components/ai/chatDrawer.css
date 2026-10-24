@@ -313,8 +313,9 @@
 
 /* Header */
 .doorare-chat-header {
-  padding: 14px 20px;
-  background: #f8fafc;
+  height: 56px;
+  padding: 0 16px;
+  background: #ffffff;
   border-bottom: 1px solid #e2e8f0;
   display: flex;
   align-items: center;
@@ -324,20 +325,22 @@
 .doorare-chat-header-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .doorare-chat-header-action-btn {
-  background: #ffffff;
+  height: 32px;
+  padding: 0 10px;
+  background: #f8fafc;
   border: 1px solid #cbd5e1;
   border-radius: 8px;
-  padding: 6px 12px;
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 600;
   color: #334155;
   cursor: pointer;
-  display: flex;
+  display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 4px;
   transition: all 0.15s;
 }
@@ -349,22 +352,23 @@
 }
 
 .doorare-chat-header-action-btn.icon {
-  font-size: 12px;
+  font-size: 11.5px;
+  padding: 0 8px;
 }
 
 .doorare-chat-sessions-toggle-btn {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
   border-radius: 8px;
-  width: 34px;
-  height: 34px;
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   position: relative;
   transition: all 0.15s;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .doorare-chat-sessions-toggle-btn:hover {
@@ -385,7 +389,7 @@
   font-size: 9px;
   font-weight: 700;
   border-radius: 10px;
-  padding: 1px 5px;
+  padding: 1px 4px;
 }
 
 .doorare-chat-title-group {
@@ -395,52 +399,53 @@
 }
 
 .doorare-chat-avatar {
-  width: 42px;
-  height: 42px;
-  border-radius: 14px;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
   background: #f0f9ff;
   border: 1px solid #bae6fd;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 6px rgba(2, 132, 199, 0.15);
 }
 
 .doorare-chat-title {
-  font-size: 15px;
-  font-weight: 600;
-  color: #0f172a;
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f2a5c;
   line-height: 1.2;
 }
 
 .doorare-chat-context-badge {
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 500;
   color: #0284c7;
   background: #e0f2fe;
-  padding: 2px 8px;
+  padding: 1px 7px;
   border-radius: 9999px;
   display: inline-block;
-  margin-top: 3px;
+  margin-top: 2px;
 }
 
 .doorare-chat-close-btn {
+  width: 32px;
+  height: 32px;
   background: transparent;
-  border: none;
-  font-size: 20px;
+  border: 1px solid transparent;
+  border-radius: 8px;
   color: #64748b;
   cursor: pointer;
-  padding: 6px;
-  border-radius: 6px;
-  display: flex;
+  font-size: 14px;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   transition: all 0.15s;
 }
 
 .doorare-chat-close-btn:hover {
-  background: #e2e8f0;
-  color: #0f172a;
+  background: #fee2e2;
+  color: #dc2626;
+  border-color: #fecaca;
 }
 
 /* Messages area */
@@ -451,43 +456,64 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
-  background: #fafafa;
+  background: #f8fafc;
 }
 
 .doorare-chat-msg-row {
   display: flex;
   flex-direction: column;
-  max-width: 88%;
+  max-width: 100%;
 }
 
-.doorare-chat-msg-row.user {
-  align-self: flex-end;
+.doorare-msg-row-inner {
+  display: flex;
+  gap: 10px;
+  max-width: 100%;
 }
 
-.doorare-chat-msg-row.assistant {
-  align-self: flex-start;
+.doorare-chat-msg-row.user .doorare-msg-row-inner {
+  justify-content: flex-end;
+}
+
+.doorare-msg-avatar {
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+
+.doorare-msg-content-col {
+  display: flex;
+  flex-direction: column;
+  max-width: 86%;
+  min-width: 0;
+}
+
+.doorare-chat-msg-row.user .doorare-msg-content-col {
+  align-items: flex-end;
+  max-width: 78%;
 }
 
 .doorare-chat-bubble {
   padding: 12px 16px;
-  border-radius: 14px;
   font-size: 13.5px;
-  line-height: 1.5;
+  line-height: 1.55;
   word-break: break-word;
 }
 
 .doorare-chat-bubble.user {
-  background: #2563eb;
-  color: #ffffff;
-  border-bottom-right-radius: 4px;
+  background: #f1f5f9;
+  color: #0f172a;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px 18px 4px 18px;
+  font-weight: 450;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
 }
 
 .doorare-chat-bubble.assistant {
   background: #ffffff;
   color: #1e293b;
   border: 1px solid #e2e8f0;
-  border-bottom-left-radius: 4px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  border-radius: 18px 18px 18px 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 /* Typing / Thinking animation */
@@ -643,66 +669,116 @@
 
 /* Input Area */
 .doorare-chat-input-area {
-  padding: 16px 20px;
+  padding: 14px 18px 12px 18px;
   background: #ffffff;
   border-top: 1px solid #e2e8f0;
 }
 
-.doorare-chat-input-form {
+.doorare-input-capsule {
+  border: 1.5px solid #cbd5e1;
+  border-radius: 16px;
+  background: #ffffff;
+  padding: 10px 12px 8px 14px;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
+  transition: all 0.2s ease;
   display: flex;
+  flex-direction: column;
   gap: 8px;
-  align-items: flex-end;
 }
 
-.doorare-chat-input-box {
-  flex: 1;
-  border: 1px solid #cbd5e1;
-  border-radius: 10px;
-  padding: 10px 14px;
-  font-size: 13.5px;
+.doorare-input-capsule:focus-within {
+  border-color: #2563eb;
+  box-shadow: 0 4px 18px rgba(37, 99, 235, 0.12);
+}
+
+.doorare-input-textarea {
+  width: 100%;
+  border: none;
   outline: none;
   resize: none;
   font-family: inherit;
-  min-height: 42px;
-  max-height: 120px;
-  transition: border-color 0.15s;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: #0f172a;
+  background: transparent;
+  min-height: 28px;
+  max-height: 140px;
 }
 
-.doorare-chat-input-box:focus {
-  border-color: #2563eb;
-  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+.doorare-input-textarea::placeholder {
+  color: #94a3b8;
+}
+
+.doorare-input-bottom-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.doorare-input-badge {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: #64748b;
+  background: #f8fafc;
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+}
+
+.doorare-badge-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #10b981;
 }
 
 .doorare-chat-send-btn {
-  width: 42px;
-  height: 42px;
-  background: #2563eb;
-  color: white;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #1d4ed8;
+  color: #ffffff;
   border: none;
-  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: all 0.15s ease;
+  box-shadow: 0 2px 6px rgba(29, 78, 216, 0.3);
 }
 
 .doorare-chat-send-btn:hover:not(:disabled) {
-  background: #1d4ed8;
+  background: #1e40af;
+  transform: scale(1.05);
 }
 
 .doorare-chat-send-btn:disabled {
-  background: #94a3b8;
+  background: #cbd5e1;
+  color: #94a3b8;
+  box-shadow: none;
   cursor: not-allowed;
 }
 
-/* Quick prompt chips */
-.doorare-chat-quick-chips {
+.doorare-chat-stop-btn {
+  height: 30px;
+  padding: 0 10px;
+  background: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 8px;
   display: flex;
-  gap: 6px;
-  overflow-x: auto;
-  padding-bottom: 8px;
-  margin-bottom: 8px;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.doorare-chat-stop-btn:hover {
+  background: #dc2626;
 }
 
 .doorare-quick-chip {
@@ -1176,5 +1252,306 @@
   white-space: pre-wrap;
   font-family: inherit;
 }
+
+/* ========================================================
+   Markdown Table Styles
+   ======================================================== */
+
+.doorare-md-table-wrap {
+  margin: 10px 0;
+  overflow-x: auto;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.doorare-md-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+  text-align: left;
+  background: #ffffff;
+}
+
+.doorare-md-table th {
+  background: #f1f5f9;
+  color: #0f172a;
+  font-weight: 600;
+  padding: 8px 12px;
+  border-bottom: 1px solid #cbd5e1;
+  white-space: nowrap;
+}
+
+.doorare-md-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid #f1f5f9;
+  color: #334155;
+}
+
+.doorare-md-table tbody tr:hover {
+  background: #f8fafc;
+}
+
+.doorare-md-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* ========================================================
+   Clinical Proposal Card Badges & Detail Toggle
+   ======================================================== */
+
+.doorare-chat-proposal-card.decided {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  opacity: 0.9;
+}
+
+.doorare-proposal-tag {
+  font-size: 11px;
+  font-weight: 700;
+  color: #2563eb;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.doorare-proposal-badges-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0 6px 0;
+}
+
+.doorare-prop-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 11.5px;
+}
+
+.doorare-prop-badge-k {
+  color: #64748b;
+  font-weight: 500;
+}
+
+.doorare-prop-badge-v {
+  color: #0f172a;
+  font-weight: 600;
+}
+
+.doorare-prop-badge-v.highlight {
+  color: #2563eb;
+  font-weight: 700;
+}
+
+.doorare-proposal-details-toggle {
+  background: none;
+  border: none;
+  color: #64748b;
+  font-size: 11px;
+  cursor: pointer;
+  padding: 2px 0;
+  text-decoration: underline;
+}
+
+.doorare-proposal-details-toggle:hover {
+  color: #0284c7;
+}
+
+.doorare-proposal-raw-json {
+  margin: 6px 0 10px 0;
+  padding: 8px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 11px;
+  max-height: 140px;
+  overflow: auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+/* ========================================================
+   Message Action Buttons & Copy Feedback
+   ======================================================== */
+
+.doorare-bubble-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 6px;
+  padding-top: 4px;
+  border-top: 1px dashed #e2e8f0;
+}
+
+.doorare-bubble-copy-btn {
+  background: none;
+  border: none;
+  color: #64748b;
+  font-size: 11px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: all 0.15s;
+}
+
+.doorare-bubble-copy-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.doorare-thinking-copy-btn {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  font-size: 10px;
+  color: #475569;
+  padding: 1px 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.doorare-thinking-copy-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.doorare-thinking-timer-done {
+  font-size: 10.5px;
+  color: #64748b;
+  font-weight: 500;
+  margin-left: 4px;
+}
+
+/* ========================================================
+   Empty State Starter Cards
+   ======================================================== */
+
+.doorare-chat-empty-state {
+  text-align: center;
+  padding: 24px 16px;
+  max-width: 580px;
+  margin: 0 auto;
+}
+
+.doorare-empty-avatar {
+  margin-bottom: 12px;
+}
+
+.doorare-empty-title {
+  font-size: 16.5px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 6px;
+}
+
+.doorare-empty-desc {
+  font-size: 13px;
+  line-height: 1.5;
+  color: #64748b;
+  margin-bottom: 20px;
+}
+
+.doorare-empty-starter-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 10px;
+  text-align: left;
+}
+
+.doorare-starter-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 12px 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  transition: all 0.18s ease;
+}
+
+.doorare-starter-card:hover {
+  border-color: #38bdf8;
+  background: #f0f9ff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(2, 132, 199, 0.12);
+}
+
+.doorare-starter-icon {
+  font-size: 14px;
+  color: #0284c7;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.doorare-starter-text {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #1e293b;
+  line-height: 1.4;
+}
+
+.doorare-starter-card:hover .doorare-starter-text {
+  color: #0369a1;
+}
+
+/* ========================================================
+   Stop Button & Clinical Safety Disclaimer
+   ======================================================== */
+
+.doorare-chat-stop-btn {
+  height: 42px;
+  padding: 0 14px;
+  background: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+
+.doorare-chat-stop-btn:hover {
+  background: #dc2626;
+}
+
+.doorare-stop-icon {
+  width: 10px;
+  height: 10px;
+  background-color: white;
+  border-radius: 2px;
+  display: inline-block;
+}
+
+.doorare-chat-disclaimer {
+  text-align: center;
+  font-size: 11px;
+  color: #94a3b8;
+  margin-top: 8px;
+}
+
+/* Mobile responsive breakpoint */
+@media (max-width: 768px) {
+  .doorare-chat-drawer {
+    width: 100vw;
+  }
+  .doorare-chat-sidebar {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 260px;
+    z-index: 60;
+    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15);
+  }
+}
+
 
 
