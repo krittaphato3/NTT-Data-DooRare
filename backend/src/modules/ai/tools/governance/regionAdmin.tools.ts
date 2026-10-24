@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { query } from '../../../../db/client.js';
+import { pool as db, query } from '../../../../db/client.js';
+import { demandCandidates, loadPoolLot, poolLotBlocker, ruleSplit } from '../../../expiry/matching.js';
 import type { IAgentTool, RequestContext, ToolProposalPayload, ToolResult } from '../tool.types.js';
 import {
   buildEndpoint,
@@ -326,12 +327,14 @@ export interface PoolAllocationCandidate {
   travelMinutes: number | null;
   demandQty: number;
   allocatedQty: number;
+  daysOfStock: number;
+  transportCostThb: number;
 }
 
 /**
  * Tool: simulate_pool_allocation
- * Runs a deterministic greedy distance-ordered allocation simulation for a near-expiry pool lot
- * to candidate regional hospitals in shortage. No mutations are performed.
+ * Simulates the F-22 split of a near-expiry pool lot with the code the allocation plans use (expiry/matching.ts):
+ * receivers with a verified mapping that can use it before expiry, fewest days of stock first. No mutations are performed.
  * Allowed Roles: REGION_ADMIN, SYSTEM_ADMIN
  */
 export const simulatePoolAllocationTool: IAgentTool<{
@@ -340,7 +343,7 @@ export const simulatePoolAllocationTool: IAgentTool<{
 }> = {
   name: 'simulate_pool_allocation',
   description:
-    'Simulates greedy distance-ordered redistribution of a near-expiry pool entry to candidate hospitals in the region with stock alerts.',
+    'Simulates the F-22 split of a near-expiry pool entry (the same rule allocation plans are checked against): region hospitals with a verified mapping that can use it before expiry, fewest days of stock first.',
   parameters: z.object({
     poolEntryId: z.string().uuid().describe('UUID of the pool_entry to simulate allocation for'),
     maxCandidates: z
@@ -443,59 +446,30 @@ export const simulatePoolAllocationTool: IAgentTool<{
         };
       }
 
-      // Query candidate regional hospitals with active alerts for the same drug_master
-      const candRes = await query<{
-        hospital_id: string;
-        hospital_name: string;
-        alert_id: string;
-        suggested_borrow_qty: string;
-        distance_km: string | null;
-        travel_minutes: string | null;
-      }>(
-        `SELECT h.id AS hospital_id,
-                h.name_th AS hospital_name,
-                sa.id AS alert_id,
-                COALESCE(sa.suggested_borrow_qty, 0)::text AS suggested_borrow_qty,
-                dist.distance_km::text AS distance_km,
-                dist.travel_minutes::text AS travel_minutes
-           FROM stock_alert sa
-           JOIN hospital_drug hd ON hd.id = sa.hospital_drug_id
-           JOIN hospital h ON h.id = hd.hospital_id
-           LEFT JOIN hospital_distance dist
-                  ON dist.from_hospital_id = $1
-                 AND dist.to_hospital_id = h.id
-          WHERE h.region_id = $2
-            AND h.id <> $1
-            AND h.active = true
-            AND hd.drug_master_id = $3
-            AND sa.status IN ('OPEN', 'ACKNOWLEDGED', 'LINKED_TO_REQUEST', 'SNOOZED')
-            AND COALESCE(sa.suggested_borrow_qty, 0) > 0
-          ORDER BY dist.distance_km ASC NULLS LAST, h.name_th ASC
-          LIMIT $4`,
-        [pe.source_hospital_id, pe.region_id, pe.drug_master_id, maxCandidates],
-      );
+      // The same candidates and split the allocation agent and a hand-made plan are checked against (F-22 / BR-F2a-025:
+      // verified mapping, can use it before expiry, fewest days of stock first), so the simulation shows the plan the system
+      // would actually accept.
+      const lot = await loadPoolLot(db, pe.id);
+      if (!lot) return { success: false, error: `Pool entry '${args.poolEntryId}' not found.` };
+      const { life, candidates } = await demandCandidates(db, lot);
+      const considered = candidates.slice(0, maxCandidates);
+      const split = ruleSplit(lot, life, considered);
 
       let remaining = initialAvailable;
-      const allocations: PoolAllocationCandidate[] = [];
-
-      for (const cand of candRes.rows) {
-        if (remaining <= 0) break;
-
-        const demand = toNumber(cand.suggested_borrow_qty, 0);
-        if (demand <= 0) continue;
-
-        const allocated = Math.min(remaining, demand);
-        remaining = Number((remaining - allocated).toFixed(3));
-
-        allocations.push({
-          hospitalId: cand.hospital_id,
-          hospitalName: cand.hospital_name,
-          distanceKm: cand.distance_km !== null ? toNumber(cand.distance_km) : null,
-          travelMinutes: cand.travel_minutes !== null ? toNumber(cand.travel_minutes) : null,
-          demandQty: demand,
-          allocatedQty: allocated,
-        });
-      }
+      const allocations: PoolAllocationCandidate[] = split.map((line) => {
+        const c = considered.find((x) => x.hospitalId === line.receiverHospitalId)!;
+        remaining = Number((remaining - line.qty).toFixed(3));
+        return {
+          hospitalId: c.hospitalId,
+          hospitalName: c.name,
+          distanceKm: c.km,
+          travelMinutes: Math.round(c.transitDays * 1440),
+          demandQty: c.cap?.deficit ?? 0,
+          allocatedQty: line.qty,
+          daysOfStock: Math.round((c.stock / c.usePerDay) * 10) / 10,
+          transportCostThb: c.transportCostThb,
+        };
+      });
 
       const totalAllocated = Number((initialAvailable - remaining).toFixed(3));
 
@@ -512,8 +486,11 @@ export const simulatePoolAllocationTool: IAgentTool<{
           initialAvailable,
           totalAllocated,
           remainingAvailable: remaining,
-          candidateCount: candRes.rows.length,
+          candidateCount: considered.length,
           allocations,
+          method: 'F-22 greedy (fewest days of stock first, then shorter transit)',
+          /** Why the owner could not turn this lot into a plan right now (null = it can). */
+          blocker: poolLotBlocker(lot),
           simulationOnly: true,
         },
       };

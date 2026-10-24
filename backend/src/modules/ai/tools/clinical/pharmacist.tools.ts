@@ -749,16 +749,40 @@ export const PHARMACIST_PROPOSAL_WHITELIST = {
       note: z.string().optional(),
     }),
   },
+  /** F2: the allocation agent (AGT-F2-001) proposes a plan for a lot our hospital released; the code checks it (F-22). */
+  SEND_POOL_TO_AGENT: {
+    buildEndpoint: (poolEntryId?: string) => {
+      if (!poolEntryId) throw new Error('poolEntryId (targetId) is required for SEND_POOL_TO_AGENT');
+      return `/api/v1/pool/${poolEntryId}/agent-plan`;
+    },
+    method: 'POST' as const,
+    routeSource: 'backend/src/modules/expiry/expiry.routes.ts (POST /pool/:id/agent-plan)',
+    payloadSchema: z.object({}),
+  },
+  /** F2: object to another hospital's allocation plan of our region, with a reason (plan goes to discussion). */
+  OBJECT_ALLOCATION_PLAN: {
+    buildEndpoint: (planId?: string) => {
+      if (!planId) throw new Error('allocation plan id (targetId) is required for OBJECT_ALLOCATION_PLAN');
+      return `/api/v1/allocation-plans/${planId}/objection`;
+    },
+    method: 'POST' as const,
+    routeSource: 'backend/src/modules/expiry/expiry.routes.ts (POST /allocation-plans/:id/objection)',
+    payloadSchema: z.object({
+      reason: z.string().min(3, 'Objection reason must be at least 3 characters').max(1000),
+    }),
+  },
 } as const;
+
+type PharmacistAction = keyof typeof PHARMACIST_PROPOSAL_WHITELIST;
 
 /**
  * Tool: submit_pharmacist_proposal (Terminal Tool)
  * Generates an interactive Human-In-The-Loop (HITL) proposal card for pharmacist authorization.
- * Whitelisted actions: CREATE_BORROW_REQUEST, SNOOZE_ALERT, RELEASE_NEAR_EXPIRY_POOL
+ * Whitelisted actions: CREATE_BORROW_REQUEST, SNOOZE_ALERT, RELEASE_NEAR_EXPIRY_POOL, SEND_POOL_TO_AGENT, OBJECT_ALLOCATION_PLAN
  * Allowed Roles: PHARMACIST, SYSTEM_ADMIN
  */
 export const submitPharmacistProposalTool: IAgentTool<{
-  actionType: 'CREATE_BORROW_REQUEST' | 'SNOOZE_ALERT' | 'RELEASE_NEAR_EXPIRY_POOL';
+  actionType: PharmacistAction;
   title: string;
   description: string;
   summary: Record<string, unknown>;
@@ -767,10 +791,10 @@ export const submitPharmacistProposalTool: IAgentTool<{
 }> = {
   name: 'submit_pharmacist_proposal',
   description:
-    'Terminal proposal tool submitting human-in-the-loop action proposals for borrow requests, alert snoozing, or near-expiry pool releases.',
+    'Terminal proposal tool submitting human-in-the-loop action proposals for borrow requests, alert snoozing, near-expiry pool releases, sending an own pool lot to the allocation agent, or objecting to another hospital\'s allocation plan in the region.',
   parameters: z.object({
     actionType: z
-      .enum(['CREATE_BORROW_REQUEST', 'SNOOZE_ALERT', 'RELEASE_NEAR_EXPIRY_POOL'])
+      .enum(['CREATE_BORROW_REQUEST', 'SNOOZE_ALERT', 'RELEASE_NEAR_EXPIRY_POOL', 'SEND_POOL_TO_AGENT', 'OBJECT_ALLOCATION_PLAN'])
       .describe('Whitelisted pharmacist action type'),
     title: z.string().describe('Title of the proposed action'),
     description: z.string().describe('Detailed clinical explanation or rationale'),
@@ -779,7 +803,7 @@ export const submitPharmacistProposalTool: IAgentTool<{
       .string()
       .uuid()
       .optional()
-      .describe('Target ID required for alert snoozing (alertId) or pool release (nearExpiryId)'),
+      .describe('Target ID: alertId (SNOOZE_ALERT), nearExpiryId (RELEASE_NEAR_EXPIRY_POOL), poolEntryId (SEND_POOL_TO_AGENT) or allocation plan id (OBJECT_ALLOCATION_PLAN)'),
     payload: z.record(z.string(), z.unknown()).describe('Action-specific payload parameters'),
   }),
   allowedRoles: ['PHARMACIST', 'SYSTEM_ADMIN'],
@@ -844,6 +868,27 @@ export const submitPharmacistProposalTool: IAgentTool<{
               error: 'Permission denied: Cannot release near-expiry item belonging to another hospital.',
             };
           }
+        } else if (args.actionType === 'SEND_POOL_TO_AGENT') {
+          // only the hospital that released the lot plans it (same rule as POST /pool/:id/agent-plan)
+          const lot = await query<{ hospital_id: string }>(
+            'SELECT ne.hospital_id FROM pool_entry pe JOIN near_expiry_item ne ON ne.id = pe.near_expiry_item_id WHERE pe.id = $1',
+            [args.targetId],
+          );
+          if (lot.rows.length === 0) return { success: false, error: `Pool entry '${args.targetId}' not found.` };
+          if (!isSystemAdmin && lot.rows[0].hospital_id !== hospitalId) {
+            return { success: false, error: 'Permission denied: Only the hospital that released the lot can send it to the allocation agent.' };
+          }
+        } else if (args.actionType === 'OBJECT_ALLOCATION_PLAN') {
+          // a hospital of the plan's region that is not in it yet (involved hospitals approve or reject instead)
+          const plan = await query<{ same_region: boolean; involved: boolean }>(
+            `SELECT ap.region_id = (SELECT region_id FROM hospital WHERE id = $2) AS same_region,
+                    EXISTS (SELECT 1 FROM plan_approval pa WHERE pa.plan_id = ap.id AND pa.hospital_id = $2) AS involved
+               FROM allocation_plan ap WHERE ap.id = $1`,
+            [args.targetId, hospitalId],
+          );
+          if (plan.rows.length === 0) return { success: false, error: `Allocation plan '${args.targetId}' not found.` };
+          if (!isSystemAdmin && !plan.rows[0].same_region) return { success: false, error: 'Permission denied: The allocation plan belongs to another region.' };
+          if (plan.rows[0].involved) return { success: false, error: 'Your hospital is already in this plan: approve or reject it instead of objecting.' };
         }
       }
 

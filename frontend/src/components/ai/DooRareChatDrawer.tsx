@@ -36,6 +36,9 @@ const ProposalCard: React.FC<ProposalCardProps> = ({ proposal, onActionComplete 
   const [loading, setLoading] = useState(false);
   const [decided, setDecided] = useState<'approved' | 'declined' | null>(null);
   const [showTechnicalDetails, setShowTechnicalDetails] = useState(false);
+  // Write routes (borrow requests, pool release, plan approval, emergency borrowing, allocation agent...) require an
+  // Idempotency-Key; one key per card, so approving again after a network error never runs the action twice.
+  const [idempotencyKey] = useState(() => crypto.randomUUID());
 
   const handleApprove = async () => {
     setLoading(true);
@@ -46,6 +49,7 @@ const ProposalCard: React.FC<ProposalCardProps> = ({ proposal, onActionComplete 
         method: proposal.actionApi.method,
         headers: {
           'Content-Type': 'application/json',
+          'Idempotency-Key': idempotencyKey,
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify(proposal.actionApi.payload),

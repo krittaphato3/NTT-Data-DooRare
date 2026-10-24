@@ -15,6 +15,11 @@ summary: Alert link/duplicates/snooze, F2 agent+manual plans+objection, F3 add i
 - F2: `allocation.agent.ts` (BYOK LLM, F-22 fallback), `GET /pool/{id}/candidates`, `POST /pool/{id}/agent-plan`, `POST /allocation-plans`, `POST /allocation-plans/{id}/objection`; region plans visible while objectable; UI buttons + `ManualPlanDialog`.
 - F3: `AddPlanItem` (setExtras/setKits); added items now named in plan view; late confirm of TIMED_OUT legs (`lateAnswerSql`), pharmacist lender page uses `/emergency-legs/{id}/confirm`.
 
+- Merged latest `backend-byok` (Messenger-style Copilot popup, AI config presets): no conflict. Made the AI side match:
+  - Copilot Approve sends one `Idempotency-Key` per card (every idempotent route, e.g. create borrow request, failed with 400 before).
+  - `simulate_pool_allocation` (REGION_ADMIN) now uses `demandCandidates` / `ruleSplit` (F-22 order, as plans are checked).
+  - Pharmacist Copilot can propose `SEND_POOL_TO_AGENT` and `OBJECT_ALLOCATION_PLAN` (test `ai.f2.proposals.test.ts`).
+
 ## Decisions
 - `decisions/0005-f2-f3-feedback-rules.md`.
 
