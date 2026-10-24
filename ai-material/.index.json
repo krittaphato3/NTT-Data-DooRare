@@ -1,5 +1,117 @@
 [
   {
+    "path": "sessions/2026-10-24-0935-antigravity-logistics-tools.md",
+    "title": "Session: Logistics & Operations AI Toolsets (Person 4 Scope)",
+    "summary": "Session",
+    "tags": "session",
+    "date": "2026-10-24"
+  },
+  {
+    "path": "sessions/2026-10-24-1027-antigravity-governance-utils-part1.md",
+    "title": "Session: Governance AI Utilities (Person 5 Scope - Part 1)",
+    "summary": "Session",
+    "tags": "session",
+    "date": "2026-10-24"
+  },
+  {
+    "path": "sessions/2026-10-24-1030-antigravity-governance-hospital-admin-part2.md",
+    "title": "Session: Hospital Admin Governance Tools (Person 5 Scope - Part 2)",
+    "summary": "Session",
+    "tags": "session",
+    "date": "2026-10-24"
+  },
+  {
+    "path": "sessions/2026-10-24-1038-antigravity-governance-region-admin-part3.md",
+    "title": "Session: Region Admin Governance Tools (Person 5 Scope - Part 3)",
+    "summary": "Session",
+    "tags": "session",
+    "date": "2026-10-24"
+  },
+  {
+    "path": "sessions/2026-10-24-1042-antigravity-governance-system-admin-part4.md",
+    "title": "Session: System Admin Governance Tools (Person 5 Scope - Part 4)",
+    "summary": "Session",
+    "tags": "session",
+    "date": "2026-10-24"
+  },
+  {
+    "path": "sessions/2026-10-24-1048-antigravity-governance-data-admin-part5.md",
+    "title": "Session: Data Admin Governance Tools (Person 5 Scope - Part 5)",
+    "summary": "Session",
+    "tags": "session",
+    "date": "2026-10-24"
+  },
+  {
+    "path": "sessions/2026-10-24-1057-antigravity-governance-auditor-part6.md",
+    "title": "Session: Auditor Governance Tools (Person 5 Scope - Part 6)",
+    "summary": "Session",
+    "tags": "session",
+    "date": "2026-10-24"
+  },
+  {
+    "path": "sessions/2026-10-24-1111-antigravity-governance-auditor-part6b.md",
+    "title": "Session: Auditor Governance Tools Verification & Schema Alignment (Person 5 Scope - Part 6b)",
+    "summary": "Session",
+    "tags": "session",
+    "date": "2026-10-24"
+  },
+  {
+    "path": "sessions/2026-10-24-1115-antigravity-governance-cleanup-part6c.md",
+    "title": "Session: Governance Verify Payload Numeric Type Cleanup (Person 5 Scope - Part 6c)",
+    "summary": "Session",
+    "tags": "session",
+    "date": "2026-10-24"
+  },
+  {
+    "path": "sessions/2026-10-24-1118-antigravity-governance-registry-part7.md",
+    "title": "Session: Governance Tools Registration & Registry Wiring (Person 5 Scope - Part 7)",
+    "summary": "Session",
+    "tags": "session",
+    "date": "2026-10-24"
+  },
+  {
+    "path": "sessions/2026-10-24-1145-antigravity-governance-tests-part8a.md",
+    "title": "Session: 2026-10-24 11:45 Governance Tools Unit Tests Part 8a",
+    "summary": "Session",
+    "tags": "session",
+    "date": "2026-10-24"
+  },
+  {
+    "path": "sessions/2026-10-24-1155-antigravity-governance-tests-part8a-fix.md",
+    "title": "Session: 2026-10-24 11:55 Governance Tools Unit Tests Part 8a Fix",
+    "summary": "Session",
+    "tags": "session",
+    "date": "2026-10-24"
+  },
+  {
+    "path": "sessions/2026-10-24-1204-antigravity-governance-tests-part8b.md",
+    "title": "Session: 2026-10-24 12:04 - Person 5 Scope: Governance Tests (Part 8b)",
+    "summary": "Session",
+    "tags": "session",
+    "date": "2026-10-24"
+  },
+  {
+    "path": "sessions/2026-10-24-1218-antigravity-governance-tests-part8c.md",
+    "title": "Session: 2026-10-24 12:18 - Person 5 Scope: Governance Tests (Part 8c)",
+    "summary": "Session",
+    "tags": "session",
+    "date": "2026-10-24"
+  },
+  {
+    "path": "sessions/2026-10-24-1230-antigravity-governance-tests-part8d.md",
+    "title": "Session: 2026-10-24 12:30 - Person 5 Scope: Governance Tests (Part 8d)",
+    "summary": "Session",
+    "tags": "session",
+    "date": "2026-10-24"
+  },
+  {
+    "path": "sessions/2026-10-24-1232-antigravity-governance-final-part9.md",
+    "title": "Session: 2026-10-24 12:32 - Person 5 Scope: Governance Final Verification & Capstone (Part 9)",
+    "summary": "Session",
+    "tags": "session",
+    "date": "2026-10-24"
+  },
+  {
     "path": "sessions/2026-10-23-0825-claude-forecast-scheduled-predict-job.md",
     "title": "Forecast scheduled predict job (Option A + Option B dynamic DB export)",
     "summary": "Option B completed: Postgres usage & snapshot streaming export -> predict up…",

@@ -1,0 +1,21 @@
+# Session: 2026-10-24 11:55 Governance Tools Unit Tests Part 8a Fix
+
+- **goal**: Execute PART 8a-fix: verify and correct Part 8a test coverage and investigate the real database schema for `incident` and `emergency_plan`.
+- **done**:
+  - Proved beyond doubt with live PostgreSQL execution and `specification/schema.sql` that table `incident` has NO `title` column (columns are `incident_no`, `incident_type`, `description`, etc.).
+  - Fixed `backend/src/modules/ai/tools/governance/hospitalAdmin.tools.ts` to query `incident_no`, `incident_type` and use `incident_no` in proposals, and require a plan with status `READY_FOR_APPROVAL`.
+  - Committed fix in `b9d89b1` (`fix(ai): governance hospitalAdmin incident lookup`).
+  - Un-skipped `APPROVE_INCIDENT_PLAN` proposal testing in `backend/tests/ai/hospitalAdmin.tools.test.ts`: tested failure paths (unknown incident UUID, and incident without ready plan) and added success path guarded by DB count check (`t.skip` with exact count reason if 0 ready plans in seed DB).
+  - Committed test update in `02914c0` (`test(ai): governance tests accuracy fixes`).
+  - Audited all claims: confirmed that `z-score`, `FEFO`, and `cumulative` were report summary hallucinations not in the test files; confirmed `prohibition` is correctly applied only to pool simulation (BR-F1b-014), not waiver.
+  - Verified `npm --prefix backend run build` (0 errors), `npm --prefix backend test` (163 pass), and all `tests/ai/*.tools.test.ts` pass cleanly.
+- **decisions**:
+  - Maintained separation between source fix commit (`b9d89b1`) and test fix commit (`02914c0`).
+  - Left pool simulation greedy allocation un-mocked and untouched because the allocation algorithm is inline inside `execute()`, not an exported pure function.
+- **files touched**:
+  - `backend/src/modules/ai/tools/governance/hospitalAdmin.tools.ts`
+  - `backend/tests/ai/hospitalAdmin.tools.test.ts`
+- **errors encountered**:
+  - `PostgreSQL error: column "title" does not exist` when executing `APPROVE_INCIDENT_PLAN` proposal on `incident`. Resolved by querying real columns (`incident_no`, `incident_type`).
+- **next steps**:
+  - Await user approval to proceed with Part 8b (`dataAdmin.tools.test.ts` and `auditor.tools.test.ts`).
