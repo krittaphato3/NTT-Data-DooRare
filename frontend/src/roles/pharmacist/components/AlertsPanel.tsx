@@ -36,8 +36,8 @@ const ALERTS_PAGE = 6;
 type AlertStatus = 'open' | 'linked' | 'acked' | 'snoozed';
 
 const STATUS_META: Record<AlertStatus, { label: string; cls: string; icon: IconName }> = {
-  open: { label: 'เปิด', cls: 't-amber', icon: 'bell' },
-  linked: { label: 'ผูกคำขอแล้ว', cls: 't-green', icon: 'link' },
+  open: { label: 'รอจัดการ', cls: 't-amber', icon: 'bell' },
+  linked: { label: 'สร้างคำขอยืมแล้ว', cls: 't-green', icon: 'link' },
   acked: { label: 'รับทราบแล้ว', cls: 't-blue', icon: 'eye' },
   snoozed: { label: 'เลื่อนเตือน', cls: 't-grey', icon: 'moon' },
 };
@@ -73,7 +73,7 @@ export function AlertsPanel({ query, hospital, role = 'PHARMACIST' }: AlertsPane
     ? [
         { key: 'all', label: 'ทั้งหมด', count: allAlerts.length },
         { key: 'shortage', label: 'สต็อกต่ำ/เตรียมสั่ง', count: allAlerts.filter((a) => a.type === 'shortage').length },
-        { key: 'request', label: 'ผูกคำขอแล้ว', count: allAlerts.filter((a) => a.type === 'request').length },
+        { key: 'request', label: 'สร้างคำขอยืมแล้ว', count: allAlerts.filter((a) => a.type === 'request').length },
       ]
     : ALERT_TABS;
   const q = query.trim().toLowerCase();

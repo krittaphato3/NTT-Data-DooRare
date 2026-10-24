@@ -34,6 +34,8 @@ export interface ApiNearExpiry {
 
 export interface ApiPoolEntry {
   id: string;
+  /** The near-expiry item behind the pool entry (what `withdraw` takes). */
+  itemId?: string;
   drug: { name: string; localCode: string; ved: 'V' | 'E' | 'D'; unit: string };
   lotNo: string;
   expiryDate: string;
@@ -144,6 +146,8 @@ type One<T> = { ok: true; id: string; version: number; data: T };
 const post = <T>(path: string, body: unknown = {}) => apiJson<T>(path, { method: 'POST', headers: { 'Idempotency-Key': crypto.randomUUID() }, body: JSON.stringify(body) });
 
 export const listNearExpiry = () => apiJsonAll<{ ok: true; items: ApiNearExpiry[]; nextCursor: string | null }>('/near-expiry?limit=200');
+/** Runs the near-expiry scan now (the server also runs it on a timer): lots that entered the threshold show up for review. */
+export const scanNearExpiryNow = () => post<{ ok: true; detected: number; reevaluated: number; refreshed: number; writeOffs: number; timedOutPlans: number; repeatFlags: number }>('/near-expiry/scan');
 export const releaseNearExpiry = (id: string, qty: number, version?: number) => post<One<ApiNearExpiry>>(`/near-expiry/${id}/release`, { qty, version });
 export const keepNearExpiry = (id: string, reason: string, version?: number) => post<One<ApiNearExpiry>>(`/near-expiry/${id}/keep`, { reason, version });
 export const dismissNearExpiry = (id: string, reason: string) => post<One<ApiNearExpiry>>(`/near-expiry/${id}/dismiss`, { reason });

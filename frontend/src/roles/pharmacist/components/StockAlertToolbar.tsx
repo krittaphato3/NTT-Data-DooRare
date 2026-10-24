@@ -1,12 +1,12 @@
 import { Icon } from '../../../components/common/icons';
 import { ALERT_TABS, SEVERITY_FILTERS, SORT_OPTIONS, VED_FILTERS } from '../data/stockAlerts';
-import type { Severity, SortMode, Ved } from '../data/stockAlerts';
+import type { AlertTabKey, Severity, SortMode, Ved } from '../data/stockAlerts';
 
 interface StockAlertToolbarProps {
-  tab: 'queue' | 'all';
-  onTab: (tab: 'queue' | 'all') => void;
+  tab: AlertTabKey;
+  onTab: (tab: AlertTabKey) => void;
   /** Row count per tab key, rendered in the tab bubble. */
-  tabCounts: Record<'queue' | 'all', number>;
+  tabCounts: Record<AlertTabKey, number>;
   search: string;
   onSearch: (v: string) => void;
   severity: 'all' | Severity;

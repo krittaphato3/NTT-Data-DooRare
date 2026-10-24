@@ -42,7 +42,7 @@ interface NavDef {
 const CATALOGUE: Record<string, NavDef> = {
   dash: { th: 'ภาพรวม', en: 'Dashboard', ui: 'UI-01', icon: 'grid', href: 'Main.dc.html', badge: '', red: false },
   alerts: { th: 'แจ้งเตือนสต็อก', en: 'Stock alerts · Forecast', ui: 'UI-02 · UI-03', icon: 'bell', href: 'Stock.dc.html', badge: '8', red: true },
-  req: { th: 'คำขอยืมของเรา', en: 'Borrow requests', ui: 'UI-04 · UI-05 · UI-10', icon: 'inbox', href: 'Requests.dc.html', badge: '1', red: true },
+  req: { th: 'ยืม-ให้ยืมยา', en: 'Borrow & Lend', ui: 'UI-04 · UI-05 · UI-06 · UI-10', icon: 'inbox', href: 'Requests.dc.html', badge: '1', red: true },
   lend: { th: 'คิวตอบคำขอยืม', en: 'Lender queue', ui: 'UI-06', icon: 'hand', href: 'RequestsLender.dc.html', badge: '2', red: true },
   exp: { th: 'ยาใกล้หมดอายุ', en: 'Near-expiry review', ui: 'UI-07', icon: 'calx', href: '#', badge: '3', red: false },
   pool: { th: 'คลังกลาง · แผนจัดสรร', en: 'Pool & allocation', ui: 'UI-08 · UI-09', icon: 'layers', href: '#', badge: '1', red: false },
@@ -62,13 +62,13 @@ const CATALOGUE: Record<string, NavDef> = {
 
 /** Role → nav keys (`'|'` renders the admin group header) — mockup `ROLES` verbatim. */
 export const ROLE_NAV: Record<string, string[]> = {
-  PHARMACIST: ['dash', 'alerts', 'req', 'lend', 'exp', 'pool', 'inc', 'tr', 'doc', 'rep', 'aud'],
+  PHARMACIST: ['dash', 'alerts', 'req', 'exp', 'pool', 'inc', 'tr', 'doc', 'rep', 'aud'],
   PROCUREMENT_OFFICER: ['dash', 'alerts', 'req', 'doc', 'rep'],
   WAREHOUSE_OFFICER: ['dash', 'tr', 'inc', 'doc'],
   DRIVER: ['tr'],
   // RBAC 5.3: ER works in F3 only (no F1/F2, no transport list).
   ER_STAFF: ['inc'],
-  HOSPITAL_ADMIN: ['dash', 'alerts', 'req', 'lend', 'exp', 'pool', 'inc', 'tr', 'doc', 'rep', '|', 'usr', 'cfg', 'aud'],
+  HOSPITAL_ADMIN: ['dash', 'alerts', 'req', 'exp', 'pool', 'inc', 'tr', 'doc', 'rep', '|', 'usr', 'cfg', 'aud'],
   SYSTEM_ADMIN: ['adm', 'hosp', 'acct', '|', 'cfg', 'aud'],
 };
 
@@ -135,7 +135,7 @@ export function homeHrefFor(role: string): string {
  * role opens read-only (no write actions — see `lib/rbac.ts`).
  */
 const VISIBLE_KEYS: Record<string, string[]> = {
-  HOSPITAL_ADMIN: ['dash', 'alerts', 'req', 'lend', 'exp', 'pool', 'inc', 'tr', 'doc', 'rep', '|', 'usr', 'cfg', 'aud'],
+  HOSPITAL_ADMIN: ['dash', 'alerts', 'req', 'exp', 'pool', 'inc', 'tr', 'doc', 'rep', '|', 'usr', 'cfg', 'aud'],
   SYSTEM_ADMIN: ['adm', 'hosp', 'acct', '|', 'cfg', 'aud'],
 };
 

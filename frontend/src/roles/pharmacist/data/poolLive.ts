@@ -16,7 +16,7 @@ export function poolEntryToView(e: ApiPoolEntry): PoolLot {
     from: e.origin.name,
     releasedBy: e.releasedBy ?? '—',
     releasedAt: fmtThaiTime(e.releasedAt),
-    live: { uuid: e.id, originId: e.origin.id, qtyAvailable: e.qtyAvailable, status: e.status, planNo: e.planNo },
+    live: { uuid: e.id, ...(e.itemId ? { itemId: e.itemId } : {}), originId: e.origin.id, qtyAvailable: e.qtyAvailable, status: e.status, planNo: e.planNo },
   };
 }
 

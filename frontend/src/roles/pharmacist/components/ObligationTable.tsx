@@ -193,16 +193,18 @@ export function ObligationTable({ rows, mayWaive, onWaive }: ObligationTableProp
                     )}
                   </td>
                   <td className="r">
-                    <button
-                      type="button"
-                      className="btn btn-sm btn-p"
-                      data-part="obligation-waive"
-                      disabled={!gate.allowed}
-                      title={gate.hint}
-                      onClick={() => onWaive(o)}
-                    >
-                      ยกเว้นภาระการคืน
-                    </button>
+                    {gate.allowed ? (
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-p"
+                        data-part="obligation-waive"
+                        onClick={() => onWaive(o)}
+                      >
+                        ยกเว้นภาระการคืน
+                      </button>
+                    ) : (
+                      <span className="sub">—</span>
+                    )}
                   </td>
                 </tr>
               );

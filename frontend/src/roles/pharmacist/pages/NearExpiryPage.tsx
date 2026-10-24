@@ -2,9 +2,14 @@ import { useEffect, useState } from 'react';
 import { Icon } from '../../../components/common/icons';
 import { homeHrefFor } from '../../../data/navigation';
 import type { RoleCode } from '../../../lib/rbac';
+import { ConfirmDialog } from '../components/ConfirmDialog';
+import { ExpiryPipelineStepper } from '../components/ExpiryPipelineStepper';
+import { ReasonDialog } from '../../hospital-admin/components/ReasonDialog';
 import { NearExpiryDrawer } from '../components/NearExpiryDrawer';
+import { usePoolAndPlans } from '../data/useExpiryF2';
+import { mayActFor } from '../../../lib/rbac';
 import { useNearExpiry } from '../data/useNearExpiry';
-import { dismissNearExpiry, getValue, keepNearExpiry, releaseNearExpiry, withdrawNearExpiry } from '../../../services/expiryApi';
+import { dismissNearExpiry, getValue, keepNearExpiry, releaseNearExpiry, scanNearExpiryNow, withdrawNearExpiry } from '../../../services/expiryApi';
 import type { ApiValue } from '../../../services/expiryApi';
 import { useAuth } from '../../../context/AuthContext';
 import {
@@ -57,12 +62,19 @@ function advice(i: NearExpiryItem): { text: string; cls: string } {
 export function NearExpiryPage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
   const [tab, setTab] = useState<ExpiryTab>('review');
   const ne = useNearExpiry();
+  const f2 = usePoolAndPlans();
+  const mayRelease = mayActFor(role, 'PHARMACIST', 'releaseNearExpiry');
+  /** Quantity the pharmacist chose to release per lot (default = the FEFO suggestion). */
+  const [relQty, setRelQty] = useState<Record<string, number>>({});
+  /** Dialog for a row action: release a quantity, or keep the whole lot (needs a reason). */
+  const [rowAction, setRowAction] = useState<{ kind: 'release'; item: NearExpiryItem; rel: number } | { kind: 'keep'; item: NearExpiryItem } | null>(null);
   const { user } = useAuth();
   const live = ne.source === 'live';
   const [localItems, setItems] = useState<NearExpiryItem[] | null>(null);
   const items = live ? ne.items : (localItems ?? ne.items);
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [scanNote, setScanNote] = useState<string | null>(null);
   const [value, setValue] = useState<ApiValue | null>(null);
   useEffect(() => {
     if (live) getValue(12).then(setValue).catch(() => setValue(null));
@@ -109,6 +121,12 @@ export function NearExpiryPage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
     : EXPIRY_KPIS;
 
   const rows = items.filter(inTab);
+  const stepCounts = {
+    expiry: counts.review,
+    pool: f2.pool.length,
+    plans: f2.plans.filter((p) => p.status === 'PENDING_MY_APPROVAL').length,
+    discussion: f2.plans.filter((p) => p.status === 'NEEDS_DISCUSSION').length,
+  };
   const sel = items.find((i) => i.id === selId) ?? rows[0];
 
   /** Live: every decision is an API call (release holds the quantity, keep/dismiss/withdraw need a reason). */
@@ -122,6 +140,17 @@ export function NearExpiryPage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
     setBusy(true);
     setActionError(null);
     call.then(() => ne.reload()).catch((e: Error) => setActionError(e.message)).finally(() => setBusy(false));
+  };
+
+  /** Demo / on-demand: run the near-expiry scan now instead of waiting for the server timer. */
+  const scanNow = () => {
+    setBusy(true);
+    setActionError(null);
+    setScanNote(null);
+    scanNearExpiryNow()
+      .then((r) => { setScanNote(`ตรวจเสร็จ: พบล็อตใหม่ ${r.detected} ล็อต · กลับมาให้ตัดสินใจใหม่ ${r.reevaluated} · อัปเดตวัน/มูลค่า ${r.refreshed} · หมดอายุ ${r.writeOffs}`); return ne.reload(); })
+      .catch((e: Error) => setActionError(e.message))
+      .finally(() => setBusy(false));
   };
 
   const decide = (id: string, status: NearExpiryStatus, qty?: number) => {
@@ -193,6 +222,12 @@ export function NearExpiryPage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
           </div>
         </div>
         <div className="pagehead-actions">
+          {live && (
+            <button className="btn btn-p" onClick={scanNow} disabled={busy} title="ตรวจล็อตที่เข้าเกณฑ์ใกล้หมดอายุของทุกโรงพยาบาลตอนนี้ (ระบบก็ตรวจให้เองตามรอบเวลา)">
+              <Icon name="refresh" />
+              {busy ? 'กำลังตรวจ…' : 'ตรวจล็อตใกล้หมดอายุตอนนี้'}
+            </button>
+          )}
           <button className="btn btn-s" onClick={exportCsv} title="ส่งออกข้อมูลเป็น CSV">
             <Icon name="download" />
             CSV
@@ -203,6 +238,12 @@ export function NearExpiryPage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
           </button>
         </div>
       </section>
+
+      {(scanNote || actionError) && (
+        <div className="card" role={actionError ? 'alert' : 'status'} style={{ padding: '10px 16px', fontSize: 13, color: actionError ? '#B91C1C' : '#0F2A5C' }}>{actionError ?? scanNote}</div>
+      )}
+
+      <ExpiryPipelineStepper current="expiry" counts={stepCounts} role={role} />
 
       {/* KPI row — colored accent tiles from the mockup */}
       <section className="ne-kpis">
@@ -247,7 +288,7 @@ export function NearExpiryPage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
                 <th style={{ width: 110 }}>คงคลัง</th>
                 <th style={{ width: 220 }}>หมดอายุ</th>
                 <th style={{ width: 90, textAlign: 'right' }}>มูลค่า</th>
-                <th style={{ width: 230 }}>คำแนะนำ</th>
+                <th style={{ width: 330 }}>ตัดสินใจ: เก็บไว้ใช้ / ปล่อยเข้าพูล</th>
               </tr>
             </thead>
             <tbody>
@@ -318,7 +359,76 @@ export function NearExpiryPage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
                       </span>
                     </td>
                     <td>
-                      <span className={a.cls}>{a.text}</span>
+                      {i.status === 'PENDING' ? (
+                        (() => {
+                          const maxRel = releasable(i);
+                          const rel = Math.min(maxRel, Math.max(0, relQty[i.id] ?? maxRel));
+                          const stay = i.qty - rel;
+                          const keepAll = (auto: boolean) => {
+                            if (!auto) { setRowAction({ kind: 'keep', item: i }); return; }
+                            const why = 'FEFO ใช้ทันก่อนหมดอายุ ไม่ต้องปล่อยเข้าคลังกลาง';
+                            if (live) decideLive(i, 'KEPT', undefined, why);
+                            else decide(i.id, 'KEPT');
+                          };
+                          return (
+                            <div className="ne-act">
+                              <div className="ne-split" title="เขียว = เก็บไว้ใช้เอง · ฟ้า = ปล่อยเข้าคลังกลาง">
+                                <span className="ne-split-keep" style={{ flex: stay }} />
+                                <span className="ne-split-rel" style={{ flex: rel }} />
+                              </div>
+                              <div className="ne-split-txt num">
+                                <span className="k">เก็บไว้ใช้เอง <b>{stay.toLocaleString()}</b></span>
+                                <span className="r">ปล่อยเข้าพูล <b>{rel.toLocaleString()}</b> {i.unit}</span>
+                              </div>
+                              {maxRel > 0 ? (
+                                <>
+                                  <label className="ne-act-row">
+                                    <span className="sub">จำนวนที่จะปล่อย</span>
+                                    <input
+                                      className="ne-qtyinput num"
+                                      type="number"
+                                      min={0}
+                                      max={maxRel}
+                                      value={rel}
+                                      disabled={!mayRelease || busy}
+                                      aria-label={`จำนวนที่จะปล่อย ${i.drug}`}
+                                      onChange={(e) => setRelQty((m) => ({ ...m, [i.id]: Math.max(0, Math.min(maxRel, Math.floor(Number(e.target.value) || 0))) }))}
+                                    />
+                                    <span className="sub">/ สูงสุด {maxRel.toLocaleString()} {i.unit}</span>
+                                    {rel !== maxRel && (
+                                      <button type="button" className="link" onClick={() => setRelQty((m) => ({ ...m, [i.id]: maxRel }))}>ใช้ค่าแนะนำ</button>
+                                    )}
+                                  </label>
+                                  <div className="ne-act-btns">
+                                    <button
+                                      className="btn btn-p btn-sm"
+                                      disabled={!mayRelease || busy || rel <= 0}
+                                      title={mayRelease ? (rel <= 0 ? 'ใส่จำนวนที่จะปล่อยก่อน' : undefined) : 'เฉพาะเภสัชกรเจ้าของล็อตปล่อยเข้าคลังกลางได้'}
+                                      onClick={() => setRowAction({ kind: 'release', item: i, rel })}
+                                    >
+                                      ปล่อย {rel.toLocaleString()} เข้าคลังกลาง
+                                    </button>
+                                    <button className="btn btn-s btn-sm" disabled={!mayRelease || busy} onClick={() => keepAll(false)}>
+                                      เก็บไว้ใช้เองทั้งล็อต
+                                    </button>
+                                    <button className="link" onClick={() => open(i.id)}>รายละเอียด</button>
+                                  </div>
+                                </>
+                              ) : (
+                                <div className="ne-act-btns">
+                                  <span className={a.cls}>FEFO ใช้ทันหมด · ไม่ต้องปล่อย</span>
+                                  <button className="btn btn-p btn-sm" disabled={!mayRelease || busy} onClick={() => keepAll(true)}>
+                                    ยืนยันเก็บไว้ใช้เอง
+                                  </button>
+                                  <button className="link" onClick={() => open(i.id)}>รายละเอียด</button>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()
+                      ) : (
+                        <span className={a.cls}>{a.text}</span>
+                      )}
                     </td>
                   </tr>
                 );
@@ -342,6 +452,51 @@ export function NearExpiryPage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
         </div>
       </section>
 
+      {rowAction?.kind === 'release' && (
+        <ConfirmDialog
+          title="ปล่อยเข้าคลังกลาง"
+          detail={
+            <>
+              <div><b>{rowAction.item.drug}</b> · ล็อต {rowAction.item.lot}</div>
+              <ul style={{ margin: '8px 0 0', paddingLeft: 18 }}>
+                <li>ปล่อยเข้าคลังกลาง <b className="num">{rowAction.rel.toLocaleString()} {rowAction.item.unit}</b> (ถูกกันออกจากสต็อกใช้งานทันที)</li>
+                <li>เก็บไว้ใช้เอง <b className="num">{(rowAction.item.qty - rowAction.rel).toLocaleString()} {rowAction.item.unit}</b></li>
+                <li>ถอนกลับได้ก่อนแผนจัดสรรอนุมัติ</li>
+              </ul>
+            </>
+          }
+          confirmLabel={`ปล่อย ${rowAction.rel.toLocaleString()} ${rowAction.item.unit}`}
+          busy={busy}
+          onConfirm={() => {
+            const { item, rel } = rowAction;
+            setRowAction(null);
+            if (live) decideLive(item, 'RELEASED', rel);
+            else decide(item.id, 'RELEASED', rel);
+          }}
+          onClose={() => setRowAction(null)}
+        />
+      )}
+      {rowAction?.kind === 'keep' && (
+        <ReasonDialog
+          title="เก็บไว้ใช้เองทั้งล็อต"
+          detail={
+            <>
+              <div><b>{rowAction.item.drug}</b> · ล็อต {rowAction.item.lot} · <span className="num">{rowAction.item.qty.toLocaleString()} {rowAction.item.unit}</span></div>
+              <div style={{ marginTop: 8 }}>จะไม่ปล่อยเข้าคลังกลาง และกลับมาให้ตัดสินใจใหม่เมื่อถึงวันทบทวน</div>
+            </>
+          }
+          confirmLabel="เก็บไว้ใช้เอง"
+          defaultReason="ต้องการเก็บไว้ใช้เอง"
+          minLength={3}
+          onConfirm={(reason) => {
+            const { item } = rowAction;
+            setRowAction(null);
+            if (live) decideLive(item, 'KEPT', undefined, reason);
+            else decide(item.id, 'KEPT');
+          }}
+          onClose={() => setRowAction(null)}
+        />
+      )}
       {drawerOpen && sel && (
         <NearExpiryDrawer
           key={sel.id}

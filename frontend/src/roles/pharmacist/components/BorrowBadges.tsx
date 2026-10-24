@@ -2,12 +2,13 @@ import { Icon } from '../../../components/common/icons';
 import { groupMeta, groupOf, RETURN_META, STATUS_META, URGENCY_META } from '../data/borrow';
 import type { BorrowStatus, ReturnState, Urgency } from '../data/borrow';
 
-export function BorrowStatusBadge({ status }: { status: BorrowStatus }) {
+/** `kit`: an F3 kit request never needs a lender added by hand, so ESCALATED reads as a hand-over to the admin. */
+export function BorrowStatusBadge({ status, kit = false }: { status: BorrowStatus; kit?: boolean }) {
   const g = groupMeta(groupOf(status));
   return (
     <span className={`badge t-${g.tone}`} title={status}>
       <Icon name={g.icon} className="ic14" />
-      {STATUS_META[status].label}
+      {kit && status === 'ESCALATED' ? 'ส่งต่อผู้ดูแล' : STATUS_META[status].label}
     </span>
   );
 }
