@@ -1,6 +1,6 @@
 import { Icon } from '../../../components/common/icons';
-import { GROUPS } from '../data/borrow';
-import type { StatusGroup, Tone } from '../data/borrow';
+import { TILES } from '../data/borrow';
+import type { TileGroup, Tone } from '../data/borrow';
 
 const TILE_TONE: Record<Tone, [string, string]> = {
   amber: ['#92400E', '#FFFBEB'],
@@ -11,16 +11,16 @@ const TILE_TONE: Record<Tone, [string, string]> = {
 };
 
 interface BorrowStatusTilesProps {
-  counts: Record<StatusGroup, number>;
-  active: StatusGroup | null;
-  onPick: (g: StatusGroup | null) => void;
+  counts: Record<TileGroup, number>;
+  active: TileGroup | null;
+  onPick: (g: TileGroup | null) => void;
 }
 
 /** SM-1 status groups as filter tiles (click again to clear). */
 export function BorrowStatusTiles({ counts, active, onPick }: BorrowStatusTilesProps) {
   return (
     <div className="tiles5">
-      {GROUPS.map((g) => {
+      {TILES.map((g) => {
         const [fg, bg] = TILE_TONE[g.tone];
         const on = active === g.id;
         return (

@@ -9,6 +9,10 @@ interface ReasonDialogProps {
   confirmLabel: string;
   /** Server-side failure (409 SELF_LOCKOUT / LAST_ADMIN …) shown inside the dialog. */
   error?: string;
+  /** Pre-filled reason the user can accept or edit. */
+  defaultReason?: string;
+  /** Shortest reason the server accepts (default 1). */
+  minLength?: number;
   onConfirm: (reason: string) => void;
   onClose: () => void;
 }
@@ -17,10 +21,10 @@ interface ReasonDialogProps {
  * Confirmation dialog for audited write actions (SEC-003): the reason is mandatory and is what
  * gets written to the audit log, so confirm stays disabled until it is filled in.
  */
-export function ReasonDialog({ title, detail, confirmLabel, error, onConfirm, onClose }: ReasonDialogProps) {
-  const [reason, setReason] = useState('');
+export function ReasonDialog({ title, detail, confirmLabel, error, defaultReason = '', minLength = 1, onConfirm, onClose }: ReasonDialogProps) {
+  const [reason, setReason] = useState(defaultReason);
   const [touched, setTouched] = useState(false);
-  const valid = reason.trim().length > 0;
+  const valid = reason.trim().length >= minLength;
 
   return (
     <Modal label={`${title} / Confirm`} onClose={onClose}>
@@ -42,7 +46,7 @@ export function ReasonDialog({ title, detail, confirmLabel, error, onConfirm, on
           onChange={(e) => setReason(e.target.value)}
           onBlur={() => setTouched(true)}
         />
-        {touched && !valid && <span className="ha-error">กรุณาระบุเหตุผล</span>}
+        {touched && !valid && <span className="ha-error">{minLength > 1 ? `กรุณาระบุเหตุผลอย่างน้อย ${minLength} ตัวอักษร` : 'กรุณาระบุเหตุผล'}</span>}
       </div>
 
       {error && (

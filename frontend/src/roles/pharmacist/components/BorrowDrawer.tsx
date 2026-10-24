@@ -2,6 +2,7 @@ import { Icon } from '../../../components/common/icons';
 import type { IconName } from '../../../components/common/icons';
 import { mayActFor, maySeePeerStock, requiredRoleHint } from '../../../lib/rbac';
 import type { Action, RoleCode } from '../../../lib/rbac';
+import { withRole } from '../../../data/navigation';
 import { fmtTime } from '../../../lib/time';
 import { groupMeta, groupOf, LEG_META } from '../data/borrow';
 import type { BorrowRequest, StatusGroup } from '../data/borrow';
@@ -80,7 +81,7 @@ export function BorrowDrawer({ request: r, tick, decision, onDecide, onClose, on
           <h2 className="code" style={{ margin: 0, fontSize: 19, lineHeight: '28px', fontWeight: 600, color: '#0F2A5C' }}>
             {r.id}
           </h2>
-          <BorrowStatusBadge status={r.status} />
+          <BorrowStatusBadge status={r.status} kit={r.isKit} />
           <UrgencyBadge urgency={r.urgency} />
           <span className="badge t-grey code">{r.context}</span>
           {r.returnState && <ReturnBadge state={r.returnState} />}
@@ -214,7 +215,12 @@ export function BorrowDrawer({ request: r, tick, decision, onDecide, onClose, on
             )}
             {/* escalate-manual is reachable only once the request is ESCALATED (§4.1 escalation
                 step, FR-F1b-011) — the ladder has to be exhausted first. */}
-            {r.status === 'ESCALATED' && (
+            {r.status === 'ESCALATED' && r.isKit && (
+              <a className="btn btn-p" data-part="kit-incident-link" href={withRole('?page=incident', role)} style={{ textDecoration: 'none' }} title="ชุดยา (F3) ไม่มีลำดับผู้ให้ยืมให้เพิ่มด้วยมือ ต้องจัดการผ่านเหตุฉุกเฉิน">
+                ไปจัดการที่เหตุฉุกเฉิน
+              </a>
+            )}
+            {r.status === 'ESCALATED' && !r.isKit && (
               <button
                 className="btn btn-p"
                 data-part="escalate-manual"

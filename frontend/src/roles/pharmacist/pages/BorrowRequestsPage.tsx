@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useAuth } from '../../../context/AuthContext';
 import { Icon } from '../../../components/common/icons';
 import { homeHrefFor, withRole } from '../../../data/navigation';
@@ -17,14 +18,14 @@ import type { Decision } from '../components/BorrowDrawer';
 import { BorrowStatusTiles } from '../components/BorrowStatusTiles';
 import { BorrowTable } from '../components/BorrowTable';
 import { ObligationTable, ObligationTiles } from '../components/ObligationTable';
-import { BORROW_REQUESTS, GROUPS, groupOf, isOpenRequest, LENDER_QUEUE } from '../data/borrow';
+import { BORROW_REQUESTS, groupOf, isOpenRequest, LENDER_QUEUE, needsLender, TILES, tileOf } from '../data/borrow';
 import { isOpenLeg } from '../data/lender';
 import { useBorrowRequests } from '../data/useBorrowRequests';
 import { approveBorrowRequest, cancelBorrowRequest, escalateManual as escalateManualApi, rejectBorrowRequest } from '../../../services/borrowApi';
 import { mockFallbackEnabled } from '../../../services/dataSource';
 import { getHospitals } from '../../../services/catalogApi';
 import type { ApiHospital } from '../../../services/catalogApi';
-import type { BorrowContext, BorrowRequest, StatusGroup, Urgency } from '../data/borrow';
+import type { BorrowContext, BorrowRequest, TileGroup, Urgency } from '../data/borrow';
 import { dueLabel, obligationCounts, obligationFromApi, outstandingOf, RETURN_OBLIGATIONS } from '../data/obligations';
 import { listReturnObligations, recordReturn as apiRecordReturn, waiveReturn } from '../../../services/returnsApi';
 import type { ApiReturnObligation } from '../../../services/returnsApi';
@@ -69,10 +70,29 @@ function withEscalation(r: BorrowRequest, esc: Record<string, { reason: string; 
  *
  * `role` gates the write controls through `lib/rbac.ts` and drives the breadcrumb home.
  */
-export function BorrowRequestsPage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
+export function BorrowRequestsPage({
+  role = 'PHARMACIST',
+  embedded = false,
+  view: forcedView,
+  actionsSlot,
+}: {
+  role?: RoleCode;
+  /** Rendered inside the Borrow & Lend hub: the hub owns the heading and the tabs. */
+  embedded?: boolean;
+  /** Hub-controlled sub view; standalone the page keeps its own switch. */
+  view?: 'requests' | 'obligations';
+  /** Hub element that hosts the page actions (history / create) beside the tabs. */
+  actionsSlot?: HTMLElement | null;
+}) {
   const { user } = useAuth();
   const tick = useTick();
-  const [group, setGroup] = useState<StatusGroup | null>(null);
+  // `?group=escalated` (old Action Center link) = "กำลังขอยืม" narrowed to the requests that need a lender.
+  const [group, setGroup] = useState<TileGroup | null>(() => {
+    const g = new URLSearchParams(window.location.search).get('group');
+    if (g === 'escalated') return 'progress';
+    return TILES.some((x) => x.id === g) ? (g as TileGroup) : null;
+  });
+  const [onlyNeedLender, setOnlyNeedLender] = useState(() => new URLSearchParams(window.location.search).get('group') === 'escalated');
   const [selId, setSelId] = useState('');
   // Detail drawer stays closed until a request is opened from the table.
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -111,7 +131,8 @@ export function BorrowRequestsPage({ role = 'PHARMACIST' }: { role?: RoleCode })
   // The sub-tab exists only for HOSPITAL_ADMIN; for every other role the page renders exactly
   // what it rendered before (no extra control, no extra state in the DOM).
   const maySeeObligations = role === 'HOSPITAL_ADMIN';
-  const [view, setView] = useState<'requests' | 'obligations'>('requests');
+  const [viewState, setView] = useState<'requests' | 'obligations'>('requests');
+  const view = forcedView ?? viewState;
   const [obligations, setObligations] = useState<ReturnObligation[]>(mockFallbackEnabled() ? RETURN_OBLIGATIONS : []);
   const [obligationsLive, setObligationsLive] = useState(false);
   const [waiveError, setWaiveError] = useState<string | null>(null);
@@ -163,7 +184,8 @@ export function BorrowRequestsPage({ role = 'PHARMACIST' }: { role?: RoleCode })
     const linked = all.find((r) => r.id === linkedRequest);
     if (linked) {
       // also when it is already finished (the default list shows only requests still in progress)
-      setGroup(groupOf(linked.status));
+      setGroup(tileOf(linked));
+      setOnlyNeedLender(false);
       setQ(linkedRequest);
       setSelId(linkedRequest);
       setDrawerOpen(true);
@@ -171,7 +193,8 @@ export function BorrowRequestsPage({ role = 'PHARMACIST' }: { role?: RoleCode })
     setLinkedRequest(null);
   }, [linkedRequest, live.source, all]);
   const inPeriod = all.filter((r) => r.daysAgo <= days);
-  const counts = Object.fromEntries(GROUPS.map((g) => [g.id, inPeriod.filter((r) => groupOf(r.status) === g.id).length])) as Record<StatusGroup, number>;
+  const counts = Object.fromEntries(TILES.map((g) => [g.id, inPeriod.filter((r) => tileOf(r) === g.id).length])) as Record<TileGroup, number>;
+  const needLenderCount = inPeriod.filter(needsLender).length;
   const pendingAll = all.filter((r) => groupOf(r.status) === 'pending').length;
 
   const obligationCountList = useMemo(() => obligationCounts(obligations), [obligations]);
@@ -181,7 +204,8 @@ export function BorrowRequestsPage({ role = 'PHARMACIST' }: { role?: RoleCode })
 
   const needle = q.trim().toLowerCase();
   const rows = inPeriod
-    .filter((r) => !group || groupOf(r.status) === group)
+    .filter((r) => !group || tileOf(r) === group)
+    .filter((r) => !onlyNeedLender || needsLender(r))
     .filter((r) => !historyOnly || ['fulfilled', 'closed'].includes(groupOf(r.status)))
     // Default view = requests still being worked on; the finished ones show under a status tile or "ประวัติ".
     .filter((r) => group || historyOnly || isOpenRequest(r.status))
@@ -410,10 +434,25 @@ export function BorrowRequestsPage({ role = 'PHARMACIST' }: { role?: RoleCode })
     setEscalateTarget(null);
   };
 
+  const actionsEl = (
+    <div className="pagehead-actions">
+    <button className="btn btn-s" aria-pressed={historyOnly} onClick={() => { setHistoryOnly((v) => !v); setGroup(null); }} title="แสดงเฉพาะคำขอที่จบแล้ว (ได้ครบ · ปิด · ยกเลิก)">
+      <Icon name="history" />
+      ประวัติ{historyOnly ? ' ✓' : ''}
+    </button>
+    {mayCreate && (
+      <button className="btn btn-p" disabled={!isLive} title={isLive ? undefined : 'ต้องเชื่อมต่อ API'} onClick={() => setManualOpen(true)}>
+        <Icon name="plus" />
+        สร้างคำขอยืมเอง <span style={{ fontWeight: 400 }}>UI-10</span>
+      </button>
+    )}
+  </div>
+  );
+
   return (
     <>
       <section className="pagehead">
-        <div>
+        {!embedded && (<div>
           <nav aria-label="breadcrumb" style={{ fontSize: 12, lineHeight: '16px' }}>
             <a href={homeHrefFor(role)} className="link" style={{ fontSize: 12, fontWeight: 400 }}>หน้าหลัก</a> <span aria-hidden="true">›</span> <span aria-current="page">คำขอยืมของเรา</span>
           </nav>
@@ -421,22 +460,11 @@ export function BorrowRequestsPage({ role = 'PHARMACIST' }: { role?: RoleCode })
             คำขอยืมระหว่างโรงพยาบาล <span>/ Borrow requests</span>
           </h1>
           <div style={{ fontSize: 13 }}>{user?.hospitalName ?? 'รพ.สมุทรปราการ'} · ข้อมูล ณ {new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น. · ทุกคำขอต้องให้เภสัชกรอนุมัติก่อนส่ง · ไม่ตอบในเวลา = ส่งต่อผู้ให้ยืมถัดไปอัตโนมัติ</div>
-        </div>
-        <div className="pagehead-actions">
-          <button className="btn btn-s" aria-pressed={historyOnly} onClick={() => setHistoryOnly((v) => !v)} title="แสดงเฉพาะคำขอที่จบแล้ว (ได้ครบ · ปิด · ยกเลิก)">
-            <Icon name="history" />
-            ประวัติ{historyOnly ? ' ✓' : ''}
-          </button>
-          {mayCreate && (
-            <button className="btn btn-p" disabled={!isLive} title={isLive ? undefined : 'ต้องเชื่อมต่อ API'} onClick={() => setManualOpen(true)}>
-              <Icon name="plus" />
-              สร้างคำขอยืมเอง <span style={{ fontWeight: 400 }}>UI-10</span>
-            </button>
-          )}
-        </div>
+        </div>)}
+        {!embedded && actionsEl}
       </section>
 
-      <section aria-label="มุมมองคำขอยืม" className="dirs">
+      {!embedded && (<section aria-label="มุมมองคำขอยืม" className="dirs">
         <button
           type="button"
           className={`dir ${showObligations ? '' : 'dir-on'}`}
@@ -494,7 +522,9 @@ export function BorrowRequestsPage({ role = 'PHARMACIST' }: { role?: RoleCode })
             )}
           </button>
         )}
-      </section>
+      </section>)}
+
+      {embedded && actionsSlot && createPortal(actionsEl, actionsSlot)}
 
       {createdNotice && (
         <div role="status" className="card" style={{ padding: '10px 16px', color: '#166534', fontSize: 13 }}>{createdNotice}</div>
@@ -568,13 +598,25 @@ export function BorrowRequestsPage({ role = 'PHARMACIST' }: { role?: RoleCode })
               <h2 className="sec-h">
                 สถานะคำขอ <span className="en">SM-1</span>
               </h2>
-              {group && (
-                <button className="link" onClick={() => setGroup(null)}>
+              {(group || onlyNeedLender) && (
+                <button className="link" onClick={() => { setGroup(null); setOnlyNeedLender(false); }}>
                   ล้างตัวกรองสถานะ
                 </button>
               )}
             </div>
-            <BorrowStatusTiles counts={counts} active={group} onPick={setGroup} />
+            <BorrowStatusTiles counts={counts} active={group} onPick={(g) => { setGroup(g); setOnlyNeedLender(false); if (g) setHistoryOnly(false); }} />
+            {needLenderCount > 0 && (
+              <button
+                type="button"
+                className="bl-need"
+                aria-pressed={onlyNeedLender}
+                onClick={() => { setOnlyNeedLender((v) => !v); setGroup(onlyNeedLender ? null : 'progress'); setHistoryOnly(false); }}
+              >
+                <Icon name="tri" className="ic14" />
+                ต้องเพิ่มผู้ให้ยืม <span className="num">{needLenderCount}</span> รายการ — ไม่มีผู้ให้ยืมเหลือในลำดับ
+                <span aria-hidden="true">{onlyNeedLender ? ' ✓' : ' →'}</span>
+              </button>
+            )}
           </div>
           <div className="tr-filters">
             <label className="tr-search">

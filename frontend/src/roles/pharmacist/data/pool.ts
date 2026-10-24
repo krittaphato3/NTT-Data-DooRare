@@ -17,7 +17,7 @@ export interface PoolLot {
   releasedBy: string;
   releasedAt: string;
   /** Live rows only: pool entry uuid, owner hospital and the quantity not yet in a plan. */
-  live?: { uuid: string; originId: string; qtyAvailable: number; status: 'HELD' | 'IN_PLAN' | 'ALLOCATED'; planNo: string | null };
+  live?: { uuid: string; itemId?: string; originId: string; qtyAvailable: number; status: 'HELD' | 'IN_PLAN' | 'ALLOCATED'; planNo: string | null };
 }
 
 export type PlanStatus =

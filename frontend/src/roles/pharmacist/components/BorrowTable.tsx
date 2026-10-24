@@ -74,7 +74,7 @@ export function BorrowTable({ rows, activeId, tick, onOpen }: BorrowTableProps) 
                   <UrgencyBadge urgency={r.urgency} />
                 </td>
                 <td>
-                  <BorrowStatusBadge status={r.status} />
+                  <BorrowStatusBadge status={r.status} kit={r.isKit} />
                   {r.returnState && (
                     <span style={{ display: 'block', marginTop: 4 }}>
                       <ReturnBadge state={r.returnState} />

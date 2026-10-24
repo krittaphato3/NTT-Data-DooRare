@@ -49,7 +49,7 @@ export interface ApiBorrowRequest {
   reason: string | null;
   version: number;
   borrower: { id: string; code: string; name: string };
-  drug: { id: string; name: string; baseUnit: string; ved: 'V' | 'E' | 'D' | null; coldChain: boolean };
+  drug: { id: string; kind?: 'DRUG' | 'KIT'; name: string; baseUnit: string; ved: 'V' | 'E' | 'D' | null; coldChain: boolean };
   qtyRequested: number;
   qtyFulfilled: number;
   rValue: number | null;
