@@ -16,13 +16,14 @@ services:
     environment:
       PORT: 3001
       NODE_ENV: production
-      DB_HOST: db
+      DB_HOST: doorare-db.cxw4iguq6sg9.ap-southeast-1.rds.amazonaws.com
       DB_PORT: 5432
       DB_NAME: doorare
       DB_USER: doorare
-      DB_PASSWORD: doorare_dev
+      DB_PASSWORD: doorare-password-db
+      PGSSLMODE: no-verify
     ports:
-      - "127.0.0.1:3001:3001"
+      - "3001:3001"
     volumes:
       - doorare_uploads:/app/uploads
     depends_on:

@@ -16,6 +16,8 @@
     "express": "^4.21.1",
     "pg": "^8.13.0",
     "pg-copy-streams": "^7.0.0",
+    "pip": "^0.0.1",
+    "python": "^0.0.4",
     "zod": "^4.6.7"
   },
   "devDependencies": {
