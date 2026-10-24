@@ -202,6 +202,17 @@ export const inspectAgentRunProvenanceTool: IAgentTool<{
           };
         });
 
+        const auditLogEntries = auditRes.rows.map((row) => ({
+          id: row.id,
+          occurredAt: row.occurred_at,
+          actorId: row.actor_id,
+          actorRole: row.actor_role,
+          action: row.action,
+          entityType: row.entity_type,
+          entityId: row.entity_id,
+          rowHash: row.row_hash,
+        }));
+
         return {
           success: true,
           data: {
@@ -227,7 +238,7 @@ export const inspectAgentRunProvenanceTool: IAgentTool<{
               outputTruncated: sanitizedOutput.truncated,
             },
             toolCalls,
-            auditLogEntries: auditRes.rows,
+            auditLogEntries,
           },
         };
       }
@@ -384,6 +395,167 @@ export interface NarcoticsTaskFinding {
   taskId: string;
   taskNo: string | null;
   detail: string;
+}
+
+export interface CustodyTaskInput {
+  taskId?: string;
+  taskNo?: string | null;
+  status: string;
+  driver_id?: string | null;
+  loaded_at?: string | Date | null;
+  departed_at?: string | Date | null;
+  arrived_at?: string | Date | null;
+  received_at?: string | Date | null;
+  eventCount?: number;
+  photoCount?: number;
+  handoverPhotoCount?: number;
+  is_controlled?: boolean;
+  ref_type?: string;
+  drug_name?: string;
+}
+
+/**
+ * Pure helper detecting custody compliance gaps for a single transport task.
+ */
+export function detectCustodyGaps(
+  task: CustodyTaskInput,
+  nowMs: number = Date.now(),
+): NarcoticsTaskFinding[] {
+  const findings: NarcoticsTaskFinding[] = [];
+  const taskId = task.taskId || '';
+  const taskNo = task.taskNo ?? null;
+  const maxTransitMs = NARCOTICS_IN_TRANSIT_MAX_HOURS * 3600 * 1000;
+
+  // 1. Violation: Controlled substance in regional pooling allocation
+  if (task.ref_type === 'ALLOCATION_LINE') {
+    findings.push({
+      code: 'CONTROLLED_IN_ALLOCATION',
+      taskId,
+      taskNo,
+      detail: `Controlled substance (${task.drug_name || 'Controlled'}) transferred via regional allocation line, violating BR-F1b-014 prohibition.`,
+    });
+  }
+
+  // Only evaluate procedural handover checks if the task has not been cancelled
+  if (task.status !== 'CANCELLED') {
+    // 2. Missing driver after dispatch
+    if (task.status !== 'WAITING_DISPATCH' && !task.driver_id) {
+      findings.push({
+        code: 'MISSING_DRIVER',
+        taskId,
+        taskNo,
+        detail: `Task status is '${task.status}' but no driver account is assigned.`,
+      });
+    }
+
+    // 3. Missing expected lifecycle timestamps
+    if (['LOADED', 'IN_TRANSIT', 'ARRIVED', 'RECEIVED'].includes(task.status) && !task.loaded_at) {
+      findings.push({
+        code: 'MISSING_TIMESTAMP',
+        taskId,
+        taskNo,
+        detail: `Task reached status '${task.status}' without recorded loaded_at timestamp.`,
+      });
+    }
+    if (['IN_TRANSIT', 'ARRIVED', 'RECEIVED'].includes(task.status) && !task.departed_at) {
+      findings.push({
+        code: 'MISSING_TIMESTAMP',
+        taskId,
+        taskNo,
+        detail: `Task reached status '${task.status}' without recorded departed_at timestamp.`,
+      });
+    }
+    if (['ARRIVED', 'RECEIVED'].includes(task.status) && !task.arrived_at) {
+      findings.push({
+        code: 'MISSING_TIMESTAMP',
+        taskId,
+        taskNo,
+        detail: `Task reached status '${task.status}' without recorded arrived_at timestamp.`,
+      });
+    }
+    if (task.status === 'RECEIVED' && !task.received_at) {
+      findings.push({
+        code: 'MISSING_TIMESTAMP',
+        taskId,
+        taskNo,
+        detail: `Task reached status 'RECEIVED' without recorded received_at timestamp.`,
+      });
+    }
+
+    // 4. Timestamp chronologic order violation
+    const tLoaded = task.loaded_at ? new Date(task.loaded_at).getTime() : null;
+    const tDeparted = task.departed_at ? new Date(task.departed_at).getTime() : null;
+    const tArrived = task.arrived_at ? new Date(task.arrived_at).getTime() : null;
+    const tReceived = task.received_at ? new Date(task.received_at).getTime() : null;
+
+    if (tLoaded && tDeparted && tLoaded > tDeparted) {
+      findings.push({
+        code: 'TIMESTAMP_ORDER_VIOLATION',
+        taskId,
+        taskNo,
+        detail: `Timestamp sequence violation: loaded_at (${task.loaded_at}) is later than departed_at (${task.departed_at}).`,
+      });
+    }
+    if (tDeparted && tArrived && tDeparted > tArrived) {
+      findings.push({
+        code: 'TIMESTAMP_ORDER_VIOLATION',
+        taskId,
+        taskNo,
+        detail: `Timestamp sequence violation: departed_at (${task.departed_at}) is later than arrived_at (${task.arrived_at}).`,
+      });
+    }
+    if (tArrived && tReceived && tArrived > tReceived) {
+      findings.push({
+        code: 'TIMESTAMP_ORDER_VIOLATION',
+        taskId,
+        taskNo,
+        detail: `Timestamp sequence violation: arrived_at (${task.arrived_at}) is later than received_at (${task.received_at}).`,
+      });
+    }
+    if (tLoaded && tReceived && tLoaded > tReceived) {
+      findings.push({
+        code: 'TIMESTAMP_ORDER_VIOLATION',
+        taskId,
+        taskNo,
+        detail: `Timestamp sequence violation: loaded_at (${task.loaded_at}) is later than received_at (${task.received_at}).`,
+      });
+    }
+
+    // 5. No event trail
+    const eventCount = task.eventCount ?? 0;
+    if (task.status !== 'WAITING_DISPATCH' && eventCount === 0) {
+      findings.push({
+        code: 'NO_EVENT_TRAIL',
+        taskId,
+        taskNo,
+        detail: `Dispatched task has zero recorded transport_event audit milestones.`,
+      });
+    }
+
+    // 6. No handover photo upon arrival/receipt
+    const handoverPhotos = task.handoverPhotoCount ?? (task.status === 'RECEIVED' ? (task.photoCount ?? 0) : 0);
+    if (task.status === 'RECEIVED' && handoverPhotos === 0) {
+      findings.push({
+        code: 'NO_HANDOVER_PHOTO',
+        taskId,
+        taskNo,
+        detail: `Narcotics shipment completed receipt without required arrival/handover verification photo.`,
+      });
+    }
+
+    // 7. Stale in-transit
+    if (task.status === 'IN_TRANSIT' && tDeparted && nowMs - tDeparted > maxTransitMs) {
+      const elapsedHours = Number(((nowMs - tDeparted) / (3600 * 1000)).toFixed(1));
+      findings.push({
+        code: 'STALE_IN_TRANSIT',
+        taskId,
+        taskNo,
+        detail: `Narcotics dispatch has been in-transit for ${elapsedHours} hours (> ${NARCOTICS_IN_TRANSIT_MAX_HOURS}h threshold).`,
+      });
+    }
+  }
+
+  return findings;
 }
 
 export interface NarcoticsCustodyTaskItem {
@@ -546,126 +718,25 @@ export const inspectNarcoticsChainOfCustodyTool: IAgentTool<{
       const maxTransitMs = NARCOTICS_IN_TRANSIT_MAX_HOURS * 3600 * 1000;
 
       for (const row of res.rows) {
-        const taskFindings: NarcoticsTaskFinding[] = [];
-
-        // 1. Violation: Controlled substance in regional pooling allocation
-        if (row.ref_type === 'ALLOCATION_LINE') {
-          taskFindings.push({
-            code: 'CONTROLLED_IN_ALLOCATION',
+        const taskFindings = detectCustodyGaps(
+          {
             taskId: row.task_id,
             taskNo: row.task_no,
-            detail: `Controlled substance (${row.drug_name}) transferred via regional allocation line, violating BR-F1b-014 prohibition.`,
-          });
-        }
-
-        // Only evaluate procedural handover checks if the task has not been cancelled
-        if (row.status !== 'CANCELLED') {
-          // 2. Missing driver after dispatch
-          if (row.status !== 'WAITING_DISPATCH' && !row.driver_id) {
-            taskFindings.push({
-              code: 'MISSING_DRIVER',
-              taskId: row.task_id,
-              taskNo: row.task_no,
-              detail: `Task status is '${row.status}' but no driver account is assigned.`,
-            });
-          }
-
-          // 3. Missing expected lifecycle timestamps
-          if (['LOADED', 'IN_TRANSIT', 'ARRIVED', 'RECEIVED'].includes(row.status) && !row.loaded_at) {
-            taskFindings.push({
-              code: 'MISSING_TIMESTAMP',
-              taskId: row.task_id,
-              taskNo: row.task_no,
-              detail: `Task reached status '${row.status}' without recorded loaded_at timestamp.`,
-            });
-          }
-          if (['IN_TRANSIT', 'ARRIVED', 'RECEIVED'].includes(row.status) && !row.departed_at) {
-            taskFindings.push({
-              code: 'MISSING_TIMESTAMP',
-              taskId: row.task_id,
-              taskNo: row.task_no,
-              detail: `Task reached status '${row.status}' without recorded departed_at timestamp.`,
-            });
-          }
-          if (['ARRIVED', 'RECEIVED'].includes(row.status) && !row.arrived_at) {
-            taskFindings.push({
-              code: 'MISSING_TIMESTAMP',
-              taskId: row.task_id,
-              taskNo: row.task_no,
-              detail: `Task reached status '${row.status}' without recorded arrived_at timestamp.`,
-            });
-          }
-          if (row.status === 'RECEIVED' && !row.received_at) {
-            taskFindings.push({
-              code: 'MISSING_TIMESTAMP',
-              taskId: row.task_id,
-              taskNo: row.task_no,
-              detail: `Task reached status 'RECEIVED' without recorded received_at timestamp.`,
-            });
-          }
-
-          // 4. Timestamp chronologic order violation
-          const tLoaded = row.loaded_at ? new Date(row.loaded_at).getTime() : null;
-          const tDeparted = row.departed_at ? new Date(row.departed_at).getTime() : null;
-          const tArrived = row.arrived_at ? new Date(row.arrived_at).getTime() : null;
-          const tReceived = row.received_at ? new Date(row.received_at).getTime() : null;
-
-          if (tLoaded && tDeparted && tLoaded > tDeparted) {
-            taskFindings.push({
-              code: 'TIMESTAMP_ORDER_VIOLATION',
-              taskId: row.task_id,
-              taskNo: row.task_no,
-              detail: `Timestamp sequence violation: loaded_at (${row.loaded_at}) is later than departed_at (${row.departed_at}).`,
-            });
-          }
-          if (tDeparted && tArrived && tDeparted > tArrived) {
-            taskFindings.push({
-              code: 'TIMESTAMP_ORDER_VIOLATION',
-              taskId: row.task_id,
-              taskNo: row.task_no,
-              detail: `Timestamp sequence violation: departed_at (${row.departed_at}) is later than arrived_at (${row.arrived_at}).`,
-            });
-          }
-          if (tArrived && tReceived && tArrived > tReceived) {
-            taskFindings.push({
-              code: 'TIMESTAMP_ORDER_VIOLATION',
-              taskId: row.task_id,
-              taskNo: row.task_no,
-              detail: `Timestamp sequence violation: arrived_at (${row.arrived_at}) is later than received_at (${row.received_at}).`,
-            });
-          }
-
-          // 5. No event trail
-          if (row.status !== 'WAITING_DISPATCH' && row.event_count === 0) {
-            taskFindings.push({
-              code: 'NO_EVENT_TRAIL',
-              taskId: row.task_id,
-              taskNo: row.task_no,
-              detail: `Dispatched task has zero recorded transport_event audit milestones.`,
-            });
-          }
-
-          // 6. No handover photo upon arrival/receipt
-          if (row.status === 'RECEIVED' && row.handover_photo_count === 0) {
-            taskFindings.push({
-              code: 'NO_HANDOVER_PHOTO',
-              taskId: row.task_id,
-              taskNo: row.task_no,
-              detail: `Narcotics shipment completed receipt without required arrival/handover verification photo.`,
-            });
-          }
-
-          // 7. Stale in-transit
-          if (row.status === 'IN_TRANSIT' && tDeparted && nowMs - tDeparted > maxTransitMs) {
-            const elapsedHours = Number(((nowMs - tDeparted) / (3600 * 1000)).toFixed(1));
-            taskFindings.push({
-              code: 'STALE_IN_TRANSIT',
-              taskId: row.task_id,
-              taskNo: row.task_no,
-              detail: `Narcotics dispatch has been in-transit for ${elapsedHours} hours (> ${NARCOTICS_IN_TRANSIT_MAX_HOURS}h threshold).`,
-            });
-          }
-        }
+            status: row.status,
+            driver_id: row.driver_id,
+            loaded_at: row.loaded_at,
+            departed_at: row.departed_at,
+            arrived_at: row.arrived_at,
+            received_at: row.received_at,
+            eventCount: row.event_count,
+            photoCount: row.photo_count,
+            handoverPhotoCount: row.handover_photo_count,
+            is_controlled: row.is_controlled,
+            ref_type: row.ref_type,
+            drug_name: row.drug_name,
+          },
+          nowMs,
+        );
 
         allFindings.push(...taskFindings);
 
@@ -731,6 +802,73 @@ export const inspectNarcoticsChainOfCustodyTool: IAgentTool<{
 
 // --- TOOL 3: verify_tamper_evidence ---
 
+export interface AuditWindowRow {
+  id: string | number;
+  prev_hash: string | null;
+  row_hash: string;
+}
+
+export interface AuditWindowAnalysis {
+  linkedPairs: number;
+  edgeRows: number;
+  forks: number;
+  genesisCandidatesInWindow: number;
+  anomalies: string[];
+}
+
+/**
+ * Pure helper analyzing hash continuity, linkage, forks, and loops within an audit_log row window.
+ */
+export function analyzeAuditWindow(rows: AuditWindowRow[]): AuditWindowAnalysis {
+  const rowMap = new Map<string, AuditWindowRow>();
+  for (const r of rows) {
+    rowMap.set(r.row_hash, r);
+  }
+
+  let linkedPairs = 0;
+  let edgeRows = 0;
+  let forks = 0;
+  let genesisCandidatesInWindow = 0;
+  const seenPrevHashes = new Map<string, string | number>();
+  const anomalies: string[] = [];
+
+  for (const r of rows) {
+    if (r.prev_hash === null) {
+      genesisCandidatesInWindow++;
+    } else {
+      // Check for fork (two rows sharing identical non-null prev_hash)
+      if (seenPrevHashes.has(r.prev_hash)) {
+        forks++;
+        anomalies.push(
+          `Fork detected: audit_log entry ${r.id} and ${seenPrevHashes.get(r.prev_hash)} share identical prev_hash ${r.prev_hash.slice(0, 12)}...`,
+        );
+      } else {
+        seenPrevHashes.set(r.prev_hash, r.id);
+      }
+
+      // Check parent linkage within window
+      const parent = rowMap.get(r.prev_hash);
+      if (parent) {
+        if (String(parent.id) === String(r.id)) {
+          anomalies.push(`Self-referential loop: audit_log entry ${r.id} has row_hash equal to its prev_hash.`);
+        } else {
+          linkedPairs++;
+        }
+      } else {
+        edgeRows++;
+      }
+    }
+  }
+
+  return {
+    linkedPairs,
+    edgeRows,
+    forks,
+    genesisCandidatesInWindow,
+    anomalies,
+  };
+}
+
 /**
  * Tool: verify_tamper_evidence
  * Audits SHA-256 cryptographic chain continuity and verifies tamper evidence.
@@ -767,13 +905,7 @@ export const verifyTamperEvidenceTool: IAgentTool<{
       const verifyRes = await query<{ problems: string }>(`SELECT audit_chain_verify() AS problems`);
       const chainVerifyProblems = toNumber(verifyRes.rows[0]?.problems, 0);
 
-      // 2. Query total genesis rows across audit_log
-      const genesisRes = await query<{ count: string }>(
-        `SELECT COUNT(*)::text AS count FROM audit_log WHERE prev_hash IS NULL`,
-      );
-      const totalGenesisInTable = toNumber(genesisRes.rows[0]?.count, 0);
-
-      // 3. Fetch recent bounded window of audit_log metadata
+      // 2. Fetch recent bounded window of audit_log metadata
       const windowRes = await query<{
         id: string;
         occurred_at: string;
@@ -796,48 +928,20 @@ export const verifyTamperEvidenceTool: IAgentTool<{
       );
 
       const rows = windowRes.rows;
-      const rowMap = new Map<string, (typeof rows)[0]>();
-      for (const r of rows) {
-        rowMap.set(r.row_hash, r);
-      }
+      const windowAnalysis = analyzeAuditWindow(rows);
 
-      let linkedPairs = 0;
-      let edgeRows = 0;
-      let forks = 0;
-      let genesisCandidatesInWindow = 0;
-      const seenPrevHashes = new Map<string, string>();
-      const anomalies: string[] = [];
+      // 3. Entity-specific audit trail if requested
+      let entityAuditTrail: Array<{
+        id: string;
+        occurredAt: string;
+        actorId: string | null;
+        actorRole: string | null;
+        action: string;
+        entityType: string;
+        entityId: string | null;
+        rowHash: string;
+      }> | undefined;
 
-      for (const r of rows) {
-        if (r.prev_hash === null) {
-          genesisCandidatesInWindow++;
-        } else {
-          // Check for fork (two rows sharing identical non-null prev_hash)
-          if (seenPrevHashes.has(r.prev_hash)) {
-            forks++;
-            anomalies.push(
-              `Fork detected: audit_log entry ${r.id} and ${seenPrevHashes.get(r.prev_hash)} share identical prev_hash ${r.prev_hash.slice(0, 12)}...`,
-            );
-          } else {
-            seenPrevHashes.set(r.prev_hash, r.id);
-          }
-
-          // Check parent linkage within window
-          const parent = rowMap.get(r.prev_hash);
-          if (parent) {
-            if (parent.id === r.id) {
-              anomalies.push(`Self-referential loop: audit_log entry ${r.id} has row_hash equal to its prev_hash.`);
-            } else {
-              linkedPairs++;
-            }
-          } else {
-            edgeRows++;
-          }
-        }
-      }
-
-      // 4. Entity-specific audit trail if requested
-      let entityAuditTrail: unknown[] | undefined;
       if (args.entityType && args.entityId) {
         const entRes = await query<{
           id: string;
@@ -857,21 +961,29 @@ export const verifyTamperEvidenceTool: IAgentTool<{
             ORDER BY occurred_at ASC`,
           [args.entityType, args.entityId],
         );
-        entityAuditTrail = entRes.rows;
+        entityAuditTrail = entRes.rows.map((r) => ({
+          id: r.id,
+          occurredAt: r.occurred_at,
+          actorId: r.actor_id,
+          actorRole: r.actor_role,
+          action: r.action,
+          entityType: r.entity_type,
+          entityId: r.entity_id,
+          rowHash: r.row_hash,
+        }));
       }
 
       return {
         success: true,
         data: {
-          intact: chainVerifyProblems === 0,
           chainVerifyProblems,
+          intact: chainVerifyProblems === 0,
           windowChecked: rows.length,
-          linkedPairs,
-          edgeRows,
-          forks,
-          genesisCandidatesInWindow,
-          totalGenesisInTable,
-          anomalies,
+          linkedPairs: windowAnalysis.linkedPairs,
+          edgeRows: windowAnalysis.edgeRows,
+          forks: windowAnalysis.forks,
+          genesisCandidatesInWindow: windowAnalysis.genesisCandidatesInWindow,
+          anomalies: windowAnalysis.anomalies,
           checkedAt: new Date().toISOString(),
           note:
             'Cryptographic SHA-256 validation is computed natively inside PostgreSQL via audit_chain_verify(). 0 problems indicates continuous tamper-free integrity.',
