@@ -596,10 +596,11 @@ export const submitHospitalAdminProposalTool: IAgentTool<{
         const incRes = await query<{
           id: string;
           hospital_id: string;
-          title: string;
+          incident_no: string;
+          incident_type: string;
           status: string;
         }>(
-          `SELECT id, hospital_id, title, status::text AS status
+          `SELECT id, hospital_id, incident_no, incident_type, status::text AS status
              FROM incident
             WHERE id = $1`,
           [args.incidentId],
@@ -637,14 +638,19 @@ export const submitHospitalAdminProposalTool: IAgentTool<{
         );
 
         const plan = planRes.rows[0] as { id: string; revision: number; status: string } | undefined;
+        if (!plan) {
+          return {
+            success: false,
+            error: `No emergency plan with status 'READY_FOR_APPROVAL' found for incident '${args.incidentId}'.`,
+          };
+        }
 
         const actionDef = PROPOSAL_ACTION_WHITELIST.HOSPITAL_ADMIN.APPROVE_INCIDENT_PLAN;
         const endpoint = buildEndpoint(actionDef.endpointTemplate, { id: inc.id });
 
-        const payload: Record<string, unknown> = {};
-        if (plan) {
-          payload.planId = plan.id;
-        }
+        const payload: Record<string, unknown> = {
+          planId: plan.id,
+        };
         if (args.note && args.note.trim()) {
           payload.note = args.note.trim();
         }
@@ -652,16 +658,17 @@ export const submitHospitalAdminProposalTool: IAgentTool<{
         const summary: Record<string, unknown> = {
           action: 'APPROVE_INCIDENT_PLAN',
           incidentId: inc.id,
-          incidentTitle: inc.title,
-          planId: plan?.id ?? null,
-          revision: plan?.revision ?? null,
+          incidentNo: inc.incident_no,
+          incidentType: inc.incident_type,
+          planId: plan.id,
+          revision: plan.revision,
           note: args.note?.trim() ?? null,
         };
 
         const proposal: ToolProposalPayload = {
           type: 'APPROVE_INCIDENT_PLAN',
-          title: `Proposal: Approve Emergency Incident Plan for ${inc.title}`,
-          description: `Propose executive approval for emergency incident plan (Incident: ${inc.title}${plan ? `, Revision ${plan.revision}` : ''}).${args.note ? ` Note: ${args.note.trim()}` : ''}`,
+          title: `Proposal: Approve Emergency Incident Plan for ${inc.incident_no}`,
+          description: `Propose executive approval for emergency incident plan (Incident: ${inc.incident_no} [${inc.incident_type}], Revision ${plan.revision}).${args.note ? ` Note: ${args.note.trim()}` : ''}`,
           summary,
           actionApi: {
             endpoint,
