@@ -33,7 +33,7 @@ const DEMO_CAST: { email: string; role: RoleCode; hospital_code: string; hospita
 const DEMO_ROLES: RoleCode[] = ['PHARMACIST', 'WAREHOUSE_OFFICER', 'ER_STAFF', 'DRIVER'];
 
 export function LoginPage() {
-  const { login, dbConnected, dbMessage, refreshHealth } = useAuth();
+  const { login, dbConnected, dbMessage, refreshHealth, cognitoAuth } = useAuth();
 
   const [email, setEmail] = useState('pharmacist1.ha@example.org');
   const [password, setPassword] = useState('doorare123');
@@ -409,6 +409,65 @@ export function LoginPage() {
               ระบุบัญชีผู้ใช้ หรือเลือกบทบาทด้านซ้ายเพื่อทดสอบ
             </div>
           </div>
+
+          {/* AWS COGNITO SINGLE SIGN-ON */}
+          <div style={{ marginBottom: 20 }}>
+            <button
+              type="button"
+              disabled={loading || cognitoAuth?.isLoading}
+              onClick={() => {
+                if (cognitoAuth) {
+                  cognitoAuth.signinRedirect().catch((err: any) => {
+                    console.error('[Cognito] signinRedirect error', err);
+                    setError(`Cognito Error: ${err.message || 'Cannot redirect to Cognito'}`);
+                  });
+                }
+              }}
+              style={{
+                width: '100%',
+                padding: '12px 16px',
+                background: '#232F3E',
+                color: '#FFFFFF',
+                border: '1.5px solid #FF9900',
+                borderRadius: 8,
+                fontSize: 14,
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 10,
+                boxShadow: '0 2px 6px rgba(35, 47, 62, 0.2)',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z" fill="#FF9900"/>
+              </svg>
+              <span>{cognitoAuth?.isLoading ? 'กำลังเชื่อมต่อ AWS Cognito...' : 'เข้าสู่ระบบด้วย AWS Cognito (SSO)'}</span>
+            </button>
+            <div style={{ display: 'flex', alignItems: 'center', margin: '18px 0 14px', color: '#94A3B8', fontSize: 12 }}>
+              <div style={{ flex: 1, height: '1px', background: '#E2E8F0' }} />
+              <span style={{ padding: '0 10px' }}>หรือเข้าใช้งานด้วยบัญชีภายใน (Internal Demo)</span>
+              <div style={{ flex: 1, height: '1px', background: '#E2E8F0' }} />
+            </div>
+          </div>
+
+          {cognitoAuth?.error && (
+            <div
+              style={{
+                background: '#FEF2F2',
+                border: '1px solid #FCA5A5',
+                color: '#B91C1C',
+                padding: '10px 14px',
+                borderRadius: 8,
+                fontSize: 12.5,
+                marginBottom: 16,
+              }}
+            >
+              <b>Cognito OIDC Error:</b> {cognitoAuth.error.message}
+            </div>
+          )}
 
           {/* ERROR ALERT */}
           {error && (

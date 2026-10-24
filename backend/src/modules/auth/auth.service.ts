@@ -167,6 +167,108 @@ export class AuthService {
     };
   }
 
+  async cognitoLogin(
+    dto: { email?: string; sub?: string; idToken?: string },
+    meta?: ClientMeta
+  ): Promise<{ ok: boolean; token?: string; user?: AuthSessionUser; error?: string; code?: string; status: number }> {
+    const email = (dto.email || '').trim().toLowerCase();
+    const sub = (dto.sub || '').trim();
+
+    if (!sub && !email) {
+      return { ok: false, status: 400, code: 'VALIDATION', error: 'Missing Cognito sub or email' };
+    }
+
+    let user = sub ? await this.repo.findUserByCognitoSub(sub) : null;
+    if (!user && email) {
+      user = await this.repo.findUserByEmail(email);
+      if (user && sub && user.cognito_sub !== sub) {
+        // Link real AWS Cognito sub to app_user in PostgreSQL
+        await this.repo.updateCognitoSub(user.id, sub);
+        user.cognito_sub = sub;
+      }
+    }
+
+    if (!user) {
+      await this.repo.recordLoginEvent({
+        userId: null,
+        email: email || sub,
+        success: false,
+        failureReason: 'ไม่พบผู้ใช้ในระบบ DooRare (Cognito)',
+        meta,
+      });
+      return {
+        ok: false,
+        status: 401,
+        code: 'USER_NOT_REGISTERED',
+        error: `บัญชี Cognito (${email || sub}) ยังไม่ได้ลงทะเบียนในระบบ DooRare กรุณาติดต่อผู้ดูแลระบบ`,
+      };
+    }
+
+    if (!user.active) {
+      await this.repo.recordLoginEvent({
+        userId: user.id,
+        email: user.email,
+        success: false,
+        failureReason: 'บัญชีถูกระงับการใช้งาน',
+        meta,
+      });
+      return {
+        ok: false,
+        status: 403,
+        code: 'ACCOUNT_SUSPENDED',
+        error: `บัญชีผู้ใช้งานนี้ (${user.display_name}) ถูกระงับการใช้งาน กรุณาติดต่อผู้ดูแลระบบ`,
+      };
+    }
+
+    await this.repo.recordLoginEvent({
+      userId: user.id,
+      email: user.email,
+      success: true,
+      failureReason: null,
+      meta,
+    });
+
+    await this.repo.updateUserLastLogin(user.id);
+
+    const token = `sess_cog_${user.id.slice(0, 8)}_${Date.now()}`;
+    this.activeSessions.set(token, {
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+      createdAt: Date.now(),
+    });
+
+    const addRoles = user.additional_roles || [];
+    const allRoles = Array.from(new Set([user.role, ...addRoles]));
+
+    return {
+      ok: true,
+      status: 200,
+      token,
+      user: {
+        id: user.id,
+        cognitoSub: user.cognito_sub,
+        email: user.email,
+        name: user.display_name,
+        role: user.role,
+        roleTh: getRoleThai(user.role),
+        hospitalId: user.hospital_id,
+        hospitalCode: user.hospital_code || 'HA',
+        hospitalName: user.hospital_name || 'เขตสุขภาพที่ 6',
+        regionId: user.region_id,
+        mfaEnabled: user.mfa_enabled,
+        additionalRoles: addRoles,
+        allRoles,
+        phone: user.phone,
+        lastLoginAt: new Date().toISOString(),
+        scopeLabel: user.hospital_name
+          ? `เห็นเฉพาะข้อมูล ${user.hospital_name}`
+          : 'ทุกโรงพยาบาล (เขตสุขภาพที่ 6)',
+        initial: user.display_name.charAt(0) || 'D',
+      },
+    };
+  }
+
   /** Resolve a token to its user without touching `last_seen_at` (used by the auth middleware on every request). */
   async getSessionUser(token: string): Promise<AuthSessionUser | null> {
     return this.getMe(token, false);

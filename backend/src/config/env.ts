@@ -59,6 +59,7 @@ export const config = {
     database: process.env.DB_NAME || 'doorare',
     user: process.env.DB_USER || 'doorare',
     password: process.env.DB_PASSWORD || 'doorare_dev',
+    ssl: process.env.DB_SSL === 'true',
   },
   security: {
     masterPassword: process.env.MASTER_PASSWORD || 'doorare123',
@@ -91,5 +92,14 @@ export const config = {
       pythonStaleAfterDays: Number(process.env.FORECAST_JOB_STALE_AFTER_DAYS || 3650),
       timeoutMs: Number(process.env.FORECAST_JOB_TIMEOUT_MS || 15 * 60_000),
     },
+  },
+  location: {
+    apiKey: process.env.AWS_LOCATION_API_KEY || '',
+    region: process.env.AWS_LOCATION_REGION || process.env.AWS_DEFAULT_REGION || 'ap-southeast-1',
+  },
+  cognito: {
+    userPoolId: process.env.COGNITO_USER_POOL_ID || 'us-east-1_Yqc7bshFl',
+    clientId: process.env.COGNITO_APP_CLIENT_ID || '4nee5d2ou8jp3pvrabg7qn52rq',
+    region: process.env.COGNITO_REGION || 'us-east-1',
   },
 };

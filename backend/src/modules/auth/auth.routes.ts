@@ -5,6 +5,7 @@ import { requireAuth, requireRole } from '../../middleware/auth.js';
 export const authRouter = Router();
 
 authRouter.post('/login', authController.login);
+authRouter.post('/cognito', authController.cognitoLogin);
 authRouter.post('/logout', authController.logout);
 authRouter.get('/role-accounts', authController.getRoleAccounts);
 authRouter.get(

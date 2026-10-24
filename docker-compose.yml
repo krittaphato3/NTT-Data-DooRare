@@ -16,18 +16,21 @@ services:
     environment:
       PORT: 3001
       NODE_ENV: production
-      DB_HOST: db
-      DB_PORT: 5432
-      DB_NAME: doorare
-      DB_USER: doorare
-      DB_PASSWORD: doorare_dev
+      DB_HOST: ${DB_HOST:-doorare-db.cxw4iguq6sg9.ap-southeast-1.rds.amazonaws.com}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_NAME: ${DB_NAME:-doorare}
+      DB_USER: ${DB_USER:-doorare}
+      DB_PASSWORD: ${DB_PASSWORD:-doorare-password-db}
+      DB_SSL: "${DB_SSL:-true}"
+      AWS_LOCATION_API_KEY: "v1.public.eyJqdGkiOiI4MWMyNGU3Zi0wZmUzLTQ2N2UtODE5Ny0zNTU5ODdhY2Q0YTgifREY1F3OivBmMGq_qS4BWyG7btAKR5qZVFFHcQS0ooOBdcQ4n45i7lEvkHpZV1_Bb39HAGb4HRtwYxXEfrHKkOrsDWPyAgsI9xF3vYu6WVJAlcKSxjxZhTs7UW_89GLn8mwjl72IbdrLg99pPrbw_tUfb_lPsu11Pd9FOeis58_ZIUWpWLrpW4FRoKUG6ZWbQNn0qDBcNHeKmk_8RHUAIDfvL1HuSxoGhw3p3WJv0J773ZVU9MPxJEnaQKNB7CwZ9YvLbHNC940pGbwOyM682E2svqYUbtHuNtbDNnUq1fsRP8GcGtq9r137IrjknI_WSNDI8F6dIctbnu6ke5ntlkI.MzRjYzZmZGUtZmY3NC00NDZiLWJiMTktNTc4YjUxYTFlOGZi"
+      AWS_LOCATION_REGION: "ap-southeast-1"
+      COGNITO_USER_POOL_ID: "us-east-1_Yqc7bshFl"
+      COGNITO_APP_CLIENT_ID: "4nee5d2ou8jp3pvrabg7qn52rq"
+      COGNITO_REGION: "us-east-1"
     ports:
       - "127.0.0.1:3001:3001"
     volumes:
       - doorare_uploads:/app/uploads
-    depends_on:
-      db:
-        condition: service_healthy
     restart: unless-stopped
 
   # PostgreSQL 16 for the DooRare schema (db/schema.sql). Host port 5442 (5432/5433 are used by other local projects).

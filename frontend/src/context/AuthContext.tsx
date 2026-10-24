@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
+import { useAuth as useCognitoAuth } from 'react-oidc-context';
 import type { AuthUser, LoginCredentials, LoginResponse } from '../types/auth';
 import type { RoleCode } from '../lib/rbac';
 import * as authApi from '../services/authApi';
@@ -15,9 +16,11 @@ interface AuthContextValue {
   dbConnected: boolean;
   dbMessage: string;
   login: (credentials: LoginCredentials) => Promise<LoginResponse>;
+  loginWithCognito: (payload: { email?: string; sub: string; idToken?: string }) => Promise<LoginResponse>;
   logout: () => Promise<void>;
   switchRole: (role: RoleCode) => void;
   refreshHealth: () => Promise<void>;
+  cognitoAuth?: ReturnType<typeof useCognitoAuth>;
 }
 
 const defaultAuth: AuthContextValue = {
@@ -29,6 +32,7 @@ const defaultAuth: AuthContextValue = {
   dbConnected: false,
   dbMessage: '',
   login: async () => ({ ok: false }),
+  loginWithCognito: async () => ({ ok: false }),
   logout: async () => {},
   switchRole: () => {},
   refreshHealth: async () => {},
@@ -37,6 +41,7 @@ const defaultAuth: AuthContextValue = {
 const AuthContext = createContext<AuthContextValue>(defaultAuth);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const cognitoAuth = useCognitoAuth();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [activeRole, setActiveRole] = useState<RoleCode>('PHARMACIST');
@@ -45,6 +50,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [dbMessage, setDbMessage] = useState('กำลังตรวจสอบการเชื่อมต่อฐานข้อมูล...');
 
   const lastActivityRef = useRef<number>(Date.now());
+
+  // Auto-sync AWS Cognito authentication with DooRare session
+  useEffect(() => {
+    if (cognitoAuth.isAuthenticated && cognitoAuth.user?.profile && !user) {
+      const email = cognitoAuth.user.profile.email;
+      const sub = cognitoAuth.user.profile.sub || '';
+      const idToken = cognitoAuth.user.id_token;
+
+      authApi.loginWithCognito({ email, sub, idToken }).then((res) => {
+        if (res.ok && res.user && res.token) {
+          setUser(res.user);
+          setToken(res.token);
+          setActiveRole(res.user.role);
+          const sessionData = JSON.stringify({
+            user: res.user,
+            token: res.token,
+            activeRole: res.user.role,
+          });
+          sessionStorage.setItem(STORAGE_KEY, sessionData);
+          localStorage.setItem(STORAGE_KEY, sessionData);
+          setDbConnected(true);
+          setDbMessage('เข้าสู่ระบบสำเร็จผ่าน AWS Cognito');
+        }
+      });
+    }
+  }, [cognitoAuth.isAuthenticated, cognitoAuth.user, user]);
 
   const refreshHealth = useCallback(async () => {
     const health = await authApi.checkHealth();
@@ -136,9 +167,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return res;
   };
 
+  const loginWithCognito = async (payload: { email?: string; sub: string; idToken?: string }): Promise<LoginResponse> => {
+    const res = await authApi.loginWithCognito(payload);
+    if (res.ok && res.user && res.token) {
+      setUser(res.user);
+      setToken(res.token);
+      setActiveRole(res.user.role);
+      const sessionData = JSON.stringify({
+        user: res.user,
+        token: res.token,
+        activeRole: res.user.role,
+      });
+      sessionStorage.setItem(STORAGE_KEY, sessionData);
+      localStorage.setItem(STORAGE_KEY, sessionData);
+      setDbConnected(true);
+      setDbMessage('เข้าสู่ระบบสำเร็จผ่าน AWS Cognito');
+    }
+    return res;
+  };
+
   const logout = async () => {
     if (token) {
       await authApi.logout(token);
+    }
+    if (cognitoAuth?.isAuthenticated) {
+      await cognitoAuth.removeUser();
     }
     setUser(null);
     setToken(null);
@@ -175,9 +228,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         dbConnected,
         dbMessage,
         login,
+        loginWithCognito,
         logout,
         switchRole,
         refreshHealth,
+        cognitoAuth,
       }}
     >
       {children}

@@ -10,6 +10,7 @@ import type { ScoreParts } from '../../core/formulas/borrow.js';
 import type { BorrowConfig } from './borrow.config.js';
 import { findListing, latestForecast, usableStock } from './borrow.inputs.js';
 import type { Need } from './borrow.inputs.js';
+import { getOrRefreshHospitalDistance } from '../location/location.service.js';
 
 export interface Candidate {
   hospitalId: string;
@@ -77,9 +78,19 @@ export async function buildLadder(db: Db, cfg: BorrowConfig, need: Need, request
 
   const candidates: Candidate[] = [];
   for (const h of hospitals) {
+    let transitMin: number | null = h.transit;
+    if (transitMin === null) {
+      try {
+        const route = await getOrRefreshHospitalDistance(db, h.id, requesterHospitalId);
+        transitMin = route.travelMinutes;
+      } catch {
+        // fallback remains null
+      }
+    }
+
     const listing = await findListing(db, h.id, need.drug.drugMasterId);
     const base: Candidate = {
-      hospitalId: h.id, code: h.code, name: h.name, eligible: false, failure: null, listingId: listing?.id ?? null, transitMin: h.transit,
+      hospitalId: h.id, code: h.code, name: h.name, eligible: false, failure: null, listingId: listing?.id ?? null, transitMin,
       usableForLending: 0, totalTarget: null, lendable: 0, stock: 0, uLender: 0, approvalRate: null, timeoutRate: null, parts: null, si: null,
     };
     if (!listing) {
@@ -99,7 +110,7 @@ export async function buildLadder(db: Db, cfg: BorrowConfig, need: Need, request
     const uLender = dailyUsage(week?.p50 ?? null, month?.p50 ?? null, need.leadDays) ?? 0;
     const windowMaxMin = need.windowDays * 1440;
     const failure = hardFilterFailure({
-      transitMin: h.transit,
+      transitMin,
       windowMaxMin,
       lendable,
       coldChain: need.drug.coldChain,

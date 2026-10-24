@@ -14,6 +14,8 @@
     "e2e:loadmore": "node scripts/e2e-loadmore.mjs",
     "ai:index": "node scripts/ai-index.mjs",
     "ai:session": "node scripts/ai-session.mjs",
+    "forecast:load": "npx tsx scripts/load-forecast.ts",
+    "test:agent": "npx tsx scripts/test-agent.ts",
     "db:up": "bash scripts/db.sh up",
     "db:load": "bash scripts/db.sh load",
     "db:reset": "bash scripts/db.sh reset",

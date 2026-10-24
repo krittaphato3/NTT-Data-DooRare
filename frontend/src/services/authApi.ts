@@ -49,6 +49,15 @@ export async function login(credentials: LoginCredentials): Promise<LoginRespons
   return await res.json();
 }
 
+export async function loginWithCognito(payload: { email?: string; sub: string; idToken?: string }): Promise<LoginResponse> {
+  const res = await fetch(`${API_BASE}/auth/cognito`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  return await res.json();
+}
+
 export async function logout(token?: string | null): Promise<void> {
   try {
     await fetch(`${API_BASE}/auth/logout`, {

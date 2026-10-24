@@ -14,6 +14,15 @@ export class AuthController {
     }
   };
 
+  cognitoLogin = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const result = await this.service.cognitoLogin(req.body, req.clientMeta);
+      res.status(result.status).json(result);
+    } catch (err) {
+      next(err);
+    }
+  };
+
   getMe = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const authHeader = req.headers.authorization || '';
