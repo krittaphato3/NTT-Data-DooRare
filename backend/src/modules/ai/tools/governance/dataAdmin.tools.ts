@@ -631,10 +631,9 @@ export const submitDataAdminProposalTool: IAgentTool<{
       .describe('Canonical drug_master UUID for VERIFY_DRUG_MAPPING'),
     baseUnitsPerPack: z
       .number()
-      .int()
       .positive()
       .optional()
-      .describe('Hospital pack size in base units (positive integer; required for VERIFY_DRUG_MAPPING)'),
+      .describe('Hospital pack size in base units (required for VERIFY_DRUG_MAPPING)'),
     unitConversionFactor: z
       .number()
       .positive()
@@ -724,7 +723,7 @@ export const submitDataAdminProposalTool: IAgentTool<{
         if (effectiveBaseUnitsPerPack === undefined || effectiveBaseUnitsPerPack <= 0) {
           return {
             success: false,
-            error: 'baseUnitsPerPack (positive integer) is required for VERIFY_DRUG_MAPPING.',
+            error: 'baseUnitsPerPack (positive number) is required for VERIFY_DRUG_MAPPING.',
           };
         }
 
