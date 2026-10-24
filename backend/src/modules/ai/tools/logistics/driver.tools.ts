@@ -1,4 +1,3 @@
-import crypto from 'node:crypto';
 import { z } from 'zod';
 import { query } from '../../../../db/client.js';
 import type { IAgentTool, RequestContext, ToolProposalPayload, ToolResult } from '../tool.types.js';
@@ -634,6 +633,9 @@ export const logTransitTemperatureAlertTool: IAgentTool<{
           coldChainRequired,
           hasColdBox,
           driverGuidance,
+          thresholdsProvisional: true,
+          provisionalNote:
+            'The 10.0°C warning/critical threshold cut-off is a provisional operational assumption pending pharmacist cold-chain SOP sign-off (spec ASM-15 / R-05).',
           recordingHint:
             'This reading can be officially recorded to the task transit event log by calling submit_driver_status_proposal with actionType LOG_TRANSIT_EVENT.',
         },
@@ -794,7 +796,6 @@ const DRIVER_PROPOSAL_WHITELIST = {
     endpoint: (taskId: string) => `/api/v1/transport-tasks/${taskId}/events:sync`,
     method: 'POST' as const,
     fixedStatus: undefined,
-    // Schema accepts either direct `events: [...]` array or single event fields to normalize into events array
     payloadSchema: z.object({
       events: z
         .array(
@@ -810,7 +811,6 @@ const DRIVER_PROPOSAL_WHITELIST = {
         .min(1)
         .max(200)
         .optional(),
-      // Direct single event fields supported for ergonomic LLM calls:
       clientEventId: z.string().uuid().optional(),
       seq: z.number().int().min(0).optional(),
       toStatus: z.enum(['LOADED', 'IN_TRANSIT', 'ARRIVED', 'RECEIVED']).optional(),
@@ -840,7 +840,13 @@ export const submitDriverStatusProposalTool: IAgentTool<{
     title: z.string().describe('Title of the proposed action'),
     description: z.string().describe('Detailed trip status rationale'),
     summary: z.record(z.string(), z.unknown()).describe('Key-value summary of proposed metrics'),
-    payload: z.record(z.string(), z.unknown()).optional().default({}).describe('Action-specific payload parameters'),
+    payload: z
+      .record(z.string(), z.unknown())
+      .optional()
+      .default({})
+      .describe(
+        "Action-specific payload parameters. For LOG_TRANSIT_EVENT, copy clientEventId, seq, and capturedAt exactly from the driver's offline event queue. Never invent or guess.",
+      ),
   }),
   allowedRoles: ['DRIVER', 'SYSTEM_ADMIN'],
   execute: async (args, context: RequestContext): Promise<ToolResult> => {
@@ -942,42 +948,80 @@ export const submitDriverStatusProposalTool: IAgentTool<{
           ...(data.reason ? { reason: data.reason } : {}),
         };
       } else if (args.actionType === 'LOG_TRANSIT_EVENT') {
-        const data = parseRes.data as {
-          events?: Array<{
-            clientEventId: string;
-            seq: number;
-            toStatus: string;
-            capturedAt: string;
-            photoKeys?: string[];
-            temperatureC?: number;
-          }>;
-          clientEventId?: string;
-          seq?: number;
-          toStatus?: 'LOADED' | 'IN_TRANSIT' | 'ARRIVED' | 'RECEIVED';
-          capturedAt?: string;
-          photoKeys?: string[];
-          temperatureC?: number;
-        };
+        const rawPayloadRecord = (args.payload || {}) as Record<string, unknown>;
 
-        if (data.events && data.events.length > 0) {
-          sanitizedPayload = { events: data.events };
-        } else if (data.seq !== undefined && data.toStatus) {
+        // Array form
+        if (Array.isArray(rawPayloadRecord.events)) {
+          if (rawPayloadRecord.events.length === 0) {
+            return {
+              success: false,
+              error: 'Invalid proposal payload for LOG_TRANSIT_EVENT: events array cannot be empty.',
+            };
+          }
+          for (let i = 0; i < rawPayloadRecord.events.length; i++) {
+            const ev = rawPayloadRecord.events[i] as any;
+            if (!ev || typeof ev !== 'object') {
+              return { success: false, error: `Invalid proposal payload for LOG_TRANSIT_EVENT: events[${i}] must be an object.` };
+            }
+            if (!ev.clientEventId || typeof ev.clientEventId !== 'string') {
+              return { success: false, error: `Invalid proposal payload for LOG_TRANSIT_EVENT: Missing required field clientEventId at events[${i}]. Copy exactly from the driver's offline event queue. Never invent or guess.` };
+            }
+            if (ev.seq === undefined || typeof ev.seq !== 'number' || !Number.isInteger(ev.seq) || ev.seq < 0) {
+              return { success: false, error: `Invalid proposal payload for LOG_TRANSIT_EVENT: Missing required field seq at events[${i}]. Copy exactly from the driver's offline event queue. Never invent or guess.` };
+            }
+            if (!ev.capturedAt || typeof ev.capturedAt !== 'string' || Number.isNaN(new Date(ev.capturedAt).getTime())) {
+              return { success: false, error: `Invalid proposal payload for LOG_TRANSIT_EVENT: Missing required field capturedAt at events[${i}]. Copy exactly from the driver's offline event queue. Never invent or guess.` };
+            }
+            if (!ev.toStatus || !['LOADED', 'IN_TRANSIT', 'ARRIVED', 'RECEIVED'].includes(ev.toStatus)) {
+              return { success: false, error: `Invalid proposal payload for LOG_TRANSIT_EVENT: toStatus is required at events[${i}] (must be LOADED, IN_TRANSIT, ARRIVED, or RECEIVED).` };
+            }
+          }
+          sanitizedPayload = { events: rawPayloadRecord.events };
+        } else {
+          // Single-event form: check each required field explicitly with no fallbacks
+          if (!rawPayloadRecord.clientEventId || typeof rawPayloadRecord.clientEventId !== 'string') {
+            return {
+              success: false,
+              error: 'Invalid proposal payload for LOG_TRANSIT_EVENT: Missing required field clientEventId. Copy exactly from the driver\'s offline event queue. Never invent or guess.',
+            };
+          }
+          const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+          if (!uuidRegex.test(rawPayloadRecord.clientEventId)) {
+            return {
+              success: false,
+              error: 'Invalid proposal payload for LOG_TRANSIT_EVENT: clientEventId must be a valid UUID.',
+            };
+          }
+          if (rawPayloadRecord.seq === undefined || typeof rawPayloadRecord.seq !== 'number' || !Number.isInteger(rawPayloadRecord.seq) || rawPayloadRecord.seq < 0) {
+            return {
+              success: false,
+              error: 'Invalid proposal payload for LOG_TRANSIT_EVENT: Missing required field seq. Copy exactly from the driver\'s offline event queue. Never invent or guess.',
+            };
+          }
+          if (!rawPayloadRecord.capturedAt || typeof rawPayloadRecord.capturedAt !== 'string' || Number.isNaN(new Date(rawPayloadRecord.capturedAt).getTime())) {
+            return {
+              success: false,
+              error: 'Invalid proposal payload for LOG_TRANSIT_EVENT: Missing required field capturedAt. Copy exactly from the driver\'s offline event queue. Never invent or guess.',
+            };
+          }
+          if (!rawPayloadRecord.toStatus || typeof rawPayloadRecord.toStatus !== 'string' || !['LOADED', 'IN_TRANSIT', 'ARRIVED', 'RECEIVED'].includes(rawPayloadRecord.toStatus)) {
+            return {
+              success: false,
+              error: 'Invalid proposal payload for LOG_TRANSIT_EVENT: Missing required field toStatus (must be LOADED, IN_TRANSIT, ARRIVED, or RECEIVED).',
+            };
+          }
+
           sanitizedPayload = {
             events: [
               {
-                clientEventId: data.clientEventId || crypto.randomUUID(),
-                seq: data.seq,
-                toStatus: data.toStatus,
-                capturedAt: data.capturedAt || new Date().toISOString(),
-                ...(data.photoKeys ? { photoKeys: data.photoKeys } : {}),
-                ...(data.temperatureC !== undefined ? { temperatureC: data.temperatureC } : {}),
+                clientEventId: rawPayloadRecord.clientEventId,
+                seq: rawPayloadRecord.seq,
+                toStatus: rawPayloadRecord.toStatus,
+                capturedAt: rawPayloadRecord.capturedAt,
+                ...(Array.isArray(rawPayloadRecord.photoKeys) ? { photoKeys: rawPayloadRecord.photoKeys } : {}),
+                ...(typeof rawPayloadRecord.temperatureC === 'number' ? { temperatureC: rawPayloadRecord.temperatureC } : {}),
               },
             ],
-          };
-        } else {
-          return {
-            success: false,
-            error: 'Invalid proposal payload for LOG_TRANSIT_EVENT: Must provide either events array or seq and toStatus.',
           };
         }
       }

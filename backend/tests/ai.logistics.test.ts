@@ -1015,6 +1015,9 @@ test('logTransitTemperatureAlertTool: temperature classification boundaries and 
   const res2 = await logTransitTemperatureAlertTool.execute({ taskId: taskRow.id, temperatureC: 2.0 }, ctx);
   assert.equal((res2.data as any).status, 'NORMAL');
   assert.equal((res2.data as any).deltaFromRange, 0);
+  assert.equal((res2.data as any).thresholdsProvisional, true);
+  assert.ok((res2.data as any).provisionalNote);
+  assert.match((res2.data as any).provisionalNote, /provisional operational assumption/i);
 
   // 2. Exactly 8.0 -> NORMAL
   const res8 = await logTransitTemperatureAlertTool.execute({ taskId: taskRow.id, temperatureC: 8.0 }, ctx);
@@ -1191,6 +1194,10 @@ test('submitDriverStatusProposalTool: LOG_TRANSIT_EVENT produces whitelisted eve
     userId: taskRow.driver_id,
   };
 
+  const testEventId = 'a0000000-0000-4000-8000-000000000001';
+  const testCapturedAt = '2026-10-24T05:30:00.000Z';
+
+  // 1. Single-event form passes values through exactly
   const res = await submitDriverStatusProposalTool.execute(
     {
       actionType: 'LOG_TRANSIT_EVENT',
@@ -1199,8 +1206,10 @@ test('submitDriverStatusProposalTool: LOG_TRANSIT_EVENT produces whitelisted eve
       description: 'Midway temperature check',
       summary: {},
       payload: {
+        clientEventId: testEventId,
         seq: 1,
         toStatus: 'IN_TRANSIT',
+        capturedAt: testCapturedAt,
         temperatureC: 5.2,
       },
     },
@@ -1214,9 +1223,100 @@ test('submitDriverStatusProposalTool: LOG_TRANSIT_EVENT produces whitelisted eve
   const events = res.proposal.actionApi.payload.events as any[];
   assert.ok(Array.isArray(events));
   assert.equal(events.length, 1);
+  assert.equal(events[0].clientEventId, testEventId);
   assert.equal(events[0].seq, 1);
   assert.equal(events[0].toStatus, 'IN_TRANSIT');
+  assert.equal(events[0].capturedAt, testCapturedAt);
   assert.equal(events[0].temperatureC, 5.2);
+
+  // 2. Missing clientEventId is rejected
+  const noClientEventIdRes = await submitDriverStatusProposalTool.execute(
+    {
+      actionType: 'LOG_TRANSIT_EVENT',
+      taskId: taskRow.id,
+      title: 'Missing event ID',
+      description: 'Test',
+      summary: {},
+      payload: {
+        seq: 1,
+        toStatus: 'IN_TRANSIT',
+        capturedAt: testCapturedAt,
+      },
+    },
+    ctx,
+  );
+  assert.equal(noClientEventIdRes.success, false);
+  assert.match(noClientEventIdRes.error || '', /clientEventId/i);
+
+  // 3. Missing seq is rejected
+  const noSeqRes = await submitDriverStatusProposalTool.execute(
+    {
+      actionType: 'LOG_TRANSIT_EVENT',
+      taskId: taskRow.id,
+      title: 'Missing seq',
+      description: 'Test',
+      summary: {},
+      payload: {
+        clientEventId: testEventId,
+        toStatus: 'IN_TRANSIT',
+        capturedAt: testCapturedAt,
+      },
+    },
+    ctx,
+  );
+  assert.equal(noSeqRes.success, false);
+  assert.match(noSeqRes.error || '', /seq/i);
+
+  // 4. Missing capturedAt is rejected
+  const noCapturedAtRes = await submitDriverStatusProposalTool.execute(
+    {
+      actionType: 'LOG_TRANSIT_EVENT',
+      taskId: taskRow.id,
+      title: 'Missing capturedAt',
+      description: 'Test',
+      summary: {},
+      payload: {
+        clientEventId: testEventId,
+        seq: 1,
+        toStatus: 'IN_TRANSIT',
+      },
+    },
+    ctx,
+  );
+  assert.equal(noCapturedAtRes.success, false);
+  assert.match(noCapturedAtRes.error || '', /capturedAt/i);
+
+  // 5. Valid array form passes through unchanged
+  const arrayRes = await submitDriverStatusProposalTool.execute(
+    {
+      actionType: 'LOG_TRANSIT_EVENT',
+      taskId: taskRow.id,
+      title: 'Array form event',
+      description: 'Test array payload',
+      summary: {},
+      payload: {
+        events: [
+          {
+            clientEventId: testEventId,
+            seq: 2,
+            toStatus: 'ARRIVED',
+            capturedAt: testCapturedAt,
+            temperatureC: 4.8,
+          },
+        ],
+      },
+    },
+    ctx,
+  );
+  assert.equal(arrayRes.success, true);
+  assert.ok(arrayRes.proposal);
+  const arrEvents = arrayRes.proposal.actionApi.payload.events as any[];
+  assert.equal(arrEvents.length, 1);
+  assert.equal(arrEvents[0].clientEventId, testEventId);
+  assert.equal(arrEvents[0].seq, 2);
+  assert.equal(arrEvents[0].toStatus, 'ARRIVED');
+  assert.equal(arrEvents[0].capturedAt, testCapturedAt);
+  assert.equal(arrEvents[0].temperatureC, 4.8);
 });
 
 test('submitDriverStatusProposalTool: UPDATE_ETA is draft-only and emits no proposal', async () => {
