@@ -6,12 +6,12 @@ import { DooRareBotAvatar } from './DooRareBotAvatar';
 import { MarkdownContent } from '../common/MarkdownContent';
 import { ToolExecutionLogCard, type ToolLogEntry } from './ToolExecutionLogCard';
 import { ThinkingAccordion } from './ThinkingAccordion';
+import { Icon, type IconName } from '../common/icons';
 import {
   loadSessions,
   saveSession,
   deleteSession,
   clearAllSessions,
-  formatSessionRelativeTime,
   type ChatSession,
   type DisplayChatMessage,
 } from '../../services/chatSessionStore';
@@ -55,9 +55,9 @@ const ProposalCard: React.FC<ProposalCardProps> = ({ proposal, onActionComplete 
         throw new Error(problem.message || problem.title || `HTTP ${res.status}`);
       }
       setDecided('approved');
-      onActionComplete(`✅ ดำเนินการสำเร็จ: ${proposal.title}`);
+      onActionComplete(`ดำเนินการสำเร็จ: ${proposal.title}`);
     } catch (err: any) {
-      onActionComplete(`❌ ดำเนินการไม่สำเร็จ: ${err.message}`);
+      onActionComplete(`ดำเนินการไม่สำเร็จ: ${err.message}`);
     } finally {
       setLoading(false);
     }
@@ -65,14 +65,14 @@ const ProposalCard: React.FC<ProposalCardProps> = ({ proposal, onActionComplete 
 
   const handleDecline = () => {
     setDecided('declined');
-    onActionComplete(`🚫 ปฏิเสธข้อเสนอ: ${proposal.title}`);
+    onActionComplete(`ปฏิเสธข้อเสนอ: ${proposal.title}`);
   };
 
   if (decided) {
     return (
       <div className="doorare-chat-proposal-card decided">
         <div className="doorare-proposal-header">
-          {decided === 'approved' ? '✅ อนุมัติข้อเสนอเรียบร้อย' : '🚫 ปฏิเสธข้อเสนอแล้ว'}
+          {decided === 'approved' ? 'อนุมัติข้อเสนอเรียบร้อย' : 'ปฏิเสธข้อเสนอแล้ว'}
         </div>
         <div className="doorare-proposal-desc">{proposal.title}</div>
       </div>
@@ -89,7 +89,7 @@ const ProposalCard: React.FC<ProposalCardProps> = ({ proposal, onActionComplete 
   return (
     <div className="doorare-chat-proposal-card">
       <div className="doorare-proposal-header">
-        <span className="doorare-proposal-tag">📋 ข้อเสนอเพื่อการตัดสินใจ (HITL Proposal)</span>
+        <span className="doorare-proposal-tag">ข้อเสนอเพื่อการตัดสินใจ (HITL Proposal)</span>
       </div>
       <div className="doorare-proposal-title">{proposal.title}</div>
       <div className="doorare-proposal-desc">{proposal.description}</div>
@@ -488,71 +488,142 @@ export const DooRareChatDrawer: React.FC = () => {
     handleSend(chipText);
   };
 
-  // Preset chips depending on current role
-  const quickChips =
-    user?.role === 'ER_STAFF'
-      ? ['ตรวจสอบยาแก้พิษฉุกเฉิน (Antidote)', 'สรุปรายการของนอกเซ็ตอุบัติภัย', 'ติดตามสถานะรถขนส่งด่วน']
-      : user?.role === 'PHARMACIST'
-      ? ['ตรวจสอบสต็อกยาใกล้ถึงจุด ROP', 'ค้นหา รพ. ที่มียาให้ยืมใกล้ที่สุด', 'เช็ครายการยาใกล้หมดอายุใน Pool']
-      : ['ตรวจสอบสถานะระบบ AI Copilot', 'คำนวณสรุปการยืมยาประจำวัน'];
+  const starterCards = [
+    ...(user?.role === 'ER_STAFF'
+      ? [
+          {
+            icon: 'siren' as IconName,
+            title: 'ตรวจสอบยาแก้พิษฉุกเฉิน',
+            desc: 'ค้นหายาแก้พิษพร้อมใช้ในรัศมีขนส่ง 60 นาที',
+            prompt: 'ตรวจสอบยาแก้พิษฉุกเฉิน (Antidote)',
+          },
+          {
+            icon: 'box' as IconName,
+            title: 'สรุปรายการของนอกเซ็ตอุบัติภัย',
+            desc: 'จัดชุดยาและเวชภัณฑ์รับมืออุบัติเหตุกลุ่มชน',
+            prompt: 'สรุปรายการของนอกเซ็ตอุบัติภัย',
+          },
+          {
+            icon: 'truck' as IconName,
+            title: 'ติดตามสถานะรถขนส่งด่วน',
+            desc: 'ตรวจสอบพิกัดรถขนส่งและอุณหภูมิ Cold-Chain',
+            prompt: 'ติดตามสถานะรถขนส่งด่วน',
+          },
+          {
+            icon: 'layers' as IconName,
+            title: 'ประเมินเกณฑ์ชุดยาฉุกเฉิน',
+            desc: 'ตรวจสอบจำนวนชุดยาสำเร็จรูปในคลังฉุกเฉิน',
+            prompt: 'ประเมินเกณฑ์ชุดยาฉุกเฉิน',
+          },
+        ]
+      : [
+          {
+            icon: 'chart' as IconName,
+            title: 'ตรวจสอบสต็อกยาใกล้ถึงจุด ROP',
+            desc: 'วิเคราะห์ระดับสต็อกยาและบันไดคะแนน รพ. ให้ยืม',
+            prompt: 'ตรวจสอบสต็อกยาใกล้ถึงจุด ROP',
+          },
+          {
+            icon: 'hand' as IconName,
+            title: 'ค้นหาแหล่งยืมยาใกล้ที่สุด',
+            desc: 'ประเมินระยะทาง ค่า Si และปริมาณพร้อมให้ยืม',
+            prompt: 'ค้นหา รพ. ที่มียาให้ยืมใกล้ที่สุด',
+          },
+          {
+            icon: 'calx' as IconName,
+            title: 'เช็คยาใกล้หมดอายุใน Pool',
+            desc: 'ตรวจสอบลอตยาใกล้หมดอายุเพื่อวางแผนจัดสรร',
+            prompt: 'เช็ครายการยาใกล้หมดอายุใน Pool',
+          },
+          {
+            icon: 'inbox' as IconName,
+            title: 'สรุปสถานะการยืมยาประจำวัน',
+            desc: 'ดูภาพรวมคำขอยืมยาและการจัดส่งในเครือข่าย',
+            prompt: 'คำนวณสรุปการยืมยาประจำวัน',
+          },
+        ]),
+  ];
 
   return (
     <>
-      {/* Floating Trigger Button */}
-      <button
-        className="doorare-chat-trigger-btn"
-        onClick={() => setIsOpen(true)}
-        title="DooRare AI Copilot"
-        aria-label="Open AI Copilot"
-      >
-        <span className="doorare-chat-pulse-badge" />
-        <DooRareBotAvatar size={38} />
-      </button>
+      {/* Floating Trigger Button (Hide when popup is open so it feels like a Messenger chat head) */}
+      {!isOpen && (
+        <button
+          className="doorare-chat-trigger-btn"
+          onClick={() => setIsOpen(true)}
+          title="DooRare AI Copilot"
+          aria-label="Open AI Copilot"
+        >
+          <span className="doorare-chat-pulse-badge" />
+          <DooRareBotAvatar size={38} />
+        </button>
+      )}
 
-      {/* Backdrop Overlay */}
-      <div
-        className={`doorare-chat-overlay ${isOpen ? 'open' : ''}`}
-        onClick={handleClose}
-      />
+      {/* Backdrop Overlay - Only active in Full Screen mode so normal popup does not block page */}
+      {isFullScreen && (
+        <div
+          className={`doorare-chat-overlay ${isOpen ? 'open' : ''}`}
+          onClick={handleClose}
+        />
+      )}
 
-      {/* Slide-out Drawer / Full Screen Container */}
+      {/* Messenger Floating Popup Window / Full Screen Container */}
       <div className={`doorare-chat-drawer ${isOpen ? 'open' : ''} ${isFullScreen ? 'fullscreen' : ''}`}>
         {/* Previous Sessions Sidebar (Visible in Fullscreen OR when showSessionsDrawer is toggled in Drawer mode) */}
-        {(isFullScreen || showSessionsDrawer) && (
+        {((isFullScreen && !isSidebarCollapsed) || (!isFullScreen && showSessionsDrawer)) && (
           <aside className={`doorare-chat-sidebar ${showSessionsDrawer && !isFullScreen ? 'drawer-overlay' : ''}`}>
-            <div className="doorare-chat-sidebar-header">
+            {/* Top Brand & Collapse Row */}
+            <div className="doorare-chat-sidebar-top-bar">
+              <div className="doorare-sidebar-brand">
+                <DooRareBotAvatar size={24} />
+                <span className="doorare-sidebar-brand-name">DooRare AI</span>
+              </div>
               <button
                 type="button"
-                className="doorare-chat-new-chat-btn"
+                className="doorare-sidebar-toggle-btn"
+                onClick={() => {
+                  if (isFullScreen) {
+                    setIsSidebarCollapsed(true);
+                  } else {
+                    setShowSessionsDrawer(false);
+                  }
+                }}
+                title="ซ่อนแถบด้านข้าง"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                  <line x1="9" y1="3" x2="9" y2="21" />
+                </svg>
+              </button>
+            </div>
+
+            {/* New Chat Pill Button (Gemini-style) */}
+            <div className="doorare-chat-sidebar-action-wrap">
+              <button
+                type="button"
+                className="doorare-chat-new-chat-pill"
                 onClick={handleNewChat}
                 title="เริ่มการสนทนาใหม่"
               >
-                <span>＋</span>
-                <span>แชทใหม่ (New Chat)</span>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="12" y1="5" x2="12" y2="19" />
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+                <span>แชทใหม่</span>
               </button>
-
-              {showSessionsDrawer && !isFullScreen && (
-                <button
-                  type="button"
-                  className="doorare-chat-sidebar-close-btn"
-                  onClick={() => setShowSessionsDrawer(false)}
-                  title="ปิดประวัติการสนทนา"
-                >
-                  ✕
-                </button>
-              )}
             </div>
 
-            <div className="doorare-chat-sidebar-title-bar">
-              <span className="doorare-chat-sidebar-title-text">ประวัติการสนทนา</span>
+            {/* Recent Chats Section */}
+            <div className="doorare-chat-sidebar-section-header">
+              <span className="doorare-chat-sidebar-title-text">ล่าสุด</span>
               {sessions.length > 0 && (
                 <button
                   type="button"
                   className="doorare-chat-clear-history-btn"
                   onClick={handleClearAll}
-                  title="ล้างประวัติทั้งหมด"
+                  title="ล้างประวัติการสนทนาทั้งหมด"
                 >
-                  ล้างทั้งหมด
+                  ล้าง
                 </button>
               )}
             </div>
@@ -560,8 +631,7 @@ export const DooRareChatDrawer: React.FC = () => {
             <div className="doorare-chat-session-list">
               {sessions.length === 0 ? (
                 <div className="doorare-chat-session-empty">
-                  <span style={{ fontSize: 24, marginBottom: 6 }}>🕒</span>
-                  <div>ไม่มีประวัติการสนทนาใน 24 ชั่วโมงล่าสุด</div>
+                  <span>ไม่มีประวัติการสนทนาใน 24 ชั่วโมงล่าสุด</span>
                 </div>
               ) : (
                 sessions.map((s) => (
@@ -569,14 +639,10 @@ export const DooRareChatDrawer: React.FC = () => {
                     key={s.id}
                     className={`doorare-chat-session-item ${s.id === activeSessionId ? 'active' : ''}`}
                     onClick={() => handleSelectSession(s)}
+                    title={s.title}
                   >
-                    <div className="doorare-chat-session-info">
-                      <div className="doorare-chat-session-name" title={s.title}>
-                        💬 {s.title}
-                      </div>
-                      <div className="doorare-chat-session-time">
-                        {formatSessionRelativeTime(s.updatedAt)}
-                      </div>
+                    <div className="doorare-chat-session-name">
+                      {s.title}
                     </div>
                     <button
                       type="button"
@@ -585,17 +651,34 @@ export const DooRareChatDrawer: React.FC = () => {
                         e.stopPropagation();
                         handleDeleteSession(s.id);
                       }}
-                      title="ลบการสนทนานี้"
+                      title="ลบ"
                     >
-                      ✕
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                      </svg>
                     </button>
                   </div>
                 ))
               )}
             </div>
 
-            <div className="doorare-chat-sidebar-footer">
-              <span className="doorare-chat-retention-pill">🕒 ล้างประวัติอัตโนมัติทุก 24 ชม.</span>
+            {/* User Profile Footer (Exactly like Gemini in Image 2) */}
+            <div className="doorare-chat-sidebar-user-footer">
+              <div className="doorare-user-footer-avatar">
+                {(user?.name || user?.role || 'U')[0].toUpperCase()}
+              </div>
+              <div className="doorare-user-footer-info">
+                <div className="doorare-user-footer-name">
+                  {user?.name || user?.roleTh || 'ผู้ใช้งาน'}
+                </div>
+                <div className="doorare-user-footer-sub">
+                  {user?.hospitalName || 'เขตสุขภาพที่ 6'}
+                </div>
+              </div>
+              <div className="doorare-user-footer-retention" title="ระบบล้างประวัติอัตโนมัติทุก 24 ชั่วโมง">
+                24h
+              </div>
             </div>
           </aside>
         )}
@@ -605,34 +688,41 @@ export const DooRareChatDrawer: React.FC = () => {
           {/* Header */}
           <div className="doorare-chat-header">
             <div className="doorare-chat-title-group">
-              {!isFullScreen ? (
+              {isFullScreen && isSidebarCollapsed && (
+                <button
+                  type="button"
+                  className="doorare-sidebar-toggle-btn in-header"
+                  onClick={() => setIsSidebarCollapsed(false)}
+                  title="เปิดแถบด้านข้าง"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                    <line x1="9" y1="3" x2="9" y2="21" />
+                  </svg>
+                </button>
+              )}
+
+              {!isFullScreen && (
                 <button
                   type="button"
                   className={`doorare-chat-sessions-toggle-btn ${showSessionsDrawer ? 'active' : ''}`}
                   onClick={() => setShowSessionsDrawer((prev) => !prev)}
                   title="ดูประวัติการสนทนา (24 ชม.)"
                 >
-                  <span>💬</span>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                  </svg>
                   {sessions.length > 0 && (
                     <span className="doorare-sessions-badge">{sessions.length}</span>
                   )}
                 </button>
-              ) : (
-                <button
-                  type="button"
-                  className="doorare-chat-header-action-btn"
-                  onClick={() => setIsSidebarCollapsed((prev) => !prev)}
-                  title={isSidebarCollapsed ? 'แสดงแถบประวัติการสนทนา' : 'ซ่อนแถบประวัติ'}
-                >
-                  {isSidebarCollapsed ? '▶ ประวัติ' : '◀ ซ่อนแถบ'}
-                </button>
               )}
 
               <div className="doorare-chat-avatar">
-                <DooRareBotAvatar size={32} />
+                <DooRareBotAvatar size={28} />
               </div>
-              <div>
-                <div className="doorare-chat-title">DooRare AI Copilot</div>
+              <div className="doorare-chat-title-text-wrap">
+                <div className="doorare-chat-title">DooRare Copilot</div>
                 <span className="doorare-chat-context-badge">
                   {user?.roleTh || user?.role || 'Guest'}
                 </span>
@@ -642,13 +732,35 @@ export const DooRareChatDrawer: React.FC = () => {
             <div className="doorare-chat-header-actions">
               <button
                 type="button"
-                className="doorare-chat-header-action-btn"
+                className={`doorare-chat-header-action-btn ${!isFullScreen ? 'icon' : ''}`}
                 onClick={handleNewChat}
                 title="เริ่มแชทใหม่ (New Chat)"
               >
-                ＋ แชทใหม่
+                {!isFullScreen ? (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="12" y1="5" x2="12" y2="19" />
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                  </svg>
+                ) : (
+                  '＋ แชทใหม่'
+                )}
               </button>
 
+              {/* Minimize button (Messenger style) */}
+              {!isFullScreen && (
+                <button
+                  type="button"
+                  className="doorare-chat-header-action-btn icon"
+                  onClick={() => setIsOpen(false)}
+                  title="ย่อหน้าต่างลงเป็นปุ่มแชท (Minimize)"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                  </svg>
+                </button>
+              )}
+
+              {/* Fullscreen / Restore toggle */}
               <button
                 type="button"
                 className="doorare-chat-header-action-btn icon"
@@ -658,11 +770,25 @@ export const DooRareChatDrawer: React.FC = () => {
                 }}
                 title={
                   isFullScreen
-                    ? 'ย่อหน้าต่าง (Minimize to Drawer)'
+                    ? 'ย่อเป็นหน้าต่าง Messenger (Minimize to Popup)'
                     : 'ขยายเต็มหน้าจอ (Full Screen like ChatGPT / Claude / Gemini)'
                 }
               >
-                {isFullScreen ? '⤡ ย่อหน้าต่าง' : '⛶ เต็มจอ'}
+                {isFullScreen ? (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="4 14 10 14 10 20" />
+                    <polyline points="20 10 14 10 14 4" />
+                    <line x1="14" y1="10" x2="21" y2="3" />
+                    <line x1="3" y1="21" x2="10" y2="14" />
+                  </svg>
+                ) : (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="15 3 21 3 21 9" />
+                    <polyline points="9 21 3 21 3 15" />
+                    <line x1="21" y1="3" x2="14" y2="10" />
+                    <line x1="3" y1="21" x2="10" y2="14" />
+                  </svg>
+                )}
               </button>
 
               <button
@@ -684,25 +810,27 @@ export const DooRareChatDrawer: React.FC = () => {
           >
             {displayMessages.length === 0 && (
               <div className="doorare-chat-empty-state">
-                <div className="doorare-empty-avatar">
-                  <DooRareBotAvatar size={48} />
+                <div className="doorare-empty-greeting">
+                  เราจะเริ่มจากตรงไหนก่อนดี
                 </div>
-                <div className="doorare-empty-title">
-                  สวัสดีครับ ผมคือผู้ช่วย DooRare AI Copilot
-                </div>
-                <div className="doorare-empty-desc">
-                  พร้อมช่วยเหลือข้อมูลยา สต็อก ค้นหาแหล่งยืมยา ประเมินชุดยาอุบัติภัย หรือวิเคราะห์คำขอยืมฉุกเฉิน
+                <div className="doorare-empty-subgreeting">
+                  ระบบผู้ช่วยอัจฉริยะเพื่อการจัดสรรและกระจายยาฉุกเฉิน เขตสุขภาพที่ 6
                 </div>
 
-                <div className="doorare-empty-starter-grid">
-                  {quickChips.map((chip, idx) => (
+                <div className="doorare-starter-grid">
+                  {starterCards.map((card, idx) => (
                     <div
                       key={idx}
                       className="doorare-starter-card"
-                      onClick={() => handleQuickPrompt(chip)}
+                      onClick={() => handleQuickPrompt(card.prompt)}
                     >
-                      <span className="doorare-starter-icon">⚡</span>
-                      <span className="doorare-starter-text">{chip}</span>
+                      <div className="doorare-starter-icon-wrap">
+                        <Icon name={card.icon} style={{ width: 18, height: 18 }} />
+                      </div>
+                      <div className="doorare-starter-content">
+                        <div className="doorare-starter-title">{card.title}</div>
+                        <div className="doorare-starter-desc">{card.desc}</div>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -815,7 +943,7 @@ export const DooRareChatDrawer: React.FC = () => {
                 <div className="doorare-input-badge">
                   <span className="doorare-badge-dot" />
                   <span className="doorare-badge-text">
-                    {user?.hospitalName ? `📍 ${user.hospitalName}` : '🌐 ส่วนกลาง เขตสุขภาพที่ 6'}
+                    {user?.hospitalName ? user.hospitalName : 'ส่วนกลาง เขตสุขภาพที่ 6'}
                   </span>
                 </div>
                 {isStreaming ? (
@@ -845,7 +973,7 @@ export const DooRareChatDrawer: React.FC = () => {
               </div>
             </div>
             <div className="doorare-chat-disclaimer">
-              🔒 ประมวลผลด้วย AI เพื่อความปลอดภัยทางคลินิก · โปรดตรวจสอบความถูกต้องของข้อมูล
+              ประมวลผลด้วย AI เพื่อความปลอดภัยทางคลินิก · โปรดตรวจสอบความถูกต้องของข้อมูล
             </div>
           </div>
       </div>

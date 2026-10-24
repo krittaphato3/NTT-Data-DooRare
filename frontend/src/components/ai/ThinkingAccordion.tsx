@@ -60,7 +60,13 @@ export const ThinkingAccordion: React.FC<ThinkingAccordionProps> = ({ thought, i
         title="คลิกเพื่อเปิด/ปิด กระบวนการคิดวิเคราะห์ (Chain of Thought)"
       >
         <div className="doorare-thinking-title-wrap">
-          <span className={`doorare-thinking-icon ${isThinking ? 'pulse' : ''}`}>🧠</span>
+          <span className={`doorare-thinking-icon ${isThinking ? 'pulse' : ''}`}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 2a4 4 0 0 0-4 4v1a4 4 0 0 0 8 0V6a4 4 0 0 0-4-4z" />
+              <path d="M16 11a4 4 0 0 1 4 4v1a4 4 0 0 1-8 0v-1a4 4 0 0 1 4-4z" />
+              <path d="M8 11a4 4 0 0 0-4 4v1a4 4 0 0 0 8 0v-1a4 4 0 0 0-4-4z" />
+            </svg>
+          </span>
           <span className="doorare-thinking-title">
             {isThinking ? (
               <>
