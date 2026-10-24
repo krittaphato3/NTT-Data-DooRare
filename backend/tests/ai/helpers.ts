@@ -100,9 +100,13 @@ const ALLOWED_TABLES = new Set([
   'transport_task',
   'audit_log',
   'agent_run',
+  'agent_tool_call',
   'stock_lot',
   'hospital_drug',
   'drug_master',
+  'mapping_candidate',
+  'transport_event',
+  'transport_photo',
 ]);
 
 /**
