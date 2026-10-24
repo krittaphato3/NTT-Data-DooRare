@@ -38,6 +38,8 @@ export interface ApiLadderEntry {
   stock: number;
   qtyPlanned: number;
   message: string | null;
+  /** AGT-F1: why the agent picked this lender and quantity for the first round. */
+  rationale?: string | null;
 }
 
 export interface ApiBorrowRequest {
@@ -68,6 +70,7 @@ export interface ApiBorrowRequest {
     excluded: { hospitalId: string; code: string; reason: string | null }[];
     parallel: boolean;
     builtAt: string;
+    agent?: { status: 'OK' | 'FALLBACK' | 'SKIPPED'; model: string | null; summary: string | null; confidence: string | null; flags: string[]; priorityAfter: string[] } | null;
   };
 }
 

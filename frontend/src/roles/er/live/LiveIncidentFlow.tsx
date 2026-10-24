@@ -16,6 +16,7 @@ import { EMPTY_INTAKE, LiveIntakeForm, countsOf, intakeTotal } from './IntakeFor
 import type { IntakeState } from './IntakeForm';
 import { ErrorNote, IncidentHeader, Warnings } from './IncidentHeader';
 import { AddPlanItem } from './AddPlanItem';
+import { AgentExtrasPanel } from './AgentExtrasPanel';
 import { LiveBorrowConfirm } from './LiveBorrowConfirm';
 import { LiveExtrasTable, LiveKitTable, PlanNotes } from './PlanTables';
 import { classMeta, errorText, num } from './format';
@@ -338,6 +339,15 @@ export function LiveIncidentFlow({ role = 'ER_STAFF' }: { role?: RoleCode }) {
                 <div style={{ flex: '1 1 640px', minWidth: 320, display: 'flex', flexDirection: 'column', gap: 16 }}>
                   <LiveKitTable plan={preview} editable={access.mayWrite} onPack={editPack} onRemove={removeKit} />
                   <LiveExtrasTable plan={preview} editable={access.mayWrite} onRemove={removeExtra} onSetQty={setExtraQty} />
+                  {incidentId && (
+                    <AgentExtrasPanel
+                      incidentId={incidentId}
+                      extrasInPlan={preview.extras.map((e) => e.key)}
+                      mayAsk={access.mayWrite}
+                      disabled={busy}
+                      {...(access.mayWrite ? { onAdd: addExtra } : {})}
+                    />
+                  )}
                   {access.mayWrite && (
                     <AddPlanItem
                       kitsInPlan={preview.kits.map((k) => k.code)}
@@ -363,7 +373,7 @@ export function LiveIncidentFlow({ role = 'ER_STAFF' }: { role?: RoleCode }) {
                   <div className="card" style={{ padding: '14px 16px' }}>
                     <div style={{ fontSize: 13.5, fontWeight: 700, color: '#0f2a5c', marginBottom: 6 }}>การประเมิน</div>
                     <div style={{ fontSize: 12, color: '#475569', lineHeight: '18px' }}>
-                      ชุดและรายการนอกชุดมาจากกฎต่อผู้ป่วยตามระดับคัดแยก (Preset Kit / incident rules) · ปริมาณทั้งหมดคำนวณโดยโค้ด (F-27) · Agent ยังไม่เชื่อมต่อ จึงไม่มีคำถามหรือคำอธิบายจาก Agent
+                      ชุดและรายการนอกชุดมาจากกฎต่อผู้ป่วยตามระดับคัดแยก (Preset Kit / incident rules) · ปริมาณทั้งหมดคำนวณโดยโค้ด (F-27) · รายการนอกชุดที่ควรเตรียมเพิ่ม ขอความเห็นจาก Agent ได้ในกล่อง "ข้อเสนอของ Agent" ด้านซ้าย (ไม่รอ ไม่เปลี่ยนแผนเอง)
                     </div>
                     <div style={{ fontSize: 11.5, color: '#94a3b8', marginTop: 8 }}>เจ้าหน้าที่ตรวจ เพิ่ม ลดหรือเอาออกได้ก่อนยืนยัน (BR-F3-008)</div>
                   </div>

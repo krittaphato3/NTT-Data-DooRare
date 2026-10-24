@@ -64,7 +64,7 @@ export interface BorrowRequest {
   createdBy: string;
   approvedBy?: string;
   legs: BorrowLeg[];
-  agentNote?: { code: string; text: string };
+  agentNote?: { code: string; text: string; model?: string | null; confidence?: string | null; status?: 'OK' | 'FALLBACK' | 'SKIPPED' };
   /** F3 kit request: it has no drug item, so the ranked-lender steps (add a lender by hand) do not apply. */
   isKit?: boolean;
 }

@@ -182,7 +182,7 @@ export function BorrowDrawer({ request: r, tick, decision, onDecide, onClose, on
           )}
           {r.agentNote && (
             <div className="br-agent">
-              <b style={{ color: '#1D4ED8', fontWeight: 600 }}>Agent ({r.agentNote.code})</b> · {r.agentNote.text}
+              <b style={{ color: '#1D4ED8', fontWeight: 600 }}>Agent ({r.agentNote.code})</b>{r.agentNote.model && r.agentNote.status === 'OK' ? <span className="sub"> · {r.agentNote.model}{r.agentNote.confidence ? ` · ความมั่นใจ ${r.agentNote.confidence}` : ''}</span> : null} · {r.agentNote.text}
             </div>
           )}
         </div>

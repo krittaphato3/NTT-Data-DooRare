@@ -3,8 +3,9 @@ import { asyncHandler } from '../../middleware/asyncHandler.js';
 import { requireAuth, requireRole } from '../../middleware/auth.js';
 import { idempotent } from '../../middleware/idempotency.js';
 import { emergencyBorrowService, listEmergencyLegs, previewBorrowing } from './emergency.borrow.js';
+import { extrasRunning, latestExtras, startExtrasRun } from './extras.agent.js';
 import { incidentsService } from './incidents.service.js';
-import { ownIncident } from './incidents.shared.js';
+import { assertOpen, ownIncident } from './incidents.shared.js';
 import { pool } from '../../db/client.js';
 import { kitsService } from './kits.service.js';
 import { planService } from './plan.service.js';
@@ -30,6 +31,17 @@ incidentsRouter.post('/:id/plan', requireAuth, erOrPharmacist, idempotent(), asy
   const result = await planService.calculate(req, req.params.id);
   res.status(result.data.preview ? 200 : 201).json(result); // a preview stores nothing
 })); // API-F3-005
+// AGT-F3: second opinion on items outside the preset kits (never changes the plan by itself; staff add items through the normal plan edit)
+incidentsRouter.get('/:id/plan/agent-suggestions', requireAuth, readers, asyncHandler(async (req, res) => {
+  const incident = await ownIncident(pool, req.user!, req.params.id);
+  res.json({ ok: true, data: { running: extrasRunning(incident.id), latest: await latestExtras(incident) } });
+}));
+incidentsRouter.post('/:id/plan/agent-suggestions', requireAuth, erOrPharmacist, idempotent(), asyncHandler(async (req, res) => {
+  const incident = await ownIncident(pool, req.user!, req.params.id);
+  assertOpen(incident);
+  const started = startExtrasRun(incident); // runs in the background: LLM calls can take a minute, the screen polls the GET above
+  res.status(202).json({ ok: true, data: { running: true, started } });
+}));
 incidentsRouter.post('/:id/plan/approve', requireAuth, requireRole('ER_STAFF', 'PHARMACIST', 'HOSPITAL_ADMIN'), idempotent(), asyncHandler(async (req, res) => res.json(await planService.approve(req, req.params.id)))); // API-F3-006
 incidentsRouter.post('/:id/emergency-borrow', requireAuth, erOrPharmacist, idempotent(), asyncHandler(async (req, res) => res.json(await emergencyBorrowService.send(req, req.params.id)))); // API-F3-007
 incidentsRouter.get('/:id/emergency-borrow/preview', requireAuth, erOrPharmacist, asyncHandler(async (req, res) => res.json({ ok: true, data: await previewBorrowing(pool, await ownIncident(pool, req.user!, req.params.id)) })));

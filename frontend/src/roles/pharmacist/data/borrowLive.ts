@@ -52,6 +52,16 @@ export function returnStateOf(requestNo: string, obligations: ApiReturnObligatio
   return 'PENDING';
 }
 
+/** The pharmacist's note under the legs: what the lender-selection agent chose (AGT-F1), or why the rules were used. */
+function agentNoteOf(r: ApiBorrowRequest): NonNullable<BorrowRequest['agentNote']> {
+  const a = r.proposal?.agent;
+  if (a?.status === 'OK' && a.summary) {
+    return { code: 'F1_T2', text: `${a.summary}${a.priorityAfter.length ? ` · ถ้ารอบแรกไม่พอ ขอต่อ: ${a.priorityAfter.join(' → ')}` : ''} · เภสัชกรตรวจและอนุมัติก่อนส่ง`, model: a.model, confidence: a.confidence, status: 'OK' };
+  }
+  const why = a?.status === 'SKIPPED' ? 'ปิด Agent อยู่' : a?.flags.includes('NO_LLM_CONFIGURED') ? 'ยังไม่ได้ตั้งค่า LLM' : a ? 'Agent ตอบไม่ได้หรือไม่ผ่านการตรวจ' : 'ไม่ได้ใช้ Agent';
+  return { code: 'F1_T2', text: `${why} — ใช้ลำดับตามคะแนน Si และข้อความแม่แบบ · เภสัชกรตรวจและอนุมัติก่อนส่ง`, status: a?.status ?? 'SKIPPED', model: a?.model ?? null };
+}
+
 export function borrowRequestToView(r: ApiBorrowRequest, now = Date.now(), returnState?: ReturnState): BorrowRequest {
   const unit = r.drug.baseUnit;
   const activeLegs = r.legs.filter((l) => l.status !== 'CANCELLED');
@@ -60,7 +70,7 @@ export function borrowRequestToView(r: ApiBorrowRequest, now = Date.now(), retur
     hospital: e.name,
     si: e.si,
     state: 'NOT_SENT',
-    detail: e.qtyPlanned > 0 ? `ลำดับ ${e.rank} · รอบแรก ขอ ${n(e.qtyPlanned)} ${unit}` : `ลำดับ ${e.rank} · ส่งต่อถ้ารอบแรกได้ไม่ครบ`,
+    detail: `${e.qtyPlanned > 0 ? `ลำดับ ${e.rank} · รอบแรก ขอ ${n(e.qtyPlanned)} ${unit}` : `ลำดับ ${e.rank} · ส่งต่อถ้ารอบแรกได้ไม่ครบ`}${e.rationale ? ` · Agent: ${e.rationale}` : ''}`,
   }));
   const legs: BorrowLeg[] = r.legs.length
     ? r.legs.map((l) => ({ hospital: l.lender.name, ...(l.si !== null ? { si: l.si } : {}), state: LEG[l.status], rawStatus: l.status, detail: legDetail(l, unit) }))
@@ -109,6 +119,6 @@ export function borrowRequestToView(r: ApiBorrowRequest, now = Date.now(), retur
     ...(r.approvedBy ? { approvedBy: `${r.approvedBy} (PHARMACIST)` } : {}),
     legs,
     ...(r.drug.kind === 'KIT' ? { isKit: true } : {}),
-    ...(r.status === 'PENDING_APPROVAL' ? { agentNote: { code: 'F1_T3', text: 'ร่างข้อความตามเทมเพลต (ยังไม่เชื่อม Agent) — เภสัชกรตรวจและอนุมัติก่อนส่ง' } } : {}),
+    ...(r.status === 'PENDING_APPROVAL' ? { agentNote: agentNoteOf(r) } : {}),
   };
 }

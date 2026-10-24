@@ -182,6 +182,13 @@
     "date": "2026-10-25"
   },
   {
+    "path": "sessions/2026-10-25-0900-claude-agents-f1-f3.md",
+    "title": "Session: F1 lender-selection and F3 extras agents",
+    "summary": "LLM agents for F1/F3 with code guardrails and fallbacks.",
+    "tags": "session, backend, agents, f1, f3",
+    "date": "2026-10-25"
+  },
+  {
     "path": "sessions/2026-10-23-0825-claude-forecast-scheduled-predict-job.md",
     "title": "Forecast scheduled predict job (Option A + Option B dynamic DB export)",
     "summary": "Option B completed: Postgres usage & snapshot streaming export -> predict up…",
