@@ -22,5 +22,8 @@
   },
   "devDependencies": {
     "playwright-core": "^1.64.0"
+  },
+  "dependencies": {
+    "git": "^0.1.5"
   }
 }
