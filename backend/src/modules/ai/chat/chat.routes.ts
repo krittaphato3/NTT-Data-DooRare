@@ -47,10 +47,15 @@ aiChatRouter.post('/', requireAuth, async (req: Request, res: Response) => {
 
   // Construct request context
   const user = req.user;
+  // Tenant isolation: the hospital comes from the authenticated session. A client-supplied
+  // routeContext.hospitalId is honoured only for roles that legitimately span hospitals.
+  const canSwitchHospital = user?.role === 'SYSTEM_ADMIN' || user?.role === 'REGION_ADMIN';
   const context: RequestContext = {
     userId: user?.id,
     role: user?.role,
-    hospitalId: routeContext?.hospitalId || user?.hospitalId || null,
+    hospitalId: canSwitchHospital
+      ? routeContext?.hospitalId || user?.hospitalId || null
+      : user?.hospitalId || null,
     currentPath: routeContext?.currentPath,
     pageTitle: routeContext?.pageTitle,
     activeId: routeContext?.activeId,

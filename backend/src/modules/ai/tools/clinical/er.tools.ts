@@ -79,7 +79,8 @@ export const getAntidoteLocatorTool: IAgentTool<{
          WHERE h.id <> $1
            AND h.active = true
            AND sl.expiry_date > current_date
-           AND (dm.generic_name ILIKE $2 OR hd.local_name ILIKE $2)
+           AND COALESCE(dm.is_controlled, false) = false  -- BR-F1b-014: controlled drugs are never offered
+            AND (dm.generic_name ILIKE $2 OR hd.local_name ILIKE $2)
            AND COALESCE(d.travel_minutes_override, d.travel_minutes) <= $3
          GROUP BY h.id, h.name_th, h.name_en, d.travel_minutes_override, d.travel_minutes,
                   dm.generic_name, dm.strength, dm.dosage_form, dm.base_unit, dm.is_cold_chain, h.has_cold_chain

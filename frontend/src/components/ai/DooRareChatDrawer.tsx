@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { getStoredToken } from '../../services/apiFetch';
 import { streamAiChat, type ChatMessage, type RouteContext } from '../../services/aiChatApi';
 import { DooRareBotAvatar } from './DooRareBotAvatar';
 import { MarkdownContent } from '../common/MarkdownContent';
@@ -38,12 +39,20 @@ const ProposalCard: React.FC<ProposalCardProps> = ({ proposal, onActionComplete 
   const handleApprove = async () => {
     setLoading(true);
     try {
-      // Execute the proposal's action API
-      await fetch(proposal.actionApi.endpoint, {
+      // Execute the proposal's action API (endpoint is already prefixed with /api/v1; send the session token)
+      const token = getStoredToken();
+      const res = await fetch(proposal.actionApi.endpoint, {
         method: proposal.actionApi.method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify(proposal.actionApi.payload),
       });
+      if (!res.ok) {
+        const problem = await res.json().catch(() => ({}));
+        throw new Error(problem.message || problem.title || `HTTP ${res.status}`);
+      }
       setDecided('approved');
       onActionComplete(`✅ ดำเนินการสำเร็จ: ${proposal.title}`);
     } catch (err: any) {
