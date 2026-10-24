@@ -139,12 +139,15 @@ export const DooRareChatDrawer: React.FC = () => {
     scrollToBottom();
   }, [displayMessages, activeTool, proposals]);
 
-  // Load active sessions (and auto-purge >24h) when drawer opens
+  // Role and User-partitioned scope key for chat session isolation
+  const userScope = user?.id ? `${user.role || 'USER'}_${user.id}` : user?.role || null;
+
+  // Load active sessions (and auto-purge >24h) when drawer opens or user changes
   useEffect(() => {
     if (isOpen) {
-      setSessions(loadSessions());
+      setSessions(loadSessions(userScope));
     }
-  }, [isOpen]);
+  }, [isOpen, userScope]);
 
   // Persist session to 24h store
   const persistCurrentSession = (
@@ -177,8 +180,8 @@ export const DooRareChatDrawer: React.FC = () => {
       proposals: currentProposals,
     };
 
-    saveSession(sessionObj);
-    setSessions(loadSessions());
+    saveSession(sessionObj, userScope);
+    setSessions(loadSessions(userScope));
   };
 
   // Session Actions
@@ -202,8 +205,8 @@ export const DooRareChatDrawer: React.FC = () => {
   };
 
   const handleDeleteSession = (id: string) => {
-    deleteSession(id);
-    const updated = loadSessions();
+    deleteSession(id, userScope);
+    const updated = loadSessions(userScope);
     setSessions(updated);
     if (activeSessionId === id) {
       handleNewChat();
@@ -212,7 +215,7 @@ export const DooRareChatDrawer: React.FC = () => {
 
   const handleClearAll = () => {
     if (window.confirm('คุณต้องการล้างประวัติการสนทนาทั้งหมดใน 24 ชั่วโมงหรือไม่?')) {
-      clearAllSessions();
+      clearAllSessions(userScope);
       setSessions([]);
       handleNewChat();
     }
