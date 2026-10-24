@@ -42,8 +42,12 @@ export function zodToJsonSchema(schema: z.ZodObject<any>): ToolJsonSchema['param
       typeStr = 'object';
     }
 
+    const enumValues: string[] | undefined =
+      inner instanceof z.ZodEnum ? [...(inner.options as string[])] : undefined;
+
     properties[key] = {
       type: typeStr,
+      ...(enumValues ? { enum: enumValues } : {}),
       ...(description ? { description } : {}),
     };
   }

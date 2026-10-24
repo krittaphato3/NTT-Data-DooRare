@@ -3,6 +3,8 @@ import { requireAuth } from '../../../middleware/auth.js';
 import { reactEngine } from '../engine/react.engine.js';
 import type { ChatMessage } from '../providers/types.js';
 import type { RequestContext } from '../tools/tool.types.js';
+// Side-effect import: registers every domain tool (Person 3/4/5) into defaultToolRegistry at server start.
+import '../tools/index.js';
 
 export const aiChatRouter = Router();
 
