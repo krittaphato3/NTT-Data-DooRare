@@ -3,6 +3,18 @@ import { query } from '../../../../db/client.js';
 import { forecastsService } from '../../../forecasts/forecasts.service.js';
 import type { IAgentTool, RequestContext, ToolResult } from '../tool.types.js';
 
+/** BR-F1b-014: controlled drugs (narcotics/psychotropics) never enter the automatic borrow flow. */
+export const CONTROLLED_DRUG_BLOCKED_MESSAGE =
+  'Blocked (BR-F1b-014): controlled drugs (narcotics/psychotropics) are excluded from automation; use the regulated manual process.';
+
+export async function isControlledDrugMaster(drugMasterId: string): Promise<boolean> {
+  const r = await query<{ is_controlled: boolean | null }>(
+    'SELECT is_controlled FROM drug_master WHERE id = $1',
+    [drugMasterId],
+  );
+  return Boolean(r.rows[0]?.is_controlled);
+}
+
 /**
  * Tool: get_stock_and_alerts
  * Retrieves live usable stock, days of coverage, and active reorder alerts for a hospital drug.
@@ -238,6 +250,16 @@ export const getRankedLenderLadderTool: IAgentTool<{
           };
         }
 
+        const ctrl = await query(
+          `SELECT 1 FROM borrow_request_item bri
+             JOIN drug_master dm ON dm.id = bri.drug_master_id AND dm.is_controlled = true
+            WHERE bri.request_id = $1 LIMIT 1`,
+          [args.requestId],
+        );
+        if (ctrl.rows.length > 0) {
+          return { success: false, error: CONTROLLED_DRUG_BLOCKED_MESSAGE };
+        }
+
         return {
           success: true,
           data: {
@@ -264,6 +286,9 @@ export const getRankedLenderLadderTool: IAgentTool<{
       const params: unknown[] = [requesterHospId];
       let drugJoin = '';
       if (args.drugMasterId) {
+        if (await isControlledDrugMaster(args.drugMasterId)) {
+          return { success: false, error: CONTROLLED_DRUG_BLOCKED_MESSAGE };
+        }
         params.push(args.drugMasterId);
         drugJoin = `
           LEFT JOIN hospital_drug hd ON hd.hospital_id = h.id AND hd.drug_master_id = $${params.length}
@@ -272,7 +297,9 @@ export const getRankedLenderLadderTool: IAgentTool<{
       } else {
         drugJoin = `
           LEFT JOIN hospital_drug hd ON hd.hospital_id = h.id
+          LEFT JOIN drug_master dmc ON dmc.id = hd.drug_master_id
           LEFT JOIN stock_lot sl ON sl.hospital_drug_id = hd.id AND sl.hospital_id = h.id AND sl.expiry_date > current_date
+            AND COALESCE(dmc.is_controlled, false) = false
         `;
       }
 
@@ -827,6 +854,14 @@ export const submitPharmacistProposalTool: IAgentTool<{
           success: false,
           error: `Invalid proposal payload for ${args.actionType}: ${parseRes.error.message}`,
         };
+      }
+
+      // BR-F1b-014: never propose an automated borrow of a controlled drug
+      if (args.actionType === 'CREATE_BORROW_REQUEST') {
+        const dmId = (parseRes.data as { drugMasterId?: string }).drugMasterId;
+        if (dmId && (await isControlledDrugMaster(dmId))) {
+          return { success: false, error: CONTROLLED_DRUG_BLOCKED_MESSAGE };
+        }
       }
 
       // Emit HITL proposal

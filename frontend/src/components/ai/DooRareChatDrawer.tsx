@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { getStoredToken } from '../../services/apiFetch';
 import { streamAiChat, type ChatMessage, type RouteContext } from '../../services/aiChatApi';
 import { DooRareBotAvatar } from './DooRareBotAvatar';
 import { MarkdownContent } from '../common/MarkdownContent';
@@ -39,12 +40,20 @@ const ProposalCard: React.FC<ProposalCardProps> = ({ proposal, onActionComplete 
   const handleApprove = async () => {
     setLoading(true);
     try {
-      // Execute the proposal's action API
-      await fetch(proposal.actionApi.endpoint, {
+      // Execute the proposal's action API (endpoint is already prefixed with /api/v1; send the session token)
+      const token = getStoredToken();
+      const res = await fetch(proposal.actionApi.endpoint, {
         method: proposal.actionApi.method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify(proposal.actionApi.payload),
       });
+      if (!res.ok) {
+        const problem = await res.json().catch(() => ({}));
+        throw new Error(problem.message || problem.title || `HTTP ${res.status}`);
+      }
       setDecided('approved');
       onActionComplete(`ดำเนินการสำเร็จ: ${proposal.title}`);
     } catch (err: any) {
@@ -205,12 +214,15 @@ export const DooRareChatDrawer: React.FC = () => {
     }
   }, [displayMessages, activeTool, proposals]);
 
-  // Load active sessions (and auto-purge >24h) when drawer opens
+  // Role and User-partitioned scope key for chat session isolation
+  const userScope = user?.id ? `${user.role || 'USER'}_${user.id}` : user?.role || null;
+
+  // Load active sessions (and auto-purge >24h) when drawer opens or user changes
   useEffect(() => {
     if (isOpen) {
-      setSessions(loadSessions());
+      setSessions(loadSessions(userScope));
     }
-  }, [isOpen]);
+  }, [isOpen, userScope]);
 
   // Persist session to 24h store
   const persistCurrentSession = (
@@ -243,8 +255,8 @@ export const DooRareChatDrawer: React.FC = () => {
       proposals: currentProposals,
     };
 
-    saveSession(sessionObj);
-    setSessions(loadSessions());
+    saveSession(sessionObj, userScope);
+    setSessions(loadSessions(userScope));
   };
 
   // Session Actions
@@ -268,8 +280,8 @@ export const DooRareChatDrawer: React.FC = () => {
   };
 
   const handleDeleteSession = (id: string) => {
-    deleteSession(id);
-    const updated = loadSessions();
+    deleteSession(id, userScope);
+    const updated = loadSessions(userScope);
     setSessions(updated);
     if (activeSessionId === id) {
       handleNewChat();
@@ -278,7 +290,7 @@ export const DooRareChatDrawer: React.FC = () => {
 
   const handleClearAll = () => {
     if (window.confirm('คุณต้องการล้างประวัติการสนทนาทั้งหมดใน 24 ชั่วโมงหรือไม่?')) {
-      clearAllSessions();
+      clearAllSessions(userScope);
       setSessions([]);
       handleNewChat();
     }

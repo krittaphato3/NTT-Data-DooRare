@@ -18,7 +18,6 @@ export interface ChatSession {
   proposals?: any[];
 }
 
-const STORAGE_KEY = 'doorare_chat_sessions_v1';
 const RETENTION_MS = 24 * 60 * 60 * 1000; // 24 Hours in milliseconds
 
 /**
@@ -32,11 +31,21 @@ function sanitizeTitle(title: string): string {
 }
 
 /**
- * Loads all active sessions from localStorage, automatically purging any session older than 24 hours.
+ * Returns a storage key partitioned by user identity / role scope.
  */
-export function loadSessions(): ChatSession[] {
+export function getStorageKey(userScope?: string | null): string {
+  if (!userScope) return 'doorare_chat_sessions_guest_v1';
+  return `doorare_chat_sessions_${userScope}_v1`;
+}
+
+/**
+ * Loads all active sessions from localStorage for a specific user/role scope,
+ * automatically purging any session older than 24 hours.
+ */
+export function loadSessions(userScope?: string | null): ChatSession[] {
+  const storageKey = getStorageKey(userScope);
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(storageKey);
     if (!raw) return [];
 
     const parsed: ChatSession[] = JSON.parse(raw);
@@ -52,7 +61,7 @@ export function loadSessions(): ChatSession[] {
 
     // If any expired sessions were pruned or titles sanitized, write the cleaned list back to storage
     if (activeSessions.length !== parsed.length) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(activeSessions));
+      localStorage.setItem(storageKey, JSON.stringify(activeSessions));
     }
 
     // Return most recently updated sessions first
@@ -63,11 +72,12 @@ export function loadSessions(): ChatSession[] {
 }
 
 /**
- * Saves or updates a session in localStorage with defensive deduplication.
+ * Saves or updates a session in localStorage for a specific user/role scope.
  */
-export function saveSession(session: ChatSession): void {
+export function saveSession(session: ChatSession, userScope?: string | null): void {
+  const storageKey = getStorageKey(userScope);
   try {
-    const sessions = loadSessions();
+    const sessions = loadSessions(userScope);
     // 1. Match by session ID
     let index = sessions.findIndex((s) => s.id === session.id);
 
@@ -107,30 +117,32 @@ export function saveSession(session: ChatSession): void {
       return true;
     });
 
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(deduplicated));
+    localStorage.setItem(storageKey, JSON.stringify(deduplicated));
   } catch (err) {
     console.error('Failed to save chat session:', err);
   }
 }
 
 /**
- * Deletes a single session by ID.
+ * Deletes a single session by ID for a specific user scope.
  */
-export function deleteSession(id: string): void {
+export function deleteSession(id: string, userScope?: string | null): void {
+  const storageKey = getStorageKey(userScope);
   try {
-    const sessions = loadSessions().filter((s) => s.id !== id);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions));
+    const sessions = loadSessions(userScope).filter((s) => s.id !== id);
+    localStorage.setItem(storageKey, JSON.stringify(sessions));
   } catch (err) {
     console.error('Failed to delete session:', err);
   }
 }
 
 /**
- * Purges all chat sessions.
+ * Purges all chat sessions for a specific user scope.
  */
-export function clearAllSessions(): void {
+export function clearAllSessions(userScope?: string | null): void {
+  const storageKey = getStorageKey(userScope);
   try {
-    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(storageKey);
   } catch {}
 }
 
