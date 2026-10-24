@@ -16,7 +16,20 @@ export function poolEntryToView(e: ApiPoolEntry): PoolLot {
     from: e.origin.name,
     releasedBy: e.releasedBy ?? '—',
     releasedAt: fmtThaiTime(e.releasedAt),
+    live: { uuid: e.id, ...(e.itemId ? { itemId: e.itemId } : {}), originId: e.origin.id, qtyAvailable: e.qtyAvailable, status: e.status, planNo: e.planNo },
   };
+}
+
+const CONFIDENCE: Record<string, AllocationPlan['agent']['confidence']> = { HIGH: 'สูง', MEDIUM: 'ปานกลาง', LOW: 'ต่ำ' };
+
+/** The plan's origin: the allocation agent's run (or its F-22 fallback), or a split the owner pharmacist wrote by hand. */
+function agentView(p: ApiPlan): AllocationPlan['agent'] {
+  const run = p.agentRunId ? p.agentRunId.slice(0, 8) : '—';
+  if (!p.agentRunId) return { run, confidence: '—', title: 'แผนที่เภสัชกรสร้างเอง', note: 'เภสัชกร รพ.เจ้าของยากำหนดผู้รับและจำนวนเอง · โค้ดตรวจ F-22 (ใช้ทันก่อนหมดอายุ) และ F-23 (ค่าขนส่งเทียบมูลค่า) ก่อนบันทึก' };
+  if (!p.agent || p.agent.status === 'OK') {
+    return { run, confidence: CONFIDENCE[p.agent?.confidence ?? ''] ?? 'ปานกลาง', title: `Agent เสนอแผน (${p.agent?.model ?? run})`, note: p.agent?.summary ?? 'แผนจากการจับคู่ของ Agent · โค้ดคำนวณ F-22 และ F-23 ซ้ำและตรวจก่อนบันทึก' };
+  }
+  return { run, confidence: '—', title: `ใช้สูตร F-22 แทน Agent (${p.agent.status})`, note: `${p.agent.summary ?? 'Agent เสนอแผนที่ใช้ไม่ได้'} · แบ่งให้ รพ.ที่สต็อกเหลือน้อยวันที่สุดก่อน (F-22)` };
 }
 
 function statusOf(p: ApiPlan): PlanStatus {
@@ -52,9 +65,9 @@ export function planToView(p: ApiPlan): AllocationPlan {
     lotNo: p.lot.lotNo,
     expiry: fmtThaiDate(p.lot.expiryDate),
     daysLeft: p.lot.daysLeft,
-    agent: { run: p.agentRunId ? p.agentRunId.slice(0, 8) : '—', confidence: 'ปานกลาง', note: 'แผนจากการจับคู่ของ Agent · โค้ดคำนวณ F-22 (ใช้ทันก่อนหมดอายุ) และ F-23 (ค่าขนส่งเทียบมูลค่า) ซ้ำและตรวจก่อนบันทึก' },
+    agent: agentView(p),
     approvals: p.approvals.map((a) => ({
-      hospital: short(a.hospital.name),
+      hospital: `${short(a.hospital.name)}${a.kind === 'OBJECTOR' ? ' · ผู้คัดค้าน' : ''}`,
       pharmacist: a.decidedBy ?? '—',
       state: a.decision === 'PENDING' ? 'WAITING' : a.decision,
       ...(a.decidedAt ? { at: fmtThaiTime(a.decidedAt) } : {}),
@@ -70,6 +83,9 @@ export function planToView(p: ApiPlan): AllocationPlan {
       cancelRequestedBy: p.cancelRequestedBy,
       lines: p.lines.map((l) => ({ receiver: short(l.receiver.name), qty: l.qty, km: l.distanceKm, cost: l.transportCostThb, taskNo: l.task?.taskNo ?? null })),
       openForApproval: p.status === 'READY_FOR_APPROVAL' || p.status === 'NEEDS_DISCUSSION',
+      involved: p.involved,
+      isParty: p.myKind === 'ORIGIN' || p.myKind === 'RECEIVER',
+      canObject: p.canObject,
     },
   };
 }

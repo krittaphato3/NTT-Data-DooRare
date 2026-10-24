@@ -221,6 +221,8 @@ export interface ApiEmergencyLeg {
   id: string;
   round: number;
   status: ApiBorrowLeg['status'];
+  /** TIMED_OUT but the request still lacks goods: the lender may still confirm late (first confirmation wins). */
+  canAnswerLate: boolean;
   request: { id: string; requestNo: string };
   borrower: { id: string; code: string; name: string };
   incident: { id: string; incidentNo: string; type: string | null; location: string | null; status: string; eta: { minutes: number | null; arrivalAt: string | null; remainingSec: number | null; source: string; flags: string[] } };

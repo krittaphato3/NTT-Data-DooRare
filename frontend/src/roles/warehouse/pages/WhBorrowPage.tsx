@@ -3,8 +3,8 @@ import { useAuth } from '../../../context/AuthContext';
 import { Icon } from '../../../components/common/icons';
 import { BorrowStatusBadge, ReturnBadge, UrgencyBadge } from '../../pharmacist/components/BorrowBadges';
 import { BorrowStatusTiles } from '../../pharmacist/components/BorrowStatusTiles';
-import { GROUPS, groupOf, LEG_META } from '../../pharmacist/data/borrow';
-import type { BorrowRequest, StatusGroup } from '../../pharmacist/data/borrow';
+import { LEG_META, TILES, tileOf } from '../../pharmacist/data/borrow';
+import type { BorrowRequest, TileGroup } from '../../pharmacist/data/borrow';
 import { useBorrowRequests } from '../../pharmacist/data/useBorrowRequests';
 import '../../pharmacist/borrow.css';
 import { ViewOnlyNote } from '../components/ViewOnlyNote';
@@ -20,7 +20,7 @@ import '../kit.css';
  */
 export function WhBorrowPage() {
   const { user } = useAuth();
-  const [group, setGroup] = useState<StatusGroup | null>(null);
+  const [group, setGroup] = useState<TileGroup | null>(null);
   const [q, setQ] = useState('');
   const [selId, setSelId] = useState<string | null>(null);
   // Our hospital's requests from GET /borrow-requests (read-only for WH); mock fixtures when the API is unreachable.
@@ -34,9 +34,9 @@ export function WhBorrowPage() {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  const counts = Object.fromEntries(GROUPS.map((g) => [g.id, requests.filter((r) => groupOf(r.status) === g.id).length])) as Record<StatusGroup, number>;
+  const counts = Object.fromEntries(TILES.map((g) => [g.id, requests.filter((r) => tileOf(r) === g.id).length])) as Record<TileGroup, number>;
   const needle = q.trim().toLowerCase();
-  const rows = requests.filter((r) => !group || groupOf(r.status) === group).filter((r) => !needle || [r.id, r.drug, ...r.lender].some((t) => t.toLowerCase().includes(needle)));
+  const rows = requests.filter((r) => !group || tileOf(r) === group).filter((r) => !needle || [r.id, r.drug, ...r.lender].some((t) => t.toLowerCase().includes(needle)));
   const sel: BorrowRequest | undefined = requests.find((r) => r.id === selId);
 
   return (

@@ -15,6 +15,7 @@ import type { StockLine } from '../data/stockCheck';
 import { EMPTY_INTAKE, LiveIntakeForm, countsOf, intakeTotal } from './IntakeForm';
 import type { IntakeState } from './IntakeForm';
 import { ErrorNote, IncidentHeader, Warnings } from './IncidentHeader';
+import { AddPlanItem } from './AddPlanItem';
 import { LiveBorrowConfirm } from './LiveBorrowConfirm';
 import { LiveExtrasTable, LiveKitTable, PlanNotes } from './PlanTables';
 import { classMeta, errorText, num } from './format';
@@ -249,6 +250,11 @@ export function LiveIncidentFlow({ role = 'ER_STAFF' }: { role?: RoleCode }) {
     if (qty === 0) return removeExtra(e);
     void refreshPreview({ ...edits, setExtras: { ...edits.setExtras, [e.key]: qty } });
   };
+  // BR-F3-008: a kit or item the rules left out; adding it also undoes an earlier removal of the same line
+  const addKit = (code: string, qty: number) =>
+    void refreshPreview({ ...edits, removeKits: (edits.removeKits ?? []).filter((c) => c !== code), setKits: { ...edits.setKits, [code]: qty } });
+  const addExtra = (drugMasterId: string, qty: number) =>
+    void refreshPreview({ ...edits, removeExtras: (edits.removeExtras ?? []).filter((c) => c !== drugMasterId), setExtras: { ...edits.setExtras, [drugMasterId]: qty } });
   const restore = (key: string, kind: 'kit' | 'extra') =>
     void refreshPreview(kind === 'kit' ? { ...edits, removeKits: (edits.removeKits ?? []).filter((c) => c !== key) } : { ...edits, removeExtras: (edits.removeExtras ?? []).filter((c) => c !== key) });
 
@@ -332,6 +338,15 @@ export function LiveIncidentFlow({ role = 'ER_STAFF' }: { role?: RoleCode }) {
                 <div style={{ flex: '1 1 640px', minWidth: 320, display: 'flex', flexDirection: 'column', gap: 16 }}>
                   <LiveKitTable plan={preview} editable={access.mayWrite} onPack={editPack} onRemove={removeKit} />
                   <LiveExtrasTable plan={preview} editable={access.mayWrite} onRemove={removeExtra} onSetQty={setExtraQty} />
+                  {access.mayWrite && (
+                    <AddPlanItem
+                      kitsInPlan={preview.kits.map((k) => k.code)}
+                      extrasInPlan={preview.extras.map((e) => e.key)}
+                      disabled={busy}
+                      onAddKit={addKit}
+                      onAddDrug={addExtra}
+                    />
+                  )}
                   {removed.length > 0 && (
                     <div className="card" style={{ padding: '10px 14px', fontSize: 12, color: '#475569', display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
                       เอาออกจากแผนแล้ว:

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Icon } from '../../../components/common/icons';
-import { homeHrefFor } from '../../../data/navigation';
+import { homeHrefFor, withRole } from '../../../data/navigation';
 import type { RoleCode } from '../../../lib/rbac';
 import { createBorrowRequest, proposeBorrowRequest } from '../../../services/borrowApi';
 import { StockAlertSummary } from '../components/StockAlertSummary';
@@ -12,12 +12,13 @@ import {
   ALERT_ROWS,
   ALERT_STATUS_META,
   ALERT_TYPE_META,
+  isAlertHandled,
   PHARMACY_CONTEXT,
   QUEUE_ROWS,
   SEVERITY_META,
   sortAlertRows,
 } from '../data/stockAlerts';
-import type { Severity, SortMode, StockAlertRow, Ved } from '../data/stockAlerts';
+import type { AlertTabKey, Severity, SortMode, StockAlertRow, Ved } from '../data/stockAlerts';
 import { useStockAlerts } from '../data/useStockAlerts';
 
 /** Small modal shell (mirrors PageHeader's dialog): scrim click and Escape close it. */
@@ -68,13 +69,13 @@ const fmt = (n: number) => n.toLocaleString('en-US', { maximumFractionDigits: 2 
  * drives the breadcrumb home.
  */
 export function StockAlertsPage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
-  const [tab, setTab] = useState<'queue' | 'all'>('queue');
+  const [tab, setTab] = useState<AlertTabKey>('pending');
   const [search, setSearch] = useState('');
   const [severity, setSeverity] = useState<'all' | Severity>('all');
   const [ved, setVed] = useState<Ved | null>(null);
   const [sort, setSort] = useState<SortMode>('default');
   const [acked, setAcked] = useState<ReadonlySet<string>>(new Set());
-  const [snoozed, setSnoozed] = useState<ReadonlySet<string>>(new Set());
+  const [snoozed] = useState<ReadonlySet<string>>(new Set());
   const [created, setCreated] = useState<ReadonlySet<string>>(new Set());
   const [selected, setSelected] = useState<string | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -83,21 +84,26 @@ export function StockAlertsPage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
   const sa = useStockAlerts();
   const live = sa.source === 'live';
   const [actionError, setActionError] = useState<string | null>(null);
-  const [snoozeTarget, setSnoozeTarget] = useState<StockAlertRow | null>(null);
-  const [snoozeReason, setSnoozeReason] = useState('');
-  const [snoozeHours, setSnoozeHours] = useState(24);
-  const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
-  useEffect(() => {
-    if (sa.source === 'live') setTab(sa.rows.some((r) => r.alert) ? 'queue' : 'all');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sa.source]);
 
   const demo = sa.source === 'mock';
   const allRows = live ? sa.rows : demo ? ALERT_ROWS : [];
   const queueRows = live ? sa.rows.filter((r) => r.alert) : demo ? QUEUE_ROWS : [];
-  const base = tab === 'queue' ? queueRows : allRows;
-  const tabCounts = { queue: queueRows.length, all: allRows.length };
+
+  const pendingRows = useMemo(() => queueRows.filter((r) => !isAlertHandled(r, acked, snoozed)), [queueRows, acked, snoozed]);
+  const handledRows = useMemo(() => queueRows.filter((r) => isAlertHandled(r, acked, snoozed)), [queueRows, acked, snoozed]);
+
+  const base = tab === 'pending' ? pendingRows : tab === 'handled' ? handledRows : queueRows;
+  const tabCounts = { pending: pendingRows.length, handled: handledRows.length, all: queueRows.length };
+
+  useEffect(() => {
+    if (sa.source === 'live') {
+      if (pendingRows.length > 0) setTab('pending');
+      else if (handledRows.length > 0) setTab('handled');
+      else setTab('all');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sa.source]);
 
   const severityCounts = useMemo(() => {
     const c: Record<'all' | Severity, number> = { all: base.length, critical: 0, urgent: 0, normal: 0 };
@@ -120,26 +126,34 @@ export function StockAlertsPage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
   const justCreated = selectedRow ? created.has(selectedRow.id) : false;
 
   const runAction = async (fn: () => Promise<void>) => {
-    setBusy(true);
     setActionError(null);
     try {
       await fn();
     } catch (e) {
       setActionError((e as Error).message);
-    } finally {
-      setBusy(false);
     }
   };
 
   const handleAction = (row: StockAlertRow, cond: RowActionCond) => {
-    if (live) {
-      // Live: the server owns the alert state (SM-8). Creating a borrow request waits for the F1b API.
-      if (cond === 'ack' && row.alert) void runAction(() => sa.ack(row.alert!.alertId));
-      else if (cond === 'snooze') {
-        setSnoozeReason('');
-        setSnoozeHours(24);
-        setSnoozeTarget(row);
-      } else if (cond === 'create' && row.alert) {
+    // ไปอนุมัติคำขอ / ติดตามคำขอ / the BR link: open drawer in "คำขอยืมของเรา"
+    if (cond === 'request' && row.alert?.brNo) {
+      window.location.search = withRole(`?page=requests&request=${encodeURIComponent(row.alert.brNo)}`, role);
+      return;
+    }
+    if (cond === 'ack') {
+      if (live && row.alert) {
+        void runAction(async () => {
+          await sa.ack(row.alert!.alertId);
+          setNotice(`✅ รับทราบการแจ้งเตือน ${row.drug} เรียบร้อยแล้ว (ย้ายไปหมวด "จัดการแล้ว")`);
+        });
+      } else {
+        setAcked((prev) => new Set(prev).add(row.id));
+        setNotice(`✅ รับทราบการแจ้งเตือน ${row.drug} เรียบร้อยแล้ว (ย้ายไปหมวด "จัดการแล้ว")`);
+      }
+      return;
+    }
+    if (cond === 'create' && row.alert) {
+      if (live) {
         // API-F1b-001 then -004: the request is created and its lender ladder proposed; approval happens on the requests page.
         void runAction(async () => {
           const created = await createBorrowRequest({ stockAlertId: row.alert!.alertId });
@@ -147,16 +161,13 @@ export function StockAlertsPage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
           await sa.reload();
           setNotice(`สร้างคำขอ ${proposed.data.requestNo} แล้ว (${proposed.data.status === 'ESCALATED' ? 'ไม่พบผู้ให้ยืมที่เหมาะสม' : 'รออนุมัติที่หน้า “คำขอยืม”'})`);
         });
+      } else {
+        setCreated((prev) => new Set(prev).add(row.id));
+        setSelected(row.id);
       }
-      else setSelected(row.id);
       return;
     }
-    if (cond === 'ack') setAcked((prev) => new Set(prev).add(row.id));
-    else if (cond === 'snooze') setSnoozed((prev) => new Set(prev).add(row.id));
-    else if (cond === 'create') {
-      setCreated((prev) => new Set(prev).add(row.id));
-      setSelected(row.id);
-    } else setSelected(row.id); // request | detail
+    setSelected(row.id); // detail
   };
 
   /** Status after the pharmacist's local ack / snooze / create actions (same rule the table uses). */
@@ -223,8 +234,32 @@ export function StockAlertsPage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
         </div>
       )}
       {(notice || actionError) && (
-        <div className="card" role={actionError ? 'alert' : 'status'} style={{ padding: '10px 16px', fontSize: 13, color: actionError ? '#B91C1C' : '#0F2A5C' }}>
-          {actionError ?? notice}
+        <div
+          className="card"
+          role={actionError ? 'alert' : 'status'}
+          style={{
+            padding: '12px 18px',
+            fontSize: 13.5,
+            color: actionError ? '#B91C1C' : '#065F46',
+            background: actionError ? '#FEF2F2' : '#ECFDF5',
+            borderColor: actionError ? '#FCA5A5' : '#A7F3D0',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            borderRadius: 8,
+          }}
+        >
+          <span>{actionError ?? notice}</span>
+          <button
+            className="link"
+            style={{ fontSize: 13, color: actionError ? '#B91C1C' : '#065F46', cursor: 'pointer', fontWeight: 600 }}
+            onClick={() => {
+              setActionError(null);
+              setNotice(null);
+            }}
+          >
+            ✕ ปิด
+          </button>
         </div>
       )}
 
@@ -248,39 +283,6 @@ export function StockAlertsPage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
           แสดง {rows.length} จาก {base.length} รายการ
         </div>
       </section>
-
-      {snoozeTarget && (
-        <Modal label={`เลื่อนเตือน ${snoozeTarget.drug}`} onClose={() => setSnoozeTarget(null)}>
-          <h2 style={{ margin: 0, fontSize: 18, color: '#0F2A5C' }}>เลื่อนเตือน · {snoozeTarget.drug}</h2>
-          <div style={{ display: 'grid', gap: 10, marginTop: 12 }}>
-            <label style={{ fontSize: 13 }}>
-              เลื่อนไป (ชั่วโมง, สูงสุด 168)
-              <input className="inp num" type="number" min={1} max={168} value={snoozeHours} onChange={(e) => setSnoozeHours(Number(e.target.value))} style={{ display: 'block', marginTop: 4 }} />
-            </label>
-            <label style={{ fontSize: 13 }}>
-              เหตุผล (บังคับ · บันทึกใน audit)
-              <textarea className="inp" rows={2} value={snoozeReason} onChange={(e) => setSnoozeReason(e.target.value)} style={{ display: 'block', width: '100%', marginTop: 4 }} />
-            </label>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 14 }}>
-            <button className="btn btn-s btn-sm" onClick={() => setSnoozeTarget(null)}>ยกเลิก</button>
-            <button
-              className="btn btn-p btn-sm"
-              disabled={busy || snoozeReason.trim().length < 3 || snoozeHours < 1 || snoozeHours > 168}
-              onClick={() => {
-                const target = snoozeTarget;
-                if (!target.alert) return;
-                void runAction(async () => {
-                  await sa.snooze(target.alert!.alertId, snoozeReason.trim(), snoozeHours);
-                  setSnoozeTarget(null);
-                });
-              }}
-            >
-              {busy ? 'กำลังบันทึก…' : 'ยืนยันเลื่อนเตือน'}
-            </button>
-          </div>
-        </Modal>
-      )}
 
       {historyOpen && (
         <Modal label="ประวัติการแจ้งเตือน / Alert history" onClose={() => setHistoryOpen(false)}>

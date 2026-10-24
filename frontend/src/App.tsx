@@ -13,10 +13,9 @@ import type { RoleCode } from './lib/rbac';
 import type { ShellNavEntry } from './data/navigation';
 import { USER } from './data/session';
 import { ALERTS } from './roles/pharmacist/data/dashboard';
-import { BorrowRequestsPage } from './roles/pharmacist/pages/BorrowRequestsPage';
+import { BorrowLendHubPage } from './roles/pharmacist/pages/BorrowLendHubPage';
 import { DashboardPage } from './roles/pharmacist/pages/DashboardPage';
 import { DocumentsPage } from './roles/pharmacist/pages/DocumentsPage';
-import { LenderQueuePage } from './roles/pharmacist/pages/LenderQueuePage';
 import { NearExpiryPage } from './roles/pharmacist/pages/NearExpiryPage';
 import { PoolAllocationPage } from './roles/pharmacist/pages/PoolAllocationPage';
 import { ReportsPage } from './roles/pharmacist/pages/ReportsPage';
@@ -181,7 +180,6 @@ function withLinks(items: ShellNavEntry[], role: string): ShellNavEntry[] {
     if (e.key === 'cfg' && isSysAdmin) return { ...e, href: '?page=admin&tab=config' };
     if (e.key === 'aud' && isSysAdmin) return { ...e, href: '?page=admin&tab=audit' };
     if (e.key === 'tr') return { ...e, href: `?page=transport${suffix}` };
-    if (e.key === 'lend') return { ...e, href: '?page=lend' };
     if (e.key === 'inc') return { ...e, href: '?page=incident' };
     if (e.key === 'alerts') return { ...e, href: '?page=alerts' };
     if (e.key === 'rep') return { ...e, href: `?page=report${suffix}` };
@@ -207,8 +205,7 @@ function liveBadges(t: ApiDashboard['tiles'], role: string): Record<string, stri
   if (role === 'ER_STAFF') return { track: n(t.incidents.open) };
   return {
     alerts: n(t.stockAlerts.active),
-    req: n(t.borrowRequests.pendingApproval + t.borrowRequests.escalated),
-    lend: n(t.lenderQueue.waiting),
+    req: n(t.borrowRequests.pendingApproval + t.borrowRequests.escalated + t.lenderQueue.waiting),
     exp: n(t.nearExpiry.detected),
     pool: n(t.nearExpiry.inPool),
     tr: n(t.transport.waitingDispatch + t.transport.outInFlight + t.transport.inOnTheWay + t.transport.toReceive),
@@ -391,10 +388,8 @@ function AuthenticatedShell() {
       : 'adm'
     : onTransport
     ? 'tr'
-    : onRequests
+    : onRequests || onLend
     ? 'req'
-    : onLend
-    ? 'lend'
     : onIncident
     ? 'inc'
     : onAlerts
@@ -560,10 +555,8 @@ function AuthenticatedShell() {
             onTransport ? <TransportTrackingPage role="WAREHOUSE_OFFICER" /> : onInbox ? <InboxPage /> : onKit ? <KitPage /> : onDocs ? <DocumentsPage role="WAREHOUSE_OFFICER" /> : onStock || onAlerts ? <WhStockPage /> : onRequests ? <WhBorrowPage /> : onExpiry ? <WhExpiryPage /> : onDrugs ? <WhDrugsPage /> : <WarehouseDashboardPage />
           ) : onTransport ? (
             <TransportTrackingPage role={hospitalAdmin ? 'HOSPITAL_ADMIN' : route.transportRole} />
-          ) : onRequests ? (
-            <BorrowRequestsPage role={viewerRole} />
-          ) : onLend ? (
-            <LenderQueuePage role={viewerRole} />
+          ) : onRequests || onLend ? (
+            <BorrowLendHubPage role={viewerRole} initialTab={onLend ? 'inbound' : 'outbound'} />
           ) : onIncident ? (
             <IncidentConsolePage role={viewerRole} />
           ) : onAlerts ? (

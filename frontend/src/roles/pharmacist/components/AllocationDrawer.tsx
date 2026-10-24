@@ -14,6 +14,8 @@ interface AllocationDrawerProps {
   /** Live plans only (API-F2a-009 / -011). */
   onReject?: (comment: string) => void;
   onCancel?: (reason: string) => void;
+  /** A hospital of the region outside the plan objects with a reason. */
+  onObject?: (reason: string) => void;
   busy?: boolean;
   error?: string | null;
   onClose: () => void;
@@ -22,7 +24,7 @@ interface AllocationDrawerProps {
 }
 
 /** UI-09 Allocation plan review — F-22 feasibility, F-23 economics, approval chain. */
-export function AllocationDrawer({ plan: p, decision, onApprove, onApproveAll, onUneconomical, onReject, onCancel, busy = false, error = null, onClose, role = 'PHARMACIST' }: AllocationDrawerProps) {
+export function AllocationDrawer({ plan: p, decision, onApprove, onApproveAll, onUneconomical, onReject, onCancel, onObject, busy = false, error = null, onClose, role = 'PHARMACIST' }: AllocationDrawerProps) {
   const [note, setNote] = useState('');
   const [cancelNote, setCancelNote] = useState('');
   const noteOk = note.trim().length >= 3;
@@ -51,7 +53,9 @@ export function AllocationDrawer({ plan: p, decision, onApprove, onApproveAll, o
   const canApprove = L ? L.openForApproval && L.myDecision !== 'APPROVED' : p.status === 'PENDING_MY_APPROVAL' || p.status === 'AWAITING_APPROVAL';
   const needsOption = L ? !p.economical && !L.option && L.openForApproval && L.isOrigin : !p.economical && p.status === 'PENDING_MY_APPROVAL';
   const options = L ? L.options.map((o) => ({ id: o.id, label: o.label, hint: '' })) : uneconomicalOptions();
-  const mayCancel = Boolean(L) && (L!.openForApproval || p.status === 'APPROVED' || p.status === 'AUTO_APPROVED' || p.status === 'TRANSPORTING');
+  // cancelling belongs to the owner and the receivers; an objector only takes part in the discussion
+  const mayCancel = Boolean(L?.isParty) && (L!.openForApproval || p.status === 'APPROVED' || p.status === 'AUTO_APPROVED' || p.status === 'TRANSPORTING');
+  const [objectNote, setObjectNote] = useState('');
 
   return (
     <aside className="tr-drawer" aria-label="รายละเอียดแผนจัดสรร">
@@ -175,10 +179,12 @@ export function AllocationDrawer({ plan: p, decision, onApprove, onApproveAll, o
         <div className="pl-agent">
           <div className="pl-agent-head">
             <Icon name="sparkle" style={{ width: 15, height: 15, color: '#1D4ED8' }} />
-            <b>Agent ประเมินแผน ({p.agent.run})</b>
-            <span className={`badge ${p.agent.confidence === 'สูง' ? 't-green' : p.agent.confidence === 'ปานกลาง' ? 't-amber' : 't-red'}`} style={{ marginLeft: 'auto' }}>
-              ความมั่นใจ {p.agent.confidence}
-            </span>
+            <b>{p.agent.title ?? `Agent ประเมินแผน (${p.agent.run})`}</b>
+            {p.agent.confidence !== '—' && (
+              <span className={`badge ${p.agent.confidence === 'สูง' ? 't-green' : p.agent.confidence === 'ปานกลาง' ? 't-amber' : 't-red'}`} style={{ marginLeft: 'auto' }}>
+                ความมั่นใจ {p.agent.confidence}
+              </span>
+            )}
           </div>
           <div style={{ fontSize: 12.5, lineHeight: '18px', color: '#1E3A8A' }}>{p.agent.note}</div>
         </div>
@@ -214,7 +220,7 @@ export function AllocationDrawer({ plan: p, decision, onApprove, onApproveAll, o
                     </span>
                   </span>
                 </div>
-                {a.comment && (
+                {a.comment && a.state === 'REJECTED' && (
                   <div className="pl-objection-box" style={{ marginLeft: 34 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600, color: '#991B1B', marginBottom: 2 }}>
                       <Icon name="tri" style={{ width: 13, height: 13 }} />
@@ -222,6 +228,10 @@ export function AllocationDrawer({ plan: p, decision, onApprove, onApproveAll, o
                     </div>
                     <div>"{a.comment}"</div>
                   </div>
+                )}
+                {/* a note on an approval (e.g. auto-approved in network, meeting resolution) is not an objection */}
+                {a.comment && a.state !== 'REJECTED' && (
+                  <div className="sub" style={{ marginLeft: 34 }}>ความเห็น: “{a.comment}”</div>
                 )}
               </li>
             ))}
@@ -237,6 +247,20 @@ export function AllocationDrawer({ plan: p, decision, onApprove, onApproveAll, o
           <div role="status" className="pl-done">
             <Icon name="checkc" className="ic20" style={{ color: '#166534' }} />
             <span>{decision}</span>
+          </div>
+        ) : L && !L.involved ? (
+          <div className="pl-decide">
+            <h3 className="tr-h3">คัดค้านแผน <span className="en">รพ.ในเขตที่ไม่อยู่ในแผน · ASM-16</span></h3>
+            <div className="sub">
+              โรงพยาบาลของคุณไม่ได้อยู่ในแผนนี้ · ถ้าไม่เห็นด้วยกับการจัดสรร ให้ยื่นคัดค้านพร้อมเหตุผลได้จนกว่าของจะขึ้นรถ
+              แผนจะถูกระงับเป็น “ต้องหารือ” งานขนส่งที่ยังไม่ออกจะถูกพักไว้ และทุก รพ.ในแผนได้รับแจ้ง
+            </div>
+            {error && <div role="alert" style={{ color: '#B91C1C', fontSize: 12.5 }}>{error}</div>}
+            <textarea className="sel" rows={3} style={{ width: '100%', height: 'auto' }} placeholder="เหตุผลที่คัดค้าน (อย่างน้อย 3 ตัวอักษร)" value={objectNote} onChange={(e) => setObjectNote(e.target.value)} />
+            <button className="btn btn-g" disabled={!mayApprove || busy || !L.canObject || objectNote.trim().length < 3} title={mayApprove ? undefined : approveHint} onClick={() => onObject?.(objectNote.trim())}>
+              <Icon name="x" />
+              คัดค้านแผน
+            </button>
           </div>
         ) : isNeedsDiscussion ? (
           <div className="pl-meeting-box">

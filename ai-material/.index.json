@@ -1,5 +1,26 @@
 [
   {
+    "path": "context/current-task.md",
+    "title": "Current Task",
+    "summary": "Current Task",
+    "tags": "session",
+    "date": "2026-10-24"
+  },
+  {
+    "path": "decisions/0005-f2-f3-feedback-rules.md",
+    "title": "F2 allocation agent, objections and F3 late answers (feature feedback)",
+    "summary": "Agent via BYOK with F-22 fallback; region objections until dispatch; late emergency…",
+    "tags": "decision, f2, allocation, agent, objection, f3, emergency, borrow",
+    "date": "2026-10-24"
+  },
+  {
+    "path": "sessions/2026-10-23-2250-antigravity-clinical-emergency-tools.md",
+    "title": "Session: Clinical & Emergency AI Toolsets (Person 3 Scope)",
+    "summary": "Session",
+    "tags": "session",
+    "date": "2026-10-24"
+  },
+  {
     "path": "sessions/2026-10-24-0935-antigravity-logistics-tools.md",
     "title": "Session: Logistics & Operations AI Toolsets (Person 4 Scope)",
     "summary": "Session",
@@ -112,6 +133,48 @@
     "date": "2026-10-24"
   },
   {
+    "path": "sessions/2026-10-24-1730-claude-f1-f3-feedback-fixes.md",
+    "title": "Feature feedback fixes F1-F3 (alerts, pool plans, objections, emergency)",
+    "summary": "Alert link/duplicates/snooze, F2 agent+manual plans+objection, F3 add item+late answer",
+    "tags": "session, backend, frontend, f1, f2, f3, alerts, allocation, agent, emergency",
+    "date": "2026-10-24"
+  },
+  {
+    "path": "sessions/2026-10-24-1955-antigravity-pharmacist-dashboard-action-center.md",
+    "title": "Session: Pharmacist Dashboard Action Center & Grouped Layout",
+    "summary": "Implemented pharmacist Action Center and grouped operations/analytics layout on dashboard",
+    "tags": "session, frontend, pharmacist, dashboard, action-center, ui-ux",
+    "date": "2026-10-24"
+  },
+  {
+    "path": "sessions/2026-10-24-2035-antigravity-pharmacist-stock-alerts-ux.md",
+    "title": "Session: Pharmacist Stock Alerts UX & Flow Alignment",
+    "summary": "Clarified stock alert actions (acknowledge, snooze, borrow request link) and added critical…",
+    "tags": "session, frontend, pharmacist, alerts, stock-alerts, ui-ux",
+    "date": "2026-10-24"
+  },
+  {
+    "path": "sessions/2026-10-24-2130-claude-borrow-lend-hub.md",
+    "title": "Session: Pharmacist Borrow & Lend Hub",
+    "summary": "Merged /requests and /lend into one tabbed hub; hid dead Waive button.",
+    "tags": "session, frontend, pharmacist, borrow, lend, ui-ux",
+    "date": "2026-10-24"
+  },
+  {
+    "path": "sessions/2026-10-24-2330-claude-expiry-pool-pipeline.md",
+    "title": "Session: Near-expiry + Pool pipeline UI",
+    "summary": "Stepper, split bar, folded FEFO formula, discussion alert card.",
+    "tags": "session, frontend, pharmacist, expiry, pool, ui-ux",
+    "date": "2026-10-24"
+  },
+  {
+    "path": "sessions/2026-10-25-0010-claude-incident-console-live-only.md",
+    "title": "Session: Incident console live only",
+    "summary": "Removed mock console for pharmacist/HA; view-only live data.",
+    "tags": "session, frontend, incident, er, mock-removal",
+    "date": "2026-10-25"
+  },
+  {
     "path": "sessions/2026-10-23-0825-claude-forecast-scheduled-predict-job.md",
     "title": "Forecast scheduled predict job (Option A + Option B dynamic DB export)",
     "summary": "Option B completed: Postgres usage & snapshot streaming export -> predict up…",
@@ -159,20 +222,6 @@
     "summary": "Session Note",
     "tags": "session",
     "date": "2026-10-23"
-  },
-  {
-    "path": "sessions/2026-10-23-2250-antigravity-clinical-emergency-tools.md",
-    "title": "Session: Clinical & Emergency AI Toolsets (Person 3 Scope)",
-    "summary": "Session",
-    "tags": "session",
-    "date": "2026-10-23"
-  },
-  {
-    "path": "context/current-task.md",
-    "title": "Current Task",
-    "summary": "Current Task",
-    "tags": "session",
-    "date": "2026-10-22"
   },
   {
     "path": "sessions/2026-10-22-buffy-backend-step8-admin.md",
@@ -371,13 +420,6 @@
     "date": "2026-10-17"
   },
   {
-    "path": "context/runbook.md",
-    "title": "Runbook",
-    "summary": "Runbook",
-    "tags": "session",
-    "date": "2026-10-16"
-  },
-  {
     "path": "sessions/2026-10-16-1628-buffy-phase2c-return-obligations-waive.md",
     "title": "Return obligations + Waive (Phase 2C)",
     "summary": "HOSPITAL_ADMIN gets a read-only ภาระการคืน sub-tab on Borrow requests plus the API-XC-005…",
@@ -403,14 +445,21 @@
     "title": "ai-material",
     "summary": "ai-material",
     "tags": "session",
-    "date": "2026-10-14"
+    "date": "2026-10-15"
   },
   {
     "path": "context/conventions.md",
     "title": "Conventions",
     "summary": "Conventions",
     "tags": "session",
-    "date": "2026-10-14"
+    "date": "2026-10-15"
+  },
+  {
+    "path": "context/runbook.md",
+    "title": "Runbook",
+    "summary": "Runbook",
+    "tags": "session",
+    "date": "2026-10-15"
   },
   {
     "path": "decisions/0002-role-based-frontend-structure.md",

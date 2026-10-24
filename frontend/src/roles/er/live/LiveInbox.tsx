@@ -25,7 +25,9 @@ function LegCard({ leg, canAct, actHint, reload }: { leg: ApiEmergencyLeg; canAc
   const cls = classMeta(leg.item.class);
   const left = leg.remainingSec !== null ? Math.max(0, leg.remainingSec - tick) : null;
   const etaLeft = leg.incident.eta.remainingSec !== null ? Math.max(0, leg.incident.eta.remainingSec - tick) : null;
-  const pending = leg.status === 'SENT';
+  // a timed-out request that still lacks goods can be confirmed late (the first confirmation still wins)
+  const late = leg.status !== 'SENT' && leg.canAnswerLate;
+  const pending = leg.status === 'SENT' || late;
   const enough = leg.available >= leg.qtyAsked;
 
   const answer = async (body: { decision: 'CONFIRM' | 'PARTIAL' | 'REJECT'; qty?: number; reason?: string }) => {
@@ -60,6 +62,11 @@ function LegCard({ leg, canAct, actHint, reload }: { leg: ApiEmergencyLeg; canAc
             คำขอ {leg.request.requestNo} · ต้องการรวม {num(leg.qtyRequested)} {leg.item.unit} · ผู้ป่วยถึงประมาณ {clock(leg.incident.eta.arrivalAt)}
             {etaLeft !== null && leg.incident.status === 'ACTIVE' ? ` (อีก ${mmss(etaLeft)})` : ''}{leg.transitMin !== null ? ` · เดินทางมาหาเขา ${num(leg.transitMin)} นาที` : ''}
           </div>
+          {late && (
+            <div style={{ fontSize: 12, color: '#92400e', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 6, padding: '4px 8px', marginTop: 4 }}>
+              หมดเวลาตอบแล้ว ระบบขอโรงพยาบาลอื่นต่อ แต่คำขอนี้ยังได้ของไม่ครบ · ยังยืนยันช้าได้ (ใครยืนยันก่อนได้ก่อน)
+            </div>
+          )}
           {leg.item.blood && <div style={{ fontSize: 11.5, color: '#b91c1c', marginTop: 2 }}>เลือด PRC กรุ๊ป O: ธนาคารเลือดต้องยืนยัน ABO/Rh และ cross-match · คืนเป็น BLOOD_REPLACEMENT</div>}
           {pending && <div style={{ fontSize: 12, color: enough ? '#166534' : '#92400e', marginTop: 2 }}>สต็อกของเราที่ใช้ได้ {num(leg.available)} {leg.item.unit}{enough ? '' : ' · ไม่พอสำหรับที่ขอ ยืนยันได้บางส่วน'}</div>}
           {!pending && leg.qtyAccepted !== null && <div style={{ fontSize: 12, color: '#166534', marginTop: 2 }}>ยืนยัน {num(leg.qtyAccepted)} {leg.item.unit}{leg.respondedAt ? ` เวลา ${clock(leg.respondedAt)}` : ''}{leg.task ? ` · งานขนส่ง ${leg.task.taskNo}` : ''}</div>}
@@ -79,7 +86,7 @@ function LegCard({ leg, canAct, actHint, reload }: { leg: ApiEmergencyLeg; canAc
               ยืนยัน {num(Math.min(leg.qtyAsked, leg.available))} {leg.item.unit}
             </button>
             <button type="button" className="btn btn-s" disabled={!canAct || busy || leg.available < 1 || leg.qtyAsked < 2} title={canAct ? undefined : actHint} onClick={() => { setMode(mode === 'partial' ? 'none' : 'partial'); setQty(String(Math.max(1, Math.min(leg.qtyAsked - 1, leg.available)))); }}>ให้บางส่วน</button>
-            <button type="button" className="btn btn-g" disabled={!canAct || busy} title={canAct ? undefined : actHint} onClick={() => setMode(mode === 'reject' ? 'none' : 'reject')}>ปฏิเสธ</button>
+            {!late && <button type="button" className="btn btn-g" disabled={!canAct || busy} title={canAct ? undefined : actHint} onClick={() => setMode(mode === 'reject' ? 'none' : 'reject')}>ปฏิเสธ</button>}
           </div>
           {mode === 'partial' && (
             <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -108,9 +115,9 @@ function LegCard({ leg, canAct, actHint, reload }: { leg: ApiEmergencyLeg; canAc
  */
 export function LiveInbox({ legs, canAct, actHint, reload, empty = 'ไม่มีคำขอเร่งด่วนจากโรงพยาบาลอื่น' }: Props) {
   const [showHistory, setShowHistory] = useState(false);
-  const pending = legs.filter((l) => l.status === 'SENT');
+  const pending = legs.filter((l) => l.status === 'SENT' || l.canAnswerLate);
   const active = legs.filter((l) => ['ACCEPTED', 'PARTIAL', 'LOADED', 'IN_TRANSIT'].includes(l.status));
-  const history = legs.filter((l) => !['SENT', 'ACCEPTED', 'PARTIAL', 'LOADED', 'IN_TRANSIT'].includes(l.status));
+  const history = legs.filter((l) => !l.canAnswerLate && !['SENT', 'ACCEPTED', 'PARTIAL', 'LOADED', 'IN_TRANSIT'].includes(l.status));
   if (pending.length + active.length === 0 && history.length === 0) return <div className="card" style={{ padding: '14px 18px', fontSize: 12.5, color: '#64748b' }}>{empty}</div>;
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>

@@ -5,6 +5,7 @@ import { runExpiryJobs } from './modules/expiry/expiry.routes.js';
 import { reevaluateAlerts } from './modules/forecasts/forecasts.runs.js';
 import { processLegTimers } from './modules/borrow/borrow.flow.js';
 import { processEmergencyTimers } from './modules/incidents/emergency.borrow.js';
+import { reopenSnoozedAlerts } from './modules/alerts/alerts.evaluate.js';
 import { runDueForecastJob } from './modules/forecasts/forecasts.job.js';
 
 const server = app.listen(config.port, () => {
@@ -17,6 +18,7 @@ const timers = setInterval(() => {
   withTransaction(async (client) => {
     await processLegTimers(client);
     await processEmergencyTimers(client); // F3: ask the next hospitals / alert staff once a leg timed out
+    await reopenSnoozedAlerts(client); // F1a: a snoozed stock alert comes back when its time is over
   }).catch((err) => console.error('[DooRare Backend] borrow timers failed', err));
 }, 60_000);
 timers.unref();

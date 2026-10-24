@@ -4,6 +4,7 @@ import { mayActFor, requiredRoleHint } from '../../../lib/rbac';
 import type { RoleCode } from '../../../lib/rbac';
 import { fefoUsable, lotValue, releasable } from '../data/nearExpiry';
 import type { NearExpiryItem, NearExpiryStatus } from '../data/nearExpiry';
+import '../pipeline.css';
 
 interface NearExpiryDrawerProps {
   item: NearExpiryItem;
@@ -84,18 +85,29 @@ export function NearExpiryDrawer({ item: i, onDecide, onClose, live = false, bus
           </dd>
         </dl>
 
-        {/* FEFO box — formula shown verbatim from the spec */}
+        {/* Split of the lot; the spec formula stays one click away */}
         <div className="tr-box" style={{ background: '#F8FAFC' }}>
           <h3 className="tr-h3">
-            คำนวณตามอายุที่ใช้ได้จริง <span className="en">FEFO · F-22</span>
+            แบ่งยาล็อตนี้ <span className="en">FEFO · F-22</span>
           </h3>
-          <div className="ne-formula num">
-            ใช้ได้ = floor(({i.daysLeft} − 1) × {i.usagePerDay}) = {usable} · ปล่อยได้ = {i.qty} − {usable} ={' '}
-            <b>{canRelease} {i.unit}</b>
+          <div className="ne-split" title={`เก็บใช้เอง ${Math.min(i.qty, Math.max(0, usable))} · ปล่อยเข้าพูล ${canRelease}`}>
+            <span className="ne-split-keep" style={{ flex: Math.min(i.qty, Math.max(0, usable)) }} />
+            <span className="ne-split-rel" style={{ flex: canRelease }} />
+          </div>
+          <div className="ne-split-txt num">
+            <span className="k">เก็บใช้เอง <b>{Math.min(i.qty, Math.max(0, usable))}</b> {i.unit}</span>
+            <span className="r">ปล่อยเข้าคลังกลาง <b>{canRelease}</b> {i.unit}</span>
           </div>
           <div className="sub" style={{ marginTop: 6 }}>
-            เก็บใช้ที่ รพ.เรา {usable} {i.unit} · ส่วนที่เหลือ {canRelease} {i.unit} ปล่อยเข้าคลังกลางได้โดยไม่เสียเปล่า
+            ส่วนที่ใช้ทันก่อนหมดอายุเก็บไว้ที่ รพ.เรา ส่วนที่เหลือปล่อยเข้าคลังกลางได้โดยไม่เสียเปล่า
           </div>
+          <details className="ne-calc">
+            <summary>ดูวิธีคำนวณ</summary>
+            <div className="ne-formula num">
+              ใช้ได้ = floor(({i.daysLeft} − 1) × {i.usagePerDay}) = {usable} · ปล่อยได้ = {i.qty} − {usable} ={' '}
+              <b>{canRelease} {i.unit}</b>
+            </div>
+          </details>
         </div>
 
         {decided ? (

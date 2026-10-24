@@ -34,7 +34,7 @@ export interface LabelMeta {
 export const SEVERITY_META: Record<Severity, LabelMeta> = {
   critical: { labelTh: 'เร่งด่วนมาก', labelEn: 'Critical', cls: 'ug-critical', icon: 'tri' },
   urgent: { labelTh: 'เร่งด่วน', labelEn: 'Urgent', cls: 'ug-urgent', icon: 'alertc' },
-  normal: { labelTh: 'ปกติ', labelEn: 'Normal', cls: 'ug-normal', icon: 'minusc' },
+  normal: { labelTh: 'เตือนทั่วไป', labelEn: 'Routine', cls: 'ug-normal', icon: 'minusc' },
 };
 
 /**
@@ -42,11 +42,27 @@ export const SEVERITY_META: Record<Severity, LabelMeta> = {
  * Acknowledged is light-blue per the UI-02 design image (an earlier spec said green).
  */
 export const ALERT_STATUS_META: Record<AlertStatus, LabelMeta> = {
-  open: { labelTh: 'เปิด', labelEn: 'Open', cls: 't-amber' },
+  open: { labelTh: 'รอจัดการ', labelEn: 'Open', cls: 't-amber' },
   acknowledged: { labelTh: 'รับทราบแล้ว', labelEn: 'Acknowledged', cls: 't-blue' },
-  linked: { labelTh: 'ผูกคำขอแล้ว', labelEn: 'Linked to request', cls: 't-green' },
+  linked: { labelTh: 'สร้างคำขอยืมแล้ว', labelEn: 'Borrow requested', cls: 't-green' },
   snoozed: { labelTh: 'เลื่อนเตือน', labelEn: 'Snoozed', cls: 't-grey' },
 };
+
+export const CONTROLLED_DRUGS = [
+  'fentanyl',
+  'morphine',
+  'pethidine',
+  'methadone',
+  'midazolam',
+  'ketamine',
+  'diazepam',
+  'lorazepam',
+];
+
+export function isControlledDrug(drugName: string): boolean {
+  const lower = drugName.toLowerCase();
+  return CONTROLLED_DRUGS.some((c) => lower.includes(c));
+}
 
 export interface AlertTypeMeta {
   th: string;
@@ -135,28 +151,31 @@ export const PHARMACY_CONTEXT = {
 
 /* ------------------------------------------------------- tabs & filters */
 
+export type AlertTabKey = 'pending' | 'handled' | 'all';
+
 export interface AlertTab {
-  key: 'queue' | 'all';
+  key: AlertTabKey;
   /** Tab label is Thai-only (design); the count renders in a pill from live row counts. */
   labelTh: string;
 }
 
 export const ALERT_TABS: AlertTab[] = [
-  { key: 'queue', labelTh: 'คิวแจ้งเตือน' },
-  { key: 'all', labelTh: 'รายการยาทั้งหมด' },
+  { key: 'pending', labelTh: 'รอจัดการ' },
+  { key: 'handled', labelTh: 'จัดการแล้ว / กำลังยืม' },
+  { key: 'all', labelTh: 'แจ้งเตือนทั้งหมด' },
 ];
 
 export const SEVERITY_FILTERS: { key: 'all' | Severity; labelTh: string; labelEn: string }[] = [
   { key: 'all', labelTh: 'ทั้งหมด', labelEn: 'All' },
   { key: 'critical', labelTh: 'เร่งด่วนมาก', labelEn: 'Critical' },
   { key: 'urgent', labelTh: 'เร่งด่วน', labelEn: 'Urgent' },
-  { key: 'normal', labelTh: 'ปกติ', labelEn: 'Normal' },
+  { key: 'normal', labelTh: 'เตือนทั่วไป', labelEn: 'Routine' },
 ];
 
 export const VED_FILTERS: Ved[] = ['V', 'E', 'D'];
 
 export const SORT_OPTIONS: { value: SortMode; label: string }[] = [
-  { value: 'default', label: 'ข้อกำหนด: V ก่อน → มูลค่า ABC → วันคงเหลือ' },
+  { value: 'default', label: 'ความเร่งด่วน → ยาสำคัญ (V) → วันคงเหลือ' },
   { value: 'days', label: 'วันคงเหลือน้อยก่อน' },
   { value: 'abc', label: 'มูลค่า ABC สูงก่อน' },
 ];
@@ -172,6 +191,8 @@ export interface AlertRef {
   time: string;
   /** Linked borrow request number (BR-…), shown under the status badge. */
   brNo?: string;
+  /** Live request status from borrow_request (e.g. DRAFT, PENDING_APPROVAL, IN_PROGRESS, FULFILLED). */
+  requestStatus?: string;
 }
 
 export interface StockAlertRow {
@@ -206,9 +227,31 @@ export interface StockAlertRow {
 
 const VED_RANK: Record<Ved, number> = { V: 0, E: 1, D: 2 };
 const ABC_RANK: Record<Abc, number> = { A: 0, B: 1, C: 2, D: 3, E: 4, V: 5, '–': 6 };
+const SEVERITY_RANK: Record<Severity, number> = { critical: 0, urgent: 1, normal: 2 };
 
 /**
- * Queue order: V first → ABC value → fewest days remaining (BR-F1a-011).
+ * Checks whether an alert has been handled / completed / already accepted by another hospital.
+ */
+export function isAlertHandled(
+  row: StockAlertRow,
+  acked: ReadonlySet<string>,
+  snoozed: ReadonlySet<string>,
+): boolean {
+  if (acked.has(row.id) || snoozed.has(row.id)) return true;
+  if (!row.alert) return false;
+  const status = row.alert.status;
+  if (status === 'acknowledged' || status === 'snoozed') return true;
+  if (status === 'linked') {
+    // If request has already been approved and lender accepted/in transit, it is handled
+    if (row.alert.requestStatus && !['DRAFT', 'PENDING_APPROVAL'].includes(row.alert.requestStatus)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Queue order: Default prioritizes Severity (Critical -> Urgent -> Normal) -> Vital (V) -> ABC -> days left.
  * `days` sorts purely by days-left; `abc` keeps the V-first grouping but sorts by ABC inside it.
  */
 export function sortAlertRows(rows: StockAlertRow[], mode: SortMode): StockAlertRow[] {
@@ -216,11 +259,14 @@ export function sortAlertRows(rows: StockAlertRow[], mode: SortMode): StockAlert
   copy.sort((a, b) => {
     if (mode === 'days') return a.daysLeft - b.daysLeft || VED_RANK[a.ved] - VED_RANK[b.ved];
     if (mode === 'abc') return VED_RANK[a.ved] - VED_RANK[b.ved] || ABC_RANK[a.abc] - ABC_RANK[b.abc] || a.daysLeft - b.daysLeft;
-    return (
-      VED_RANK[a.ved] - VED_RANK[b.ved] ||
-      ABC_RANK[a.abc] - ABC_RANK[b.abc] ||
-      a.daysLeft - b.daysLeft
-    );
+
+    // Default: Severity first (Critical -> Urgent -> Normal) -> VED (V -> E -> D) -> ABC -> Days Left
+    const aSev = a.alert ? SEVERITY_RANK[a.alert.severity] : 3;
+    const bSev = b.alert ? SEVERITY_RANK[b.alert.severity] : 3;
+    if (aSev !== bSev) return aSev - bSev;
+    if (VED_RANK[a.ved] !== VED_RANK[b.ved]) return VED_RANK[a.ved] - VED_RANK[b.ved];
+    if (ABC_RANK[a.abc] !== ABC_RANK[b.abc]) return ABC_RANK[a.abc] - ABC_RANK[b.abc];
+    return a.daysLeft - b.daysLeft;
   });
   return copy;
 }

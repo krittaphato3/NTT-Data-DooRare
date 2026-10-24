@@ -49,7 +49,7 @@ export interface ApiBorrowRequest {
   reason: string | null;
   version: number;
   borrower: { id: string; code: string; name: string };
-  drug: { id: string; name: string; baseUnit: string; ved: 'V' | 'E' | 'D' | null; coldChain: boolean };
+  drug: { id: string; kind?: 'DRUG' | 'KIT'; name: string; baseUnit: string; ved: 'V' | 'E' | 'D' | null; coldChain: boolean };
   qtyRequested: number;
   qtyFulfilled: number;
   rValue: number | null;
@@ -78,6 +78,8 @@ export interface ApiLenderItem {
   requestNo: string;
   round: number;
   status: ApiLegStatus;
+  /** F3 only: TIMED_OUT but the emergency request still lacks goods, so it can be confirmed late. */
+  canAnswerLate: boolean;
   urgency: ApiUrgency;
   reason: string | null;
   context: 'STOCK_ALERT' | 'MANUAL' | 'EMERGENCY';

@@ -21,6 +21,7 @@ import { mockFallbackEnabled } from '../../../services/dataSource';
 import { useLenderQueue } from '../data/useLenderQueue';
 import { useBorrowRequests } from '../data/useBorrowRequests';
 import { respondToLeg } from '../../../services/borrowApi';
+import { confirmEmergencyLeg } from '../../../services/incidentApi';
 
 const UG_ICON: Record<string, IconName> = {
   critical: 'tri',
@@ -50,6 +51,13 @@ const STATUS_FILTER: { value: '' | 'open' | BRStatus; label: string }[] = [
   { value: 'declined', label: 'ปฏิเสธ' },
 ];
 
+/** SM-1b summary tiles double as status filters. */
+const TILE_STATUSES = {
+  waiting: ['waiting'],
+  accepted: ['accepted', 'partial'],
+  loaded: ['loaded', 'in_transit'],
+} as const;
+
 type ResponsePhase = 'idle' | 'confirm' | 'done';
 type ResponseKind = 'full' | 'partial' | 'decline';
 
@@ -72,25 +80,37 @@ function SummaryTile({
   badgeCls,
   icon,
   en,
+  active,
+  onClick,
 }: {
   count: number;
   badgeText: string;
   badgeCls: string;
   icon: IconName;
   en: string;
+  active: boolean;
+  onClick: () => void;
 }) {
   return (
-    <div
+    <button
+      type="button"
+      aria-pressed={active}
+      onClick={onClick}
+      title={active ? 'คลิกอีกครั้งเพื่อล้างตัวกรอง' : 'คลิกเพื่อกรองตารางตามสถานะนี้'}
       style={{
         display: 'flex',
         flexDirection: 'column',
+        alignItems: 'flex-start',
         gap: 6,
-        background: '#ffffff',
-        border: '1px solid #e2e8f0',
+        background: active ? '#eff6ff' : '#ffffff',
+        border: active ? '2px solid #1d4ed8' : '1px solid #e2e8f0',
         borderRadius: 10,
-        padding: '12px 18px',
+        padding: active ? '11px 17px' : '12px 18px',
         minWidth: 140,
         flex: '1 1 0',
+        cursor: 'pointer',
+        font: 'inherit',
+        textAlign: 'left',
       }}
     >
       <span
@@ -112,7 +132,7 @@ function SummaryTile({
         </span>
       </div>
       <span style={{ fontSize: 11, lineHeight: '14px', color: '#94a3b8' }}>{en}</span>
-    </div>
+    </button>
   );
 }
 
@@ -815,6 +835,11 @@ function DetailPanel({
             flex: 'none',
           }}
         >
+          {req.lateAnswer && (
+            <div role="status" style={{ fontSize: 12, color: '#92400e', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, padding: '6px 10px' }}>
+              คำขอฉุกเฉินนี้หมดเวลาตอบแล้ว ระบบขอโรงพยาบาลอื่นต่อ แต่ยังได้ของไม่ครบ · ยังยืนยันช้าได้ (ใครยืนยันก่อนได้ก่อน)
+            </div>
+          )}
           {/* A role that may not answer still sees the pending decision, disabled with the owner named. */}
           {!mayRespond && (
             <button
@@ -872,23 +897,26 @@ function DetailPanel({
                 >
                   ให้บางส่วน
                 </button>
-                <button
-                  type="button"
-                  style={{
-                    flex: 1,
-                    height: 34,
-                    borderRadius: 8,
-                    fontSize: 12.5,
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    border: kind === 'decline' ? '2px solid #dc2626' : '1px solid #cbd5e1',
-                    background: kind === 'decline' ? '#fef2f2' : '#ffffff',
-                    color: kind === 'decline' ? '#dc2626' : '#334155',
-                  }}
-                  onClick={() => setKind('decline')}
-                >
-                  ปฏิเสธ
-                </button>
+                {/* a late answer only confirms: the request has already moved on to other hospitals */}
+                {!req.lateAnswer && (
+                  <button
+                    type="button"
+                    style={{
+                      flex: 1,
+                      height: 34,
+                      borderRadius: 8,
+                      fontSize: 12.5,
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      border: kind === 'decline' ? '2px solid #dc2626' : '1px solid #cbd5e1',
+                      background: kind === 'decline' ? '#fef2f2' : '#ffffff',
+                      color: kind === 'decline' ? '#dc2626' : '#334155',
+                    }}
+                    onClick={() => setKind('decline')}
+                  >
+                    ปฏิเสธ
+                  </button>
+                )}
               </div>
 
               <button
@@ -952,7 +980,12 @@ function DetailPanel({
                     const body = kind === 'full' ? { decision: 'ACCEPT' as const } : kind === 'partial' ? { decision: 'PARTIAL' as const, qty: totalLotQty, lots: chosen } : { decision: 'REJECT' as const, reason: declineReason.trim() };
                     setSending(true);
                     setSendError(null);
-                    respondToLeg(req.legId!, body)
+                    // F3 urgent requests go through the emergency confirmation (first confirmation wins, kits / FEFO picked by the server)
+                    const answer =
+                      req.trigger === 'EMERGENCY'
+                        ? confirmEmergencyLeg(req.legId!, body.decision === 'ACCEPT' ? { decision: 'CONFIRM' } : body.decision === 'PARTIAL' ? { decision: 'PARTIAL', qty: body.qty } : { decision: 'REJECT', reason: body.reason })
+                        : respondToLeg(req.legId!, body);
+                    answer
                       .then(() => { setPhase('done'); onResponded?.(); })
                       .catch((e: Error) => setSendError(e.message))
                       .finally(() => setSending(false));
@@ -987,12 +1020,13 @@ function DetailPanel({
  * `role` gates the lender response (give in full / partial / decline) through `lib/rbac.ts` and
  * drives the breadcrumb home and the switch back to UI-05.
  */
-export function LenderQueuePage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
+export function LenderQueuePage({ role = 'PHARMACIST', embedded = false }: { role?: RoleCode; /** Inside the Borrow & Lend hub: the hub owns the heading and the tabs. */ embedded?: boolean }) {
   const { user } = useAuth();
   const [query, setQuery] = useState('');
   const [urgency, setUrgency] = useState('');
   const [trigger, setTrigger] = useState('');
   const [statusFilter, setStatusFilter] = useState<'' | 'open' | BRStatus>('open');
+  const [tile, setTile] = useState<keyof typeof TILE_STATUSES | null>(null);
   const lq = useLenderQueue();
   const mine = useBorrowRequests();
   const minePending = mine.requests.filter((r) => r.status === 'PENDING_APPROVAL' || r.status === 'DRAFT').length;
@@ -1009,7 +1043,9 @@ export function LenderQueuePage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
   const rows = data.filter((r) => {
     if (urgency && r.urgency !== urgency) return false;
     if (trigger && r.trigger !== trigger) return false;
-    if (statusFilter === 'open' ? !isOpenLeg(r.status) : statusFilter && r.status !== statusFilter) return false;
+    if (tile) {
+      if (!(TILE_STATUSES[tile] as readonly string[]).includes(r.status)) return false;
+    } else if (statusFilter === 'open' ? !isOpenLeg(r.status) : statusFilter && r.status !== statusFilter) return false;
     if (q && !(r.id + r.drug + r.requester).toLowerCase().includes(q)) return false;
     return true;
   });
@@ -1025,6 +1061,8 @@ export function LenderQueuePage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {!embedded && (
+      <>
       {/* Breadcrumb */}
       <nav
         style={{
@@ -1185,6 +1223,9 @@ export function LenderQueuePage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
         </div>
       </div>
 
+      </>
+      )}
+
       {/* Summary tiles SM-1b */}
       <div className="card" style={{ padding: '14px 18px' }}>
         <div
@@ -1195,7 +1236,12 @@ export function LenderQueuePage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
             marginBottom: 10,
           }}
         >
-          สถานะรอบที่ส่งถึงเรา (SM-1b)
+          สถานะรอบที่ส่งถึงเรา (SM-1b){' '}
+          {tile && (
+            <button type="button" className="link" style={{ marginLeft: 8, fontWeight: 400 }} onClick={() => setTile(null)}>
+              ล้างตัวกรองสถานะ
+            </button>
+          )}
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
           <SummaryTile
@@ -1204,6 +1250,8 @@ export function LenderQueuePage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
             badgeCls="st-pending"
             icon="hourglass"
             en="SENT"
+            active={tile === 'waiting'}
+            onClick={() => setTile((t) => (t === 'waiting' ? null : 'waiting'))}
           />
           <SummaryTile
             count={demo ? SM1B.accepted : data.filter((r) => r.status === 'accepted' || r.status === 'partial').length}
@@ -1211,6 +1259,8 @@ export function LenderQueuePage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
             badgeCls="st-approved"
             icon="checkc"
             en="ACCEPTED · PARTIAL"
+            active={tile === 'accepted'}
+            onClick={() => setTile((t) => (t === 'accepted' ? null : 'accepted'))}
           />
           <SummaryTile
             count={demo ? SM1B.loaded : data.filter((r) => r.status === 'loaded' || r.status === 'in_transit').length}
@@ -1218,6 +1268,8 @@ export function LenderQueuePage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
             badgeCls="st-transit"
             icon="truck"
             en="LOADED · IN_TRANSIT"
+            active={tile === 'loaded'}
+            onClick={() => setTile((t) => (t === 'loaded' ? null : 'loaded'))}
           />
         </div>
       </div>
@@ -1281,7 +1333,7 @@ export function LenderQueuePage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
             </select>
             <select
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as '' | 'open' | BRStatus)}
+              onChange={(e) => { setTile(null); setStatusFilter(e.target.value as '' | 'open' | BRStatus); }}
               style={selectStyle}
             >
               {STATUS_FILTER.map((o) => (

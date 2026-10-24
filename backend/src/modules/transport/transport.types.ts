@@ -46,6 +46,8 @@ export interface TransportTaskView {
   taskNo: string | null;
   version: number;
   kind: 'F1' | 'F2';
+  /** A leg of an F3 emergency borrow request (kind stays F1: same borrow slip and transport flow). */
+  emergency: boolean;
   refType: 'BORROW_LEG' | 'ALLOCATION_LINE';
   refId: string;
   /** `BR-2026-000126 · รอบ 1` or `AP-2026-000041 · บรรทัด 2`. */

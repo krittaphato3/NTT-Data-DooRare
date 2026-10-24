@@ -26,6 +26,7 @@ export function mapTask(
     taskNo: row.task_no,
     version: Number(row.version),
     kind: row.ref_type === 'BORROW_LEG' ? 'F1' : 'F2',
+    emergency: row.borrow_context === 'EMERGENCY',
     refType: row.ref_type,
     refId: row.ref_id,
     refLabel: row.ref_label,

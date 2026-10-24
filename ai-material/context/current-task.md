@@ -1,12 +1,17 @@
 # Current Task
 
-Goal: Pharmacist Hospital Dashboard frontend (React+TS, Docker, npm) — mockup-faithful, now role-structured and responsive to phones/tablets.
+Goal: Pharmacist Hospital Dashboard & Stock Alerts UX/UI Refinement (branch `test/role-pharmacist-qa-flow`).
 
-Status: Reverted to remote `2e1313b` and continued from it. Restructured to `src/roles/pharmacist/{pages,components,data}` + shared `components/{common,layout}` and `data/{session,navigation}`. Responsive pass done (drawer nav <1024, phone top bar grid <768, 2-col KPI/tiles <640). Build passes; Docker rebuilt; :8080 HTTP 200. Collapsed rail overlap fixed and expand/collapse animated; UI capture snapshot committed to `artifacts/`.
+Status:
+1. Dashboard: Implemented Pharmacist Action Center (ศูนย์รวมงานด่วนที่ต้องทำทันที) with 3 actionable cards (🚨 สต็อกวิกฤต, 📥 รพ. อื่นขอยืมยาเข้ามา, ✍️ คำขอยืมรอเราอนุมัติ) and restructured Dashboard into 3 distinct sections (Action Center, Active Operations, Network Overview & Analytics).
+2. Stock Alerts (`/alerts`): Realigned with pharmacist clinical mental model — renamed 'ผูกคำขอแล้ว' to 'สร้างคำขอยืมแล้ว', 'เปิด' to 'รอจัดการ', button 'ตรวจสอบและอนุมัติ' to 'ไปอนุมัติคำขอ BR-xxxx →' (auto-links to `/requests` drawer), added Critical Shortage Triage Bar, tooltips for 'รับทราบ' / 'เลื่อนเตือน', and Controlled Drug badges/guardrails.
+3. Build & Container: Frontend build passes (0 TS errors), synced directly to Docker `doorare-frontend` container serving on port 8080.
 
-Blockers: Browser-panel screenshots were unavailable ("webview not composited") — verified via DOM geometry; a visual pass is still worth doing.
+4. Borrow & Lend Hub done (`BorrowLendHubPage.tsx`; `?page=requests`/`?page=lend` are tab aliases; Waive hidden without permission). See `sessions/2026-10-24-2130-claude-borrow-lend-hub.md`.
 
-Next action: Review preview at http://127.0.0.1:5173 (vite dev) or http://localhost:8080 (docker). Then wire real API replacing mock data, and add the remaining role pages on the new structure.
+5. Expiry + Pool pipeline UI done (stepper, split bar, folded FEFO, discussion alert). See `sessions/2026-10-24-2330-claude-expiry-pool-pipeline.md`.
+
+Next action: simplify Hub drawers (hide Si formula behind "ดูเหตุผล AI"), then Expiry+Pool pipeline, grouped sidebar, Copilot order sheet. Docker not rebuilt.
 
 Relevant files: `frontend/src/App.tsx`, `frontend/src/roles/pharmacist/pages/DashboardPage.tsx`, `frontend/src/index.css`, `frontend/src/README.md`
 
@@ -72,3 +77,8 @@ Relevant files: `frontend/src/App.tsx`, `frontend/src/roles/pharmacist/pages/Das
 - Note: the live `doorare` DB is still **v1.4 and empty** (no `app_user_role`/`login_event`), and `db/mock/csv` was missing; the suite now rejects a pre-v1.5 copy with an explicit missing-object list.
 - Repeatable verification added: `backend/tests/integration/admin.integration.test.ts` + README + `test:integration` script; `npm test` stays DB-free.
 - Not committed. Next: frontend wiring of HA screens / SA tabs (separate task); optional REGION lookup in `core/settings.ts`; agent runtime consuming the kill switch.
+
+## Branch fix/feature-feedback-f1-f3 (from backend-byok)
+
+- Team feedback fixes F1 alerts / F2 pool plans + objections + allocation agent / F3 add item + late emergency answers. See `sessions/2026-10-24-1730-claude-f1-f3-feedback-fixes.md`, `decisions/0005-f2-f3-feedback-rules.md`.
+- Not committed / pushed. Next: review, run the allocation agent against a real BYOK provider, PR into backend-byok.

@@ -5,6 +5,7 @@ import type { Action, RoleCode } from '../../../lib/rbac';
 import {
   ALERT_STATUS_META,
   ALERT_TYPE_META,
+  isControlledDrug,
   NOTE_TONE_COLOR,
   SEVERITY_META,
 } from '../data/stockAlerts';
@@ -56,23 +57,45 @@ function Badge({ cls, label, en, icon }: { cls: string; label: string; en?: stri
  */
 function actionsFor(row: StockAlertRow, status: AlertStatus, role: RoleCode): RowAction[] {
   const out: RowAction[] = [];
+  const controlled = isControlledDrug(row.drug);
+
   if (status === 'linked') {
-    const critical = row.alert?.severity === 'critical';
-    out.push(
-      critical
-        ? { kind: 'primary', label: 'ตรวจสอบและอนุมัติ', cond: 'request', needs: 'approveBorrow' }
-        : { kind: 'secondary', label: 'ดูคำขอ', cond: 'request' },
-    );
-  } else if (status === 'open' && row.alert?.type === 'LOW_STOCK') {
-    out.push({ kind: 'primary', label: 'สร้างคำขอ', cond: 'create', needs: 'createBorrowRequest' });
+    const isPending = !row.alert?.requestStatus || row.alert.requestStatus === 'DRAFT' || row.alert.requestStatus === 'PENDING_APPROVAL';
+    if (isPending) {
+      out.push({
+        kind: 'primary',
+        label: row.alert?.brNo ? `ไปอนุมัติคำขอ ${row.alert.brNo} →` : 'อนุมัติคำขอยืม →',
+        cond: 'request',
+        needs: 'approveBorrow',
+      });
+    } else {
+      out.push({
+        kind: 'secondary',
+        label: row.alert?.brNo ? `ติดตามคำขอ ${row.alert.brNo} →` : 'ติดตามคำขอยืม →',
+        cond: 'request',
+      });
+    }
+  } else if (status === 'open' && (row.alert?.type === 'LOW_STOCK' || row.alert?.type === 'MIN_MAX')) {
+    if (controlled) {
+      out.push({
+        kind: 'secondary',
+        label: 'ระเบียบยาควบคุมพิเศษ',
+        cond: 'detail',
+      });
+    } else {
+      const critical = row.alert?.severity === 'critical';
+      out.push({
+        kind: 'primary',
+        label: critical ? '+ ขอยืมยาด่วน' : '+ สร้างคำขอยืม',
+        cond: 'create',
+        needs: 'createBorrowRequest',
+      });
+    }
   }
-  /* Acknowledge / snooze are authoring actions the role either has or does not — they are hidden. */
+  /* Acknowledge is the authoring action for dismissing without borrowing */
   if (mayActFor(role, 'PHARMACIST', 'acknowledgeAlert')) {
     if (status === 'open') {
       out.push({ kind: 'link', label: 'รับทราบ', cond: 'ack' });
-      out.push({ kind: 'link', label: 'เลื่อน', cond: 'snooze' });
-    } else if (status === 'acknowledged') {
-      out.push({ kind: 'link', label: 'เลื่อน', cond: 'snooze' });
     }
   }
   out.push({ kind: 'link', label: 'รายละเอียด', cond: 'detail' });
@@ -133,7 +156,7 @@ export function StockAlertTable({ rows, acked, snoozed, created, onAction, role 
               <tr key={row.id}>
                 {/* ยา — V/E badge, then name + HIS code */}
                 <td style={{ minWidth: 220 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                     <span
                       className={`ved ved-${row.ved} ved-sm`}
                       title={row.ved === 'V' ? 'Vital' : row.ved === 'E' ? 'Essential' : 'Desirable'}
@@ -141,6 +164,15 @@ export function StockAlertTable({ rows, acked, snoozed, created, onAction, role 
                       {row.ved}
                     </span>
                     <span style={{ fontWeight: 600, color: '#0F2A5C' }}>{row.drug}</span>
+                    {isControlledDrug(row.drug) && (
+                      <span
+                        className="badge t-red"
+                        style={{ fontSize: 11, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 3 }}
+                        title="ยาเสพติดให้โทษ/วัตถุออกฤทธิ์ต่อจิตประสาทประเภท 2 — ห้ามยืมผ่านระบบอัตโนมัติ ต้องดำเนินการตามระเบียบ Manual สธ."
+                      >
+                        <Icon name="lock" className="ic12" /> ยาควบคุมพิเศษ
+                      </span>
+                    )}
                   </div>
                   <span className="code">{row.code}</span>
                 </td>
@@ -193,25 +225,44 @@ export function StockAlertTable({ rows, acked, snoozed, created, onAction, role 
 
                 {/* แจ้งเตือน */}
                 <td>
-                  {row.alert && sevMeta && stMeta && typeMeta ? (
-                    <>
-                      <span style={{ display: 'inline-flex', flexWrap: 'wrap', gap: 4 }}>
-                        <Badge cls={sevMeta.cls} label={sevMeta.labelTh} en={sevMeta.labelEn} icon={sevMeta.icon} />
-                        <Badge cls={stMeta.cls} label={stMeta.labelTh} en={stMeta.labelEn} />
-                      </span>
-                      <span className="sa-alert-meta">
-                        {typeMeta.th} · {row.alert.time}
-                        {row.alert.brNo && (
-                          <>
-                            {' '}
-                            <button className="link code" style={{ fontSize: 11.5 }} onClick={() => onAction(row, 'request')}>
-                              {row.alert.brNo}
-                            </button>
-                          </>
-                        )}
-                      </span>
-                    </>
-                  ) : (
+                  {row.alert && sevMeta && stMeta && typeMeta ? (() => {
+                    let stBadgeLabel = stMeta.labelTh;
+                    let stBadgeCls = stMeta.cls;
+                    if (status === 'linked' && row.alert.requestStatus) {
+                      if (row.alert.requestStatus === 'IN_PROGRESS') {
+                        stBadgeLabel = 'กำลังดำเนินการยืม (ตอบรับแล้ว)';
+                        stBadgeCls = 't-blue';
+                      } else if (row.alert.requestStatus === 'FULFILLED') {
+                        stBadgeLabel = 'ได้รับยาแล้ว';
+                        stBadgeCls = 't-green';
+                      } else if (row.alert.requestStatus === 'PENDING_APPROVAL' || row.alert.requestStatus === 'DRAFT') {
+                        stBadgeLabel = 'รออนุมัติคำขอยืม';
+                        stBadgeCls = 't-amber';
+                      }
+                    }
+                    return (
+                      <>
+                        <span style={{ display: 'inline-flex', flexWrap: 'wrap', gap: 4 }}>
+                          <Badge cls={sevMeta.cls} label={sevMeta.labelTh} en={sevMeta.labelEn} icon={sevMeta.icon} />
+                          <Badge cls={stBadgeCls} label={stBadgeLabel} en={stMeta.labelEn} />
+                        </span>
+                        <span className="sa-alert-meta">
+                          {typeMeta.th} · {row.alert.time}
+                          {row.alert.brNo && (
+                            <>
+                              {' '}
+                              <button className="link code" style={{ fontSize: 11.5 }} onClick={() => onAction(row, 'request')}>
+                                {row.alert.brNo}
+                              </button>
+                              {row.alert.requestStatus === 'IN_PROGRESS' && (
+                                <span style={{ color: '#2563EB', fontSize: 11, fontWeight: 500 }}> (ตอบรับแล้ว)</span>
+                              )}
+                            </>
+                          )}
+                        </span>
+                      </>
+                    );
+                  })() : (
                     <span style={{ color: '#94A3B8' }}>—</span>
                   )}
                 </td>
@@ -240,7 +291,13 @@ export function StockAlertTable({ rows, acked, snoozed, created, onAction, role 
                           key={a.cond}
                           className="link"
                           style={{ fontSize: 12.5 }}
-                          title={a.cond === 'snooze' ? 'เลื่อนการแจ้งเตือน 4 ชั่วโมง' : undefined}
+                          title={
+                            a.cond === 'ack'
+                              ? 'รับทราบการแจ้งเตือนแล้ว (บันทึกว่ารับรู้แล้ว เช่น มีการสั่งซื้อกับบริษัทยาอยู่แล้ว ไม่ต้องยืม)'
+                              : a.cond === 'detail'
+                                ? 'ดูข้อมูลสต็อกและประวัติการพยากรณ์เชิงลึก'
+                                : undefined
+                          }
                           onClick={() => onAction(row, a.cond)}
                         >
                           {a.label}

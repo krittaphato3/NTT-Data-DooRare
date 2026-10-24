@@ -93,6 +93,15 @@ interface Catalog {
 
 const DRUG_NAME = `concat_ws(' ', dm.generic_name, dm.strength, dm.dosage_form)`;
 
+/** Name, unit and class of the given drug master ids. */
+async function loadDrugInfo(db: Db, ids: string[]): Promise<Map<string, DrugInfo>> {
+  const drugs = new Map<string, DrugInfo>();
+  if (ids.length === 0) return drugs;
+  const d = await db.query(`SELECT dm.id, ${DRUG_NAME} AS name, dm.base_unit, dm.emergency_class, dm.is_blood_product FROM drug_master dm WHERE dm.id = ANY($1::uuid[])`, [ids]);
+  for (const row of d.rows) drugs.set(row.id, { id: row.id, name: row.name, unit: row.base_unit, cls: row.emergency_class, blood: row.is_blood_product });
+  return drugs;
+}
+
 export async function loadCatalog(db: Db): Promise<Catalog> {
   const [kitRows, ruleRows, compRows, extraRows] = await Promise.all([
     db.query(`SELECT id, code, name FROM kit_type WHERE active ORDER BY code`),
@@ -105,14 +114,7 @@ export async function loadCatalog(db: Db): Promise<Catalog> {
   const recipes = new Map<string, { item: string; perKit: number }[]>();
   for (const c of compRows.rows) recipes.set(c.code, [...(recipes.get(c.code) ?? []), { item: c.drug_master_id, perKit: c.qty }]);
   const drugIds = new Set<string>([...compRows.rows.map((c) => c.drug_master_id as string), ...extraRows.rows.map((e) => e.drug_master_id as string)]);
-  const drugs = new Map<string, DrugInfo>();
-  if (drugIds.size > 0) {
-    const d = await db.query(
-      `SELECT dm.id, ${DRUG_NAME} AS name, dm.base_unit, dm.emergency_class, dm.is_blood_product FROM drug_master dm WHERE dm.id = ANY($1::uuid[])`,
-      [[...drugIds]],
-    );
-    for (const row of d.rows) drugs.set(row.id, { id: row.id, name: row.name, unit: row.base_unit, cls: row.emergency_class, blood: row.is_blood_product });
-  }
+  const drugs = await loadDrugInfo(db, [...drugIds]);
   return {
     kits,
     kitRules: ruleRows.rows.map((r) => ({ key: r.code, triage: r.triage, perPatient: r.qty, critical: r.is_critical_min })),
@@ -376,6 +378,8 @@ export async function buildPlanView(db: Db, plan: Record<string, any>, incident:
   });
 
   const extraKeys = Object.keys(est.extras ?? {}).sort();
+  // items staff added (setExtras) are not in the rule catalogue: look their names up too
+  for (const [id, info] of await loadDrugInfo(db, extraKeys.filter((k) => isUuid(k) && !catalog.drugs.has(k)))) catalog.drugs.set(id, info);
   const extras = extraKeys.map((key) => {
     const drug = catalog.drugs.get(key);
     const alias = ALIASES[key];

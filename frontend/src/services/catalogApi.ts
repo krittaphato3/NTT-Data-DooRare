@@ -108,3 +108,6 @@ export interface ApiDashboard {
 }
 
 export const getDashboard = () => apiJson<ApiDashboard>('/dashboard');
+
+/** API-F3-016 kit types (preset kits); `code` is the key a plan edit uses. */
+export const getKitTypes = () => apiJson<{ ok: true; items: { id: string; code: string; name: string; active: boolean }[] }>('/kit-types');

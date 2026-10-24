@@ -43,12 +43,12 @@ export function InboxDrawer({ item: it, urgentLeft, startDeclining, onClose, onC
           <FeatureBadge feature={it.feature} />
           {it.urgent && open && (
             <span className="badge t-red" style={{ fontWeight: 600 }}>
-              เร่งด่วน · <span className="ib-timer">{urgentLeft}</span>
+              เร่งด่วน{urgentLeft !== '—' && <> · <span className="ib-timer">{urgentLeft}</span></>}
             </span>
           )}
         </div>
         <div style={{ fontSize: 14, color: '#0F2A5C' }}>
-          รพ.สมุทรปราการ → {HOSPITALS[it.to]} · <span className="code">{it.ref}</span>
+          {HOSPITALS[it.from ?? 'HA']} → {HOSPITALS[it.to]} · <span className="code">{it.ref}</span>
         </div>
       </div>
 

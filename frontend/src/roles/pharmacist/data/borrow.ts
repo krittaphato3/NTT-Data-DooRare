@@ -13,6 +13,8 @@ export type BorrowStatus =
   | 'CLOSED_UNFULFILLED'
   | 'CANCELLED';
 export type StatusGroup = 'pending' | 'progress' | 'escalated' | 'fulfilled' | 'closed';
+/** Filter tiles of the request list. Not the same as `StatusGroup`, which colours badges and the drawer. */
+export type TileGroup = 'pending' | 'progress' | 'accepted' | 'fulfilled' | 'closed';
 export type Urgency = 'CRITICAL' | 'URGENT' | 'NORMAL';
 export type BorrowContext = 'STOCK_ALERT' | 'EMERGENCY' | 'MANUAL';
 export type ReturnState = 'PENDING' | 'OVERDUE' | 'RETURNED';
@@ -63,6 +65,8 @@ export interface BorrowRequest {
   approvedBy?: string;
   legs: BorrowLeg[];
   agentNote?: { code: string; text: string };
+  /** F3 kit request: it has no drug item, so the ranked-lender steps (add a lender by hand) do not apply. */
+  isKit?: boolean;
 }
 
 const NATTAWUT = 'ภก.ณัฐวุฒิ ศรีสุข';
@@ -186,13 +190,21 @@ export const GROUPS: { id: StatusGroup; label: string; codes: string; tone: Tone
   { id: 'closed', label: 'ปิด · ยกเลิก', codes: 'CLOSED_UNFULFILLED · CANCELLED', tone: 'grey', icon: 'minusc' },
 ];
 
+export const TILES: { id: TileGroup; label: string; codes: string; tone: Tone; icon: IconName }[] = [
+  { id: 'pending', label: 'รออนุมัติ', codes: 'PENDING_APPROVAL · DRAFT', tone: 'amber', icon: 'hourglass' },
+  { id: 'progress', label: 'กำลังขอยืม', codes: 'รอผู้ให้ยืมตอบ · ต้องเพิ่มผู้ให้ยืม', tone: 'blue', icon: 'send' },
+  { id: 'accepted', label: 'ตอบรับแล้ว', codes: 'ผู้ให้ยืมตอบรับ · รอขนส่ง', tone: 'green', icon: 'checkc' },
+  { id: 'fulfilled', label: 'ได้ครบแล้ว', codes: 'FULFILLED', tone: 'green', icon: 'checkc' },
+  { id: 'closed', label: 'ปิด · ยกเลิก', codes: 'CLOSED_UNFULFILLED · CANCELLED', tone: 'grey', icon: 'minusc' },
+];
+
 export const STATUS_META: Record<BorrowStatus, { label: string; group: StatusGroup }> = {
   DRAFT: { label: 'ร่าง', group: 'pending' },
   PENDING_APPROVAL: { label: 'รออนุมัติ', group: 'pending' },
   APPROVED: { label: 'อนุมัติแล้ว', group: 'progress' },
   IN_PROGRESS: { label: 'กำลังขอยืม', group: 'progress' },
   PARTIALLY_FULFILLED: { label: 'ได้บางส่วน', group: 'progress' },
-  ESCALATED: { label: 'ส่งต่อผู้ดูแล', group: 'escalated' },
+  ESCALATED: { label: 'ต้องเพิ่มผู้ให้ยืม', group: 'escalated' },
   FULFILLED: { label: 'ได้ครบแล้ว', group: 'fulfilled' },
   CLOSED_UNFULFILLED: { label: 'ปิด · ไม่ได้ยา', group: 'closed' },
   CANCELLED: { label: 'ยกเลิก', group: 'closed' },
@@ -227,6 +239,20 @@ export const ACTION_LABEL: Record<RowAction, string> = {
 
 /** Requests still being worked on (the tab counters leave out finished ones: fulfilled, closed, cancelled). */
 export const isOpenRequest = (s: BorrowStatus) => !['FULFILLED', 'CLOSED_UNFULFILLED', 'CANCELLED'].includes(s);
+
+/** No lender left in the ladder: the request waits for the pharmacist to add one by hand. */
+export const needsLender = (r: Pick<BorrowRequest, 'status' | 'isKit'>) => r.status === 'ESCALATED' && !r.isKit;
+
+/**
+ * Tile a request is counted under. Escalated requests stay under "กำลังขอยืม" (flagged by `needsLender`);
+ * a request moves to "ตอบรับแล้ว" once any lender confirmed (accepted, loaded, in transit or received).
+ */
+export function tileOf(r: Pick<BorrowRequest, 'status' | 'legs'>): TileGroup {
+  const g = STATUS_META[r.status].group;
+  if (g === 'pending' || g === 'fulfilled' || g === 'closed') return g;
+  if (r.status === 'ESCALATED') return 'progress';
+  return r.legs.some((l) => l.state === 'ACCEPTED') ? 'accepted' : 'progress';
+}
 
 export const groupOf = (s: BorrowStatus) => STATUS_META[s].group;
 export const groupMeta = (g: StatusGroup) => GROUPS.find((x) => x.id === g)!;

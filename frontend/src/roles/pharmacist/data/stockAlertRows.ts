@@ -26,7 +26,7 @@ function alertRef(a: ApiAlert | undefined): AlertRef | null {
     severity: SEVERITY[a.severity],
     status: STATUS[a.status] ?? 'open',
     time: fmtThaiTime(a.updatedAt),
-    ...(a.request ? { brNo: a.request.requestNo } : {}),
+    ...(a.request ? { brNo: a.request.requestNo, requestStatus: a.request.status } : {}),
   };
 }
 
@@ -56,6 +56,7 @@ export function buildStockAlertRows(forecasts: ForecastItem[], usable: Map<strin
   const rows: StockAlertRow[] = [];
   const seen = new Set<string>();
   for (const f of forecasts) {
+    if (seen.has(f.hospitalDrugId)) continue;
     seen.add(f.hospitalDrugId);
     const a = byDrug.get(f.hospitalDrugId);
     const onHand = usable.get(f.hospitalDrugId) ?? a?.stockQty ?? 0;

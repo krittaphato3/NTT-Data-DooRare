@@ -28,7 +28,7 @@ import { withTransaction } from '../../db/tx.js';
 import type { Db } from '../../db/tx.js';
 import { HttpError } from '../../middleware/httpError.js';
 import type { AuthSessionUser } from '../auth/auth.types.js';
-import { CONFIRMED_STATUSES, effectiveQty } from '../borrow/borrow.flow.js';
+import { CONFIRMED_STATUSES, effectiveQty, LATE_ANSWER_REQUEST, lateAnswerSql } from '../borrow/borrow.flow.js';
 import { nextRequestNo } from '../borrow/borrow.service.js';
 import { loadEmergencyConfig } from './incidents.config.js';
 import type { EmergencyConfig } from './incidents.config.js';
@@ -39,6 +39,7 @@ const DRUG_NAME = `concat_ws(' ', dm.generic_name, dm.strength, dm.dosage_form)`
 /** Request statuses that still count as covering a need (a cancelled, escalated or given-up request covers nothing). */
 const LIVE_REQUEST = ['APPROVED', 'IN_PROGRESS', 'PARTIALLY_FULFILLED', 'FULFILLED'] as const;
 const OPEN_REQUEST = ['APPROVED', 'IN_PROGRESS', 'PARTIALLY_FULFILLED'] as const;
+const lateConfirmable = (request: { status: string; incident: { status: string } }): boolean => LATE_ANSWER_REQUEST.includes(request.status) && request.incident.status === 'ACTIVE';
 
 export interface BorrowLine {
   /** kit type id or drug master id: the same value `keyOf` reads from an existing request item. */
@@ -481,21 +482,27 @@ class EmergencyBorrowService {
           [legId],
         )
       ).rows[0];
-      if (leg.status !== 'SENT') {
+      // A lender whose turn timed out may still confirm late while the request lacks goods (the first confirmation still wins).
+      const lateAnswer = leg.status === 'TIMED_OUT' && lateConfirmable(request);
+      if (leg.status !== 'SENT' && !lateAnswer) {
         const taken = leg.status === 'CANCELLED' && leg.reject_reason === 'FIRST_CONFIRMED';
         throw new HttpError(409, taken ? 'TAKEN_BY_OTHER' : 'ALREADY_DECIDED', taken ? 'มีโรงพยาบาลอื่นยืนยันครบจำนวนแล้ว' : `คำขอนี้อยู่ในสถานะ ${leg.status} ตอบไม่ได้แล้ว`, { status: leg.status });
       }
+      if (lateAnswer && decision === 'REJECT') throw new HttpError(409, 'ALREADY_DECIDED', 'คำขอนี้หมดเวลาตอบและส่งต่อโรงพยาบาลอื่นแล้ว ไม่ต้องปฏิเสธ');
       const ctx = auditContext(req);
       const legs = await requestLegs(client, requestId);
       const confirmedBefore = confirmedOf(legs);
       const remaining = request.qtyRequested - confirmedBefore;
       const incident = request.incident;
 
-      await client.query(
-        `INSERT INTO reliability_stat (lender_hospital_id, month, requests_received, accepted_on_time) VALUES ($1, date_trunc('month', now())::date, 1, $2)
-         ON CONFLICT (lender_hospital_id, month) DO UPDATE SET requests_received = reliability_stat.requests_received + 1, accepted_on_time = reliability_stat.accepted_on_time + $2`,
-        [hospitalId, decision === 'REJECT' ? 0 : 1],
-      );
+      // the timer already counted a timed-out leg as received and not answered on time
+      if (!lateAnswer) {
+        await client.query(
+          `INSERT INTO reliability_stat (lender_hospital_id, month, requests_received, accepted_on_time) VALUES ($1, date_trunc('month', now())::date, 1, $2)
+           ON CONFLICT (lender_hospital_id, month) DO UPDATE SET requests_received = reliability_stat.requests_received + 1, accepted_on_time = reliability_stat.accepted_on_time + $2`,
+          [hospitalId, decision === 'REJECT' ? 0 : 1],
+        );
+      }
 
       if (decision === 'REJECT') {
         await client.query(`UPDATE borrow_leg SET status = 'REJECTED', reject_reason = $2, responded_at = now(), responded_by = $3 WHERE id = $1`, [legId, reason, user.id]);
@@ -531,8 +538,12 @@ class EmergencyBorrowService {
       const status = qty >= leg.qty_asked - 1e-9 ? 'ACCEPTED' : 'PARTIAL';
       await client.query(
         `UPDATE borrow_leg SET status = $2::leg_status, qty_accepted = $3, responded_at = now(), responded_by = $4, score_parts = COALESCE(score_parts, '{}'::jsonb) || $5::jsonb WHERE id = $1`,
-        [legId, status, qty, user.id, JSON.stringify({ lateForEta: late || Boolean(leg.score_parts?.lateForEta) })],
+        [legId, status, qty, user.id, JSON.stringify({ lateForEta: late || Boolean(leg.score_parts?.lateForEta), ...(lateAnswer ? { lateAnswer: true } : {}) })],
       );
+      // an escalated request has a lender again
+      if (lateAnswer && request.status === 'ESCALATED') {
+        await client.query(`UPDATE borrow_request SET status = 'IN_PROGRESS', updated_at = now(), version = version + 1 WHERE id = $1`, [requestId]);
+      }
       const carrier = await defaultCarrier(client, hospitalId, request.line.coldChain);
       const task = await createTransportTask(client, {
         refType: 'BORROW_LEG', refId: legId, fromHospitalId: hospitalId, toHospitalId: incident.hospital_id, vehicleId: carrier.vehicleId, driverId: carrier.driverId,
@@ -560,7 +571,7 @@ class EmergencyBorrowService {
       }
       await writeAudit(client, ctx, {
         action: status === 'ACCEPTED' ? 'EMERGENCY_LEG_CONFIRMED' : 'EMERGENCY_LEG_PARTIAL', entityType: 'borrow_leg', entityId: legId,
-        after: { requestNo: request.requestNo, qty, asked: leg.qty_asked, remainingAfter: left, lateForEta: late, task: task.taskNo, lots, cancelled: cancelled.length, trimmed: trimmed.length },
+        after: { requestNo: request.requestNo, qty, asked: leg.qty_asked, remainingAfter: left, lateForEta: late, lateAnswer, task: task.taskNo, lots, cancelled: cancelled.length, trimmed: trimmed.length },
       });
       const hospitalName = (await client.query(`SELECT COALESCE(name_th, name_en) AS name FROM hospital WHERE id = $1`, [hospitalId])).rows[0].name;
       await notifyRoles(client, incident.hospital_id, ['ER_STAFF', 'PHARMACIST', 'WAREHOUSE_OFFICER'], {
@@ -668,17 +679,24 @@ const LEG_GROUPS: Record<string, string[]> = {
   declined: ['REJECTED', 'TIMED_OUT', 'CANCELLED'],
 };
 
+/** A timed-out leg whose request still lacks goods (`$2` = LATE_ANSWER_REQUEST). */
+const LATE_OK = lateAnswerSql('$2');
+
 /** `GET /emergency-legs`: urgent requests other hospitals sent to the caller's hospital (the lender's inbox for F3). */
 export async function listEmergencyLegs(user: AuthSessionUser, raw: Record<string, unknown>) {
   const hospitalId = hospitalOf(user);
   const page = parsePage(raw);
-  const params: unknown[] = [hospitalId];
+  const params: unknown[] = [hospitalId, LATE_ANSWER_REQUEST];
   const where = [`bl.lender_hospital_id = $1`, `br.context = 'EMERGENCY'`];
-  if (typeof raw.status === 'string') where.push(`bl.status::text = ANY($${params.push(LEG_GROUPS[raw.status] ?? raw.status.split(','))}::text[])`);
+  if (typeof raw.status === 'string') {
+    const statuses = `bl.status::text = ANY($${params.push(LEG_GROUPS[raw.status] ?? raw.status.split(','))}::text[])`;
+    // a timed-out leg that can still be confirmed late stays in the lender's pending list
+    where.push(raw.status === 'pending' ? `(${statuses} OR ${LATE_OK})` : statuses);
+  }
   params.push(page.limit + 1, page.offset);
   const rows = (
     await query(
-      `SELECT bl.id, bl.round_no, bl.status::text AS status, bl.qty_asked::float8 AS qty_asked, bl.qty_accepted::float8 AS qty_accepted, bl.qty_received::float8 AS qty_received, bl.sent_at, bl.deadline_at,
+      `SELECT bl.id, bl.round_no, bl.status::text AS status, ${LATE_OK} AS late_ok, bl.qty_asked::float8 AS qty_asked, bl.qty_accepted::float8 AS qty_accepted, bl.qty_received::float8 AS qty_received, bl.sent_at, bl.deadline_at,
               bl.responded_at, bl.reject_reason, bl.message_text, bl.t_transit_min::float8 AS transit, bl.score_parts,
               br.id AS request_id, br.request_no, i.kind::text AS kind, i.kit_type_id, i.drug_master_id, i.qty_requested::float8 AS qty_requested,
               COALESCE(NULLIF(${DRUG_NAME}, ''), kt.name) AS name, kt.code AS kit_code, COALESCE(dm.base_unit, 'ชุด') AS unit, COALESCE(dm.emergency_class, 'SUPPORTIVE') AS cls, COALESCE(dm.is_blood_product, false) AS blood,
@@ -710,6 +728,8 @@ export async function listEmergencyLegs(user: AuthSessionUser, raw: Record<strin
       id: l.id as string,
       round: Number(l.round_no),
       status: l.status as string,
+      /** TIMED_OUT but the request still lacks goods: the lender may still confirm (first confirmation wins). */
+      canAnswerLate: Boolean(l.late_ok),
       request: { id: l.request_id as string, requestNo: l.request_no as string },
       borrower: { id: l.borrower_id as string, code: l.borrower_code as string, name: l.borrower_name as string },
       incident: { id: l.incident_id as string, incidentNo: l.incident_no as string, type: l.incident_type as string | null, location: l.location_text as string | null, status: l.incident_status as string, eta: { minutes: eta.minutes, arrivalAt: eta.arrivalAt, remainingSec: eta.remainingSec, source: eta.source, flags: eta.flags } },

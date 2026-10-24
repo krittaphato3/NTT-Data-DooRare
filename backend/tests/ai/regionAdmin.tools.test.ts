@@ -294,18 +294,14 @@ test('regionAdmin.tools: Pool simulation invariants and controlled prohibition',
   );
   assert.ok(data.totalAllocated <= data.initialAvailable);
 
-  // Candidates ordered by distance with nulls last
-  let seenNull = false;
-  let prevDist = -1;
+  // F-22 / BR-F2a-025 greedy order (same code as the allocation plans): fewest days of stock first
+  let prevDays = -1;
   for (const cand of data.allocations) {
-    if (cand.distanceKm === null) {
-      seenNull = true;
-    } else {
-      assert.equal(seenNull, false, 'Distance non-null candidate must not appear after null distance');
-      assert.ok(cand.distanceKm >= prevDist, 'Candidates must be ordered by distance ascending');
-      prevDist = cand.distanceKm;
-    }
+    assert.ok(cand.daysOfStock >= prevDays, 'Candidates must be ordered by days of stock ascending (F-22)');
+    assert.ok(cand.allocatedQty > 0 && cand.allocatedQty <= data.initialAvailable);
+    prevDays = cand.daysOfStock;
   }
+  assert.match(data.method, /F-22/);
 
   assertNoSecrets(simRes);
 });
