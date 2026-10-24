@@ -546,24 +546,28 @@ export const DooRareChatDrawer: React.FC = () => {
 
   return (
     <>
-      {/* Floating Trigger Button */}
-      <button
-        className="doorare-chat-trigger-btn"
-        onClick={() => setIsOpen(true)}
-        title="DooRare AI Copilot"
-        aria-label="Open AI Copilot"
-      >
-        <span className="doorare-chat-pulse-badge" />
-        <DooRareBotAvatar size={38} />
-      </button>
+      {/* Floating Trigger Button (Hide when popup is open so it feels like a Messenger chat head) */}
+      {!isOpen && (
+        <button
+          className="doorare-chat-trigger-btn"
+          onClick={() => setIsOpen(true)}
+          title="DooRare AI Copilot"
+          aria-label="Open AI Copilot"
+        >
+          <span className="doorare-chat-pulse-badge" />
+          <DooRareBotAvatar size={38} />
+        </button>
+      )}
 
-      {/* Backdrop Overlay */}
-      <div
-        className={`doorare-chat-overlay ${isOpen ? 'open' : ''}`}
-        onClick={handleClose}
-      />
+      {/* Backdrop Overlay - Only active in Full Screen mode so normal popup does not block page */}
+      {isFullScreen && (
+        <div
+          className={`doorare-chat-overlay ${isOpen ? 'open' : ''}`}
+          onClick={handleClose}
+        />
+      )}
 
-      {/* Slide-out Drawer / Full Screen Container */}
+      {/* Messenger Floating Popup Window / Full Screen Container */}
       <div className={`doorare-chat-drawer ${isOpen ? 'open' : ''} ${isFullScreen ? 'fullscreen' : ''}`}>
         {/* Previous Sessions Sidebar (Visible in Fullscreen OR when showSessionsDrawer is toggled in Drawer mode) */}
         {((isFullScreen && !isSidebarCollapsed) || (!isFullScreen && showSessionsDrawer)) && (
@@ -735,6 +739,21 @@ export const DooRareChatDrawer: React.FC = () => {
                 ＋ แชทใหม่
               </button>
 
+              {/* Minimize button (Messenger style) */}
+              {!isFullScreen && (
+                <button
+                  type="button"
+                  className="doorare-chat-header-action-btn icon"
+                  onClick={() => setIsOpen(false)}
+                  title="ย่อหน้าต่างลงเป็นปุ่มแชท (Minimize)"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                  </svg>
+                </button>
+              )}
+
+              {/* Fullscreen / Restore toggle */}
               <button
                 type="button"
                 className="doorare-chat-header-action-btn icon"
@@ -744,11 +763,25 @@ export const DooRareChatDrawer: React.FC = () => {
                 }}
                 title={
                   isFullScreen
-                    ? 'ย่อหน้าต่าง (Minimize to Drawer)'
+                    ? 'ย่อเป็นหน้าต่าง Messenger (Minimize to Popup)'
                     : 'ขยายเต็มหน้าจอ (Full Screen like ChatGPT / Claude / Gemini)'
                 }
               >
-                {isFullScreen ? '⤡ ย่อ' : '⛶ เต็มจอ'}
+                {isFullScreen ? (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="4 14 10 14 10 20" />
+                    <polyline points="20 10 14 10 14 4" />
+                    <line x1="14" y1="10" x2="21" y2="3" />
+                    <line x1="3" y1="21" x2="10" y2="14" />
+                  </svg>
+                ) : (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="15 3 21 3 21 9" />
+                    <polyline points="9 21 3 21 3 15" />
+                    <line x1="21" y1="3" x2="14" y2="10" />
+                    <line x1="3" y1="21" x2="10" y2="14" />
+                  </svg>
+                )}
               </button>
 
               <button
