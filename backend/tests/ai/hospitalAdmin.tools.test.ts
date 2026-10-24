@@ -368,8 +368,40 @@ test('hospitalAdmin.tools: Proposals structure and no-mutation verification', as
     t.skip('No open return_obligation for WAIVE_RETURN_OBLIGATION test');
   }
 
-  // Action 2: APPROVE_INCIDENT_PLAN is tested in a separate skipped test below
-  // due to a real tool bug in hospitalAdmin.tools.ts (column "title" does not exist in table incident).
+  // Action 2: APPROVE_INCIDENT_PLAN failure paths
+  // Path 2a: Unknown incident UUID fails with clear error
+  const resUnknownInc = await defaultToolRegistry.executeTool(
+    'submit_hospital_admin_proposal',
+    {
+      action: 'APPROVE_INCIDENT_PLAN',
+      incidentId: '00000000-0000-0000-0000-000000000000',
+    },
+    ctx('SYSTEM_ADMIN'),
+  );
+  assert.equal(resUnknownInc.success, false);
+  assert.match(resUnknownInc.error ?? '', /Incident '00000000-0000-0000-0000-000000000000' not found/i);
+
+  // Path 2b: Incident exists in DB but has no plan in READY_FOR_APPROVAL (e.g. all 64 seed plans are APPROVED)
+  const existingIncRes = await query<{ id: string; hospital_id: string }>(
+    `SELECT id, hospital_id FROM incident LIMIT 1`,
+  );
+  if (existingIncRes.rows.length > 0) {
+    const inc = existingIncRes.rows[0];
+    const resNoReadyPlan = await defaultToolRegistry.executeTool(
+      'submit_hospital_admin_proposal',
+      {
+        action: 'APPROVE_INCIDENT_PLAN',
+        incidentId: inc.id,
+        note: 'Attempt approval with no plan ready',
+      },
+      ctx('HOSPITAL_ADMIN', { hospitalId: inc.hospital_id }),
+    );
+    assert.equal(resNoReadyPlan.success, false);
+    assert.match(
+      resNoReadyPlan.error ?? '',
+      /No emergency plan with status 'READY_FOR_APPROVAL' found for incident/i,
+    );
+  }
 
   // Action 3: ESCALATE_BORROW_MANUAL
   const brRes = await query<{ id: string; hospital_id: string }>(
@@ -413,10 +445,71 @@ test('hospitalAdmin.tools: Proposals structure and no-mutation verification', as
   );
 });
 
-test.skip('hospitalAdmin.tools: APPROVE_INCIDENT_PLAN proposal (Real tool bug in hospitalAdmin.tools.ts: table incident has no title column)', async () => {
-  // Line 601 in hospitalAdmin.tools.ts executes:
-  // SELECT id, hospital_id, title, status::text AS status FROM incident WHERE id = $1
-  // In specification/schema.sql lines 488-496, table incident has incident_no, incident_type, description, but NO title column.
+test('hospitalAdmin.tools: APPROVE_INCIDENT_PLAN proposal success-path', async (t) => {
+  const readyPlanRes = await query<{ incident_id: string; hospital_id: string; plan_id: string }>(
+    `SELECT ep.incident_id, i.hospital_id, ep.id AS plan_id
+       FROM emergency_plan ep
+       JOIN incident i ON i.id = ep.incident_id
+      WHERE ep.status = 'READY_FOR_APPROVAL'
+      LIMIT 1`,
+  );
+
+  if (readyPlanRes.rows.length === 0) {
+    const epCountRes = await query<{ c: string }>(
+      `SELECT COUNT(*)::text AS c FROM emergency_plan WHERE status = 'READY_FOR_APPROVAL'`,
+    );
+    t.skip(
+      `Seed database has 0 emergency plans with status READY_FOR_APPROVAL (found: ${epCountRes.rows[0].c})`,
+    );
+    return;
+  }
+
+  const rPlan = readyPlanRes.rows[0];
+  const snapIncident = await countRows('incident');
+  const snapPlan = await countRows('emergency_plan');
+
+  const resApprove = await defaultToolRegistry.executeTool(
+    'submit_hospital_admin_proposal',
+    {
+      action: 'APPROVE_INCIDENT_PLAN',
+      incidentId: rPlan.incident_id,
+      note: 'Executive approval following emergency committee review.',
+    },
+    ctx('HOSPITAL_ADMIN', { hospitalId: rPlan.hospital_id }),
+  );
+
+  assert.equal(resApprove.success, true);
+  assert.equal((resApprove.data as any).requiresHumanApproval, true);
+
+  const whitelistDef = WHITELIST.HOSPITAL_ADMIN.APPROVE_INCIDENT_PLAN;
+  const expectedEndpoint = buildEndpoint(whitelistDef.endpointTemplate, { id: rPlan.incident_id });
+  assert.equal(resApprove.proposal?.actionApi?.method, 'POST');
+  assert.equal(resApprove.proposal?.actionApi?.endpoint, expectedEndpoint);
+  assert.deepEqual(
+    Object.keys(resApprove.proposal?.actionApi?.payload || {}).sort(),
+    ['note', 'planId'].sort(),
+  );
+  assert.equal((resApprove.proposal?.actionApi?.payload as any).planId, rPlan.plan_id);
+  assert.equal(
+    (resApprove.proposal?.actionApi?.payload as any).note,
+    'Executive approval following emergency committee review.',
+  );
+
+  // Without note
+  const resNoNote = await defaultToolRegistry.executeTool(
+    'submit_hospital_admin_proposal',
+    {
+      action: 'APPROVE_INCIDENT_PLAN',
+      incidentId: rPlan.incident_id,
+    },
+    ctx('HOSPITAL_ADMIN', { hospitalId: rPlan.hospital_id }),
+  );
+  assert.equal(resNoNote.success, true);
+  assert.deepEqual(Object.keys(resNoNote.proposal?.actionApi?.payload || {}), ['planId']);
+
+  // No-mutation proof
+  assert.equal(await countRows('incident'), snapIncident, 'incident count must not change');
+  assert.equal(await countRows('emergency_plan'), snapPlan, 'emergency_plan count must not change');
 });
 
 test.after(async () => {
