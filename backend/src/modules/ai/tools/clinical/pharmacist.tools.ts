@@ -869,14 +869,14 @@ export const submitPharmacistProposalTool: IAgentTool<{
             };
           }
         } else if (args.actionType === 'SEND_POOL_TO_AGENT') {
-          // only the hospital that released the lot plans it (same rule as POST /pool/:id/agent-plan)
-          const lot = await query<{ hospital_id: string }>(
-            'SELECT ne.hospital_id FROM pool_entry pe JOIN near_expiry_item ne ON ne.id = pe.near_expiry_item_id WHERE pe.id = $1',
-            [args.targetId],
+          // the pool is shared: any pharmacist of the lot's region may send it to the agent (same rule as POST /pool/:id/agent-plan)
+          const lot = await query<{ same_region: boolean }>(
+            'SELECT pe.region_id = (SELECT region_id FROM hospital WHERE id = $2) AS same_region FROM pool_entry pe WHERE pe.id = $1',
+            [args.targetId, hospitalId],
           );
           if (lot.rows.length === 0) return { success: false, error: `Pool entry '${args.targetId}' not found.` };
-          if (!isSystemAdmin && lot.rows[0].hospital_id !== hospitalId) {
-            return { success: false, error: 'Permission denied: Only the hospital that released the lot can send it to the allocation agent.' };
+          if (!isSystemAdmin && !lot.rows[0].same_region) {
+            return { success: false, error: 'Permission denied: The pool lot belongs to another region.' };
           }
         } else if (args.actionType === 'OBJECT_ALLOCATION_PLAN') {
           // a hospital of the plan's region that is not in it yet (involved hospitals approve or reject instead)

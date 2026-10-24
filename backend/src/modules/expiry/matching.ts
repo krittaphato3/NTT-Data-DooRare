@@ -111,6 +111,26 @@ export interface DemandCandidate extends Receiver {
  * Receiver candidates of a pool lot (agent tool `get_demand_candidates`): hospitals of the region with a VERIFIED mapping, a WEEK
  * forecast with use > 0 and a distance row, each with the F-22 quantity it can use before expiry, in the F-22 greedy order.
  */
+/**
+ * Quantity already promised to a receiver by other open plans for the same drug (not yet received). It counts as incoming supply,
+ * so several lots of one drug allocated one after the other in a round never fill the same shortfall twice.
+ */
+async function plannedInbound(db: Db, receiverId: string, drugMasterId: string): Promise<number> {
+  const r = await db.query(
+    `SELECT COALESCE(sum(al.qty), 0)::float8 AS qty
+       FROM allocation_line al
+       JOIN allocation_plan ap ON ap.id = al.plan_id
+       JOIN pool_entry pe ON pe.id = ap.pool_entry_id
+       JOIN near_expiry_item ne ON ne.id = pe.near_expiry_item_id
+       JOIN stock_lot sl ON sl.id = ne.lot_id
+       JOIN hospital_drug hd ON hd.id = sl.hospital_drug_id
+      WHERE al.receiver_hospital_id = $1 AND hd.drug_master_id = $2 AND ap.status::text = ANY($3::text[])
+        AND NOT EXISTS (SELECT 1 FROM transport_task tt WHERE tt.ref_type = 'ALLOCATION_LINE' AND tt.ref_id = al.id AND tt.status::text IN ('RECEIVED', 'CANCELLED'))`,
+    [receiverId, drugMasterId, ACTIVE_PLAN],
+  );
+  return Number(r.rows[0].qty);
+}
+
 export async function demandCandidates(db: Db, pool: PoolLot, today = new Date()): Promise<{ life: number; candidates: DemandCandidate[] }> {
   const cfg = await loadExpiryConfig(db, pool.origin_id);
   const life = remainingDays(new Date(pool.expiry_date), today);
@@ -133,7 +153,7 @@ export async function demandCandidates(db: Db, pool: PoolLot, today = new Date()
     const tt = fc?.total_target ?? fc?.p50 ?? null;
     if (!fc || !(fc.u > 0) || tt === null) continue;
     const incoming = await incomingOrders(db, listing.id);
-    const r: Receiver = { hospitalId: c.id, totalTarget: tt, stock: await usableStock(db, listing.id), incoming: incoming.qty, usePerDay: fc.u, transitDays: c.minutes / 1440 };
+    const r: Receiver = { hospitalId: c.id, totalTarget: tt, stock: await usableStock(db, listing.id), incoming: incoming.qty + (await plannedInbound(db, c.id, pool.drug_master_id)), usePerDay: fc.u, transitDays: c.minutes / 1440 };
     receivers.push({ ...r, code: c.code, name: c.name, km: c.km, networkId: c.network_id, cap: allocateToReceiver(r, life, pool.qty_available), transportCostThb: transportCost(c.km, pool.cold_chain, cfg.cost) });
   }
   const order = greedyOrder(receivers).map((r) => r.hospitalId);

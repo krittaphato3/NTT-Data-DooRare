@@ -254,6 +254,7 @@ export class PlansService {
       ok: true,
       items: slice.items.map((r) => ({
         id: r.id,
+        itemId: r.item_id,
         drug: { name: r.drug_name, localCode: r.local_code, ved: r.ved, unit: r.unit },
         lotNo: r.lot_no,
         expiryDate: r.expiry_date,

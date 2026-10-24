@@ -50,7 +50,7 @@ const readTools = (poolId = POOL_ID): LLMResponse => ({
 });
 const reply = (content: string): LLMResponse => ({ content, model: 'scripted', usage: { promptTokens: 100, completionTokens: 50, totalTokens: 150 } });
 
-test('allocation agent: a proposal copying max_qty of listed receivers passes G-01, G-04 and G-03', () => {
+test('allocation agent: a proposal within the max_qty caps of listed receivers passes G-01, G-04 and G-03', () => {
   const r = validateAllocationProposal('```json\n' + answer([{ receiver_hospital_id: Y, qty: 300 }, { receiver_hospital_id: X, qty: 400 }]) + '\n```', POOL_ID, candidates);
   assert.equal(r.ok, true);
   assert.deepEqual(r.lines, [{ receiverHospitalId: Y, qty: 300 }, { receiverHospitalId: X, qty: 400 }]);
@@ -72,11 +72,23 @@ test('allocation agent: changed numbers, unknown or infeasible receivers and ext
   assert.equal(validateAllocationProposal('ส่งให้ HY ทั้งหมด', POOL_ID, candidates).ok, false);
 });
 
+test('allocation agent: the agent may choose smaller quantities, but not above a cap or the pool total', () => {
+  const partial = validateAllocationProposal(answer([{ receiver_hospital_id: Y, qty: 200 }, { receiver_hospital_id: X, qty: 100 }]), POOL_ID, candidates, 600);
+  assert.equal(partial.ok, true);
+  assert.deepEqual(partial.lines, [{ receiverHospitalId: Y, qty: 200 }, { receiverHospitalId: X, qty: 100 }]);
+  const tooMuch = validateAllocationProposal(answer([{ receiver_hospital_id: Y, qty: 300 }, { receiver_hospital_id: X, qty: 400 }]), POOL_ID, candidates, 600);
+  assert.equal(tooMuch.ok, false, 'sum 700 > pool 600');
+  assert.equal(tooMuch.hits.at(-1)?.rule, 'G-03');
+  for (const [qty, rule] of [[0, 'G-03'], [12.5, 'G-03'], [-5, 'G-01']] as const) {
+    assert.equal(validateAllocationProposal(answer([{ receiver_hospital_id: Y, qty }]), POOL_ID, candidates, 600).hits.at(-1)?.rule, rule, String(qty));
+  }
+});
+
 test('allocation agent: reads both tools, then its valid split is used (status OK)', async () => {
-  const llm = new ScriptedProvider([readTools(), reply(answer([{ receiver_hospital_id: Y, qty: 300 }, { receiver_hospital_id: X, qty: 400 }]))]);
+  const llm = new ScriptedProvider([readTools(), reply(answer([{ receiver_hospital_id: Y, qty: 300 }, { receiver_hospital_id: X, qty: 300 }]))]);
   const run = await runAgent(pool, 40, candidates, llm);
   assert.equal(run.status, 'OK');
-  assert.deepEqual(run.lines, [{ receiverHospitalId: Y, qty: 300 }, { receiverHospitalId: X, qty: 400 }]);
+  assert.deepEqual(run.lines, [{ receiverHospitalId: Y, qty: 300 }, { receiverHospitalId: X, qty: 300 }]);
   assert.deepEqual(run.calls.map((c) => [c.tool, c.error]), [['get_pool_entry', null], ['get_demand_candidates', null]]);
   const tool = (run.calls[1].result as { candidates: { receiver_hospital_id: string; max_qty: number; can_use_before_expiry: boolean }[] }).candidates;
   assert.deepEqual(tool.map((c) => [c.receiver_hospital_id, c.max_qty, c.can_use_before_expiry]), [[X, 400, true], [Y, 300, true], [Z, 0, false]]);

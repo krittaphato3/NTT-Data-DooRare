@@ -15,6 +15,8 @@ const pharmacist = requireRole('PHARMACIST');
 
 export const nearExpiryRouter = Router();
 nearExpiryRouter.get('/', requireAuth, readers, asyncHandler(async (req, res) => res.json(await nearExpiryService.list(req.user!, req.query))));
+// Demo / on-demand run of the same scan the server runs on a timer (JOB-05): picks up lots that entered the threshold since the last run.
+nearExpiryRouter.post('/scan', requireAuth, requireRole('PHARMACIST', 'HOSPITAL_ADMIN'), asyncHandler(async (_req, res) => res.json({ ok: true, ...(await runExpiryJobs()) })));
 nearExpiryRouter.post('/:id/release', requireAuth, pharmacist, idempotent(), asyncHandler(async (req, res) => res.json(await nearExpiryService.release(req, req.params.id))));
 nearExpiryRouter.post('/:id/keep', requireAuth, pharmacist, asyncHandler(async (req, res) => res.json(await nearExpiryService.keep(req, req.params.id))));
 nearExpiryRouter.post('/:id/dismiss', requireAuth, pharmacist, asyncHandler(async (req, res) => res.json(await nearExpiryService.dismiss(req, req.params.id))));
