@@ -243,7 +243,8 @@ export function AllocationDrawer({ plan: p, decision, onApprove, onApproveAll, o
         </div>
 
         {/* Decision area */}
-        {decision ? (
+        {/* A live plan the viewer can still approve keeps its controls (choosing the cost option leaves the approval open); the message replaces them only once nothing is left to do. */}
+        {decision && !(L && canApprove) ? (
           <div role="status" className="pl-done">
             <Icon name="checkc" className="ic20" style={{ color: '#166534' }} />
             <span>{decision}</span>
