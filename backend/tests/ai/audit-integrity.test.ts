@@ -9,8 +9,9 @@
  *   Thai UTF-8 strings and tamper sensitivity independent of table state).
  * - Test 4 (Bounded window topology): NON-VACUOUS in design, but VACUOUS in execution on seed DB;
  *   explicitly isolates window assertions in a conditional subtest that skips when row count is 0.
- * - Test 5 (verify_tamper_evidence tool): VACUOUS regarding row content, but NON-VACUOUS
- *   regarding registry execution, RBAC gate, and output contract consistency.
+ * - Test 5 (verify_tamper_evidence tool): With an empty audit_log, it compares 0 to 0 and is
+ *   therefore vacuous for hash correctness (though NON-VACUOUS regarding registry execution,
+ *   RBAC gate, and output contract consistency).
  * - Test 6 (Synthetic chain verification): NON-VACUOUS (pure unit verification of intact chain,
  *   field modification, middle-row deletion, row reordering, and forks).
  */
@@ -152,7 +153,11 @@ test('audit-integrity: 4. Bounded window topology and Map-by-row_hash verificati
 
   // If rows exist, test bounded window analysis
   const analysis = analyzeAuditWindow(windowRows);
-  assert.ok(analysis.edgeRows >= 0, 'Analysis must report edge rows count');
+  assert.equal(
+    analysis.linkedPairs + analysis.edgeRows + analysis.genesisCandidatesInWindow,
+    windowRows.length,
+    'Window row partition invariant: linkedPairs + edgeRows + genesisCandidatesInWindow must equal windowRows.length',
+  );
   assert.equal(analysis.anomalies.length, 0, 'No hash chain anomalies expected in seed data');
 
   // Independent Map-by-row_hash verification
