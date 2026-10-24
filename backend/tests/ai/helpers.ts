@@ -131,3 +131,13 @@ export async function countRows(
  * Re-export the proposal action whitelist for governance tests.
  */
 export const WHITELIST = PROPOSAL_ACTION_WHITELIST;
+
+/**
+ * Safely parses an unknown / string value into a number with a fallback.
+ */
+export function toNumber(val: unknown, fallback = 0): number {
+  if (val === null || val === undefined) return fallback;
+  const n = Number(val);
+  return Number.isNaN(n) ? fallback : n;
+}
+
