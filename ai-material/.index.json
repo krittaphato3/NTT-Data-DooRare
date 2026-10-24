@@ -168,6 +168,13 @@
     "date": "2026-10-24"
   },
   {
+    "path": "sessions/2026-10-25-0010-claude-incident-console-live-only.md",
+    "title": "Session: Incident console live only",
+    "summary": "Removed mock console for pharmacist/HA; view-only live data.",
+    "tags": "session, frontend, incident, er, mock-removal",
+    "date": "2026-10-25"
+  },
+  {
     "path": "sessions/2026-10-23-0825-claude-forecast-scheduled-predict-job.md",
     "title": "Forecast scheduled predict job (Option A + Option B dynamic DB export)",
     "summary": "Option B completed: Postgres usage & snapshot streaming export -> predict up…",
