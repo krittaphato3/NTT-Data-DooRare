@@ -99,3 +99,47 @@ test('ToolRegistry filters ToolDefinition list by role', () => {
   const adminDefs = registry.getToolDefinitionsForRole('SYSTEM_ADMIN');
   assert.equal(adminDefs.length, 2);
 });
+
+test('zodToJsonSchema converts z.record and z.preprocess to object type', () => {
+  const schema = z.object({
+    recordField: z.record(z.string(), z.unknown()).describe('Record field'),
+    preprocessedRecord: z.preprocess((v) => v, z.record(z.string(), z.unknown())).describe('Preprocessed record'),
+  });
+
+  const jsonSchema = zodToJsonSchema(schema);
+  assert.equal((jsonSchema.properties.recordField as any).type, 'object');
+  assert.equal((jsonSchema.properties.preprocessedRecord as any).type, 'object');
+});
+
+test('ToolRegistry automatically parses stringified JSON properties in arguments', async () => {
+  const registry = new ToolRegistry();
+  const testTool: IAgentTool<{
+    title: string;
+    payload: Record<string, unknown>;
+  }> = {
+    name: 'test_json_prop_tool',
+    description: 'Test tool',
+    parameters: z.object({
+      title: z.string(),
+      payload: z.record(z.string(), z.unknown()),
+    }),
+    allowedRoles: ['*'],
+    execute: async (args) => {
+      return { success: true, data: args.payload };
+    },
+  };
+
+  registry.register(testTool);
+
+  const res = await registry.executeTool(
+    'test_json_prop_tool',
+    {
+      title: 'Testing',
+      payload: JSON.stringify({ requiredUnits: 3, bloodType: 'A Neg' }),
+    },
+    { role: 'SYSTEM_ADMIN' },
+  );
+
+  assert.equal(res.success, true);
+  assert.deepEqual(res.data, { requiredUnits: 3, bloodType: 'A Neg' });
+});

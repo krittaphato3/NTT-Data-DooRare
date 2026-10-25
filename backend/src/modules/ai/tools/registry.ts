@@ -20,25 +20,41 @@ export function zodToJsonSchema(schema: z.ZodObject<any>): ToolJsonSchema['param
     let typeStr = 'string';
     let description: string | undefined;
 
-    // Unpack optional/nullable/default if wrapped
+    // Unpack optional/nullable/default/effects/preprocess if wrapped
     let inner: any = zodType;
     while (
       inner instanceof z.ZodOptional ||
       inner instanceof z.ZodNullable ||
-      inner instanceof z.ZodDefault
+      inner instanceof z.ZodDefault ||
+      inner._def?.innerType ||
+      inner._def?.schema ||
+      inner._def?.out
     ) {
-      inner = inner._def.innerType;
+      if (inner._def?.innerType) {
+        inner = inner._def.innerType;
+      } else if (inner._def?.schema) {
+        inner = inner._def.schema;
+      } else if (inner._def?.out) {
+        inner = inner._def.out;
+      } else {
+        break;
+      }
     }
 
     description = zodType.description || inner.description;
 
-    if (inner instanceof z.ZodNumber) {
+    if (inner instanceof z.ZodNumber || inner._def?.type === 'number') {
       typeStr = 'number';
-    } else if (inner instanceof z.ZodBoolean) {
+    } else if (inner instanceof z.ZodBoolean || inner._def?.type === 'boolean') {
       typeStr = 'boolean';
-    } else if (inner instanceof z.ZodArray) {
+    } else if (inner instanceof z.ZodArray || inner._def?.type === 'array') {
       typeStr = 'array';
-    } else if (inner instanceof z.ZodObject) {
+    } else if (
+      inner instanceof z.ZodObject ||
+      inner instanceof z.ZodRecord ||
+      inner._def?.type === 'object' ||
+      inner._def?.type === 'record'
+    ) {
       typeStr = 'object';
     }
 
@@ -150,7 +166,24 @@ export class ToolRegistry {
     // Parse and validate arguments against Zod schema
     let parsedArgs: unknown;
     try {
-      const argsToParse = typeof argsRaw === 'string' ? JSON.parse(argsRaw) : argsRaw || {};
+      let argsToParse = typeof argsRaw === 'string' ? JSON.parse(argsRaw) : argsRaw || {};
+      if (argsToParse && typeof argsToParse === 'object' && !Array.isArray(argsToParse)) {
+        for (const [k, v] of Object.entries(argsToParse)) {
+          if (typeof v === 'string') {
+            const trimmed = v.trim();
+            if (
+              (trimmed.startsWith('{') && trimmed.endsWith('}')) ||
+              (trimmed.startsWith('[') && trimmed.endsWith(']'))
+            ) {
+              try {
+                (argsToParse as Record<string, unknown>)[k] = JSON.parse(trimmed);
+              } catch {
+                // leave as string
+              }
+            }
+          }
+        }
+      }
       const parsed = tool.parameters.safeParse(argsToParse);
       if (!parsed.success) {
         return {

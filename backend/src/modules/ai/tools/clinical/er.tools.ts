@@ -568,13 +568,48 @@ export const submitErActionProposalTool: IAgentTool<{
       .describe('Whitelisted emergency action type'),
     title: z.string().describe('Short title for the emergency proposal'),
     description: z.string().describe('Detailed emergency justification'),
-    summary: z.record(z.string(), z.unknown()).describe('Key-value summary of casualties, kit counts, or antidotes'),
+    summary: z
+      .preprocess((val) => {
+        if (typeof val === 'string') {
+          try {
+            const parsed = JSON.parse(val);
+            if (parsed && typeof parsed === 'object') return parsed;
+          } catch {
+            // Not valid JSON, split key-values or turn into key: summary
+            const obj: Record<string, unknown> = {};
+            const parts = val.split(/[;\n,]+/);
+            for (const part of parts) {
+              const [k, ...v] = part.split(/[:=]/);
+              if (k && v.length > 0) {
+                const rawVal = v.join(':').trim();
+                const num = Number(rawVal);
+                obj[k.trim()] = !isNaN(num) && rawVal !== '' ? num : rawVal;
+              }
+            }
+            if (Object.keys(obj).length > 0) return obj;
+            return { note: val };
+          }
+        }
+        return val ?? {};
+      }, z.record(z.string(), z.unknown()))
+      .describe('Key-value summary of casualties, kit counts, or antidotes (e.g. {"casualties": 3, "bloodType": "A Negative"})'),
     targetId: z
       .string()
       .uuid()
       .optional()
       .describe('Target incident UUID if linking dispatch or borrow to an incident'),
-    payload: z.record(z.string(), z.unknown()).describe('Action-specific payload parameters'),
+    payload: z
+      .preprocess((val) => {
+        if (typeof val === 'string') {
+          try {
+            return JSON.parse(val);
+          } catch {
+            return { raw: val };
+          }
+        }
+        return val ?? {};
+      }, z.record(z.string(), z.unknown()))
+      .describe('Action-specific payload parameters'),
   }),
   allowedRoles: ['ER_STAFF', 'PHARMACIST', 'SYSTEM_ADMIN'],
   execute: async (args, context: RequestContext): Promise<ToolResult> => {
@@ -638,8 +673,38 @@ export const submitErActionProposalTool: IAgentTool<{
         }
       }
 
+      // Prepare sanitized and normalized payload
+      const rawPayload = (args.payload || {}) as Record<string, unknown>;
+      const payloadToValidate: Record<string, unknown> = { ...rawPayload };
+
+      if (args.actionType === 'DECLARE_INCIDENT') {
+        if (!payloadToValidate.title && args.title) {
+          payloadToValidate.title = args.title;
+        }
+        if (!payloadToValidate.description && args.description) {
+          payloadToValidate.description = args.description;
+        }
+        if (payloadToValidate.patientCounts && typeof payloadToValidate.patientCounts === 'object') {
+          const counts: Record<string, number> = {};
+          for (const [k, v] of Object.entries(payloadToValidate.patientCounts as Record<string, unknown>)) {
+            const num = Number(v);
+            if (!isNaN(num)) counts[k.toUpperCase()] = Math.max(0, Math.round(num));
+          }
+          payloadToValidate.patientCounts = counts;
+        }
+      }
+
+      if (args.actionType === 'REQUEST_URGENT_ANTIDOTE') {
+        if (!payloadToValidate.reason) {
+          payloadToValidate.reason = args.description || args.title || 'Emergency antidote/blood borrow request';
+        }
+        if (effectiveIncidentId && !payloadToValidate.incidentId) {
+          payloadToValidate.incidentId = effectiveIncidentId;
+        }
+      }
+
       // Validate payload schema
-      const parseRes = actionDef.payloadSchema.safeParse(args.payload);
+      const parseRes = actionDef.payloadSchema.safeParse(payloadToValidate);
       if (!parseRes.success) {
         return {
           success: false,

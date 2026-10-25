@@ -821,7 +821,55 @@ test('submitErActionProposalTool: validates targetId requirement and foreign own
     { role: 'ER_STAFF', hospitalId: hosp.id },
   );
   assert.equal(noTargetRes.success, false);
-  assert.match(noTargetRes.error || '', /incidentId.*is required/i);
+  assert.match(noTargetRes.error || '', /targetId.*required/i);
+});
+
+test('submitErActionProposalTool: handles string summary and stringified JSON payload via ToolRegistry', async () => {
+  const hosp = (await query('SELECT id FROM hospital WHERE active = true LIMIT 1')).rows[0];
+
+  const res = await defaultToolRegistry.executeTool(
+    'submit_er_action_proposal',
+    {
+      actionType: 'DECLARE_INCIDENT',
+      title: 'Blood A Negative Emergency Incident',
+      description: 'Trauma incident with 3 male casualties aged 23-30 years',
+      summary: 'Casualties: 3; Blood Type: A Negative; Action: Urgent borrow request; Critical: Yes',
+      payload: JSON.stringify({
+        title: 'Trauma Collision Incident',
+        eventType: 'MASS_CASUALTY',
+        patientCounts: { RED: 3 },
+      }),
+    },
+    { role: 'ER_STAFF', hospitalId: hosp.id, userId: 'test-user-er' },
+  );
+
+  assert.equal(res.success, true);
+  assert.ok(res.proposal);
+  assert.equal(res.proposal?.type, 'DECLARE_INCIDENT');
+  assert.equal((res.proposal?.summary as any).Casualties, 3);
+});
+
+test('submitErActionProposalTool: auto-populates title and description in payload for DECLARE_INCIDENT', async () => {
+  const hosp = (await query('SELECT id FROM hospital WHERE active = true LIMIT 1')).rows[0];
+
+  const res = await submitErActionProposalTool.execute(
+    {
+      actionType: 'DECLARE_INCIDENT',
+      title: 'Emergency Auto Title Incident',
+      description: 'Auto description for trauma incident',
+      summary: { casualties: 3 },
+      payload: {
+        eventType: 'TRAUMA',
+        patientCounts: { RED: 3 },
+      },
+    },
+    { role: 'ER_STAFF', hospitalId: hosp.id },
+  );
+
+  assert.equal(res.success, true);
+  assert.ok(res.proposal);
+  assert.equal((res.proposal?.actionApi.payload as any).title, 'Emergency Auto Title Incident');
+  assert.equal((res.proposal?.actionApi.payload as any).description, 'Auto description for trauma incident');
 });
 
 test('Task 9: clinicalTools collection contains exactly 12 tools with unique names', () => {

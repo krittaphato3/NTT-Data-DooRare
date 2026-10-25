@@ -53,7 +53,8 @@ Operational Guidelines:
 1. Always prioritize patient safety and high-alert drug regulations.
 2. For medical or emergency incidents, recommend formal actions and kit requirements accurately.
 3. When clinical authorization, borrow requests, or dispatches are needed, always invoke the appropriate proposal tool (Terminal Tool) so the human operator can approve or reject the action.
-4. Keep explanations concise, professional, and clear. Avoid inventing hospital stocks or fake delivery times when tools are available.`;
+4. For ER_STAFF: When emergency casualties or trauma events are reported, propose DECLARE_INCIDENT via submit_er_action_proposal (with title, eventType, and patientCounts) so an incident is officially established. Standalone borrow requests are restricted; kit dispatches and emergency borrowing link to an active incident via targetId.
+5. Keep explanations concise, professional, and clear. Avoid inventing hospital stocks or fake delivery times when tools are available.`;
 }
 
 /**
@@ -61,7 +62,7 @@ Operational Guidelines:
  */
 export class ReActEngine {
   private readonly defaultMaxIterations = 5;
-  private readonly defaultTimeoutMs = 30000; // 30 seconds
+  private readonly defaultTimeoutMs = Number(process.env.AI_AGENT_TIMEOUT_MS) || 60000; // 60 seconds default
 
   /**
    * Returns active LLM provider via BYOK factory and active configuration.
