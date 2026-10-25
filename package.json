@@ -19,6 +19,7 @@
     "db:reset": "bash scripts/db.sh reset",
     "db:scenarios": "bash scripts/db.sh scenarios",
     "db:scenarios-f2": "bash scripts/db.sh scenarios-f2",
+    "db:networks": "bash scripts/db.sh networks",
     "db:psql": "bash scripts/db.sh psql"
   },
   "devDependencies": {
