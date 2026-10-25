@@ -10,6 +10,7 @@ import type { AuditContext } from '../../core/audit.js';
 import { notifyRoles } from '../../core/notify.js';
 import { loadBorrowConfig } from './borrow.config.js';
 import { usableStock } from './borrow.inputs.js';
+import type { AgentInfo } from './borrow.agent.js';
 import type { LadderEntry } from './borrow.ladder.js';
 
 export const CONFIRMED_STATUSES = ['ACCEPTED', 'PARTIAL', 'LOADED', 'IN_TRANSIT'] as const;
@@ -33,6 +34,8 @@ export interface StoredLadder {
   drafts: Record<string, string>;
   parallel: boolean;
   builtAt: string;
+  /** AGT-F1 result of the proposal (who the agent chose and why); absent when the agent was not used. */
+  agent?: AgentInfo & { runId?: string };
 }
 
 /** The ladder frozen by this module; seed rows written before F1b hold an older array shape and count as "no ladder". */

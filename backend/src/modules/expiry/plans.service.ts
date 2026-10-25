@@ -18,6 +18,9 @@ import { withTransaction } from '../../db/tx.js';
 import type { Db } from '../../db/tx.js';
 import { HttpError } from '../../middleware/httpError.js';
 import type { AuthSessionUser } from '../auth/auth.types.js';
+import { costCheck } from '../../core/formulas/expiry.js';
+import { round } from '../../core/formulas/borrow.js';
+import { loadExpiryConfig } from './expiry.config.js';
 import { createPlanFromAgentProposal, demandCandidates, loadPoolLot, poolLotBlocker, startTransport } from './matching.js';
 import type { AgentProposal, PoolLot } from './matching.js';
 
@@ -397,6 +400,85 @@ export class PlansService {
       await logDecision(client, plan, 'OBJECTED', reason, user.id, 'object');
       const name = (await client.query(`SELECT COALESCE(name_th, name_en) AS name FROM hospital WHERE id = $1`, [hospitalId])).rows[0]?.name ?? 'โรงพยาบาลในเขต';
       await notifyInvolved(client, id, 'PLAN_OBJECTION', `${name} คัดค้านแผนจัดสรร ${plan.plan_no} · ต้องหารือ`, reason);
+      const fresh = await loadPlan(client, id, user);
+      const data = (await planViews(client, [fresh], user))[0];
+      return { ok: true, id, version: data.version, data };
+    });
+  }
+
+  /**
+   * `POST /allocation-plans/{id}/revise`: an involved pharmacist changes the split of a plan that is still open (READY_FOR_APPROVAL /
+   * NEEDS_DISCUSSION), e.g. after the discussion. The code re-checks every line like a new plan (F-22 cap, pool quantity), recomputes
+   * value / transport cost / F-23, bumps the version and asks every involved hospital to approve again (the reviser's own approval is
+   * given with the change). When all have approved, the transport starts as usual (`decision`).
+   */
+  async revise(req: Request, rawId: string) {
+    const user = req.user!;
+    const hospitalId = mustBePharmacist(user);
+    const id = uuidParam(rawId, 'id');
+    const body = bodyObject(req.body);
+    const lines = parseLines(body.lines);
+    const version = optionalNumber(body.version, 'version', { min: 1 });
+    if (version === undefined) throw new HttpError(400, 'VALIDATION', 'ต้องระบุ version');
+    const note = typeof body.note === 'string' ? body.note.trim() : '';
+    if (note.length < 3) throw new HttpError(400, 'VALIDATION', 'ต้องระบุเหตุผล/ผลการหารือ (อย่างน้อย 3 ตัวอักษร)');
+    return withTransaction(async (client) => {
+      const plan = await loadPlan(client, id, user, true);
+      if (!OPEN_FOR_APPROVAL.includes(plan.status)) throw new HttpError(409, 'ALREADY_DECIDED', `แผนอยู่ในสถานะ ${plan.status} แก้ยอดไม่ได้`);
+      assertVersion(plan, version);
+      if (!(await client.query(`SELECT 1 FROM plan_approval WHERE plan_id = $1 AND hospital_id = $2`, [id, hospitalId])).rowCount) {
+        throw new HttpError(403, 'FORBIDDEN', 'เฉพาะโรงพยาบาลที่อยู่ในแผนนี้แก้ยอดได้');
+      }
+      const oldLines = (await client.query(`SELECT receiver_hospital_id, qty::float8 AS qty FROM allocation_line WHERE plan_id = $1`, [id])).rows;
+      const oldTotal = oldLines.reduce((s, l) => s + Number(l.qty), 0);
+      // give the plan's own quantity back to the pool and drop its lines: the candidates are then computed as for a new plan (its own lines are not counted as incoming)
+      await client.query(`DELETE FROM allocation_line WHERE plan_id = $1`, [id]);
+      await client.query(`UPDATE pool_entry SET qty_available = qty_available + $2 WHERE id = $1`, [plan.pool_id, oldTotal]);
+      const lot = (await loadPoolLot(client, plan.pool_id, true))!;
+      const cfg = await loadExpiryConfig(client, lot.origin_id);
+      const { candidates } = await demandCandidates(client, lot);
+      const total = lines.reduce((s, l) => s + l.qty, 0);
+      if (total > lot.qty_available) throw new HttpError(422, 'OVER_POOL', `รวม ${total} เกินจำนวนที่จัดสรรได้ (${lot.qty_available} ${lot.unit})`);
+      const built = lines.map((l) => {
+        const c = candidates.find((x) => x.hospitalId === l.receiverHospitalId);
+        if (!c?.cap) throw new HttpError(422, 'NOT_A_CANDIDATE', `${c?.name ?? 'โรงพยาบาลนี้'} ใช้ยานี้ไม่ทันก่อนหมดอายุ หรือไม่มีรายการยาที่จับคู่แล้ว/ผลพยากรณ์`);
+        if (l.qty > c.cap.qty) throw new HttpError(422, 'OVER_CAP', `${c.name} ใช้ได้ก่อนหมดอายุไม่เกิน ${c.cap.qty} ${lot.unit} (F-22)`);
+        return { receiverId: c.hospitalId, qty: l.qty, km: c.km, cost: c.transportCostThb, value: round(l.qty * lot.unit_price, 2) };
+      });
+      const totalValue = round(built.reduce((s, l) => s + l.value, 0), 2);
+      const totalCost = round(built.reduce((s, l) => s + l.cost, 0), 2);
+      const check = costCheck(totalCost, totalValue, cfg.cost.ratioMax);
+      for (const l of built) {
+        await client.query(
+          `INSERT INTO allocation_line (plan_id, receiver_hospital_id, qty, value_thb, expected_use_before_expiry, distance_km, transport_cost_thb, cold_chain) VALUES ($1, $2, $3, $4, true, $5, $6, $7)`,
+          [id, l.receiverId, l.qty, l.value, l.km, l.cost, lot.cold_chain],
+        );
+      }
+      await client.query(`UPDATE pool_entry SET qty_available = qty_available - $2 WHERE id = $1`, [plan.pool_id, total]);
+      // approvals: the owner and the new receivers take part; former receivers that dropped out leave, outside objectors stay. Everybody approves again.
+      const keep = new Set<string>([lot.origin_id, ...built.map((l) => l.receiverId)]);
+      const formerReceivers = oldLines.map((l) => l.receiver_hospital_id as string).filter((h) => !keep.has(h));
+      if (formerReceivers.length) await client.query(`DELETE FROM plan_approval WHERE plan_id = $1 AND hospital_id = ANY($2::uuid[])`, [id, formerReceivers]);
+      for (const h of keep) {
+        await client.query(
+          `INSERT INTO plan_approval (plan_id, hospital_id, decision) VALUES ($1, $2, 'PENDING') ON CONFLICT (plan_id, hospital_id) DO NOTHING`,
+          [id, h],
+        );
+      }
+      await client.query(`UPDATE plan_approval SET decision = 'PENDING', decided_by = NULL, decided_at = NULL, comment = NULL WHERE plan_id = $1`, [id]);
+      await client.query(`UPDATE plan_approval SET decision = 'APPROVED', decided_by = $3, decided_at = now(), comment = $4 WHERE plan_id = $1 AND hospital_id = $2`, [id, hospitalId, user.id, `ปรับยอดจัดสรร: ${note}`]);
+      await client.query(
+        `UPDATE allocation_plan SET status = 'READY_FOR_APPROVAL', total_value_thb = $2, total_transport_cost_thb = $3, cost_ratio = $4, economical = $5, option_chosen = NULL,
+                approval_deadline = now() + make_interval(hours => $6::int), updated_at = now(), version = version + 1 WHERE id = $1`,
+        [id, totalValue, totalCost, check.ratio === null ? null : Math.min(check.ratio, 99.9999), !check.uneconomical, cfg.planApprovalTimeoutH],
+      );
+      await writeAudit(client, auditContext(req), {
+        action: 'PLAN_REVISED', entityType: 'allocation_plan', entityId: id, reason: note,
+        before: { status: plan.status, lines: oldLines.map((l) => ({ to: l.receiver_hospital_id, qty: l.qty })) },
+        after: { hospital: hospitalId, planNo: plan.plan_no, lines: built.map((l) => ({ to: l.receiverId, qty: l.qty, cost: l.cost })), totalValue, totalCost, economical: !check.uneconomical },
+      });
+      await logDecision(client, plan, 'REVISED', note, user.id, 'revise');
+      await notifyInvolved(client, id, 'PLAN_APPROVAL_REQUEST', `แผนจัดสรร ${plan.plan_no} ปรับยอดแล้ว · รอเห็นชอบอีกครั้ง`, note);
       const fresh = await loadPlan(client, id, user);
       const data = (await planViews(client, [fresh], user))[0];
       return { ok: true, id, version: data.version, data };

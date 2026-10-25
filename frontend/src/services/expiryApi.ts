@@ -161,6 +161,8 @@ export const getPoolCandidates = (id: string) => apiJson<{ ok: true; data: ApiPo
 /** AGT-F2-001: the allocation agent proposes the split (the code checks it, or uses its own F-22 split as fallback). */
 export const sendPoolToAgent = (id: string) => post<{ ok: true; data: ApiAgentPlanResult }>(`/pool/${id}/agent-plan`);
 export const createAllocationPlan = (poolEntryId: string, lines: { receiverHospitalId: string; qty: number }[]) => post<One<ApiPlan>>('/allocation-plans', { poolEntryId, lines });
+/** An involved pharmacist changes the split of an open plan; every hospital then approves again (the reviser's own approval is included). */
+export const revisePlan = (id: string, version: number, lines: { receiverHospitalId: string; qty: number }[], note: string) => post<One<ApiPlan>>(`/allocation-plans/${id}/revise`, { version, lines, note });
 export const objectPlan = (id: string, reason: string) => post<One<ApiPlan>>(`/allocation-plans/${id}/objection`, { reason });
 export const cancelPlan = (id: string, reason: string) => post<One<ApiPlan> & { state: 'CANCEL_REQUESTED' | 'CANCELLED' }>(`/allocation-plans/${id}/cancel`, { reason });
 

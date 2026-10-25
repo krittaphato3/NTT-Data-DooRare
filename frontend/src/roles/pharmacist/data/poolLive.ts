@@ -81,7 +81,7 @@ export function planToView(p: ApiPlan): AllocationPlan {
       option: p.option,
       options: p.options,
       cancelRequestedBy: p.cancelRequestedBy,
-      lines: p.lines.map((l) => ({ receiver: short(l.receiver.name), qty: l.qty, km: l.distanceKm, cost: l.transportCostThb, taskNo: l.task?.taskNo ?? null })),
+      lines: p.lines.map((l) => ({ receiver: short(l.receiver.name), receiverId: l.receiver.id, qty: l.qty, km: l.distanceKm, cost: l.transportCostThb, taskNo: l.task?.taskNo ?? null })),
       openForApproval: p.status === 'READY_FOR_APPROVAL' || p.status === 'NEEDS_DISCUSSION',
       involved: p.involved,
       isParty: p.myKind === 'ORIGIN' || p.myKind === 'RECEIVER',

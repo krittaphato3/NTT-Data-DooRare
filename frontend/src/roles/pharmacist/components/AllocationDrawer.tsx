@@ -10,6 +10,8 @@ interface AllocationDrawerProps {
   decision?: string;
   onApprove: () => void;
   onApproveAll?: (resolutionNote: string, lines?: { receiver: string; qty: number }[]) => void;
+  /** Live plans: change the split and ask every hospital to approve again (qty 0 drops a receiver). */
+  onRevise?: (note: string, lines: { receiverHospitalId: string; qty: number }[]) => void;
   onUneconomical: (label: string, optionId?: string) => void;
   /** Live plans only (API-F2a-009 / -011). */
   onReject?: (comment: string) => void;
@@ -24,7 +26,7 @@ interface AllocationDrawerProps {
 }
 
 /** UI-09 Allocation plan review — F-22 feasibility, F-23 economics, approval chain. */
-export function AllocationDrawer({ plan: p, decision, onApprove, onApproveAll, onUneconomical, onReject, onCancel, onObject, busy = false, error = null, onClose, role = 'PHARMACIST' }: AllocationDrawerProps) {
+export function AllocationDrawer({ plan: p, decision, onApprove, onApproveAll, onRevise, onUneconomical, onReject, onCancel, onObject, busy = false, error = null, onClose, role = 'PHARMACIST' }: AllocationDrawerProps) {
   const [note, setNote] = useState('');
   const [cancelNote, setCancelNote] = useState('');
   const noteOk = note.trim().length >= 3;
@@ -41,9 +43,12 @@ export function AllocationDrawer({ plan: p, decision, onApprove, onApproveAll, o
   const [showAdjustForm, setShowAdjustForm] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
   const initialLines = (L?.lines && L.lines.length > 0)
-    ? L.lines.map((l) => ({ receiver: l.receiver, qty: l.qty }))
-    : [{ receiver: p.to || 'รพ.ปลายทาง', qty: p.qty }];
+    ? L.lines.map((l) => ({ receiver: l.receiver, receiverId: l.receiverId, qty: l.qty }))
+    : [{ receiver: p.to || 'รพ.ปลายทาง', receiverId: '', qty: p.qty }];
   const [lines, setLines] = useState(initialLines);
+  const [reviseNote, setReviseNote] = useState('');
+  const keptLines = lines.filter((l) => Number(l.qty) > 0 && l.receiverId);
+  const canRevise = Boolean(onRevise) && keptLines.length > 0 && reviseNote.trim().length >= 3;
   const adjustedTotal = lines.reduce((sum, l) => sum + (Number(l.qty) || 0), 0);
   const isMatch = adjustedTotal === p.qty;
 
@@ -108,6 +113,154 @@ export function AllocationDrawer({ plan: p, decision, onApprove, onApproveAll, o
               ))}
               <span className="badge t-blue">+ ผู้ประสานงาน Region Admin</span>
             </div>
+          </div>
+        )}
+
+        {isNeedsDiscussion && !decision && (!L || L.involved) && (
+          <div className="pl-meeting-box">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, color: '#92400E', fontSize: 13.5 }}>
+                <Icon name="users" style={{ width: 16, height: 16, color: '#D97706' }} />
+                <span>การดำเนินการเจรจาจัดสรรยา ({p.approvals.length} รพ.)</span>
+              </div>
+              <span className="badge t-amber">ต้องการข้อตกลงร่วม</span>
+            </div>
+            <div style={{ fontSize: 12.5, color: '#78350F', lineHeight: '18px' }}>
+              แผนนี้มีข้อโต้แย้งจาก {p.approvals.filter((a) => a.state === 'REJECTED').map((a) => a.hospital).join(', ') || 'โรงพยาบาลในแผน'} ท่านสามารถนัดหมายประชุมด่วนเฉพาะ รพ. ในแผนนี้ และบันทึกผลการประชุมเพื่อปรับปรุงยอดจัดสรรส่งขอความเห็นชอบรอบใหม่ (v{p.version + 1})
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              <button
+                type="button"
+                className="btn btn-s"
+                style={{ background: '#FEF3C7', borderColor: '#F59E0B', color: '#92400E', fontWeight: 600 }}
+                onClick={() => setShowMeetingModal((v) => !v)}
+              >
+                <Icon name="calendar" />
+                {showMeetingModal ? 'ซ่อนรายละเอียดนัดหมาย' : `นัดหมายประชุมด่วน (เฉพาะ ${p.approvals.length} รพ.)`}
+              </button>
+              <button
+                type="button"
+                className="btn btn-p"
+                onClick={() => setShowAdjustForm((v) => !v)}
+              >
+                <Icon name="edit" />
+                {showAdjustForm ? 'ซ่อนฟอร์มปรับยอด' : `บันทึกผลการประชุม & ปรับปรุงยอด (v${p.version + 1})`}
+              </button>
+            </div>
+
+            {/* Meeting Details Card */}
+            {showMeetingModal && (
+              <div style={{ background: '#FFFFFF', border: '1px solid #FCD34D', borderRadius: 8, padding: 12, marginTop: 4, display: 'flex', flexDirection: 'column', gap: 8, fontSize: 12.5 }}>
+                <div style={{ fontWeight: 600, color: '#0F2A5C' }}>
+                  รายละเอียดการนัดหมายประชุมด่วน (Teleconference)
+                </div>
+                <div>
+                  <strong>วาระการประชุม:</strong> พิจารณาปรับยอดจัดสรรยา {p.drug} (แผน {p.id} v{p.version}) เพื่อให้ทุกฝ่ายบรรลุข้อตกลงร่วมกัน
+                </div>
+                <div>
+                  <strong>ผู้เข้าร่วม (เฉพาะ รพ. ในแผน + ผู้แทนเขต):</strong>
+                  <ul style={{ margin: '4px 0 0 16px', padding: 0, lineHeight: '20px' }}>
+                    {p.approvals.map((a) => (
+                      <li key={a.hospital}>
+                        {a.hospital} — {a.pharmacist} {a.state === 'REJECTED' ? '(ผู้ขอปรับยอด/มีข้อโต้แย้ง)' : ''}
+                      </li>
+                    ))}
+                    <li>ผู้ประสานงานสำนักงานสาธารณสุขจังหวัด / เขตสุขภาพที่ 6 (Region Admin)</li>
+                  </ul>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
+                  <input
+                    readOnly
+                    className="sel"
+                    style={{ flex: 1, fontSize: 12, background: '#F8FAFC' }}
+                    value={`https://meet.doorare.moph.go.th/f2-${p.id.toLowerCase()}`}
+                  />
+                  <button
+                    type="button"
+                    className="btn btn-s"
+                    onClick={() => {
+                      navigator.clipboard?.writeText?.(`https://meet.doorare.moph.go.th/f2-${p.id.toLowerCase()}`);
+                      setCopiedLink(true);
+                      setTimeout(() => setCopiedLink(false), 2500);
+                    }}
+                  >
+                    {copiedLink ? 'คัดลอกแล้ว!' : 'คัดลอกลิงก์'}
+                  </button>
+                </div>
+                <div className="sub" style={{ color: '#166534', fontWeight: 500 }}>
+                  ✓ ระบบส่งข้อความแจ้งเตือนด่วนไปยังห้องแชทและ SMS ของเภสัชกรทุก รพ. ในแผนเรียบร้อยแล้ว
+                </div>
+              </div>
+            )}
+
+            {/* Adjust Quantities Form & Approve Resolution */}
+            {showAdjustForm && (
+              <div className="pl-adjust-box">
+                <div style={{ fontWeight: 600, color: '#1E3A8A', fontSize: 13 }}>
+                  ปรับปรุงยอดจัดสรรตามมติที่ประชุม (ยอดรวมในคลัง {p.qty} {p.unit})
+                </div>
+                <div style={{ fontSize: 12, color: '#475569' }}>
+                  แก้ไขจำนวนยาที่แต่ละ รพ. จะได้รับตามที่ตกลงร่วมกันในที่ประชุม เพื่ออนุมัติเห็นชอบทั้งสองฝ่าย
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {lines.map((line, idx) => (
+                    <div key={line.receiver} className="pl-adjust-row">
+                      <span>{line.receiver}:</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <input
+                          type="number"
+                          className="sel"
+                          style={{ width: 90, textAlign: 'right' }}
+                          value={line.qty}
+                          onChange={(e) => {
+                            const val = Number(e.target.value) || 0;
+                            setLines((prev) => prev.map((item, i) => i === idx ? { ...item, qty: val } : item));
+                          }}
+                        />
+                        <span>{p.unit}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 12.5, fontWeight: 600, color: '#0F2A5C' }}>
+                  <span>ยอดรวมที่จัดสรรใหม่:</span>
+                  <span>{adjustedTotal} {p.unit} {onRevise ? `(เดิม ${p.qty})` : isMatch ? '(ตรงตามยอดคลัง)' : '(ยอดรวมไม่ตรงกับคลัง!)'}</span>
+                </div>
+                {onRevise ? (
+                  <>
+                    <textarea className="sel" rows={2} style={{ width: '100%', height: 'auto' }} placeholder="ผลการหารือ / เหตุผลที่ปรับยอด (อย่างน้อย 3 ตัวอักษร)" value={reviseNote} onChange={(e) => setReviseNote(e.target.value)} />
+                    <div className="sub">ใส่ 0 เพื่อตัด รพ. ออกจากแผน · ระบบตรวจเพดานที่ใช้ได้ทันก่อนหมดอายุ (F-22) ใหม่ แล้วส่งให้ทุก รพ. ในแผนกดเห็นชอบอีกครั้ง (ฝั่งคุณถือว่าเห็นชอบแล้ว) เมื่อครบจึงเริ่มขนส่ง</div>
+                    {error && <div role="alert" style={{ color: '#B91C1C', fontSize: 12.5 }}>{error}</div>}
+                    <button
+                      type="button"
+                      className="btn btn-p"
+                      disabled={!canRevise || busy}
+                      onClick={() => onRevise?.(reviseNote.trim(), keptLines.map((l) => ({ receiverHospitalId: l.receiverId, qty: Number(l.qty) })))}
+                    >
+                      <Icon name="check" />
+                      ส่งขอความเห็นชอบรอบใหม่ (v{p.version + 1})
+                    </button>
+                  </>
+                ) : (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 4 }}>
+                    <button
+                      type="button"
+                      className="btn btn-p"
+                      style={{ flex: 1, minWidth: 200 }}
+                      disabled={!isMatch || busy}
+                      onClick={() => {
+                        const desc = lines.map((l) => `${l.receiver} ${l.qty} ${p.unit}`).join(', ');
+                        if (onApproveAll) onApproveAll(`เห็นชอบตามมติที่ประชุม: ${desc}`, lines);
+                        else onUneconomical(`บันทึกผลการประชุมเรียบร้อย: ${desc} · อนุมัติผ่านทุก รพ.`);
+                      }}
+                    >
+                      <Icon name="check" />
+                      ยืนยันมติที่ประชุม & อนุมัติผ่านทุก รพ. ทันที
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 
@@ -262,139 +415,7 @@ export function AllocationDrawer({ plan: p, decision, onApprove, onApproveAll, o
               คัดค้านแผน
             </button>
           </div>
-        ) : isNeedsDiscussion ? (
-          <div className="pl-meeting-box">
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, color: '#92400E', fontSize: 13.5 }}>
-                <Icon name="users" style={{ width: 16, height: 16, color: '#D97706' }} />
-                <span>การดำเนินการเจรจาจัดสรรยา ({p.approvals.length} รพ.)</span>
-              </div>
-              <span className="badge t-amber">ต้องการข้อตกลงร่วม</span>
-            </div>
-            <div style={{ fontSize: 12.5, color: '#78350F', lineHeight: '18px' }}>
-              แผนนี้มีข้อโต้แย้งจาก {p.approvals.filter((a) => a.state === 'REJECTED').map((a) => a.hospital).join(', ') || 'โรงพยาบาลในแผน'} ท่านสามารถนัดหมายประชุมด่วนเฉพาะ รพ. ในแผนนี้ และบันทึกผลการประชุมเพื่อปรับปรุงยอดจัดสรรส่งขอความเห็นชอบรอบใหม่ (v{p.version + 1})
-            </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-              <button
-                type="button"
-                className="btn btn-s"
-                style={{ background: '#FEF3C7', borderColor: '#F59E0B', color: '#92400E', fontWeight: 600 }}
-                onClick={() => setShowMeetingModal((v) => !v)}
-              >
-                <Icon name="calendar" />
-                {showMeetingModal ? 'ซ่อนรายละเอียดนัดหมาย' : `นัดหมายประชุมด่วน (เฉพาะ ${p.approvals.length} รพ.)`}
-              </button>
-              <button
-                type="button"
-                className="btn btn-p"
-                onClick={() => setShowAdjustForm((v) => !v)}
-              >
-                <Icon name="edit" />
-                {showAdjustForm ? 'ซ่อนฟอร์มปรับยอด' : `บันทึกผลการประชุม & ปรับปรุงยอด (v${p.version + 1})`}
-              </button>
-            </div>
-
-            {/* Meeting Details Card */}
-            {showMeetingModal && (
-              <div style={{ background: '#FFFFFF', border: '1px solid #FCD34D', borderRadius: 8, padding: 12, marginTop: 4, display: 'flex', flexDirection: 'column', gap: 8, fontSize: 12.5 }}>
-                <div style={{ fontWeight: 600, color: '#0F2A5C' }}>
-                  รายละเอียดการนัดหมายประชุมด่วน (Teleconference)
-                </div>
-                <div>
-                  <strong>วาระการประชุม:</strong> พิจารณาปรับยอดจัดสรรยา {p.drug} (แผน {p.id} v{p.version}) เพื่อให้ทุกฝ่ายบรรลุข้อตกลงร่วมกัน
-                </div>
-                <div>
-                  <strong>ผู้เข้าร่วม (เฉพาะ รพ. ในแผน + ผู้แทนเขต):</strong>
-                  <ul style={{ margin: '4px 0 0 16px', padding: 0, lineHeight: '20px' }}>
-                    {p.approvals.map((a) => (
-                      <li key={a.hospital}>
-                        {a.hospital} — {a.pharmacist} {a.state === 'REJECTED' ? '(ผู้ขอปรับยอด/มีข้อโต้แย้ง)' : ''}
-                      </li>
-                    ))}
-                    <li>ผู้ประสานงานสำนักงานสาธารณสุขจังหวัด / เขตสุขภาพที่ 6 (Region Admin)</li>
-                  </ul>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
-                  <input
-                    readOnly
-                    className="sel"
-                    style={{ flex: 1, fontSize: 12, background: '#F8FAFC' }}
-                    value={`https://meet.doorare.moph.go.th/f2-${p.id.toLowerCase()}`}
-                  />
-                  <button
-                    type="button"
-                    className="btn btn-s"
-                    onClick={() => {
-                      navigator.clipboard?.writeText?.(`https://meet.doorare.moph.go.th/f2-${p.id.toLowerCase()}`);
-                      setCopiedLink(true);
-                      setTimeout(() => setCopiedLink(false), 2500);
-                    }}
-                  >
-                    {copiedLink ? 'คัดลอกแล้ว!' : 'คัดลอกลิงก์'}
-                  </button>
-                </div>
-                <div className="sub" style={{ color: '#166534', fontWeight: 500 }}>
-                  ✓ ระบบส่งข้อความแจ้งเตือนด่วนไปยังห้องแชทและ SMS ของเภสัชกรทุก รพ. ในแผนเรียบร้อยแล้ว
-                </div>
-              </div>
-            )}
-
-            {/* Adjust Quantities Form & Approve Resolution */}
-            {showAdjustForm && (
-              <div className="pl-adjust-box">
-                <div style={{ fontWeight: 600, color: '#1E3A8A', fontSize: 13 }}>
-                  ปรับปรุงยอดจัดสรรตามมติที่ประชุม (ยอดรวมในคลัง {p.qty} {p.unit})
-                </div>
-                <div style={{ fontSize: 12, color: '#475569' }}>
-                  แก้ไขจำนวนยาที่แต่ละ รพ. จะได้รับตามที่ตกลงร่วมกันในที่ประชุม เพื่ออนุมัติเห็นชอบทั้งสองฝ่าย
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {lines.map((line, idx) => (
-                    <div key={line.receiver} className="pl-adjust-row">
-                      <span>{line.receiver}:</span>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                        <input
-                          type="number"
-                          className="sel"
-                          style={{ width: 90, textAlign: 'right' }}
-                          value={line.qty}
-                          onChange={(e) => {
-                            const val = Number(e.target.value) || 0;
-                            setLines((prev) => prev.map((item, i) => i === idx ? { ...item, qty: val } : item));
-                          }}
-                        />
-                        <span>{p.unit}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 12.5, fontWeight: 600, color: isMatch ? '#166534' : '#DC2626' }}>
-                  <span>ยอดรวมที่จัดสรร:</span>
-                  <span>{adjustedTotal} / {p.qty} {p.unit} {isMatch ? '(ตรงตามยอดคลัง)' : '(ยอดรวมไม่ตรงกับคลัง!)'}</span>
-                </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 4 }}>
-                  <button
-                    type="button"
-                    className="btn btn-p"
-                    style={{ flex: 1, minWidth: 200 }}
-                    disabled={!isMatch || busy}
-                    onClick={() => {
-                      const desc = lines.map((l) => `${l.receiver} ${l.qty} ${p.unit}`).join(', ');
-                      if (onApproveAll) {
-                        onApproveAll(`เห็นชอบตามมติที่ประชุม: ${desc}`, lines);
-                      } else {
-                        onUneconomical(`บันทึกผลการประชุมเรียบร้อย: ${desc} · อนุมัติผ่านทุก รพ.`);
-                      }
-                    }}
-                  >
-                    <Icon name="check" />
-                    ยืนยันมติที่ประชุม & อนุมัติผ่านทุก รพ. ทันที
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        ) : needsOption ? (
+        ) : isNeedsDiscussion ? null : needsOption ? (
           <div className="pl-decide">
             <h3 className="tr-h3" style={{ color: '#B91C1C' }}>
               ⚠ ค่าขนส่งเกินเกณฑ์ · เจ้าของยาต้องเลือก 1 ใน 4 ทาง <span className="en">FR-F2a-005</span>

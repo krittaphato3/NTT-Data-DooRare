@@ -21,11 +21,12 @@ import { ObligationTable, ObligationTiles } from '../components/ObligationTable'
 import { BORROW_REQUESTS, groupOf, isOpenRequest, LENDER_QUEUE, needsLender, TILES, tileOf } from '../data/borrow';
 import { isOpenLeg } from '../data/lender';
 import { useBorrowRequests } from '../data/useBorrowRequests';
-import { approveBorrowRequest, cancelBorrowRequest, escalateManual as escalateManualApi, rejectBorrowRequest } from '../../../services/borrowApi';
+import { approveBorrowRequest, cancelBorrowRequest, skipBorrowLeg, escalateManual as escalateManualApi, rejectBorrowRequest } from '../../../services/borrowApi';
 import { mockFallbackEnabled } from '../../../services/dataSource';
 import { getHospitals } from '../../../services/catalogApi';
 import type { ApiHospital } from '../../../services/catalogApi';
-import type { BorrowContext, BorrowRequest, TileGroup, Urgency } from '../data/borrow';
+import type { BorrowContext, BorrowLeg, BorrowRequest, TileGroup, Urgency } from '../data/borrow';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 import { dueLabel, obligationCounts, obligationFromApi, outstandingOf, RETURN_OBLIGATIONS } from '../data/obligations';
 import { listReturnObligations, recordReturn as apiRecordReturn, waiveReturn } from '../../../services/returnsApi';
 import type { ApiReturnObligation } from '../../../services/returnsApi';
@@ -151,6 +152,8 @@ export function BorrowRequestsPage({
   const [waiveTarget, setWaiveTarget] = useState<ReturnObligation | null>(null);
   const [waiveBanner, setWaiveBanner] = useState<{ id: string; at: string; auditId: string } | null>(null);
   const [escalateTarget, setEscalateTarget] = useState<BorrowRequest | null>(null);
+  const [skipTarget, setSkipTarget] = useState<{ r: BorrowRequest; leg: BorrowLeg } | null>(null);
+  const [skipBusy, setSkipBusy] = useState(false);
   const [escalations, setEscalations] = useState<Record<string, { reason: string; at: string }>>({});
   /** API-XC-005 grants the waive to HOSPITAL_ADMIN alone; the control is gated on the action. */
   const mayWaive = can(role, 'waiveReturn');
@@ -192,7 +195,8 @@ export function BorrowRequestsPage({
     }
     setLinkedRequest(null);
   }, [linkedRequest, live.source, all]);
-  const inPeriod = all.filter((r) => r.daysAgo <= days);
+  // Emergency (F3) requests are worked in the incident console: they never show on this page.
+  const inPeriod = all.filter((r) => r.daysAgo <= days).filter((r) => r.context !== 'EMERGENCY');
   const counts = Object.fromEntries(TILES.map((g) => [g.id, inPeriod.filter((r) => tileOf(r) === g.id).length])) as Record<TileGroup, number>;
   const needLenderCount = inPeriod.filter(needsLender).length;
   const pendingAll = all.filter((r) => groupOf(r.status) === 'pending').length;
@@ -434,6 +438,16 @@ export function BorrowRequestsPage({
     setEscalateTarget(null);
   };
 
+  const confirmSkip = () => {
+    if (!skipTarget?.r.uuid || !skipTarget.leg.legId) { setSkipTarget(null); return; }
+    setSkipBusy(true);
+    setActionError(null);
+    skipBorrowLeg(skipTarget.r.uuid, skipTarget.leg.legId)
+      .then(() => live.reload())
+      .catch((e: Error) => setActionError(e.message))
+      .finally(() => { setSkipBusy(false); setSkipTarget(null); });
+  };
+
   const actionsEl = (
     <div className="pagehead-actions">
     <button className="btn btn-s" aria-pressed={historyOnly} onClick={() => { setHistoryOnly((v) => !v); setGroup(null); }} title="แสดงเฉพาะคำขอที่จบแล้ว (ได้ครบ · ปิด · ยกเลิก)">
@@ -632,7 +646,6 @@ export function BorrowRequestsPage({
             <select className={`sel ${context !== 'all' ? 'sel-on' : ''}`} aria-label="บริบท" value={context} onChange={(e) => setContext(e.target.value as 'all' | BorrowContext)}>
               <option value="all">บริบท: ทั้งหมด</option>
               <option value="STOCK_ALERT">STOCK_ALERT · แจ้งเตือนสต็อก</option>
-              <option value="EMERGENCY">EMERGENCY · เหตุฉุกเฉิน</option>
               <option value="MANUAL">MANUAL · สร้างเอง</option>
             </select>
             <select className={`sel ${days !== 90 ? 'sel-on' : ''}`} aria-label="ช่วงเวลา" value={days} onChange={(e) => setDays(Number(e.target.value))}>
@@ -656,6 +669,7 @@ export function BorrowRequestsPage({
           decision={isLive ? undefined : decision[sel.id]}
           onDecide={decide}
           onEscalate={setEscalateTarget}
+          onSkipLeg={(r, leg) => setSkipTarget({ r, leg })}
           onCancel={setCancelTarget}
           onRecordReturn={handleOpenRecordReturn}
           onClose={() => setDrawerOpen(false)}
@@ -775,6 +789,22 @@ export function BorrowRequestsPage({
             </button>
           </div>
         </Modal>
+      )}
+
+      {skipTarget && (
+        <ConfirmDialog
+          title="ส่งคำขอต่อไปยังลำดับถัดไป"
+          detail={
+            <>
+              <div><b className="code">{skipTarget.r.id}</b> · {skipTarget.r.drug}</div>
+              <div style={{ marginTop: 6 }}>ยกเลิกคำขอที่ส่งถึง <b>{skipTarget.leg.hospital}</b> (โรงพยาบาลนั้นจะเห็นว่าถูกยกเลิก ไม่ต้องตอบ) แล้วส่งถึงผู้ให้ยืมรายถัดไปในลำดับทันที</div>
+            </>
+          }
+          confirmLabel="ยกเลิกแห่งนี้และส่งต่อ"
+          busy={skipBusy}
+          onConfirm={confirmSkip}
+          onClose={() => setSkipTarget(null)}
+        />
       )}
 
       {/* escalate-manual (API-F1b-012): only reachable from an ESCALATED request. */}

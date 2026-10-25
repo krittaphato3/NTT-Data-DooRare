@@ -23,6 +23,8 @@ import { loadBorrowConfig } from './borrow.config.js';
 import { advanceRequest, asStoredLadder, draftMessage, effectiveQty, loadLegs, loadRequest, sendLegs, setRequestStatus } from './borrow.flow.js';
 import type { StoredLadder } from './borrow.flow.js';
 import { findListing, loadNeed, usableStock } from './borrow.inputs.js';
+import { selectLenders } from './borrow.agent.js';
+import type { AgentInfo } from './borrow.agent.js';
 import { buildLadder } from './borrow.ladder.js';
 import type { LadderEntry } from './borrow.ladder.js';
 
@@ -119,10 +121,11 @@ export async function requestView(db: Db, row: Record<string, any>, viewer: Auth
       ? {
           proposal: {
             need: stored.need,
-            ladder: stored.ladder.map((e) => ({ hospitalId: e.hospitalId, code: e.code, name: e.name, rank: e.rank, si: e.si, parts: e.parts, transitMin: e.transitMin, lendable: e.lendable, stock: e.stock, qtyPlanned: e.qtyPlanned, message: stored.drafts[e.hospitalId] ?? null })),
+            ladder: stored.ladder.map((e) => ({ hospitalId: e.hospitalId, code: e.code, name: e.name, rank: e.rank, si: e.si, parts: e.parts, transitMin: e.transitMin, lendable: e.lendable, stock: e.stock, qtyPlanned: e.qtyPlanned, message: stored.drafts[e.hospitalId] ?? null, rationale: stored.agent?.picks.find((p) => p.hospitalId === e.hospitalId)?.rationale ?? null })),
             excluded: stored.excluded,
             parallel: stored.parallel,
             builtAt: stored.builtAt,
+            agent: stored.agent ? { status: stored.agent.runStatus, model: stored.agent.model, summary: stored.agent.summary, confidence: stored.agent.confidence, flags: stored.agent.flags, priorityAfter: stored.agent.priorityAfter } : null,
           },
         }
       : {}),
@@ -274,9 +277,19 @@ export class BorrowService {
       }
       const plan = await buildLadder(client, cfg, need, hospitalId);
       const timeout = timeoutPlan(need.urgency, need.stock, need.u, cfg.timeoutMin, cfg.reminderRatio);
+      // AGT-F1: the agent chooses the first round among the lenders the code accepted (falls back to the Si ladder unchanged)
+      let agent: Awaited<ReturnType<typeof selectLenders>> | null = null;
+      if (plan.ladder.length > 0 && cfg.agentEnabled) {
+        agent = await selectLenders({
+          requestNo: r.request_no, ladder: plan.ladder, borrowQty: need.borrow, parallel: plan.parallel, maxParallel: cfg.maxParallel,
+          allowedNumbers: [Math.round(timeout.effectiveMin), Math.round(timeout.effectiveMin / 60)], drug: r.drug_name, unit: r.base_unit, requester: r.borrower_name,
+          urgency: need.urgency, deadlineMin: timeout.effectiveMin, need: { stock: need.stock, u: need.u, required: need.required, ved: need.ved },
+        });
+        plan.ladder = agent.ladder;
+      }
       const drafts: Record<string, string> = {};
       for (const e of plan.ladder) {
-        drafts[e.hospitalId] = draftMessage({ requester: r.borrower_name, drug: r.drug_name, qty: e.qtyPlanned || Math.min(e.lendable, need.borrow), unit: r.base_unit, urgency: need.urgency, round: e.qtyPlanned ? 1 : 2, deadlineMin: timeout.effectiveMin });
+        drafts[e.hospitalId] = agent?.messages[e.hospitalId] ?? draftMessage({ requester: r.borrower_name, drug: r.drug_name, qty: e.qtyPlanned || Math.min(e.lendable, need.borrow), unit: r.base_unit, urgency: need.urgency, round: e.qtyPlanned ? 1 : 2, deadlineMin: timeout.effectiveMin });
       }
       const stored: StoredLadder = {
         version: 1,
@@ -286,6 +299,7 @@ export class BorrowService {
         drafts,
         parallel: plan.parallel,
         builtAt: new Date().toISOString(),
+        ...(agent ? { agent: agent.info } : {}),
       };
       const normalUse = normalUseQty(need.u, need.leadDays, need.stock, need.incoming);
       const noLender = plan.ladder.length === 0;
@@ -295,21 +309,32 @@ export class BorrowService {
       );
       await client.query(`UPDATE borrow_request_item SET qty_requested = $2, r_value = $3 WHERE id = $1`, [r.item_id, need.borrow, need.required === null ? null : round(need.required, 3)]);
       const input = { hospitalId, drugMasterId: r.drug_master_id, qty: need.borrow, urgency: need.urgency };
+      const ruleHits = [
+        { rule: 'G-QTY', ok: plan.ladder.reduce((s, e) => s + e.qtyPlanned, 0) <= need.borrow, note: 'first round does not exceed the borrow quantity' },
+        { rule: 'G-HARD-FILTER', ok: plan.ladder.every((e) => e.eligible), note: 'only lenders passing F-12' },
+        { rule: 'G-PARALLEL', ok: plan.ladder.filter((e) => e.qtyPlanned > 0).length <= (plan.parallel ? cfg.maxParallel : 1), note: 'sequential, or up to max_parallel when very urgent' },
+      ];
+      const inputHash = crypto.createHash('sha256').update(JSON.stringify(input)).digest('hex');
+      const ladderOut = plan.ladder.map((e) => ({ hospitalId: e.hospitalId, si: e.si, qtyPlanned: e.qtyPlanned }));
       const run = (
-        await client.query(
-          `INSERT INTO agent_run (agent, task, ref_type, ref_id, hospital_id, model_id, input_hash, input, output, status, guardrail_hits)
-           VALUES ('RULES', 'PROPOSE', 'borrow_request', $1, $2, NULL, $3, $4::jsonb, $5::jsonb, 'SKIPPED', $6::jsonb) RETURNING id`,
-          [
-            id, hospitalId, crypto.createHash('sha256').update(JSON.stringify(input)).digest('hex'), JSON.stringify({ ...input, need }),
-            JSON.stringify({ mode: cfg.agentEnabled ? 'RULES_ONLY_NO_AGENT_CONNECTED' : 'AGENT_DISABLED', ladder: plan.ladder.map((e) => ({ hospitalId: e.hospitalId, si: e.si, qtyPlanned: e.qtyPlanned })), excluded: stored.excluded, drafts }),
-            JSON.stringify([
-              { rule: 'G-QTY', ok: plan.ladder.reduce((s, e) => s + e.qtyPlanned, 0) <= need.borrow, note: 'first round does not exceed the borrow quantity' },
-              { rule: 'G-HARD-FILTER', ok: plan.ladder.every((e) => e.eligible), note: 'only lenders passing F-12' },
-              { rule: 'G-PARALLEL', ok: plan.ladder.filter((e) => e.qtyPlanned > 0).length <= (plan.parallel ? cfg.maxParallel : 1), note: 'sequential, or up to max_parallel when very urgent' },
-            ]),
-          ],
-        )
+        agent
+          ? await client.query(
+              `INSERT INTO agent_run (agent, task, ref_type, ref_id, hospital_id, model_id, input_hash, input, output, status, steps, latency_ms, tokens_in, tokens_out, guardrail_hits)
+               VALUES ('BORROW', 'F1_T2_LENDER_SELECTION', 'borrow_request', $1, $2, $3, $4, $5::jsonb, $6::jsonb, $7, $8, $9, $10, $11, $12::jsonb) RETURNING id`,
+              [
+                id, hospitalId, agent.run.modelId, inputHash, JSON.stringify({ ...input, need }),
+                JSON.stringify({ ...(agent.run.output ?? {}), flags: agent.run.flags, error: agent.run.error, ladder: ladderOut, excluded: stored.excluded, drafts }),
+                agent.run.status, agent.run.steps, agent.run.latencyMs, agent.run.tokensIn || null, agent.run.tokensOut || null, JSON.stringify([...ruleHits, ...agent.run.hits]),
+              ],
+            )
+          : await client.query(
+              `INSERT INTO agent_run (agent, task, ref_type, ref_id, hospital_id, model_id, input_hash, input, output, status, guardrail_hits)
+               VALUES ('RULES', 'PROPOSE', 'borrow_request', $1, $2, NULL, $3, $4::jsonb, $5::jsonb, 'SKIPPED', $6::jsonb) RETURNING id`,
+              [id, hospitalId, inputHash, JSON.stringify({ ...input, need }), JSON.stringify({ mode: cfg.agentEnabled ? 'RULES_ONLY_NO_AGENT_CONNECTED' : 'AGENT_DISABLED', ladder: ladderOut, excluded: stored.excluded, drafts }), JSON.stringify(ruleHits)],
+            )
       ).rows[0];
+      if (agent) stored.agent = { ...agent.info, runId: run.id } as AgentInfo & { runId: string };
+      await client.query(`UPDATE borrow_request SET ladder = $2::jsonb WHERE id = $1`, [id, JSON.stringify(stored)]);
       await writeAudit(client, auditContext(req), { action: 'REQ_PROPOSED', entityType: 'borrow_request', entityId: id, agentRunId: run.id, after: { ladder: plan.ladder.map((e) => ({ code: e.code, si: e.si, qtyPlanned: e.qtyPlanned })), excluded: stored.excluded } });
       const fresh = await loadRequest(client, id);
       if (noLender) {
@@ -588,6 +613,7 @@ export class BorrowService {
       const legs = await loadLegs(client, id);
       const remaining = Math.max(0, Math.ceil(r.qty_requested - effectiveQty(legs) - 1e-9));
       if (qty > remaining) throw new HttpError(422, 'GUARDRAIL_REJECTED', `ขอเกินจำนวนที่ยังขาด (${remaining})`);
+      if (!r.ladder) throw new HttpError(422, 'NOT_SUPPORTED', 'คำขอนี้ไม่มีลำดับผู้ให้ยืมของระบบ (เช่น ชุดยาเหตุฉุกเฉิน) จัดการที่หน้าเหตุฉุกเฉิน');
       const stored = r.ladder as StoredLadder;
       const manual: LadderEntry = {
         hospitalId: lender.id, code: lender.code, name: lender.name, eligible: true, failure: null, listingId: listing.id, transitMin: 0, usableForLending: 0, totalTarget: null,
@@ -600,6 +626,41 @@ export class BorrowService {
       await setRequestStatus(client, r, 'IN_PROGRESS', auditContext(req), 'REQ_MANUAL_LENDER', { lender: lender.code, qty, reason });
       const data = await requestView(client, await loadDetail(client, id), user);
       return { ok: true, id, version: data.version, data };
+    });
+  }
+
+  /**
+   * The borrower does not want to wait for a lender any more: the waiting request to that lender is cancelled (the lender sees it as
+   * cancelled) and the flow asks the next lender of the ladder at once, the same way a timeout would. F3 emergency requests have
+   * their own timers and are handled in the incident console.
+   */
+  async skipLeg(req: Request, rawId: string, rawLegId: string) {
+    const user = req.user!;
+    mustBePharmacistOf(user);
+    const id = uuidParam(rawId, 'id');
+    const legId = uuidParam(rawLegId, 'legId');
+    return withTransaction(async (client) => {
+      const request = await loadRequest(client, id);
+      assertBorrower(user, request);
+      const r = request!;
+      if (!['APPROVED', 'IN_PROGRESS', 'PARTIALLY_FULFILLED'].includes(r.status)) throw new HttpError(409, 'INVALID_TRANSITION', `ส่งต่อลำดับถัดไปไม่ได้ในสถานะ ${r.status}`);
+      const ctx = (await client.query(`SELECT context::text AS context FROM borrow_request WHERE id = $1`, [id])).rows[0]?.context;
+      if (ctx === 'EMERGENCY') throw new HttpError(422, 'NOT_SUPPORTED', 'คำขอเหตุฉุกเฉินจัดการที่หน้าเหตุฉุกเฉิน');
+      const leg = (await client.query(`SELECT id, status::text AS status, lender_hospital_id FROM borrow_leg WHERE id = $1 AND request_id = $2 FOR UPDATE`, [legId, id])).rows[0];
+      if (!leg) throw new HttpError(404, 'NOT_FOUND', 'ไม่พบคำขอถึงผู้ให้ยืมรายนี้');
+      if (leg.status !== 'SENT') throw new HttpError(409, 'ALREADY_DECIDED', 'ผู้ให้ยืมรายนี้ตอบแล้วหรือถูกปิดแล้ว ส่งต่อไม่ได้');
+      await client.query(`UPDATE borrow_leg SET status = 'CANCELLED', reject_reason = 'SKIPPED_BY_BORROWER' WHERE id = $1`, [legId]);
+      await notifyRoles(client, leg.lender_hospital_id, ['PHARMACIST', 'WAREHOUSE_OFFICER'], {
+        kind: 'BORROW_LEG_CANCELLED',
+        title: `คำขอยืม ${r.request_no} ถูกยกเลิกโดยผู้ขอ`,
+        body: 'ผู้ขอส่งคำขอต่อไปยังผู้ให้ยืมรายถัดไปแล้ว ไม่ต้องตอบรับ',
+        refType: 'borrow_leg',
+        refId: legId,
+      });
+      await writeAudit(client, auditContext(req), { action: 'REQ_LEG_SKIPPED', entityType: 'borrow_request', entityId: id, after: { legId, lender: leg.lender_hospital_id } });
+      const next = await advanceRequest(client, id, auditContext(req));
+      const data = await requestView(client, await loadDetail(client, id), user);
+      return { ok: true, id, version: data.version, newLegs: next.newLegs, data };
     });
   }
 

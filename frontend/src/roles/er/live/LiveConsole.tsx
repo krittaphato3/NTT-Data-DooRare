@@ -8,6 +8,7 @@ import { ViewOnlyBanner } from '../components/ViewOnlyBanner';
 import { getIncidentAccess } from '../data/access';
 import { IncidentHeader, Warnings } from './IncidentHeader';
 import { IncidentPicker } from './IncidentPicker';
+import { AgentExtrasPanel } from './AgentExtrasPanel';
 import { LiveBorrowStatus } from './LiveBorrowStatus';
 import { LivePackPanel } from './LivePack';
 import { LiveSummaryPanel } from './LiveSummary';
@@ -46,6 +47,7 @@ export function LiveConsole({ role = 'PHARMACIST' }: { role?: RoleCode }) {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                   <LiveKitTable plan={incident.plan} editable={false} />
                   <LiveExtrasTable plan={incident.plan} editable={false} />
+                  <AgentExtrasPanel incidentId={incident.id} extrasInPlan={incident.plan.extras.map((e) => e.key)} mayAsk={role === 'PHARMACIST'} />
                   <PlanNotes plan={incident.plan} />
                 </div>
               ) : (

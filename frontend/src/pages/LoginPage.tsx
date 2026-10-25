@@ -29,7 +29,17 @@ const DEMO_CAST: { email: string; role: RoleCode; hospital_code: string; hospita
   { email: 'driver1.ha@example.org', role: 'DRIVER', hospital_code: 'HA', hospital_name: 'โรงพยาบาลสมุทรปราการ', title: 'คนขับ (รพ.สมุทรปราการ)', does: 'ออกเดินทาง ยืนยันถึงปลายทาง' },
   { email: 'driver1.hc@example.org', role: 'DRIVER', hospital_code: 'HC', hospital_name: 'โรงพยาบาลพระสมุทรเจดีย์ฯ', title: 'คนขับ (รพ.พระสมุทรเจดีย์ฯ)', does: 'ออกเดินทาง ยืนยันถึงปลายทาง' },
   { email: 'driver1.hb@example.org', role: 'DRIVER', hospital_code: 'HB', hospital_name: 'โรงพยาบาลบางพลี', title: 'คนขับ (รพ.บางพลี)', does: 'ออกเดินทาง ยืนยันถึงปลายทาง' },
+  { email: 'pharmacist1.hb@example.org', role: 'PHARMACIST', hospital_code: 'HB', hospital_name: 'โรงพยาบาลบางพลี', title: 'เภสัช (รพ.บางพลี)', does: 'ปล่อยยาใกล้หมดอายุ เห็นชอบแผนจัดสรร ตอบคำขอยืม' },
+  { email: 'pharmacist1.hd@example.org', role: 'PHARMACIST', hospital_code: 'HD', hospital_name: 'โรงพยาบาลบางบ่อ', title: 'เภสัช (รพ.บางบ่อ)', does: 'ปล่อยยาใกล้หมดอายุ เห็นชอบแผนจัดสรร ตอบคำขอยืม' },
+  { email: 'pharmacist1.he@example.org', role: 'PHARMACIST', hospital_code: 'HE', hospital_name: 'โรงพยาบาลบางเสาธง', title: 'เภสัช (รพ.บางเสาธง)', does: 'ปล่อยยาใกล้หมดอายุ เห็นชอบแผนจัดสรร ตอบคำขอยืม' },
+  { email: 'warehouse_officer1.hb@example.org', role: 'WAREHOUSE_OFFICER', hospital_code: 'HB', hospital_name: 'โรงพยาบาลบางพลี', title: 'คลัง (รพ.บางพลี)', does: 'แพ็กและโหลดของขึ้นรถ รับของเข้า' },
+  { email: 'warehouse_officer1.hd@example.org', role: 'WAREHOUSE_OFFICER', hospital_code: 'HD', hospital_name: 'โรงพยาบาลบางบ่อ', title: 'คลัง (รพ.บางบ่อ)', does: 'แพ็กและโหลดของขึ้นรถ รับของเข้า' },
+  { email: 'warehouse_officer1.he@example.org', role: 'WAREHOUSE_OFFICER', hospital_code: 'HE', hospital_name: 'โรงพยาบาลบางเสาธง', title: 'คลัง (รพ.บางเสาธง)', does: 'แพ็กและโหลดของขึ้นรถ รับของเข้า' },
+  { email: 'driver1.hd@example.org', role: 'DRIVER', hospital_code: 'HD', hospital_name: 'โรงพยาบาลบางบ่อ', title: 'คนขับ (รพ.บางบ่อ)', does: 'ออกเดินทาง ยืนยันถึงปลายทาง' },
+  { email: 'driver1.he@example.org', role: 'DRIVER', hospital_code: 'HE', hospital_name: 'โรงพยาบาลบางเสาธง', title: 'คนขับ (รพ.บางเสาธง)', does: 'ออกเดินทาง ยืนยันถึงปลายทาง' },
 ];
+const HOSPITAL_ORDER = ['HA', 'HB', 'HC', 'HD', 'HE'];
+const ROLE_ORDER: RoleCode[] = ['ER_STAFF', 'PHARMACIST', 'WAREHOUSE_OFFICER', 'DRIVER'];
 const DEMO_ROLES: RoleCode[] = ['PHARMACIST', 'WAREHOUSE_OFFICER', 'ER_STAFF', 'DRIVER'];
 
 export function LoginPage() {
@@ -255,30 +265,46 @@ export function LoginPage() {
               ชุดบัญชีสำหรับเดโม · ดูการทำงานร่วมกันของแต่ละบทบาท
               <span style={{ fontWeight: 400, color: '#64748B' }}> (รหัสผ่าน doorare123 · OTP 123456)</span>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10 }}>
-              {DEMO_CAST.map((c) => {
-                const info = ROLE_INFO[c.role];
-                const selected = email === c.email;
-                return (
-                  <button
-                    key={c.email}
-                    type="button"
-                    disabled={loading}
-                    onClick={() =>
-                      handleQuickLoginRole({ id: c.email, email: c.email, display_name: c.title, role: c.role, mfa_enabled: false, hospital_code: c.hospital_code, hospital_name: c.hospital_name, all_roles: [c.role] })
-                    }
-                    style={{ textAlign: 'left', background: '#FFFFFF', border: `2px solid ${selected ? info.color : '#E2E8F0'}`, borderRadius: 10, padding: '10px 12px', cursor: 'pointer', font: 'inherit' }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 6 }}>
-                      <span style={{ fontSize: 13.5, fontWeight: 700, color: info.color }}>{c.title}</span>
-                      <span style={{ fontSize: 10.5, fontWeight: 700, padding: '2px 8px', borderRadius: 12, background: info.bg, color: info.color }}>{c.hospital_code}</span>
-                    </div>
-                    <div style={{ fontSize: 11.5, color: '#64748B', marginTop: 2 }}>{c.hospital_name}</div>
-                    <div style={{ fontSize: 11.5, color: '#475569', marginTop: 6 }}>{c.does}</div>
-                  </button>
-                );
-              })}
-            </div>
+            {HOSPITAL_ORDER.map((code) => {
+              const cast = DEMO_CAST.filter((c) => c.hospital_code === code).sort((a, b) => ROLE_ORDER.indexOf(a.role) - ROLE_ORDER.indexOf(b.role));
+              if (!cast.length) return null;
+              return (
+                <div key={code} style={{ marginBottom: 8 }}>
+                  <div style={{ fontSize: 12.5, fontWeight: 700, color: '#0F2A5C', margin: '2px 0 4px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ padding: '1px 8px', borderRadius: 12, background: '#EFF6FF', color: '#1D4ED8', fontSize: 11 }}>{code}</span>
+                    {cast[0].hospital_name}
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+                    {cast.map((c) => {
+                      const info = ROLE_INFO[c.role];
+                      const selected = email === c.email;
+                      const quick = (x: typeof c) => handleQuickLoginRole({ id: x.email, email: x.email, display_name: x.title, role: x.role, mfa_enabled: false, hospital_code: x.hospital_code, hospital_name: x.hospital_name, all_roles: [x.role] });
+                      return (
+                        <div
+                          key={c.email}
+                          onClick={() => !loading && quick(c)}
+                          style={{ background: '#FFFFFF', border: `2px solid ${selected ? info.color : '#E2E8F0'}`, borderRadius: 8, padding: '7px 9px', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: 4 }}
+                        >
+                          <span style={{ alignSelf: 'flex-start', fontSize: 9.5, fontWeight: 700, padding: '1px 6px', borderRadius: 10, background: info.bg, color: info.color }}>{c.role}</span>
+                          <div style={{ fontSize: 12.5, fontWeight: 700, color: '#0F2A5C', lineHeight: '16px' }}>{c.title}</div>
+                          <div style={{ fontSize: 10, color: '#64748B', borderTop: '1px solid #F1F5F9', paddingTop: 3, lineHeight: '13px', flex: 1 }}>{c.does}</div>
+                          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                            <button
+                              type="button"
+                              disabled={loading}
+                              onClick={(e) => { e.stopPropagation(); quick(c); }}
+                              style={{ background: selected ? info.color : '#F1F5F9', color: selected ? '#FFFFFF' : '#0F2A5C', border: 'none', borderRadius: 6, padding: '2px 8px', fontSize: 10.5, fontWeight: 600, cursor: 'pointer' }}
+                            >
+                              {loading && selected ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ ➔'}
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
           </div>
 
           <div style={{ fontSize: 13, fontWeight: 700, color: '#0F2A5C', marginBottom: 8 }}>บทบาทอื่น</div>

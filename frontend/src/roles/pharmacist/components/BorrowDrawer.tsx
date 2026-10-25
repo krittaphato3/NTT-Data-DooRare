@@ -5,7 +5,7 @@ import type { Action, RoleCode } from '../../../lib/rbac';
 import { withRole } from '../../../data/navigation';
 import { fmtTime } from '../../../lib/time';
 import { groupMeta, groupOf, LEG_META } from '../data/borrow';
-import type { BorrowRequest, StatusGroup } from '../data/borrow';
+import type { BorrowLeg, BorrowRequest, StatusGroup } from '../data/borrow';
 import { BorrowStatusBadge, ReturnBadge, UrgencyBadge } from './BorrowBadges';
 import { StopBar } from './BorrowTable';
 
@@ -19,6 +19,8 @@ interface BorrowDrawerProps {
   onClose: () => void;
   /** Opens the escalate-manual confirm dialog (API-F1b-012) for an ESCALATED request. */
   onEscalate: (r: BorrowRequest) => void;
+  /** Opens the "send on to the next lender" dialog for a lender that has not answered yet. */
+  onSkipLeg?: (r: BorrowRequest, leg: BorrowLeg) => void;
   /** Opens the cancel confirm dialog for an in-progress request (QA-PHARM-005). */
   onCancel?: (r: BorrowRequest) => void;
   /** Opens the record-return dialog for a request with return obligations (QA-PHARM-005). */
@@ -37,7 +39,7 @@ const BANNER: Record<StatusGroup, [string, string, string]> = {
 };
 
 /** UI-05 request detail (we are the borrower). Actions are local state only. */
-export function BorrowDrawer({ request: r, tick, decision, onDecide, onClose, onEscalate, onCancel, onRecordReturn, role = 'PHARMACIST' }: BorrowDrawerProps) {
+export function BorrowDrawer({ request: r, tick, decision, onDecide, onClose, onEscalate, onSkipLeg, onCancel, onRecordReturn, role = 'PHARMACIST' }: BorrowDrawerProps) {
   const group = groupOf(r.status);
 
   /** Action each drawer button performs, so a role that may not act sees it disabled with a hint. */
@@ -50,6 +52,8 @@ export function BorrowDrawer({ request: r, tick, decision, onDecide, onClose, on
      HOSPITAL_ADMIN) — it is no longer borrowed from the approval action. */
   const addLender = gate('escalateManual');
   const recordReturn = gate('updateInventory');
+  const skipLeg = gate('approveBorrow');
+  const maySkip = r.context !== 'EMERGENCY' && ['APPROVED', 'IN_PROGRESS', 'PARTIALLY_FULFILLED'].includes(r.status);
   const cancelRequest = gate('cancelRequest');
   const shouldShowCancel = ['DRAFT', 'PENDING_APPROVAL', 'APPROVED', 'IN_PROGRESS', 'PARTIALLY_FULFILLED', 'ESCALATED'].includes(r.status);
   const cancelCancellableStatus = ['DRAFT', 'PENDING_APPROVAL', 'APPROVED', 'IN_PROGRESS', 'ESCALATED'].includes(r.status);
@@ -140,6 +144,7 @@ export function BorrowDrawer({ request: r, tick, decision, onDecide, onClose, on
           <h3 className="tr-h3">
             ลำดับผู้ให้ยืมและรอบการขอ <span className="en">Legs · {r.sendMode}</span>
           </h3>
+          {r.ladderNote && <div className="sub" style={{ margin: '2px 0 8px' }}>{r.ladderNote}</div>}
           {r.legs.length === 0 ? (
             <div className="sub">ยังไม่ได้ส่งถึงผู้ให้ยืม</div>
           ) : (
@@ -174,6 +179,11 @@ export function BorrowDrawer({ request: r, tick, decision, onDecide, onClose, on
                       <span className="sub" style={{ display: 'block' }}>
                         {l.detail}
                       </span>
+                      {maySkip && l.legId && l.state === 'WAITING' && (
+                        <button className="btn btn-g" style={{ marginTop: 6 }} disabled={!skipLeg.allowed} title={skipLeg.hint ?? 'ยกเลิกคำขอถึงแห่งนี้ แล้วส่งถึงลำดับถัดไปทันที'} onClick={() => onSkipLeg?.(r, l)}>
+                          ส่งต่อลำดับถัดไปเลย
+                        </button>
+                      )}
                     </span>
                   </li>
                 );
@@ -182,7 +192,7 @@ export function BorrowDrawer({ request: r, tick, decision, onDecide, onClose, on
           )}
           {r.agentNote && (
             <div className="br-agent">
-              <b style={{ color: '#1D4ED8', fontWeight: 600 }}>Agent ({r.agentNote.code})</b> · {r.agentNote.text}
+              <b style={{ color: '#1D4ED8', fontWeight: 600 }}>Agent ({r.agentNote.code})</b>{r.agentNote.model && r.agentNote.status === 'OK' ? <span className="sub"> · {r.agentNote.model}{r.agentNote.confidence ? ` · ความมั่นใจ ${r.agentNote.confidence}` : ''}</span> : null} · {r.agentNote.text}
             </div>
           )}
         </div>

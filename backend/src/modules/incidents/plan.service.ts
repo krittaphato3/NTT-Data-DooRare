@@ -297,6 +297,14 @@ async function generate(db: Db, incident: IncidentRow, counts: Counts, edits: Pl
   };
 }
 
+/** The rule plan of the incident as it stands now, without staff edits (what the plan agent assesses); nothing is stored. */
+export async function baselinePlan(db: Db, incident: IncidentRow) {
+  const counts = await readCounts(db, incident.id);
+  const doc = await generate(db, incident, counts, noEdits(), await loadEmergencyConfig(db, incident.hospital_id));
+  const row = { id: null, revision: 0, status: 'DRAFT', estimated_need: doc.estimated, critical_min: doc.critical, buffer: doc.buffer, steps: doc.steps, shortfall: doc.shortfall, approved_by: null, approved_at: null, agent_run_id: null, created_at: new Date() };
+  return { counts, plan: await buildPlanView(db, row, incident) };
+}
+
 /** Edits of the latest live revision (kept when staff recalculate without sending new edits). */
 export async function latestEdits(db: Db, incidentId: string): Promise<PlanEdits> {
   const r = await db.query(`SELECT steps FROM emergency_plan WHERE incident_id = $1 AND status <> 'CANCELLED' ORDER BY revision DESC LIMIT 1`, [incidentId]);

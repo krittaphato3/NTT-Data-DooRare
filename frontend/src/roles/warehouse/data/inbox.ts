@@ -39,6 +39,8 @@ export interface RequestItem {
   status: InboxStatus;
   pick: PickLot[];
   note?: string;
+  /** Set for an urgent F3 request still waiting for the lender: it is answered on this page instead of in the inbox. */
+  href?: string;
   /** Transport task created once confirmed. */
   transportId?: string;
   declineReason?: string;

@@ -33,6 +33,7 @@ allocationPlansRouter.post('/:id/objection', requireAuth, pharmacist, idempotent
 allocationPlansRouter.get('/', requireAuth, requireRole('PHARMACIST', 'HOSPITAL_ADMIN', 'WAREHOUSE_OFFICER', 'SYSTEM_ADMIN'), asyncHandler(async (req, res) => res.json(await plansService.list(req.user!, req.query))));
 allocationPlansRouter.get('/:id', requireAuth, requireRole('PHARMACIST', 'HOSPITAL_ADMIN', 'WAREHOUSE_OFFICER', 'SYSTEM_ADMIN'), asyncHandler(async (req, res) => res.json(await plansService.detail(req.user!, req.params.id))));
 allocationPlansRouter.post('/:id/decision', requireAuth, pharmacist, idempotent(), asyncHandler(async (req, res) => res.json(await plansService.decision(req, req.params.id))));
+allocationPlansRouter.post('/:id/revise', requireAuth, pharmacist, idempotent(), asyncHandler(async (req, res) => res.json(await plansService.revise(req, req.params.id))));
 allocationPlansRouter.post('/:id/option', requireAuth, pharmacist, asyncHandler(async (req, res) => res.json(await plansService.option(req, req.params.id))));
 allocationPlansRouter.post('/:id/cancel', requireAuth, pharmacist, asyncHandler(async (req, res) => res.json(await plansService.cancel(req, req.params.id))));
 

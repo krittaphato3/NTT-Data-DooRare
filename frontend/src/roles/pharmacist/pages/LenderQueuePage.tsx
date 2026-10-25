@@ -441,6 +441,7 @@ function DetailPanel({
   const [kind, setKind] = useState<ResponseKind>('full');
   const live = Boolean(req.legId);
   const [declineReason, setDeclineReason] = useState('');
+  const [partialQty, setPartialQty] = useState('');
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
   const [selectedLots, setSelectedLots] = useState<Record<string, boolean>>(() => {
@@ -478,15 +479,29 @@ function DetailPanel({
   const urgencyMeta = BR_URGENCY_META[req.urgency];
   const statusMeta = BR_STATUS_META[req.status] ?? BR_STATUS_META.waiting;
 
-  const totalLotQty = lots
-    .filter((l) => selectedLots[l.lotId] && l.fefoEligible)
-    .reduce((s, l) => s + (lotQtys[l.lotId] ?? l.qty), 0);
+  // Partial answer: the quantity the pharmacist types is what is shipped; lots are taken in the listed (FEFO) order.
+  const partialNum = Number(partialQty);
+  const eligibleLots = lots.filter((l) => l.fefoEligible);
+  const eligibleTotal = eligibleLots.reduce((sum, l) => sum + l.qty, 0);
+  const partialMax = Math.min(req.qty - 1, live && eligibleLots.length ? eligibleTotal : req.qty - 1);
+  const partialValid = Number.isFinite(partialNum) && partialNum >= 1 && partialNum <= partialMax;
+  const partialLots = (() => {
+    let left = partialNum;
+    const out: { lotId: string; qty: number }[] = [];
+    for (const l of eligibleLots) {
+      if (left <= 0 || !l.uuid) continue;
+      const take = Math.min(l.qty, left);
+      out.push({ lotId: l.uuid, qty: take });
+      left -= take;
+    }
+    return out;
+  })();
 
   const confirmLabel =
     kind === 'full'
       ? `ยืนยันให้ยืม ${req.qty} ${req.unit}`
       : kind === 'partial'
-      ? `ยืนยันให้ยืม ${totalLotQty} ${req.unit} (บางส่วน)`
+      ? `ยืนยันให้ยืม ${partialValid ? partialNum : '—'} ${req.unit} (บางส่วน)`
       : 'ยืนยันปฏิเสธคำขอนี้';
 
   if (phase === 'done') {
@@ -770,8 +785,29 @@ function DetailPanel({
           </div>
         )}
 
+        {req.status === 'waiting' && kind === 'partial' && (
+          <div style={{ border: '1px solid #bfdbfe', background: '#eff6ff', borderRadius: 8, padding: '10px 12px' }}>
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#0f2a5c', marginBottom: 6 }}>
+              จำนวนที่ให้ได้ ({req.unit}) · ต้องน้อยกว่าที่ขอ {req.qty}
+            </label>
+            <input
+              type="number"
+              min={1}
+              max={partialMax}
+              value={partialQty}
+              onChange={(e) => setPartialQty(e.target.value)}
+              placeholder={`1 – ${partialMax}`}
+              aria-label="จำนวนที่ให้ยืมบางส่วน"
+              style={{ width: 140, height: 32, border: '1px solid #93c5fd', borderRadius: 6, padding: '0 8px', fontSize: 13, fontFamily: 'inherit' }}
+            />
+            <div style={{ fontSize: 11.5, color: '#475569', marginTop: 6 }}>
+              ส่งเท่าจำนวนนี้ ส่วนที่เหลือ ({partialValid ? req.qty - partialNum : '—'} {req.unit}) ระบบจะขอต่อจากผู้ให้ยืมรายถัดไปในลำดับให้เอง
+            </div>
+          </div>
+        )}
+
         {/* FEFO lot selector */}
-        {req.status === 'waiting' && lots.length > 0 && (
+        {req.status === 'waiting' && lots.length > 0 && kind !== 'partial' && (
           <div>
             <div
               style={{
@@ -814,7 +850,7 @@ function DetailPanel({
                   onToggle={() => setSelectedLots((p) => ({ ...p, [lot.lotId]: !p[lot.lotId] }))}
                   qty={lotQtys[lot.lotId] ?? lot.qty}
                   onQtyChange={(v) => setLotQtys((p) => ({ ...p, [lot.lotId]: v }))}
-                  partial={kind === 'partial'}
+                  partial={false}
                 />
               ))}
             </div>
@@ -972,12 +1008,11 @@ function DetailPanel({
                     background: kind === 'decline' ? '#b91c1c' : undefined,
                     color: kind === 'decline' ? '#fff' : undefined,
                   }}
-                  disabled={sending || (live && kind === 'decline' && declineReason.trim().length < 3)}
+                  disabled={sending || (live && kind === 'decline' && declineReason.trim().length < 3) || (kind === 'partial' && !partialValid)}
                   onClick={() => {
                     if (!live) return setPhase('done');
                     // API-F1b-009: full = ACCEPT (server picks FEFO lots >= 180 days), partial = PARTIAL with the chosen lots, decline needs a reason.
-                    const chosen = lots.filter((l) => selectedLots[l.lotId] && l.fefoEligible && l.uuid).map((l) => ({ lotId: l.uuid!, qty: lotQtys[l.lotId] ?? l.qty }));
-                    const body = kind === 'full' ? { decision: 'ACCEPT' as const } : kind === 'partial' ? { decision: 'PARTIAL' as const, qty: totalLotQty, lots: chosen } : { decision: 'REJECT' as const, reason: declineReason.trim() };
+                    const body = kind === 'full' ? { decision: 'ACCEPT' as const } : kind === 'partial' ? { decision: 'PARTIAL' as const, qty: partialNum, ...(partialLots.length ? { lots: partialLots } : {}) } : { decision: 'REJECT' as const, reason: declineReason.trim() };
                     setSending(true);
                     setSendError(null);
                     // F3 urgent requests go through the emergency confirmation (first confirmation wins, kits / FEFO picked by the server)

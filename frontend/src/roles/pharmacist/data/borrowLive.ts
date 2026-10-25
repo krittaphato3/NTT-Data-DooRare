@@ -22,7 +22,7 @@ function legDetail(l: ApiBorrowLeg, unit: string): string {
     case 'RECEIVED': return `${base} · ตอบรับ ${n(l.qtyAccepted ?? 0)} · รับแล้ว ${n(l.qtyReceived ?? 0)}`;
     case 'REJECTED': return `${base} · ปฏิเสธ ${hh(l.respondedAt)}${l.rejectReason ? ` · ${l.rejectReason}` : ''}`;
     case 'TIMED_OUT': return `${base} · หมดเวลา ${hh(l.deadlineAt)}`;
-    case 'CANCELLED': return `${base} · ยกเลิก${l.rejectReason === 'STOP_RULE' ? ' (ได้ครบตามกฎหยุดแล้ว)' : ''}`;
+    case 'CANCELLED': return `${base} · ยกเลิก${l.rejectReason === 'STOP_RULE' ? ' (ได้ครบตามกฎหยุดแล้ว)' : l.rejectReason === 'SKIPPED_BY_BORROWER' ? ' (ส่งต่อลำดับถัดไปแล้ว)' : ''}`;
     default: return base;
   }
 }
@@ -52,18 +52,46 @@ export function returnStateOf(requestNo: string, obligations: ApiReturnObligatio
   return 'PENDING';
 }
 
+/** The pharmacist's note under the legs: what the lender-selection agent chose (AGT-F1), or why the rules were used. */
+function agentNoteOf(r: ApiBorrowRequest): NonNullable<BorrowRequest['agentNote']> {
+  const a = r.proposal?.agent;
+  if (a?.status === 'OK' && a.summary) {
+    return { code: 'F1_T2', text: `${a.summary}${a.priorityAfter.length ? ` · ถ้ารอบแรกไม่พอ ขอต่อ: ${a.priorityAfter.join(' → ')}` : ''} · เภสัชกรตรวจและอนุมัติก่อนส่ง`, model: a.model, confidence: a.confidence, status: 'OK' };
+  }
+  const why = a?.status === 'SKIPPED' ? 'ปิด Agent อยู่' : a?.flags.includes('NO_LLM_CONFIGURED') ? 'ยังไม่ได้ตั้งค่า LLM' : a ? 'Agent ตอบไม่ได้หรือไม่ผ่านการตรวจ' : 'ไม่ได้ใช้ Agent';
+  return { code: 'F1_T2', text: `${why} — ใช้ลำดับตามคะแนน Si และข้อความแม่แบบ · เภสัชกรตรวจและอนุมัติก่อนส่ง`, status: a?.status ?? 'SKIPPED', model: a?.model ?? null };
+}
+
 export function borrowRequestToView(r: ApiBorrowRequest, now = Date.now(), returnState?: ReturnState): BorrowRequest {
   const unit = r.drug.baseUnit;
   const activeLegs = r.legs.filter((l) => l.status !== 'CANCELLED');
   const waiting = r.legs.find((l) => l.status === 'SENT');
-  const proposed: BorrowLeg[] = (r.status === 'PENDING_APPROVAL' && r.proposal ? r.proposal.ladder : []).map((e) => ({
-    hospital: e.name,
-    si: e.si,
-    state: 'NOT_SENT',
-    detail: e.qtyPlanned > 0 ? `ลำดับ ${e.rank} · รอบแรก ขอ ${n(e.qtyPlanned)} ${unit}` : `ลำดับ ${e.rank} · ส่งต่อถ้ารอบแรกได้ไม่ครบ`,
-  }));
+  const asked = new Set(r.legs.map((l) => l.lender.id));
+  const ladder = r.proposal?.ladder ?? [];
+  const reserve = ladder.filter((e) => !asked.has(e.hospitalId));
+  const open = ['APPROVED', 'IN_PROGRESS', 'PARTIALLY_FULFILLED'].includes(r.status);
+  const shown = r.status === 'PENDING_APPROVAL' ? ladder : open ? reserve : [];
+  // lenders needed to cover what is still missing, asking in ladder order (the rest are spare)
+  let covered = r.status === 'PENDING_APPROVAL' ? 0 : r.stop?.effective ?? 0;
+  const proposed: BorrowLeg[] = shown.map((e) => {
+    const needed = covered < r.qtyRequested;
+    covered += e.lendable;
+    const first = r.status === 'PENDING_APPROVAL' && e.qtyPlanned > 0;
+    const tail = first ? `ลำดับ ${e.rank} · รอบแรก ขอ ${n(e.qtyPlanned)} ${unit}` : `ลำดับ ${e.rank} · ${needed ? 'ส่งต่อถ้าแห่งก่อนหน้าไม่ได้/ได้ไม่ครบ' : 'สำรอง · ใช้เมื่อแห่งก่อนหน้าไม่พอ'} · ให้ยืมได้ ≤ ${n(e.lendable)} ${unit}`;
+    return { hospital: e.name, si: e.si, state: 'NOT_SENT', detail: `${tail}${e.rationale ? ` · Agent: ${e.rationale}` : ''}` };
+  });
+  const ladderNote = ladder.length && (r.status === 'PENDING_APPROVAL' || open)
+    ? (() => {
+        let c = r.status === 'PENDING_APPROVAL' ? 0 : r.stop?.effective ?? 0;
+        let k = 0;
+        for (const e of shown) { if (c >= r.qtyRequested) break; c += e.lendable; k += 1; }
+        const inFlight = r.legs.filter((l) => l.status === 'SENT').length;
+        const total = k + inFlight;
+        return `ระบบจะขอสูงสุด ${total} แห่งจนครบ ${n(r.qtyRequested)} ${unit}${shown.length > k ? ` (สำรองอีก ${shown.length - k} แห่ง)` : ''} · ส่งต่อทีละแห่งเมื่อแห่งก่อนหน้าปฏิเสธ หมดเวลา หรือกด "ส่งต่อลำดับถัดไป"`;
+      })()
+    : undefined;
   const legs: BorrowLeg[] = r.legs.length
-    ? r.legs.map((l) => ({ hospital: l.lender.name, ...(l.si !== null ? { si: l.si } : {}), state: LEG[l.status], rawStatus: l.status, detail: legDetail(l, unit) }))
+    ? [...r.legs.map((l) => ({ hospital: l.lender.name, legId: l.id, ...(l.si !== null ? { si: l.si } : {}), state: LEG[l.status], rawStatus: l.status, detail: legDetail(l, unit) })), ...proposed]
     : proposed;
   const stop = r.stop && r.status !== 'DRAFT'
     ? {
@@ -108,7 +136,8 @@ export function borrowRequestToView(r: ApiBorrowRequest, now = Date.now(), retur
     createdBy: `${r.createdBy} · ${fmtThaiTime(r.createdAt, new Date(now))}`,
     ...(r.approvedBy ? { approvedBy: `${r.approvedBy} (PHARMACIST)` } : {}),
     legs,
+    ...(ladderNote ? { ladderNote } : {}),
     ...(r.drug.kind === 'KIT' ? { isKit: true } : {}),
-    ...(r.status === 'PENDING_APPROVAL' ? { agentNote: { code: 'F1_T3', text: 'ร่างข้อความตามเทมเพลต (ยังไม่เชื่อม Agent) — เภสัชกรตรวจและอนุมัติก่อนส่ง' } } : {}),
+    ...(r.status === 'PENDING_APPROVAL' ? { agentNote: agentNoteOf(r) } : {}),
   };
 }

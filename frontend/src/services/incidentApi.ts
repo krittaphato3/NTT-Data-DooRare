@@ -297,6 +297,38 @@ export const previewPlan = (id: string, edits?: PlanEdits) => post<Wrapped<{ pre
 export const calculatePlan = (id: string, edits?: PlanEdits) => post<Wrapped<{ incident: { id: string; status: string; version: number }; plan: ApiPlan }>>(`/incidents/${id}/plan`, edits ? { edits } : {});
 export const approvePlan = (id: string, planId: string) => post<Wrapped<{ incident: { id: string; status: string; version: number }; plan: ApiPlan; packTasks: number }>>(`/incidents/${id}/plan/approve`, { planId });
 
+/** AGT-F3: items outside the preset kits that the agent suggests (a second opinion; adding one goes through the normal plan edit). */
+export interface ApiExtraSuggestion {
+  status: 'OK' | 'FALLBACK' | 'SKIPPED';
+  model: string | null;
+  summary: string | null;
+  confidence: string | null;
+  flags: string[];
+  suggestions: { drugMasterId: string; name: string; unit: string; qty: number; rationale: string; freeStock: number }[];
+  createdAt: string;
+}
+export const getExtraSuggestions = (id: string) => apiJson<Wrapped<{ running: boolean; latest: ApiExtraSuggestion | null }>>(`/incidents/${id}/plan/agent-suggestions`);
+/** Starts the agent in the background (202): poll `getExtraSuggestions` until `running` is false. */
+export const requestExtraSuggestions = (id: string) => post<Wrapped<{ running: true; started: boolean }>>(`/incidents/${id}/plan/agent-suggestions`, {});
+
+/** AGT-F3-001: the agent's assessment of the rule plan (keep / remove / ask per line, never a quantity). */
+export interface ApiPlanAgent {
+  runId: string;
+  status: 'OK' | 'FALLBACK' | 'SKIPPED';
+  model: string | null;
+  summary: string | null;
+  confidence: string | null;
+  highlights: string[];
+  flags: string[];
+  lines: { key: string; kind: 'KIT' | 'EXTRA'; name: string; decision: 'KEEP' | 'REMOVE' | 'ASK'; reason: string | null; question: string | null }[];
+  latencyMs: number | null;
+  createdAt: string;
+}
+/** `stale` = the incident (counts, type) or the rules changed since the stored assessment. */
+export const getPlanAgent = (id: string) => apiJson<Wrapped<{ running: boolean; latest: ApiPlanAgent | null; stale: boolean }>>(`/incidents/${id}/plan/agent`);
+/** Starts the agent in the background (202): poll `getPlanAgent` until `running` is false. */
+export const startPlanAgent = (id: string) => post<Wrapped<{ running: true; started: boolean }>>(`/incidents/${id}/plan/agent`, {});
+
 export const previewBorrow = (id: string) => apiJson<Wrapped<ApiBorrowPreview>>(`/incidents/${id}/emergency-borrow/preview`);
 export const sendBorrow = (id: string, lenderPlan?: Record<string, string[]>) => post<Wrapped<ApiSendResult>>(`/incidents/${id}/emergency-borrow`, lenderPlan ? { lenderPlan } : {});
 

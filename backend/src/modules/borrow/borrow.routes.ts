@@ -25,6 +25,7 @@ borrowRequestsRouter.patch('/:id/ladder', requireAuth, pharmacist, asyncHandler(
 borrowRequestsRouter.post('/:id/approve', requireAuth, pharmacist, idempotent(), asyncHandler(async (req, res) => res.json(await borrowService.approve(req, req.params.id))));
 borrowRequestsRouter.post('/:id/reject', requireAuth, pharmacist, idempotent(), asyncHandler(async (req, res) => res.json(await borrowService.reject(req, req.params.id))));
 borrowRequestsRouter.post('/:id/cancel', requireAuth, pharmacist, idempotent(), asyncHandler(async (req, res) => res.json(await borrowService.cancel(req, req.params.id))));
+borrowRequestsRouter.post('/:id/legs/:legId/skip', requireAuth, pharmacist, idempotent(), asyncHandler(async (req, res) => res.json(await borrowService.skipLeg(req, req.params.id, req.params.legId))));
 borrowRequestsRouter.post('/:id/escalate-manual', requireAuth, pharmacist, idempotent(), asyncHandler(async (req, res) => res.json(await borrowService.escalateManual(req, req.params.id))));
 
 /** API-F1b-008 `GET /lender-queue` (mounted at /api/v1/lender-queue). */

@@ -54,7 +54,7 @@ export interface AllocationPlan {
     option: string | null;
     options: { id: string; label: string }[];
     cancelRequestedBy: string | null;
-    lines: { receiver: string; qty: number; km: number; cost: number; taskNo: string | null }[];
+    lines: { receiver: string; receiverId: string; qty: number; km: number; cost: number; taskNo: string | null }[];
     openForApproval: boolean;
     /** The viewer's hospital is in the plan; `isParty` = origin or receiver (an objector is involved but not a party). */
     involved: boolean;
