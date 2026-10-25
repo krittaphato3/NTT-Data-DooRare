@@ -9,7 +9,7 @@ import { ExpiryPipelineStepper } from '../components/ExpiryPipelineStepper';
 import { ReasonDialog } from '../../hospital-admin/components/ReasonDialog';
 import { useNearExpiry } from '../data/useNearExpiry';
 import { ManualPlanDialog } from '../components/ManualPlanDialog';
-import { cancelPlan, choosePlanOption, decidePlan, getPoolCandidates, objectPlan, sendPoolToAgent, withdrawNearExpiry } from '../../../services/expiryApi';
+import { cancelPlan, choosePlanOption, decidePlan, getPoolCandidates, objectPlan, revisePlan, sendPoolToAgent, withdrawNearExpiry } from '../../../services/expiryApi';
 import type { ApiPlanOption } from '../../../services/expiryApi';
 import { usePoolAndPlans } from '../data/useExpiryF2';
 import { COST_LIMIT_PCT, planStatusMeta } from '../data/pool';
@@ -77,6 +77,8 @@ export function PoolAllocationPage({ role = 'PHARMACIST' }: { role?: RoleCode })
   const liveApprove = (p: AllocationPlan) => p.live && run(p, decidePlan(p.live.uuid, 'APPROVED', p.version), 'บันทึกการเห็นชอบแล้ว (audit_log)');
   const liveApproveAll = (p: AllocationPlan, noteText: string, lines?: { receiver: string; qty: number }[]) =>
     p.live && run(p, decidePlan(p.live.uuid, 'APPROVED', p.version, noteText, true, lines), 'บันทึกมติที่ประชุมและปรับปรุงยอดจัดสรรเรียบร้อยแล้ว · เริ่มขั้นตอนขนส่ง (UI-14)');
+  const liveRevise = (p: AllocationPlan, note: string, lines: { receiverHospitalId: string; qty: number }[]) =>
+    p.live && run(p, revisePlan(p.live.uuid, p.version, lines, note), 'ปรับยอดจัดสรรแล้ว · ส่งให้ทุก รพ. เห็นชอบรอบใหม่');
   const liveReject = (p: AllocationPlan, comment: string) => p.live && run(p, decidePlan(p.live.uuid, 'REJECTED', p.version, comment), 'บันทึกการไม่เห็นชอบแล้ว · แผนเข้าสถานะต้องหารือ');
   const liveOption = (p: AllocationPlan, id: string, label: string) => p.live && run(p, choosePlanOption(p.live.uuid, id as ApiPlanOption, p.version), `บันทึกทางเลือกแล้ว: ${label} (audit_log)`);
   const liveCancel = (p: AllocationPlan, reason: string) => p.live && run(p, cancelPlan(p.live.uuid, reason), 'ส่งคำขอยกเลิกแล้ว · ถ้าเป็นแผนที่อนุมัติแล้วต้องให้อีกฝ่ายยินยอมด้วย');
@@ -653,6 +655,7 @@ export function PoolAllocationPage({ role = 'PHARMACIST' }: { role?: RoleCode })
           decision={decisions[sel.id]}
           onApprove={() => (live ? liveApprove(sel) : approve(sel.id))}
           onApproveAll={(text, updatedLines) => (live ? liveApproveAll(sel, text, updatedLines) : approve(sel.id))}
+          onRevise={live ? (note, lines) => liveRevise(sel, note, lines) : undefined}
           onReject={(comment) => liveReject(sel, comment)}
           onUneconomical={(label, id) => (live && id ? liveOption(sel, id, label) : decideUneconomical(sel.id, label))}
           onCancel={(reason) => liveCancel(sel, reason)}
