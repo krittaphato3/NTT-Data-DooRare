@@ -122,6 +122,8 @@ export const proposeBorrowRequest = (id: string) => post<One>(`/borrow-requests/
 export const approveBorrowRequest = (id: string, version?: number, messages?: Record<string, string>) => post<One>(`/borrow-requests/${id}/approve`, { version, messages });
 export const rejectBorrowRequest = (id: string, reason: string) => post<One>(`/borrow-requests/${id}/reject`, { reason });
 export const cancelBorrowRequest = (id: string, reason: string) => post<One>(`/borrow-requests/${id}/cancel`, { reason });
+/** Borrower stops waiting for a lender: that request is cancelled and the next lender of the ladder is asked now. */
+export const skipBorrowLeg = (id: string, legId: string) => post<One>(`/borrow-requests/${id}/legs/${legId}/skip`);
 export const escalateManual = (id: string, body: { lenderHospitalId: string; qty: number; reason: string }) => post<One>(`/borrow-requests/${id}/escalate-manual`, body);
 export const editLadder = (id: string, body: { version?: number; legs?: { hospitalId: string; qty: number }[]; messages?: Record<string, string> }) =>
   apiJson<One>(`/borrow-requests/${id}/ladder`, { method: 'PATCH', body: JSON.stringify(body) });

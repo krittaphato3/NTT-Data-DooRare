@@ -24,6 +24,8 @@ export type RowAction = 'approve' | 'detail' | 'addLender' | 'recordReturn';
 
 export interface BorrowLeg {
   hospital: string;
+  /** Set for a leg the API has sent (used to skip it). */
+  legId?: string;
   /** Lender ranking score from the system order; absent for a lender added outside the ladder. */
   si?: number;
   state: LegState;
@@ -34,6 +36,8 @@ export interface BorrowLeg {
 
 export interface BorrowRequest {
   id: string;
+  /** One line above the lender list: how many lenders the plan may ask in total. */
+  ladderNote?: string;
   /** Set when the row came from the API (request uuid + row version). */
   uuid?: string;
   version?: number;

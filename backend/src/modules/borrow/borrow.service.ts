@@ -613,6 +613,7 @@ export class BorrowService {
       const legs = await loadLegs(client, id);
       const remaining = Math.max(0, Math.ceil(r.qty_requested - effectiveQty(legs) - 1e-9));
       if (qty > remaining) throw new HttpError(422, 'GUARDRAIL_REJECTED', `ขอเกินจำนวนที่ยังขาด (${remaining})`);
+      if (!r.ladder) throw new HttpError(422, 'NOT_SUPPORTED', 'คำขอนี้ไม่มีลำดับผู้ให้ยืมของระบบ (เช่น ชุดยาเหตุฉุกเฉิน) จัดการที่หน้าเหตุฉุกเฉิน');
       const stored = r.ladder as StoredLadder;
       const manual: LadderEntry = {
         hospitalId: lender.id, code: lender.code, name: lender.name, eligible: true, failure: null, listingId: listing.id, transitMin: 0, usableForLending: 0, totalTarget: null,
@@ -625,6 +626,41 @@ export class BorrowService {
       await setRequestStatus(client, r, 'IN_PROGRESS', auditContext(req), 'REQ_MANUAL_LENDER', { lender: lender.code, qty, reason });
       const data = await requestView(client, await loadDetail(client, id), user);
       return { ok: true, id, version: data.version, data };
+    });
+  }
+
+  /**
+   * The borrower does not want to wait for a lender any more: the waiting request to that lender is cancelled (the lender sees it as
+   * cancelled) and the flow asks the next lender of the ladder at once, the same way a timeout would. F3 emergency requests have
+   * their own timers and are handled in the incident console.
+   */
+  async skipLeg(req: Request, rawId: string, rawLegId: string) {
+    const user = req.user!;
+    mustBePharmacistOf(user);
+    const id = uuidParam(rawId, 'id');
+    const legId = uuidParam(rawLegId, 'legId');
+    return withTransaction(async (client) => {
+      const request = await loadRequest(client, id);
+      assertBorrower(user, request);
+      const r = request!;
+      if (!['APPROVED', 'IN_PROGRESS', 'PARTIALLY_FULFILLED'].includes(r.status)) throw new HttpError(409, 'INVALID_TRANSITION', `ส่งต่อลำดับถัดไปไม่ได้ในสถานะ ${r.status}`);
+      const ctx = (await client.query(`SELECT context::text AS context FROM borrow_request WHERE id = $1`, [id])).rows[0]?.context;
+      if (ctx === 'EMERGENCY') throw new HttpError(422, 'NOT_SUPPORTED', 'คำขอเหตุฉุกเฉินจัดการที่หน้าเหตุฉุกเฉิน');
+      const leg = (await client.query(`SELECT id, status::text AS status, lender_hospital_id FROM borrow_leg WHERE id = $1 AND request_id = $2 FOR UPDATE`, [legId, id])).rows[0];
+      if (!leg) throw new HttpError(404, 'NOT_FOUND', 'ไม่พบคำขอถึงผู้ให้ยืมรายนี้');
+      if (leg.status !== 'SENT') throw new HttpError(409, 'ALREADY_DECIDED', 'ผู้ให้ยืมรายนี้ตอบแล้วหรือถูกปิดแล้ว ส่งต่อไม่ได้');
+      await client.query(`UPDATE borrow_leg SET status = 'CANCELLED', reject_reason = 'SKIPPED_BY_BORROWER' WHERE id = $1`, [legId]);
+      await notifyRoles(client, leg.lender_hospital_id, ['PHARMACIST', 'WAREHOUSE_OFFICER'], {
+        kind: 'BORROW_LEG_CANCELLED',
+        title: `คำขอยืม ${r.request_no} ถูกยกเลิกโดยผู้ขอ`,
+        body: 'ผู้ขอส่งคำขอต่อไปยังผู้ให้ยืมรายถัดไปแล้ว ไม่ต้องตอบรับ',
+        refType: 'borrow_leg',
+        refId: legId,
+      });
+      await writeAudit(client, auditContext(req), { action: 'REQ_LEG_SKIPPED', entityType: 'borrow_request', entityId: id, after: { legId, lender: leg.lender_hospital_id } });
+      const next = await advanceRequest(client, id, auditContext(req));
+      const data = await requestView(client, await loadDetail(client, id), user);
+      return { ok: true, id, version: data.version, newLegs: next.newLegs, data };
     });
   }
 
