@@ -98,7 +98,7 @@ export function PoolAllocationPage({ role = 'PHARMACIST' }: { role?: RoleCode })
   /* Lots nobody in the region can use before expiry are not worth an agent run: found out up front with the code-side candidate list. */
   const [cands, setCands] = useState<Record<string, { ok: boolean; note: string }>>({});
   const [batch, setBatch] = useState<{ running: boolean; done: number; total: number } | null>(null);
-  const [batchResult, setBatchResult] = useState<{ lot: string; ok: boolean; skipped?: boolean; text: string }[] | null>(null);
+  const [batchResult, setBatchResult] = useState<{ lot: string; ok: boolean; skipped?: boolean; text: string; plan?: string }[] | null>(null);
   /* An allocation round covers every lot in the pool (any hospital's); the plan still needs the origin and every receiver to approve. */
   const mineOpen = (l: PoolLot) => !!l.live && l.live.status !== 'ALLOCATED' && l.live.qtyAvailable > 0;
   // Lots with nothing left to match (their plan is already moving) are listed apart, not in the waiting list.
@@ -154,7 +154,7 @@ export function PoolAllocationPage({ role = 'PHARMACIST' }: { role?: RoleCode })
     setNotice(null);
     setBatchResult(null);
     setBatch({ running: true, done: 0, total: lots.length });
-    const results: { lot: string; ok: boolean; skipped?: boolean; text: string }[] = [];
+    const results: { lot: string; ok: boolean; skipped?: boolean; text: string; plan?: string }[] = [];
     // Soonest expiry first, then the highest value, so the lots most at risk get first pick of the receivers.
     const ordered = [...lots].sort((x, y) => x.daysLeft - y.daysLeft || y.value - x.value);
     for (const l of ordered) {
@@ -168,7 +168,7 @@ export function PoolAllocationPage({ role = 'PHARMACIST' }: { role?: RoleCode })
         const { data: r } = await sendPoolToAgent(l.live!.uuid);
         const a = r.agent;
         const how = a.status === 'OK' ? `Agent (${a.model ?? '—'})` : `สูตร F-22 แทน Agent (${a.status})`;
-        results.push({ lot: l.drug, ok: true, text: `แผน ${r.plan.planNo} · ${r.plan.status === 'READY_FOR_APPROVAL' ? 'รอ รพ.ที่เกี่ยวข้องเห็นชอบ' : 'อนุมัติอัตโนมัติ (เครือข่ายเดียวกัน)'} · ${how}${a.summary ? ` — ${a.summary}` : ''}` });
+        results.push({ lot: l.drug, ok: true, plan: r.plan.status, text: `แผน ${r.plan.planNo} · ${r.plan.status === 'READY_FOR_APPROVAL' ? 'รอ รพ.ที่เกี่ยวข้องเห็นชอบ' : 'อนุมัติอัตโนมัติ (เครือข่ายเดียวกัน)'} · ${how}${a.summary ? ` — ${a.summary}` : ''}` });
       } catch (e) {
         results.push({ lot: l.drug, ok: false, text: (e as Error).message });
       }
@@ -177,7 +177,9 @@ export function PoolAllocationPage({ role = 'PHARMACIST' }: { role?: RoleCode })
     setBatch(null);
     setBatchResult(results);
     setSelected(new Set());
-    setTab('plans');
+    // Go where the new plans are: waiting for approval -> "แผนรอเห็นชอบ"; auto-approved (same network) -> "อนุมัติแล้ว · ขนส่ง"; none created -> stay on the pool
+    const made = results.filter((r) => r.ok);
+    setTab(made.some((r) => r.plan === 'READY_FOR_APPROVAL') ? 'plans' : made.length > 0 ? 'approved' : 'pool');
     await data.reload();
   };
 
@@ -342,7 +344,11 @@ export function PoolAllocationPage({ role = 'PHARMACIST' }: { role?: RoleCode })
               </li>
             ))}
           </ul>
-          <div className="sub">ทุก รพ.ที่อยู่ในแผนต้องเห็นชอบก่อนส่งของ · ดูและตรวจรายแผนได้ในแท็บแผนจัดสรร</div>
+          <div className="sub">
+            {batchResult.some((r) => r.plan === 'READY_FOR_APPROVAL') ? 'แผนที่รอเห็นชอบอยู่ในแท็บ "แผนรอเห็นชอบ" · ทุก รพ.ในแผนต้องเห็นชอบก่อนส่งของ' : ''}
+            {batchResult.some((r) => r.ok && r.plan !== 'READY_FOR_APPROVAL') ? ' แผนที่อนุมัติอัตโนมัติ (เครือข่ายเดียวกัน) เริ่มขนส่งแล้ว อยู่ในแท็บ "อนุมัติแล้ว · ขนส่ง"' : ''}
+            {batchResult.every((r) => !r.ok) ? 'ไม่มีแผนใหม่ · ล็อตที่ไม่มีผู้รับถอนกลับมาใช้เองได้ที่ปุ่มในแถว' : ''}
+          </div>
         </section>
       )}
 
