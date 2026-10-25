@@ -12,6 +12,8 @@ export interface EmergencyConfig {
   blood: { enabled: boolean; prcOMaxUnits: number; prcOMinRemainingDays: number };
   /** Days a borrowed set / item is expected back (return obligation). */
   returnDays: number;
+  /** AGT-F3-001 time budget. The spec gives 8 s for a Haiku-class model; ours runs in the background, so a slower BYOK model may take longer. */
+  agentTimeoutS: number;
 }
 
 /** `emergency.*` from `config_setting` (spec config-defaults.yaml as fallback; `emergency.max_parallel` is ours, default 5). */
@@ -30,5 +32,6 @@ export async function loadEmergencyConfig(db: Db, hospitalId?: string | null): P
       prcOMinRemainingDays: Number(await g('emergency.blood.prc_o_min_remaining_days', 7)),
     },
     returnDays: Number(await g('return.default_days', 30)),
+    agentTimeoutS: Number(await g('emergency.agent_timeout_s', 90)),
   };
 }
