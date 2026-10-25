@@ -41,7 +41,7 @@ export function RequestsTable({ rows, activeId, urgentLeft, onOpen, onConfirm, o
             return (
               <tr key={r.id} className={activeId === r.id ? 'r-active' : ''}>
                 <td>
-                  <button className="rowbtn code" style={{ fontSize: 12.5, color: '#1D4ED8', fontWeight: 600 }} onClick={() => onOpen(r.id)}>
+                  <button className="rowbtn code" style={{ fontSize: 12.5, color: '#1D4ED8', fontWeight: 600 }} onClick={() => (r.href ? window.location.assign(r.href) : onOpen(r.id))}>
                     {r.id}
                   </button>
                   <span style={{ display: 'block', marginTop: 2 }}>
@@ -74,7 +74,9 @@ export function RequestsTable({ rows, activeId, urgentLeft, onOpen, onConfirm, o
                   {r.status === 'DECLINED' && <span className="sub" style={{ display: 'block' }}>{r.declineReason}</span>}
                 </td>
                 <td className="r">
-                  {open ? (
+                  {open && r.href ? (
+                    <a className="btn btn-sm btn-p" href={r.href} style={{ textDecoration: 'none' }}>ไปยืนยันที่ Emergency</a>
+                  ) : open ? (
                     <span style={{ display: 'inline-flex', gap: 6 }}>
                       <button className="btn btn-sm btn-p" onClick={() => onConfirm(r.id)}>{confirmLabel}</button>
                       {!hideDecline && onDecline && (

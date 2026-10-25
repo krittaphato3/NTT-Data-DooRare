@@ -9,7 +9,10 @@ import type { InboxFeature, InboundTask, RequestItem } from '../data/inbox';
 import { whHref } from '../data/routes';
 import { useTransport } from '../data/useTransport';
 import { HOSPITALS } from '../data/transport';
+import type { HospitalCode } from '../data/transport';
 import { mockFallbackEnabled } from '../../../services/dataSource';
+import { useEmergencyInbox } from '../../er/live/hooks';
+import { fmtTime } from '../../../lib/time';
 import '../transport.css';
 import '../dashboard.css';
 import '../inbox.css';
@@ -26,6 +29,8 @@ export function InboxPage() {
   const { user } = useAuth();
   const tr = useTransport();
   const isLive = tr.source === 'live';
+  // Urgent F3 requests that no lender has answered yet: they have no transport task, so they are listed from the emergency inbox.
+  const emergency = useEmergencyInbox('pending');
 
   const [tab, setTab] = useState<Tab>('out');
   const [selId, setSelId] = useState<string | null>(null);
@@ -69,9 +74,28 @@ export function InboxPage() {
   const items: RequestItem[] = useMemo(() => {
     if (!isLive) return isDemo ? OUTBOUND_TASKS : [];
 
-    return tr.shipments
+    const waitingEmergency: RequestItem[] = emergency.legs
+      .filter((l) => l.status === 'SENT' || l.canAnswerLate)
+      .map((l) => ({
+        id: l.request.requestNo,
+        feature: 'F3' as const,
+        ref: `${l.item.name} · เหตุ ${l.incident.incidentNo}`,
+        drug: l.item.name,
+        qty: l.qtyAsked,
+        unit: l.item.unit,
+        to: l.borrower.code as HospitalCode,
+        requestedBy: `${l.borrower.name} · รอบ ${l.round}${l.lateForEta ? ' · ถึงหลัง ETA' : ''}`,
+        due: l.status === 'SENT' && l.remainingSec !== null ? `ยืนยันภายใน ${fmtTime(l.remainingSec)}` : 'หมดเวลา · ยังยืนยันช้าได้',
+        urgent: true,
+        status: 'NEW' as const,
+        pick: [],
+        note: 'F3 ยืมฉุกเฉิน · ยืนยัน/ให้บางส่วน/ปฏิเสธที่หน้า Emergency',
+        href: whHref('kit'),
+      }));
+
+    return [...waitingEmergency, ...tr.shipments
       .filter((s) => s.outbound && s.status !== 'RECEIVED' && s.status !== 'CANCELLED')
-      .map((s) => {
+      .map((s): RequestItem => {
         const isConfirmed =
           packedIds.has(s.id) ||
           s.status === 'LOADED' ||
@@ -99,8 +123,9 @@ export function InboxPage() {
               : 'F2 โอนยาใกล้หมดอายุ',
           transportId: s.id,
         };
-      });
-  }, [isLive, tr.shipments, packedIds]);
+      }),
+    ];
+  }, [isLive, tr.shipments, packedIds, emergency.legs]);
 
   // Inbound items: from live transport tasks
   const inTasks: InboundTask[] = useMemo(() => {
