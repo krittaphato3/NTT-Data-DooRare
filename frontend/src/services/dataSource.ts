@@ -1,22 +1,21 @@
 /**
  * One place that decides what a screen does when its API call fails.
  *  - default: show nothing invented. The hook reports the error here and the app shell shows a banner (see DataStatusBanner).
- *  - `?mock=1` (kept in localStorage until `?mock=0`): demo mode, hooks fall back to their mock fixtures and the banner says so.
+ *  - demo mode (`?mock=1`) no longer exists: the flag is ignored and cleared.
  * A 401 never reaches a hook as a "failure": apiFetch clears the dead session and reloads to the login page.
  */
 import { useSyncExternalStore } from 'react';
 
 const KEY = 'doorare_mock';
 
+/** Demo (mock) mode is switched off for good: a screen shows live data or the error, never invented rows. A flag left in localStorage is removed. */
 function readFlag(): boolean {
   try {
-    const q = new URLSearchParams(window.location.search).get('mock');
-    if (q === '1') localStorage.setItem(KEY, '1');
-    if (q === '0') localStorage.removeItem(KEY);
-    return localStorage.getItem(KEY) === '1';
+    localStorage.removeItem(KEY);
   } catch {
-    return false;
+    /* storage can be blocked */
   }
+  return false;
 }
 
 export const mockFallbackEnabled = (): boolean => readFlag();
