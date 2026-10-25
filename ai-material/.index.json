@@ -586,5 +586,12 @@
     "summary": "Reusable setup prompt starter.",
     "tags": "session, setup",
     "date": "2026-10-09"
+  },
+  {
+    "path": "sessions\\2026-10-25-1300-claude-f2-start-only-demo.md",
+    "title": "F2 demo: start-only mode (flow by hand)",
+    "summary": "demo-f2.ts CLEAN / KEEP_DETECTED options: seed only the start, rest by UI",
+    "tags": "session, f2, demo, scenario",
+    "date": "2026-10-25"
   }
 ]
