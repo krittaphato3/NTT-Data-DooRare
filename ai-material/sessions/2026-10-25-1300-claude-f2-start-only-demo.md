@@ -37,3 +37,9 @@
 - F2 plans were all auto-approved because the 5 hospitals share one network (rule in `expiry/matching.ts`: every receiver in the origin's network). `db/demo/03-networks.sql` (+ `npm run db:networks`) moves HD, HE to "เครือข่ายตัวอย่าง B" (data only, idempotent). Verified: HD lot -> plan READY_FOR_APPROVAL (receivers HB, HA).
 - DB reset 3 times for testing; final state = start-only (pool 4 lots, HA 4 DETECTED). LLM still not configured (agents on rules fallback).
 - F3 note: with no hospital inside the ETA only the fastest lender is asked (spec BR-F3-021); change to parallel not done, needs a decision.
+
+## Plan revision (after the meeting) and login cards
+- `POST /allocation-plans/:id/revise` (`plansService.revise`): involved pharmacist changes line quantities of an open plan (READY_FOR_APPROVAL / NEEDS_DISCUSSION). Own lines are removed first so F-22 caps ignore the plan itself; lines re-validated (cap, pool qty), value / transport cost / F-23 recomputed, option reset, version+1, all approvals PENDING except the reviser (APPROVED), status READY_FOR_APPROVAL; audit PLAN_REVISED. All approve -> existing `decision` starts transport. Tested via API on AP-2026-00087 (NEEDS_DISCUSSION -> READY_FOR_APPROVAL v5); the approvals + transport step was not run.
+- `AllocationDrawer`: meeting / adjust box moved to the top for NEEDS_DISCUSSION; form has a note field and "ส่งขอความเห็นชอบรอบใหม่"; old "approve all now" button only remains when no `onRevise` (mock). Only existing receivers can be edited (0 drops one); adding receivers not done.
+- Login page: demo role cards grouped per hospital (HA..HE), compact 4 per row, styled like the other-role cards; added pharmacist HB/HD/HE, warehouse HB/HD/HE, driver HD/HE.
+- `db/demo/README.md`: Thai guide to rebuild the demo scenario in a friend's Docker (needs db/mock/csv and forecasts artifacts, which are not in git).
