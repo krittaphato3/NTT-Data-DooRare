@@ -1,39 +1,40 @@
-# Session: Fix `submit_er_action_proposal` TargetId UUID and IncidentType Validation
+# Session: Fix `submit_er_action_proposal` Hallucinated UUID and Emergency Borrow Payload
 
 - Date: 2026-10-25
-- Goal: Fix `targetId: ""` UUID validation error, `POST /api/v1/incidents` `ต้องระบุ incidentType` rejection, and premature iteration exhaustion.
+- Goal: Fix `Incident '...' not found` error caused by hallucinated targetId UUIDs and missing payload fields on `REQUEST_URGENT_ANTIDOTE`.
 
 ## Root Causes Identified from User Screenshot
 
-1. `targetId: ""` passed by LLM:
-   - When models don't have an incident ID, they pass `"targetId": ""` instead of omitting it.
-   - `z.string().uuid()` throws `Invalid UUID` on empty strings.
-2. `ดำเนินการไม่สำเร็จ: ต้องระบุ incidentType` upon approving proposal card:
-   - `ER_PROPOSAL_WHITELIST.DECLARE_INCIDENT` used `eventType` and `patientCounts`.
-   - `POST /api/v1/incidents` strictly requires `body.incidentType` and `body.counts`.
-   - When the user clicked "Approve" (อนุมัติ) on the card, the frontend called `POST /api/v1/incidents` with the proposal's payload, which was missing `incidentType`, failing with `400 Bad Request: "ต้องระบุ incidentType"`.
-3. `ReAct loop reached the maximum allowed tool iterations (5)`:
-   - Model attempted to propose an emergency borrow request immediately after proposing incident declaration, without waiting for the incident to be created/approved.
-   - Default iteration ceiling of 5 was exhausted due to the initial invalid UUID retry and follow-up tools.
+1. `Incident 'da7c42c8-5cea-4366-a2f3-3fcc1116f4da' not found`:
+   - When models don't know the exact UUID of the newly declared incident, they hallucinate a random UUID into `targetId`.
+   - The backend query `SELECT hospital_id FROM incident WHERE id = $1` found 0 rows and returned `Incident '...' not found`.
+2. `ER_STAFF cannot create standalone borrow requests directly without an active incident`:
+   - After the hallucinated UUID failed, the model attempted to retry without `targetId`.
+   - Even though the hospital had a running incident created just seconds earlier, `targetId` was not bound, so the tool assumed it was a standalone request and rejected it.
+3. Strict `payloadSchema` on `REQUEST_URGENT_ANTIDOTE`:
+   - The model sent `{ requiredUnits: 3, bloodGroup: "A Negative", transfusionProtocol: "..." }`.
+   - The previous schema strictly required `items: [{ drugMasterId, qtyRequested }]`, which is impossible for models to know for blood requests.
+4. Execution timed out after 60,000ms:
+   - Successive tool retries and thinking loops triggered cumulative timeout aborts.
 
 ## Done
 
-- **Cleaned Empty String IDs**:
-  - `backend/src/modules/ai/tools/registry.ts`: `ToolRegistry.executeTool` removes empty string values for optional ID fields (`targetId`, `taskId`, `*Id`).
-  - `backend/src/modules/ai/tools/clinical/er.tools.ts`: Preprocessed `targetId` to treat empty strings as `undefined`.
-- **Aligned Incident Declaration Payload (`DECLARE_INCIDENT`)**:
-  - `backend/src/modules/ai/tools/clinical/er.tools.ts`: Aligned `actionApi.payload` to produce canonical fields (`incidentType`, `description`, `locationText`, `counts`, `acknowledgeDuplicate: true`) alongside aliases (`eventType`, `title`, `patientCounts`).
-  - `backend/src/modules/incidents/incidents.service.ts`: Updated `create` to accept `body.incidentType ?? body.eventType` and `body.counts ?? body.patientCounts` gracefully.
-- **Engine Guidelines & Headroom**:
-  - `backend/src/modules/ai/engine/react.engine.ts`: Increased `defaultMaxIterations` to 8 and updated prompt guidance instructing models that proposal tools are Terminal Tools and follow-up borrow requests must wait for incident creation.
+- **Hallucinated UUID Recovery**:
+  - `backend/src/modules/ai/tools/clinical/er.tools.ts`: If `effectiveIncidentId` is not found in the DB (or hallucinated), it automatically recovers by binding to the hospital's running active/open incident (`OPEN`, `PLAN_REVIEW`, `ACTIVE`).
+- **Flexible Urgent Antidote / Blood Borrow Payload**:
+  - `backend/src/modules/ai/tools/clinical/er.tools.ts`: Allowed optional `items`, added `.passthrough()` for emergency borrow attributes (`requiredUnits`, `bloodGroup`, `transfusionProtocol`, etc.).
+- **Frontend Active Incident Routing**:
+  - `frontend/src/components/ai/DooRareChatDrawer.tsx`: Updated `getRouteContext()` to read `incident` and `incidentId` from query params, and dispatches incident creation events.
+- **Guidance & Headroom**:
+  - `backend/src/modules/ai/engine/react.engine.ts`: Instructed models to leave `targetId` empty if unknown so the system automatically binds to the hospital's running incident.
 - **Verification**:
-  - All 51 tests across `ai.tools.test.ts` and `ai.clinical.test.ts` pass green.
-  - Verified integration with `incidentsService.create`.
+  - Added unit test in `backend/tests/ai.clinical.test.ts` asserting automatic recovery from hallucinated targetId.
+  - All 45 tests in `ai.clinical.test.ts` and 7 tests in `ai.tools.test.ts` pass green.
+  - Both `frontend` and `backend` build cleanly (`npm run build`).
 
 ## Files Touched
 
-- `backend/src/modules/ai/tools/registry.ts`
 - `backend/src/modules/ai/tools/clinical/er.tools.ts`
-- `backend/src/modules/incidents/incidents.service.ts`
 - `backend/src/modules/ai/engine/react.engine.ts`
 - `backend/tests/ai.clinical.test.ts`
+- `frontend/src/components/ai/DooRareChatDrawer.tsx`

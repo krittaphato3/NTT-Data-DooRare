@@ -58,6 +58,11 @@ const ProposalCard: React.FC<ProposalCardProps> = ({ proposal, onActionComplete 
         const problem = await res.json().catch(() => ({}));
         throw new Error(problem.message || problem.title || `HTTP ${res.status}`);
       }
+      const resJson = await res.json().catch(() => ({}));
+      if (resJson?.id || resJson?.data?.id) {
+        const createdId = resJson.id || resJson.data.id;
+        window.dispatchEvent(new CustomEvent('doorare:incident-created', { detail: { id: createdId } }));
+      }
       setDecided('approved');
       onActionComplete(`ดำเนินการสำเร็จ: ${proposal.title}`);
     } catch (err: any) {
@@ -332,7 +337,13 @@ export const DooRareChatDrawer: React.FC = () => {
   // Context Auto-Injector: Extracts current window location, title, and query active ID
   const getRouteContext = (): RouteContext => {
     const params = new URLSearchParams(window.location.search);
-    const activeId = params.get('id') || params.get('request_id') || params.get('plan_id') || undefined;
+    const activeId =
+      params.get('id') ||
+      params.get('incident') ||
+      params.get('incidentId') ||
+      params.get('request_id') ||
+      params.get('plan_id') ||
+      undefined;
     return {
       currentPath: window.location.pathname + window.location.search,
       pageTitle: document.title,

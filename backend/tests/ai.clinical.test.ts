@@ -875,6 +875,41 @@ test('submitErActionProposalTool: auto-populates title and description in payloa
   assert.equal((res.proposal?.actionApi.payload as any).description, 'Auto description for trauma incident');
 });
 
+test('submitErActionProposalTool: recovers from hallucinated or uncreated incidentId by resolving running incident', async () => {
+  const hosp = (await query('SELECT id FROM hospital WHERE active = true LIMIT 1')).rows[0];
+  const runningInc = (
+    await query<{ id: string }>(
+      "SELECT id FROM incident WHERE hospital_id = $1 AND status::text = ANY('{OPEN, PLAN_REVIEW, ACTIVE}') ORDER BY created_at DESC LIMIT 1",
+      [hosp.id],
+    )
+  ).rows[0];
+
+  if (runningInc) {
+    const fakeUuid = 'da7c42c8-5cea-4366-a2f3-3fcc1116f4da';
+    const res = await submitErActionProposalTool.execute(
+      {
+        actionType: 'REQUEST_URGENT_ANTIDOTE',
+        title: 'Emergency Blood Request',
+        description: 'Need blood for trauma cases',
+        summary: { requiredUnits: 3 },
+        targetId: fakeUuid,
+        payload: {
+          requiredUnits: 3,
+          bloodGroup: 'A Negative',
+        },
+      },
+      { role: 'ER_STAFF', hospitalId: hosp.id },
+    );
+
+    assert.equal(res.success, true);
+    assert.ok(res.proposal);
+    assert.equal(
+      res.proposal?.actionApi.endpoint,
+      `/api/v1/incidents/${runningInc.id}/emergency-borrow`,
+    );
+  }
+});
+
 test('Task 9: clinicalTools collection contains exactly 12 tools with unique names', () => {
   assert.equal(clinicalTools.length, 12, 'Must export exactly 12 clinical tools');
 

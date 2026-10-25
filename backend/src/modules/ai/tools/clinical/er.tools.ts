@@ -532,19 +532,26 @@ export const ER_PROPOSAL_WHITELIST = {
     method: 'POST' as const,
     routeSource:
       'backend/src/modules/incidents/incidents.routes.ts:34 (with incidentId) / backend/src/modules/borrow/borrow.routes.ts:19 (standalone)',
-    payloadSchema: z.object({
-      reason: z.string().min(1, 'Reason for urgent antidote is required'),
-      urgency: z.literal('VERY_URGENT').default('VERY_URGENT'),
-      items: z
-        .array(
-          z.object({
-            drugMasterId: z.string().uuid(),
-            qtyRequested: z.number().positive(),
-          }),
-        )
-        .min(1, 'At least one antidote item is required'),
-      incidentId: z.string().uuid().optional(),
-    }),
+    payloadSchema: z
+      .object({
+        reason: z.string().optional().default('Emergency borrow request'),
+        urgency: z.string().optional().default('VERY_URGENT'),
+        items: z
+          .array(
+            z.object({
+              drugMasterId: z.string().optional(),
+              qtyRequested: z.number().positive().optional(),
+            }),
+          )
+          .optional(),
+        incidentId: z.string().optional(),
+        requiredUnits: z.number().optional(),
+        bloodGroup: z.string().optional(),
+        transfusionProtocol: z.string().optional(),
+        lenderHospitalIds: z.array(z.string()).optional(),
+        lenderPlan: z.record(z.string(), z.array(z.string())).optional(),
+      })
+      .passthrough(),
   },
 } as const;
 
@@ -633,9 +640,53 @@ export const submitErActionProposalTool: IAgentTool<{
         };
       }
 
-      // Resolve effective incidentId (from targetId or payload.incidentId)
-      const effectiveIncidentId =
-        args.targetId || (typeof args.payload?.incidentId === 'string' ? args.payload.incidentId : undefined);
+      // Resolve effective incidentId (from targetId or payload.incidentId or context.activeId)
+      let effectiveIncidentId =
+        args.targetId ||
+        (typeof args.payload?.incidentId === 'string' ? args.payload.incidentId : undefined) ||
+        (typeof context.activeId === 'string' && context.activeId ? (context.activeId as string) : undefined);
+
+      // If effectiveIncidentId is supplied, enforce existence and hospital ownership
+      if (effectiveIncidentId) {
+        const inc = await query<{ hospital_id: string }>(
+          'SELECT hospital_id FROM incident WHERE id = $1',
+          [effectiveIncidentId],
+        );
+        if (inc.rows.length === 0) {
+          // If the model passed a non-existent or hallucinated UUID, check context.activeId or running incident
+          let fallbackFound = false;
+          if (context.activeId && typeof context.activeId === 'string' && context.activeId !== effectiveIncidentId) {
+            const actInc = await query<{ hospital_id: string }>(
+              'SELECT hospital_id FROM incident WHERE id = $1',
+              [context.activeId],
+            );
+            if (actInc.rows.length > 0) {
+              effectiveIncidentId = context.activeId as string;
+              fallbackFound = true;
+            }
+          }
+          if (!fallbackFound && hospitalId) {
+            const runningInc = (
+              await query<{ id: string }>(
+                "SELECT id FROM incident WHERE hospital_id = $1 AND status::text = ANY('{OPEN, PLAN_REVIEW, ACTIVE}') ORDER BY created_at DESC LIMIT 1",
+                [hospitalId],
+              )
+            ).rows[0];
+            if (runningInc) {
+              effectiveIncidentId = runningInc.id;
+              fallbackFound = true;
+            }
+          }
+          if (!fallbackFound) {
+            return { success: false, error: `Incident '${effectiveIncidentId}' not found.` };
+          }
+        } else if (!isSystemAdmin && inc.rows[0].hospital_id !== hospitalId) {
+          return {
+            success: false,
+            error: 'Permission denied: Cannot act on incident belonging to another hospital.',
+          };
+        }
+      }
 
       // Special RBAC constraint: ER_STAFF cannot call standalone /api/v1/borrow-requests (PHARMACIST-only)
       if (args.actionType === 'REQUEST_URGENT_ANTIDOTE' && context.role === 'ER_STAFF' && !effectiveIncidentId) {
@@ -655,23 +706,6 @@ export const submitErActionProposalTool: IAgentTool<{
           success: false,
           error: `Invalid targetId for ${args.actionType}: ${err.message}`,
         };
-      }
-
-      // If effectiveIncidentId is supplied, enforce hospital ownership
-      if (effectiveIncidentId) {
-        const inc = await query<{ hospital_id: string }>(
-          'SELECT hospital_id FROM incident WHERE id = $1',
-          [effectiveIncidentId],
-        );
-        if (inc.rows.length === 0) {
-          return { success: false, error: `Incident '${effectiveIncidentId}' not found.` };
-        }
-        if (!isSystemAdmin && inc.rows[0].hospital_id !== hospitalId) {
-          return {
-            success: false,
-            error: 'Permission denied: Cannot act on incident belonging to another hospital.',
-          };
-        }
       }
 
       // Prepare sanitized and normalized payload
