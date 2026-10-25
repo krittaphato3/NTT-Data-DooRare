@@ -171,6 +171,10 @@ export class ToolRegistry {
         for (const [k, v] of Object.entries(argsToParse)) {
           if (typeof v === 'string') {
             const trimmed = v.trim();
+            if (trimmed === '' && (k === 'targetId' || k === 'taskId' || k.toLowerCase().endsWith('id'))) {
+              delete (argsToParse as Record<string, unknown>)[k];
+              continue;
+            }
             if (
               (trimmed.startsWith('{') && trimmed.endsWith('}')) ||
               (trimmed.startsWith('[') && trimmed.endsWith(']'))

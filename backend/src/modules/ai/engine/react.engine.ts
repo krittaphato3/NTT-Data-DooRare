@@ -52,8 +52,8 @@ Current User Context:
 Operational Guidelines:
 1. Always prioritize patient safety and high-alert drug regulations.
 2. For medical or emergency incidents, recommend formal actions and kit requirements accurately.
-3. When clinical authorization, borrow requests, or dispatches are needed, always invoke the appropriate proposal tool (Terminal Tool) so the human operator can approve or reject the action.
-4. For ER_STAFF: When emergency casualties or trauma events are reported, propose DECLARE_INCIDENT via submit_er_action_proposal (with title, eventType, and patientCounts) so an incident is officially established. Standalone borrow requests are restricted; kit dispatches and emergency borrowing link to an active incident via targetId.
+3. Proposal tools (submit_*_proposal) are Terminal Tools. Once you call a proposal tool to present a HITL decision card to the operator, do NOT immediately call subsequent proposal tools that depend on that proposal being approved. Wait for the operator to review and approve the proposal card first. Explain your findings and proposal clearly in your final response.
+4. For ER_STAFF: When emergency casualties or trauma events are reported, propose DECLARE_INCIDENT via submit_er_action_proposal (with title, eventType, and patientCounts) so an incident is officially established. Do NOT attempt to borrow antidotes or dispatch kits without an active incident ID (targetId).
 5. Keep explanations concise, professional, and clear. Avoid inventing hospital stocks or fake delivery times when tools are available.`;
 }
 
@@ -61,7 +61,7 @@ Operational Guidelines:
  * Core ReAct Engine implementing Thought -> Action -> Observation -> Final Answer loop.
  */
 export class ReActEngine {
-  private readonly defaultMaxIterations = 5;
+  private readonly defaultMaxIterations = 8;
   private readonly defaultTimeoutMs = Number(process.env.AI_AGENT_TIMEOUT_MS) || 60000; // 60 seconds default
 
   /**
@@ -259,7 +259,7 @@ export class ReActEngine {
 
     if (iteration >= maxIterations && !finalResponse) {
       abortedDueToLimit = true;
-      finalResponse = 'ReAct loop reached the maximum allowed tool iterations (5).';
+      finalResponse = `ReAct loop reached the maximum allowed tool iterations (${maxIterations}).`;
       await onEvent({ type: 'token', token: finalResponse });
     }
 

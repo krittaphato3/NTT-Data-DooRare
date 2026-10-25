@@ -834,6 +834,7 @@ test('submitErActionProposalTool: handles string summary and stringified JSON pa
       title: 'Blood A Negative Emergency Incident',
       description: 'Trauma incident with 3 male casualties aged 23-30 years',
       summary: 'Casualties: 3; Blood Type: A Negative; Action: Urgent borrow request; Critical: Yes',
+      targetId: '', // Empty string should be cleanly accepted as undefined
       payload: JSON.stringify({
         title: 'Trauma Collision Incident',
         eventType: 'MASS_CASUALTY',
@@ -847,6 +848,8 @@ test('submitErActionProposalTool: handles string summary and stringified JSON pa
   assert.ok(res.proposal);
   assert.equal(res.proposal?.type, 'DECLARE_INCIDENT');
   assert.equal((res.proposal?.summary as any).Casualties, 3);
+  assert.equal((res.proposal?.actionApi.payload as any).incidentType, 'MASS_CASUALTY');
+  assert.deepEqual((res.proposal?.actionApi.payload as any).counts, { RED: 3, YELLOW: 0, GREEN: 0, BLACK: 0 });
 });
 
 test('submitErActionProposalTool: auto-populates title and description in payload for DECLARE_INCIDENT', async () => {

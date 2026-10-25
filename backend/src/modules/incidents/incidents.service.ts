@@ -129,13 +129,13 @@ class IncidentsService {
     const user = req.user!;
     const hospitalId = hospitalOf(user);
     const body = bodyObject(req.body);
-    const incidentType = text(body.incidentType, 'incidentType', 120, true) as string;
-    const description = text(body.description, 'description', 2000);
-    const locationText = text(body.locationText, 'locationText', 300);
+    const incidentType = text(body.incidentType ?? body.eventType, 'incidentType', 120, true) as string;
+    const description = text(body.description ?? body.title, 'description', 2000);
+    const locationText = text(body.locationText ?? body.location, 'locationText', 300);
     const lat = optionalNumber(body.locationLat, 'locationLat', { min: -90, max: 90 });
     const lon = optionalNumber(body.locationLon, 'locationLon', { min: -180, max: 180 });
     if ((lat === undefined) !== (lon === undefined)) throw new HttpError(400, 'VALIDATION', 'ต้องระบุ locationLat และ locationLon คู่กัน');
-    const counts = parseCounts(body.counts);
+    const counts = parseCounts(body.counts ?? body.patientCounts);
     const reported = optionalNumber(body.reportedEtaMin, 'reportedEtaMin', { min: 1, max: 1440 });
     const unsure = body.etaUnsure === true;
     if (unsure && reported === undefined) throw new HttpError(400, 'VALIDATION', 'etaUnsure ใช้ได้เมื่อระบุ reportedEtaMin');

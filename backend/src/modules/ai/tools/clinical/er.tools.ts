@@ -500,10 +500,13 @@ export const ER_PROPOSAL_WHITELIST = {
     method: 'POST' as const,
     routeSource: 'backend/src/modules/incidents/incidents.routes.ts:25',
     payloadSchema: z.object({
-      title: z.string().min(1, 'Incident title is required'),
-      eventType: z.string().default('MASS_CASUALTY'),
+      title: z.string().optional(),
+      incidentType: z.string().optional(),
+      eventType: z.string().optional(),
       location: z.string().optional(),
+      locationText: z.string().optional(),
       patientCounts: z.record(z.string(), z.number().int().min(0)).optional(),
+      counts: z.record(z.string(), z.number().int().min(0)).optional(),
       description: z.string().optional(),
     }),
   },
@@ -594,9 +597,7 @@ export const submitErActionProposalTool: IAgentTool<{
       }, z.record(z.string(), z.unknown()))
       .describe('Key-value summary of casualties, kit counts, or antidotes (e.g. {"casualties": 3, "bloodType": "A Negative"})'),
     targetId: z
-      .string()
-      .uuid()
-      .optional()
+      .preprocess((val) => (typeof val === 'string' && val.trim() === '' ? undefined : val), z.string().uuid().optional())
       .describe('Target incident UUID if linking dispatch or borrow to an incident'),
     payload: z
       .preprocess((val) => {
@@ -712,6 +713,51 @@ export const submitErActionProposalTool: IAgentTool<{
         };
       }
 
+      let actionApiPayload = parseRes.data as Record<string, unknown>;
+
+      if (args.actionType === 'DECLARE_INCIDENT') {
+        const validated = parseRes.data as Record<string, unknown>;
+        const incType =
+          (validated.incidentType as string) ||
+          (validated.eventType as string) ||
+          'MASS_CASUALTY';
+        const incTitle =
+          (validated.title as string) ||
+          args.title ||
+          'Emergency Incident';
+        const incDesc =
+          (validated.description as string) ||
+          args.description ||
+          incTitle;
+        const incLoc =
+          (validated.locationText as string) ||
+          (validated.location as string) ||
+          '';
+
+        const rawCountsObj =
+          (validated.counts as Record<string, unknown>) ||
+          (validated.patientCounts as Record<string, unknown>) ||
+          {};
+        const standardizedCounts: Record<string, number> = { RED: 0, YELLOW: 0, GREEN: 0, BLACK: 0 };
+        for (const [k, v] of Object.entries(rawCountsObj)) {
+          const num = Number(v);
+          if (!isNaN(num)) {
+            standardizedCounts[k.toUpperCase()] = Math.max(0, Math.round(num));
+          }
+        }
+
+        actionApiPayload = {
+          title: incTitle,
+          incidentType: incType,
+          eventType: incType,
+          description: incDesc,
+          locationText: incLoc,
+          counts: standardizedCounts,
+          patientCounts: standardizedCounts,
+          acknowledgeDuplicate: true,
+        };
+      }
+
       return {
         success: true,
         proposal: {
@@ -726,7 +772,7 @@ export const submitErActionProposalTool: IAgentTool<{
           actionApi: {
             endpoint,
             method: actionDef.method,
-            payload: parseRes.data as Record<string, unknown>,
+            payload: actionApiPayload,
           },
         },
       };
