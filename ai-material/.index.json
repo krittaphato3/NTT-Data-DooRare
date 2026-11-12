@@ -1,5 +1,12 @@
 [
   {
+    "path": "sessions\\2026-11-12-buffy-copilot-abort-context-summary-diff.md",
+    "title": "Copilot stop / screen context + plan summary change-diff",
+    "summary": "Copilot stop / screen context + plan summary change-diff",
+    "tags": "session",
+    "date": "2026-11-12"
+  },
+  {
     "path": "context\\architecture.md",
     "title": "Architecture",
     "summary": "Architecture",
@@ -80,6 +87,13 @@
     "path": "sessions\\2026-10-25-1300-claude-f2-start-only-demo.md",
     "title": "F2 demo: start-only mode (flow by hand)",
     "summary": "F2 demo",
+    "tags": "session",
+    "date": "2026-10-25"
+  },
+  {
+    "path": "sessions\\2026-10-25-1430-antigravity-fix-er-action-proposal.md",
+    "title": "Session: Fix `submit_er_action_proposal` Hallucinated UUID and Emergency Borrow Payload",
+    "summary": "Session",
     "tags": "session",
     "date": "2026-10-25"
   },
@@ -224,13 +238,6 @@
     "date": "2026-10-24"
   },
   {
-    "path": "sessions\\2026-10-22-buffy-frontend-task4-accounts.md",
-    "title": "Frontend TASK 4 — SYSTEM_ADMIN AccountCrudTab wired to /users",
-    "summary": "Frontend TASK 4 — SYSTEM_ADMIN AccountCrudTab wired to /users",
-    "tags": "session",
-    "date": "2026-10-23"
-  },
-  {
     "path": "sessions\\2026-10-22-buffy-ha-qa-fixes.md",
     "title": "HA (Step 8) QA fixes — FIX mode",
     "summary": "HA (Step 8) QA fixes — FIX mode",
@@ -301,6 +308,13 @@
     "date": "2026-10-22"
   },
   {
+    "path": "sessions\\2026-10-22-buffy-frontend-task4-accounts.md",
+    "title": "Frontend TASK 4 — SYSTEM_ADMIN AccountCrudTab wired to /users",
+    "summary": "Frontend TASK 4 — SYSTEM_ADMIN AccountCrudTab wired to /users",
+    "tags": "session",
+    "date": "2026-10-22"
+  },
+  {
     "path": "sessions\\2026-10-22-claude-backend-step6-f2.md",
     "title": "Backend step 6 - F2 near-expiry, regional pool, allocation plans, repeat expiry, value, reports",
     "summary": "Near-expiry scan and review, pool, plan approval / options / mutual-consent cancel,…",
@@ -319,6 +333,13 @@
     "title": "Demo data - backfill 1-21 Oct, role scenarios for pharmacist / ER / warehouse / driver, snapshot and restore",
     "summary": "backfill + shape run inside db:load, db:scenarios for API scenarios (snapshot idea…",
     "tags": "session, demo, mock-data, backfill, scenarios, snapshot, reset, detailed",
+    "date": "2026-10-22"
+  },
+  {
+    "path": "sessions\\2026-10-22-zcode-db-reset-and-scenarios.md",
+    "title": "Database reset, forecast artifact generation, and role demo scenarios",
+    "summary": "Pulled latest feature/backend-api branch, added forecast artifact generation helper, mounted forecasts into…",
+    "tags": "session, db, reset, demo, scenarios, forecasts, docker",
     "date": "2026-10-22"
   },
   {
@@ -476,27 +497,6 @@
     "date": "2026-10-17"
   },
   {
-    "path": "README.md",
-    "title": "ai-material",
-    "summary": "ai-material",
-    "tags": "session",
-    "date": "2026-10-16"
-  },
-  {
-    "path": "context\\conventions.md",
-    "title": "Conventions",
-    "summary": "Conventions",
-    "tags": "session",
-    "date": "2026-10-16"
-  },
-  {
-    "path": "context\\runbook.md",
-    "title": "Runbook",
-    "summary": "Runbook",
-    "tags": "session",
-    "date": "2026-10-16"
-  },
-  {
     "path": "sessions\\2026-10-16-1628-buffy-phase2c-return-obligations-waive.md",
     "title": "Return obligations + Waive (Phase 2C)",
     "summary": "HOSPITAL_ADMIN gets a read-only ภาระการคืน sub-tab on Borrow requests plus the API-XC-005…",
@@ -518,9 +518,30 @@
     "date": "2026-10-16"
   },
   {
+    "path": "context\\runbook.md",
+    "title": "Runbook",
+    "summary": "Runbook",
+    "tags": "session",
+    "date": "2026-10-15"
+  },
+  {
     "path": "GUIDELINES.md",
     "title": "Guidelines",
     "summary": "Guidelines",
+    "tags": "session",
+    "date": "2026-10-14"
+  },
+  {
+    "path": "README.md",
+    "title": "ai-material",
+    "summary": "ai-material",
+    "tags": "session",
+    "date": "2026-10-14"
+  },
+  {
+    "path": "context\\conventions.md",
+    "title": "Conventions",
+    "summary": "Conventions",
     "tags": "session",
     "date": "2026-10-14"
   },

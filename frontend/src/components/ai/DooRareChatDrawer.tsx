@@ -378,6 +378,10 @@ export const DooRareChatDrawer: React.FC = () => {
     setIsStreaming(true);
     setActiveTool(null);
 
+    // One controller per turn: the stop button and closing the drawer abort this request (SSE read + server ReAct loop).
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     // API messages payload for the backend
     const apiMessages: ChatMessage[] = [
       ...displayMessages
@@ -492,8 +496,34 @@ export const DooRareChatDrawer: React.FC = () => {
             });
           },
         },
+        controller.signal,
       );
     } catch (e: any) {
+      if (controller.signal.aborted) {
+        // The operator stopped the answer (or closed the drawer): keep the partial text, it is not an error.
+        setDisplayMessages((prev) => {
+          const updated = prev.map((m) => (m.id === assistantMsgId ? { ...m, isThinking: false } : m));
+          persistCurrentSession(updated, proposals, prompt);
+          return updated;
+        });
+      } else {
+        const errMsg = e?.message || 'เชื่อมต่อไม่สำเร็จ';
+        setDisplayMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantMsgId
+              ? {
+                  ...m,
+                  isThinking: false,
+                  content: m.content
+                    ? `${m.content}\n\n⚠️ ขออภัย เกิดข้อผิดพลาด: ${errMsg}`
+                    : `⚠️ ขออภัย เกิดข้อผิดพลาด: ${errMsg}`,
+                }
+              : m,
+          ),
+        );
+      }
+    } finally {
+      if (abortControllerRef.current === controller) abortControllerRef.current = null;
       setIsStreaming(false);
       setActiveTool(null);
     }

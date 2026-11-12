@@ -143,6 +143,12 @@ export function AgentPlanCard({ agent, plan, removed, mayWrite, busy, onRemove, 
             <div style={{ fontSize: 11.5, color: '#92400e', marginBottom: 8 }}>ข้อมูลเหตุหรือจำนวนผู้ป่วยเปลี่ยนหลังการประเมินนี้ · กด “ประเมินใหม่” เพื่อให้ Agent ดูข้อมูลล่าสุด</div>
           )}
           {a.summary && <p style={{ margin: '0 0 10px', fontSize: 12.5, color: '#334155', lineHeight: '19px' }}>{a.summary}</p>}
+          {a.whatChanged && (
+            <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, padding: '8px 10px', marginBottom: 10 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#92400e', marginBottom: 2 }}>เปลี่ยนจากครั้งก่อน</div>
+              <div style={{ fontSize: 12, color: '#78350f', lineHeight: '18px' }}>{a.whatChanged}</div>
+            </div>
+          )}
           {a.highlights.length > 0 && (
             <ul style={{ margin: '0 0 12px', paddingLeft: 16, fontSize: 12, color: '#475569', lineHeight: '18px' }}>
               {a.highlights.map((h) => <li key={h}>{h}</li>)}

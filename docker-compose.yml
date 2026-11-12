@@ -31,6 +31,13 @@ services:
       - "127.0.0.1:3001:3001"
     volumes:
       - doorare_uploads:/app/uploads
+    # Same path an ALB / ECS target group should probe (checks Postgres too).
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3001/api/v1/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 25s
     restart: unless-stopped
 
   # PostgreSQL 16 for the DooRare schema (db/schema.sql). Host port 5442 (5432/5433 are used by other local projects).
