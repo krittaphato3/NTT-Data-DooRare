@@ -7,6 +7,7 @@ import type {
   ProviderConnectionResult,
   ToolDefinition,
 } from './types.js';
+import { readOpenAiCompatStream } from './streaming.js';
 
 export class CustomProvider implements ILLMProvider {
   readonly providerType = 'CUSTOM' as const;
@@ -199,6 +200,9 @@ export class CustomProvider implements ILLMProvider {
       }
     }
 
+    const wantsStream = typeof options?.onDelta === 'function' && !isResponseEndpoint;
+    if (wantsStream) body.stream = true;
+
     const res = await this.fetchWithDockerFallback(fullUrl, {
       method: 'POST',
       headers: this.getRequestHeaders(),
@@ -209,6 +213,8 @@ export class CustomProvider implements ILLMProvider {
       const err = (await res.json().catch(() => ({}))) as any;
       throw new Error(err.error?.message || err.message || `Custom API request failed: HTTP ${res.status}`);
     }
+
+    if (wantsStream) return readOpenAiCompatStream(res, model, options!.onDelta!);
 
     const data = (await res.json()) as any;
 

@@ -125,7 +125,7 @@ export async function requestView(db: Db, row: Record<string, any>, viewer: Auth
             excluded: stored.excluded,
             parallel: stored.parallel,
             builtAt: stored.builtAt,
-            agent: stored.agent ? { status: stored.agent.runStatus, model: stored.agent.model, summary: stored.agent.summary, confidence: stored.agent.confidence, flags: stored.agent.flags, priorityAfter: stored.agent.priorityAfter } : null,
+            agent: stored.agent ? { status: stored.agent.runStatus, model: stored.agent.model, summary: stored.agent.summary, whatChanged: stored.agent.whatChanged ?? null, confidence: stored.agent.confidence, flags: stored.agent.flags, priorityAfter: stored.agent.priorityAfter } : null,
           },
         }
       : {}),
@@ -280,10 +280,20 @@ export class BorrowService {
       // AGT-F1: the agent chooses the first round among the lenders the code accepted (falls back to the Si ladder unchanged)
       let agent: Awaited<ReturnType<typeof selectLenders>> | null = null;
       if (plan.ladder.length > 0 && cfg.agentEnabled) {
+        // a re-propose compares against the ladder the previous run stored on this request
+        const prevStored = asStoredLadder((r as any).ladder);
         agent = await selectLenders({
           requestNo: r.request_no, ladder: plan.ladder, borrowQty: need.borrow, parallel: plan.parallel, maxParallel: cfg.maxParallel,
           allowedNumbers: [Math.round(timeout.effectiveMin), Math.round(timeout.effectiveMin / 60)], drug: r.drug_name, unit: r.base_unit, requester: r.borrower_name,
           urgency: need.urgency, deadlineMin: timeout.effectiveMin, need: { stock: need.stock, u: need.u, required: need.required, ved: need.ved },
+          previous: prevStored?.agent
+            ? {
+                summary: prevStored.agent.summary,
+                confidence: prevStored.agent.confidence,
+                picks: prevStored.ladder.filter((e) => e.qtyPlanned > 0).map((e) => ({ code: e.code, qty: e.qtyPlanned })),
+                priorityAfter: prevStored.agent.priorityAfter,
+              }
+            : null,
         });
         plan.ladder = agent.ladder;
       }

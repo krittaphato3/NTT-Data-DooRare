@@ -52,6 +52,11 @@ export interface ChatOptions {
   model?: string;
   temperature?: number;
   maxTokens?: number;
+  /**
+   * When provided, providers that support it ask the API to stream and call this with each text delta as it arrives.
+   * Providers that cannot stream (`BedrockProvider`) ignore it and return the whole answer, which the engine forwards once.
+   */
+  onDelta?: (text: string) => void;
 }
 
 export interface ILLMProvider {

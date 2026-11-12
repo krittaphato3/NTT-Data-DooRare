@@ -42,6 +42,18 @@ Fix the copilot chat (stop never cancelled, screen context never reached the mod
 - Verified: 4 containers up (`doorare-backend` healthy); `:8080` HTML 200; `/api/v1/health` 200 through nginx (Postgres 16.15); `POST /ai/chat` 401 without a token; login issues `sess_*` (pharmacist1.ha); SSE streams through nginx with the route context; the built image reports 53 tools including `web_fetch` / `web_search`.
 - Not done: no cloud deploy; the AWS Location API key is still hardcoded in `docker-compose.yml` (pre-existing) and should move to env/secret before any public deploy.
 
+## Part 4 — real streaming, change-diff for the other agents, answer chips
+- **Real streaming**: `ChatOptions.onDelta` + `providers/streaming.ts` (`consumeSse`, `readOpenAiCompatStream`). OpenAI / Azure / Custom send `stream: true`, reassemble tool-call fragments by index, and fall back to JSON when the endpoint ignores streaming; Anthropic parses `content_block_delta` (`text_delta`, `input_json_delta`). Bedrock stays non-streaming (whole answer forwarded once). `react.engine.ts` no longer fakes word pacing (the 15 ms/18 ms `setTimeout` loops are gone) and forwards each delta as it arrives.
+- **what_changed_th** added to AGT-F1 (`borrow.agent.ts`, previous = ladder stored on the request), AGT-F2 (`allocation.agent.ts`, previous = last OK `agent_run` for the pool entry), AGT-F3 extras (`extras.agent.ts`, previous = last OK run for the incident). Mandatory once a previous run exists; the view/API exposes `whatChanged`.
+- **Answer chips**: `frontend/src/components/ai/answerChips.ts` (pure) + `AnswerInsights.tsx` render citation chips (BR-/INC- records → `?page=`, external URLs) and 2–3 follow-up questions derived from the answer's tool names and text; click sends the prompt. Styles appended to `chatDrawer.css`.
+- System prompt gained a language rule (answer in the operator's language; Thai UI → Thai) — the live model had been replying in English to a Thai question.
+- Gotcha: on Windows `answerInsights.ts` + `AnswerInsights.tsx` collide (TS1261); the pure module is `answerChips.ts`.
+
+## Verification (part 4)
+- `npm --prefix backend run build` + `cd frontend && npm run build` exit 0.
+- 29 agent/rbac tests pass (`borrow`, `extras`, `allocation`, `plan`, `rbac-matrix`).
+- Docker rebuilt; backend healthy; `:8080` 200. Live SSE after the change: **170 token events**, Thai answer, 4 tool calls, 5 iterations, ~9.4 s.
+
 ## Next
 - Not exercised against a running stack: stop button, drawer close, and the "เปลี่ยนจากครั้งก่อน" block were only compiled.
 - Same what-changed diff for AGT-F2-001 (allocation) and AGT-F3 extras summaries if wanted.

@@ -87,10 +87,15 @@ export class MockProvider implements ILLMProvider {
     }
 
     // Default simulated conversational response
+    const content = `[Mock AI Response (${model})]: Processed request for "${lastMessage?.content || ''}". System operating in offline mock simulation mode.`;
+    if (typeof options?.onDelta === 'function') {
+      // Same contract as a real streaming provider: emit the chunks, then return the assembled answer.
+      for (const chunk of content.match(/\S+\s*|\s+/g) ?? [content]) options!.onDelta!(chunk);
+    }
     return {
       model,
       thought: 'ประมวลผลคำขอของผู้ใช้และสังเคราะห์ข้อมูลตามแนวทางความปลอดภัยด้านยา...',
-      content: `[Mock AI Response (${model})]: Processed request for "${lastMessage?.content || ''}". System operating in offline mock simulation mode.`,
+      content,
       usage: {
         promptTokens: 24,
         completionTokens: 28,

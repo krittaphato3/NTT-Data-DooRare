@@ -6,6 +6,7 @@ import { DooRareBotAvatar } from './DooRareBotAvatar';
 import { MarkdownContent } from '../common/MarkdownContent';
 import { ToolExecutionLogCard, type ToolLogEntry } from './ToolExecutionLogCard';
 import { ThinkingAccordion } from './ThinkingAccordion';
+import { AnswerInsights } from './AnswerInsights';
 import { Icon, type IconName } from '../common/icons';
 import {
   loadSessions,
@@ -925,7 +926,13 @@ export const DooRareChatDrawer: React.FC = () => {
                           </div>
                         )}
                       </div>
-                    ) : isStreaming && msg.role === 'assistant' && !msg.isThinking && !msg.thought ? (
+                    ) : null}
+
+                    {msg.role === 'assistant' && msg.content && !isStreaming && (
+                      <AnswerInsights content={msg.content} toolLogs={msg.toolLogs} onAsk={handleQuickPrompt} />
+                    )}
+
+                    {!msg.content && isStreaming && msg.role === 'assistant' && !msg.isThinking && !msg.thought ? (
                       <div className="doorare-typing-bubble" title="AI กำลังพิมพ์คำตอบ...">
                         <span className="doorare-typing-dot" />
                         <span className="doorare-typing-dot" />
