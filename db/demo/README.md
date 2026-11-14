@@ -70,6 +70,24 @@ services:
       - ./backend/models/artifacts/forecasts:/app/forecasts:ro
 ```
 
+**ถ้า `docker-compose.yml` ถูกรวมกับ `backend-byok` แล้ว** ค่าเริ่มต้นของ backend จะชี้ไปที่ RDS ก่อนรันคำสั่งใดๆ ต้องบังคับให้ใช้ฐานในเครื่อง ไม่เช่นนั้น backend และสคริปต์จะอ่านเขียนฐานที่แชร์อยู่ ให้เพิ่มใน `docker-compose.override.yml` (หรือ `.env`) ด้วย:
+
+```yaml
+services:
+  backend:
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: doorare
+      DB_USER: doorare
+      DB_PASSWORD: doorare_dev
+      DB_SSL: "false"
+```
+
+(ค่า `doorare` / `doorare_dev` คือค่าของ container `db` ในเครื่อง ดูใน `docker-compose.yml` ส่วน service `db` ถ้าไม่ตรงให้ใช้ตามนั้น)
+
+แล้วตรวจก่อนรันว่า `docker compose config | grep DB_HOST` ขึ้น `db` ไม่ใช่ที่อยู่ของ RDS
+
 ### ขั้นตอน (ครั้งแรก หรือเมื่ออยากเริ่มใหม่ทั้งหมด)
 
 1. เปิดระบบ: `docker compose build && docker compose up -d` (backend ที่ http://localhost:3001, หน้าเว็บที่ http://localhost:8080)
