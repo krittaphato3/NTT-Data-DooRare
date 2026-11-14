@@ -21,13 +21,35 @@ export interface RouteContext {
   activeId?: string;
 }
 
+export interface ClarifyQuestionOption {
+  label: string;
+  description?: string;
+}
+
+/** A question the copilot asks mid-turn: rendered as clickable choices plus a custom answer field. */
+export interface ClarifyQuestion {
+  header: string;
+  question: string;
+  options: ClarifyQuestionOption[];
+  allowFreeText?: boolean;
+  multiSelect?: boolean;
+}
+
 export interface StreamEventCallbacks {
   onStatus?: (data: { message: string; role?: string }) => void;
   onToken?: (text: string) => void;
   onThought?: (text: string) => void;
   onToolStart?: (tool: { id?: string; name: string; args?: Record<string, unknown> }) => void;
-  onToolEnd?: (res: { id?: string; name?: string; success?: boolean; data?: unknown; error?: string }) => void;
+  onToolEnd?: (res: {
+    id?: string;
+    name?: string;
+    success?: boolean;
+    data?: unknown;
+    error?: string;
+    needsInput?: boolean;
+  }) => void;
   onProposal?: (proposal: any) => void;
+  onQuestion?: (questions: ClarifyQuestion[]) => void;
   onError?: (error: string) => void;
   onDone?: () => void;
 }
@@ -109,6 +131,9 @@ export async function streamAiChat(
                 break;
               case 'proposal':
                 callbacks.onProposal?.(parsed.proposal);
+                break;
+              case 'question':
+                callbacks.onQuestion?.(parsed.questions || []);
                 break;
               case 'error':
                 callbacks.onError?.(parsed.message);

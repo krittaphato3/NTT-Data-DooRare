@@ -798,13 +798,22 @@ export const submitPharmacistProposalTool: IAgentTool<{
       .describe('Whitelisted pharmacist action type'),
     title: z.string().describe('Title of the proposed action'),
     description: z.string().describe('Detailed clinical explanation or rationale'),
-    summary: z.record(z.string(), z.unknown()).describe('Key-value summary of proposed metrics'),
+    summary: z
+      .record(z.string(), z.unknown())
+      .describe('Display-only key/value shown on the proposal card. Real values MUST go in payload.'),
     targetId: z
       .string()
       .uuid()
       .optional()
       .describe('Target ID: alertId (SNOOZE_ALERT), nearExpiryId (RELEASE_NEAR_EXPIRY_POOL), poolEntryId (SEND_POOL_TO_AGENT) or allocation plan id (OBJECT_ALLOCATION_PLAN)'),
-    payload: z.record(z.string(), z.unknown()).describe('Action-specific payload parameters'),
+    payload: z.record(z.string(), z.unknown()).describe(
+      'Action-specific payload, strictly validated per actionType. Required keys: ' +
+        'CREATE_BORROW_REQUEST {"items":[{"drugMasterId":"<drug uuid>","qtyRequested":<number>}],"reason":"<why>"}; ' +
+        'SNOOZE_ALERT {"hours":<1-168>,"reason":"<why>"}; ' +
+        'RELEASE_NEAR_EXPIRY_POOL {"qty":<number>}; ' +
+        'SEND_POOL_TO_AGENT {}; ' +
+        'OBJECT_ALLOCATION_PLAN {"reason":"<why>"}',
+    ),
   }),
   allowedRoles: ['PHARMACIST', 'SYSTEM_ADMIN'],
   execute: async (args, context: RequestContext): Promise<ToolResult> => {
@@ -903,7 +912,9 @@ export const submitPharmacistProposalTool: IAgentTool<{
 
       // BR-F1b-014: never propose an automated borrow of a controlled drug
       if (args.actionType === 'CREATE_BORROW_REQUEST') {
-        const dmId = (parseRes.data as { drugMasterId?: string }).drugMasterId;
+        // The validated shape carries the drug inside items[]; the top-level key is only a legacy convenience.
+        const borrowData = parseRes.data as { drugMasterId?: string; items?: { drugMasterId?: string }[] };
+        const dmId = borrowData.items?.[0]?.drugMasterId ?? borrowData.drugMasterId;
         if (dmId && (await isControlledDrugMaster(dmId))) {
           return { success: false, error: CONTROLLED_DRUG_BLOCKED_MESSAGE };
         }

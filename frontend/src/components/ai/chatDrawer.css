@@ -1898,3 +1898,177 @@
   background: #eff6ff;
   border-color: #93c5fd;
 }
+
+/* ---- Clarify panel (ask_operator): choices + custom answer ---- */
+.doorare-clarify-card {
+  margin-top: 8px;
+  border: 1px solid #dbe3ef;
+  border-left: 3px solid #2563eb;
+  border-radius: 10px;
+  background: #f8fafc;
+  padding: 12px 14px;
+  max-width: 640px;
+}
+
+.doorare-clarify-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #1e3a8a;
+  margin-bottom: 10px;
+}
+
+.doorare-clarify-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #2563eb;
+}
+
+.doorare-clarify-question + .doorare-clarify-question {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed #dbe3ef;
+}
+
+.doorare-clarify-header {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.doorare-clarify-text {
+  font-size: 13px;
+  color: #0f172a;
+  margin: 2px 0 8px;
+}
+
+.doorare-clarify-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.doorare-clarify-option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 7px 11px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.doorare-clarify-option:hover:not(:disabled) {
+  border-color: #2563eb;
+}
+
+.doorare-clarify-option.selected {
+  border-color: #2563eb;
+  background: #eff6ff;
+}
+
+.doorare-clarify-option:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.doorare-clarify-option-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.doorare-clarify-option-desc {
+  font-size: 11px;
+  color: #64748b;
+}
+
+.doorare-clarify-input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 13px;
+  background: #fff;
+}
+
+.doorare-clarify-input:focus {
+  outline: none;
+  border-color: #2563eb;
+}
+
+.doorare-clarify-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.doorare-clarify-submit {
+  padding: 7px 16px;
+  border: none;
+  border-radius: 8px;
+  background: #2563eb;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.doorare-clarify-submit:disabled {
+  background: #94a3b8;
+  cursor: default;
+}
+
+.doorare-clarify-hint {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+/* Tool that stopped because the copilot needs more information: no red error state */
+.doorare-tool-badge.needs-input {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.doorare-tool-log-card.needs_input {
+  border-color: #fcd34d;
+  background: #fffbeb;
+}
+
+/* Neutral state for a tool that could not run: no red error surface */
+.doorare-tool-log-card.failed {
+  border-color: #e2e8f0;
+  background-color: #f8fafc;
+}
+
+.doorare-tool-badge.neutral {
+  background: #e2e8f0;
+  color: #475569;
+}
+
+.doorare-tool-error-details {
+  margin-top: 6px;
+  font-size: 11px;
+  color: #64748b;
+}
+
+.doorare-tool-error-details summary {
+  cursor: pointer;
+}
+
+.doorare-tool-error-details .doorare-tool-code-preview {
+  margin-top: 4px;
+  max-height: 160px;
+  overflow: auto;
+}

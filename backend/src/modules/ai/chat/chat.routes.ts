@@ -106,11 +106,18 @@ aiChatRouter.post('/', requireAuth, async (req: Request, res: Response) => {
               success: event.toolResult?.success,
               data: event.toolResult?.data,
               error: event.toolResult?.error,
+              cached: event.cached ?? false,
+              needsInput: event.needsInput ?? false,
             });
             break;
           case 'proposal':
             sendSseEvent(res, 'proposal', {
               proposal: event.proposal,
+            });
+            break;
+          case 'question':
+            sendSseEvent(res, 'question', {
+              questions: event.questions,
             });
             break;
           case 'error':
@@ -132,6 +139,8 @@ aiChatRouter.post('/', requireAuth, async (req: Request, res: Response) => {
         iterations: result.iterations,
         toolCount: result.toolExecutionCount,
         hasProposals: result.proposals.length > 0,
+        // Which subset of the role's registry was sent this turn (see tools/selector.ts).
+        stagedTools: result.stagedTools,
       });
       res.end();
     }

@@ -1,4 +1,5 @@
 import type { ToolLogEntry } from '../components/ai/ToolExecutionLogCard';
+import type { ClarifyQuestion } from './aiChatApi';
 
 export interface DisplayChatMessage {
   id: string;
@@ -7,6 +8,9 @@ export interface DisplayChatMessage {
   thought?: string;
   isThinking?: boolean;
   toolLogs?: ToolLogEntry[];
+  /** Questions the copilot is waiting on; kept so the panel survives a reload. */
+  questions?: ClarifyQuestion[];
+  questionsAnswered?: boolean;
 }
 
 export interface ChatSession {

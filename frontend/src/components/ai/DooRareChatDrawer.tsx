@@ -7,6 +7,7 @@ import { MarkdownContent } from '../common/MarkdownContent';
 import { ToolExecutionLogCard, type ToolLogEntry } from './ToolExecutionLogCard';
 import { ThinkingAccordion } from './ThinkingAccordion';
 import { AnswerInsights } from './AnswerInsights';
+import { ClarifyPanel } from './ClarifyPanel';
 import { Icon, type IconName } from '../common/icons';
 import {
   loadSessions,
@@ -443,7 +444,12 @@ export const DooRareChatDrawer: React.FC = () => {
                     if (log.status === 'running' && (log.id === res.id || log.name === res.name || !res.id)) {
                       return {
                         ...log,
-                        status: res.success === false ? ('failed' as const) : ('completed' as const),
+                        status:
+                          res.success === false
+                            ? res.needsInput
+                              ? ('needs_input' as const)
+                              : ('failed' as const)
+                            : ('completed' as const),
                         result: res.data,
                         error: res.error,
                         durationMs: Date.now() - log.startTime,
@@ -469,6 +475,13 @@ export const DooRareChatDrawer: React.FC = () => {
           },
           onProposal: (proposal) => {
             setProposals((prev) => [...prev, proposal]);
+          },
+          onQuestion: (questions) => {
+            setDisplayMessages((prev) =>
+              prev.map((m) =>
+                m.id === assistantMsgId ? { ...m, questions, isThinking: false } : m,
+              ),
+            );
           },
           onError: (errMsg) => {
             setDisplayMessages((prev) =>
@@ -927,6 +940,19 @@ export const DooRareChatDrawer: React.FC = () => {
                         )}
                       </div>
                     ) : null}
+
+                    {msg.role === 'assistant' && msg.questions && msg.questions.length > 0 && !msg.questionsAnswered && (
+                      <ClarifyPanel
+                        questions={msg.questions}
+                        disabled={isStreaming}
+                        onSubmit={(answers) => {
+                          setDisplayMessages((prev) =>
+                            prev.map((m) => (m.id === msg.id ? { ...m, questionsAnswered: true } : m)),
+                          );
+                          handleSend(`ตอบคำถาม: ${answers.map((a) => `${a.header}: ${a.answer}`).join(' | ')}`);
+                        }}
+                      />
+                    )}
 
                     {msg.role === 'assistant' && msg.content && !isStreaming && (
                       <AnswerInsights content={msg.content} toolLogs={msg.toolLogs} onAsk={handleQuickPrompt} />

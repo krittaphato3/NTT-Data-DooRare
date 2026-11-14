@@ -4,7 +4,7 @@ export interface ToolLogEntry {
   id: string;
   name: string;
   args?: Record<string, unknown>;
-  status: 'running' | 'completed' | 'failed';
+  status: 'running' | 'completed' | 'failed' | 'needs_input';
   result?: unknown;
   error?: string;
   startTime: number;
@@ -74,7 +74,10 @@ export const ToolExecutionLogCard: React.FC<ToolExecutionLogCardProps> = ({ tool
             </span>
           )}
           {tool.status === 'failed' && (
-            <span className="doorare-tool-badge failed">✕ ข้อผิดพลาด</span>
+            <span className="doorare-tool-badge neutral">ไม่สามารถดำเนินการได้</span>
+          )}
+          {tool.status === 'needs_input' && (
+            <span className="doorare-tool-badge needs-input">💬 รอข้อมูล (Pending)</span>
           )}
 
           <span className="doorare-tool-chevron">{isExpanded ? '▲' : '▼'}</span>
@@ -104,6 +107,22 @@ export const ToolExecutionLogCard: React.FC<ToolExecutionLogCardProps> = ({ tool
             {tool.status === 'running' ? (
               <div className="doorare-tool-running-placeholder">
                 <span className="doorare-tool-spinner-inline" /> กำลังประมวลผลคำขอ...
+              </div>
+            ) : tool.status === 'needs_input' ? (
+              <div className="doorare-tool-running-placeholder">
+                ข้อมูลที่ส่งไปยังระบบยังไม่ครบ — Copilot ถามคำถามด้านล่างแล้ว
+              </div>
+            ) : tool.status === 'failed' ? (
+              <div className="doorare-tool-running-placeholder">
+                ระบบยังดำเนินการส่วนนี้ไม่สำเร็จในขณะนี้ — ลองอีกครั้ง หรือแจ้งผู้ดูแลระบบหากยังพบปัญหา
+                {tool.error && (
+                  <details className="doorare-tool-error-details">
+                    <summary>ดูรายละเอียดทางเทคนิค</summary>
+                    <pre className="doorare-tool-code-preview">
+                      <code>{tool.error}</code>
+                    </pre>
+                  </details>
+                )}
               </div>
             ) : tool.error ? (
               <pre className="doorare-tool-code-preview error">

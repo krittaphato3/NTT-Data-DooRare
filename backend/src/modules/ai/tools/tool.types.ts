@@ -17,6 +17,27 @@ export interface ToolResult {
   data?: unknown;
   error?: string;
   proposal?: ToolProposalPayload;
+  /** A clarifying question for the operator: the turn ends and the UI renders a choices + free-text panel. */
+  question?: ToolQuestionPayload;
+  /** Schema rejections, so the harness can ask the operator for exactly these fields. */
+  validationErrors?: { path: string; message: string }[];
+}
+
+export interface ToolQuestionOption {
+  label: string;
+  description?: string;
+}
+
+export interface ToolQuestion {
+  header: string;
+  question: string;
+  options: ToolQuestionOption[];
+  allowFreeText: boolean;
+  multiSelect: boolean;
+}
+
+export interface ToolQuestionPayload {
+  questions: ToolQuestion[];
 }
 
 export interface ToolProposalPayload {

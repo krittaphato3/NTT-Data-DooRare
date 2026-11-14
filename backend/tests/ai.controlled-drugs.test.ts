@@ -56,3 +56,21 @@ test('BR-F1b-014: borrow proposal for a controlled drug is rejected', async () =
   );
   assert.equal(res.success, false);
 });
+
+test('BR-F1b-014: the guard reads items[0].drugMasterId without a top-level key', async () => {
+  const drug = await controlledDrug();
+  if (!drug) return;
+  const res = await submitPharmacistProposalTool.execute(
+    {
+      actionType: 'CREATE_BORROW_REQUEST',
+      title: 't',
+      description: 'd',
+      summary: {},
+      // Exactly the shape the model is told to send (schema contract): no top-level drugMasterId.
+      payload: { reason: 'stock-out', items: [{ drugMasterId: drug.id, qtyRequested: 5 }] },
+    },
+    { userId: 'u', role: 'PHARMACIST', hospitalId: await hospitalId() },
+  );
+  assert.equal(res.success, false);
+  assert.match(res.error ?? '', /BR-F1b-014/);
+});
