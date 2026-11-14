@@ -65,7 +65,7 @@ export async function readOpenAiCompatStream(
     return {
       model,
       content: text,
-      thought: choice?.message?.reasoning_content ?? null,
+      thought: choice?.message?.reasoning_content ?? choice?.message?.reasoning ?? choice?.message?.thought ?? null,
       toolCalls: choice?.message?.tool_calls?.map((tc: any) => ({
         id: tc.id,
         type: 'function' as const,
@@ -73,6 +73,7 @@ export async function readOpenAiCompatStream(
           name: tc.function?.name,
           arguments: typeof tc.function?.arguments === 'string' ? tc.function.arguments : JSON.stringify(tc.function?.arguments ?? {}),
         },
+        ...(tc.extra_content ? { extra_content: tc.extra_content } : {}),
       })),
       usage: data?.usage
         ? { promptTokens: data.usage.prompt_tokens ?? 0, completionTokens: data.usage.completion_tokens ?? 0, totalTokens: data.usage.total_tokens ?? 0 }
@@ -83,7 +84,7 @@ export async function readOpenAiCompatStream(
   let content = '';
   let thought = '';
   let usage: LLMUsage | undefined;
-  const pending = new Map<number, { id: string; name: string; args: string }>();
+  const pending = new Map<number, { id: string; name: string; args: string; extra_content?: Record<string, unknown> }>();
 
   await consumeSse(res, (_event, data) => {
     let json: any;
@@ -93,17 +94,21 @@ export async function readOpenAiCompatStream(
       return;
     }
     const delta = json.choices?.[0]?.delta ?? {};
-    if (typeof delta.reasoning_content === 'string') thought += delta.reasoning_content;
+    const reasoningChunk = delta.reasoning_content ?? delta.reasoning ?? delta.thought;
+    if (typeof reasoningChunk === 'string' && reasoningChunk) thought += reasoningChunk;
     if (typeof delta.content === 'string' && delta.content) {
       content += delta.content;
       onDelta(delta.content);
     }
     for (const tc of Array.isArray(delta.tool_calls) ? delta.tool_calls : []) {
       const idx = typeof tc.index === 'number' ? tc.index : 0;
-      const cur = pending.get(idx) ?? { id: '', name: '', args: '' };
+      const cur = pending.get(idx) ?? { id: '', name: '', args: '', extra_content: undefined as Record<string, unknown> | undefined };
       if (tc.id) cur.id = tc.id;
       if (tc.function?.name) cur.name += tc.function.name;
       if (tc.function?.arguments) cur.args += tc.function.arguments;
+      if (tc.extra_content) {
+        cur.extra_content = { ...(cur.extra_content || {}), ...tc.extra_content };
+      }
       pending.set(idx, cur);
     }
     if (json.usage) {
@@ -122,6 +127,7 @@ export async function readOpenAiCompatStream(
       id: v.id || `call_${v.name}`,
       type: 'function' as const,
       function: { name: v.name, arguments: v.args || '{}' },
+      ...(v.extra_content ? { extra_content: v.extra_content } : {}),
     }));
 
   return {

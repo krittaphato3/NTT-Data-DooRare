@@ -183,24 +183,55 @@ export class BorrowService {
         alert = { id: a.id, drug_master_id: a.drug_master_id, status: a.status };
         drugMasterId = a.drug_master_id;
       }
+      if (drugMasterId) {
+        const dmRow = (await client.query('SELECT id FROM drug_master WHERE id = $1', [drugMasterId])).rows[0];
+        if (!dmRow) {
+          const hdRow = (await client.query('SELECT drug_master_id FROM hospital_drug WHERE id = $1', [drugMasterId])).rows[0];
+          if (hdRow?.drug_master_id) {
+            drugMasterId = hdRow.drug_master_id;
+            item.drugMasterId = drugMasterId;
+          } else {
+            const searchCandidate = `${reason} ${(body as any).title ?? ''} ${(item as any).name ?? ''}`;
+            const matchedDm = (
+              await client.query(
+                `SELECT hd.drug_master_id
+                   FROM hospital_drug hd
+                   JOIN drug_master dm ON dm.id = hd.drug_master_id
+                  WHERE hd.hospital_id = $1
+                    AND ($2 ILIKE ('%' || dm.generic_name || '%'))
+                  ORDER BY (CASE WHEN $2 ILIKE ('%' || dm.strength || '%') THEN 1 ELSE 2 END)
+                  LIMIT 1`,
+                [hospitalId, searchCandidate],
+              )
+            ).rows[0];
+            if (matchedDm?.drug_master_id) {
+              drugMasterId = matchedDm.drug_master_id;
+              item.drugMasterId = drugMasterId;
+            }
+          }
+        }
+      }
       if (!drugMasterId) throw new HttpError(400, 'VALIDATION', 'ต้องระบุ stockAlertId หรือ items[0].drugMasterId');
       const manualQty = optionalNumber(item.qtyRequested, 'qtyRequested', { min: 0.001 });
       if (context === 'MANUAL') {
         if (manualQty === undefined) throw new HttpError(400, 'VALIDATION', 'คำขอแบบกรอกเองต้องระบุ qtyRequested');
         if (reason.length < 3) throw new HttpError(400, 'VALIDATION', 'คำขอแบบกรอกเองต้องระบุเหตุผล');
       }
-      const dup = await client.query(
-        `SELECT br.request_no FROM borrow_request br JOIN borrow_request_item i ON i.request_id = br.id
-          WHERE br.borrower_hospital_id = $1 AND i.drug_master_id = $2 AND br.status::text = ANY($3::text[]) LIMIT 1`,
-        [hospitalId, drugMasterId, ACTIVE_REQUEST],
-      );
-      if (dup.rows[0]) throw new HttpError(409, 'CONFLICT', `มีคำขอยืมยานี้ที่ยังไม่ปิดแล้ว (${dup.rows[0].request_no})`, { requestNo: dup.rows[0].request_no });
+      const force = Boolean(body.force || body.confirmDuplicate || body.allowDuplicate);
+      if (!force) {
+        const dup = await client.query(
+          `SELECT br.request_no FROM borrow_request br JOIN borrow_request_item i ON i.request_id = br.id
+            WHERE br.borrower_hospital_id = $1 AND i.drug_master_id = $2 AND br.status::text = ANY($3::text[]) LIMIT 1`,
+          [hospitalId, drugMasterId, ACTIVE_REQUEST],
+        );
+        if (dup.rows[0]) throw new HttpError(409, 'CONFLICT', `มีคำขอยืมยานี้ที่ยังไม่ปิดแล้ว (${dup.rows[0].request_no})`, { requestNo: dup.rows[0].request_no });
+      }
 
       const cfg = await loadBorrowConfig(client, hospitalId);
       const need = await loadNeed(client, cfg, hospitalId, drugMasterId, context === 'MANUAL' ? manualQty : undefined);
-      if (need.borrow <= 0) throw new HttpError(409, 'NO_NEED', 'สต็อกและของที่กำลังมาเพียงพอแล้ว ไม่ต้องยืม (BR-F1b-004)', { required: need.required, stock: need.stock, incoming: need.incoming });
+      if (!force && need.borrow <= 0) throw new HttpError(409, 'NO_NEED', 'สต็อกและของที่กำลังมาเพียงพอแล้ว ไม่ต้องยืม (BR-F1b-004)', { required: need.required, stock: need.stock, incoming: need.incoming });
       const urgency: Urgency = need.urgency;
-      const qty = manualQty ?? need.borrow;
+      const qty = manualQty ?? (need.borrow > 0 ? need.borrow : 1);
       const requestNo = await nextRequestNo(client);
       const normalUse = normalUseQty(need.u, need.leadDays, need.stock, need.incoming);
       const inserted = await client.query(

@@ -31,6 +31,7 @@ aiChatRouter.post('/', requireAuth, async (req: Request, res: Response) => {
       pageTitle?: string;
       hospitalId?: string;
       activeId?: string;
+      webSearchEnabled?: boolean;
     };
   };
 
@@ -59,6 +60,7 @@ aiChatRouter.post('/', requireAuth, async (req: Request, res: Response) => {
     currentPath: routeContext?.currentPath,
     pageTitle: routeContext?.pageTitle,
     activeId: routeContext?.activeId,
+    webSearchEnabled: Boolean(routeContext?.webSearchEnabled),
   };
 
   // Keep connection alive with heartbeat comments if needed

@@ -19,6 +19,7 @@ export interface RouteContext {
   pageTitle?: string;
   hospitalId?: string | null;
   activeId?: string;
+  webSearchEnabled?: boolean;
 }
 
 export interface ClarifyQuestionOption {

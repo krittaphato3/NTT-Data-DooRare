@@ -1,8 +1,50 @@
 [
   {
+    "path": "sessions\\2026-11-14-2145-antigravity-webfetch-clarify-wizard-and-attachments.md",
+    "title": "AI Session: WebFetch Pre-fetch Script, Single-Round Clarification Wizard, Optional Web Search & File Attachment",
+    "summary": "AI Session",
+    "tags": "session",
+    "date": "2026-11-15"
+  },
+  {
+    "path": "sessions\\2026-11-15-0125-antigravity-clarify-choices-restoration.md",
+    "title": "AI Session: Clarify Question Clickable Choices Restoration and Auto-Fill Guardrails",
+    "summary": "AI Session",
+    "tags": "session",
+    "date": "2026-11-15"
+  },
+  {
+    "path": "sessions\\2026-11-15-0145-antigravity-gemini-white-theme-30d-retention.md",
+    "title": "Session Note: Gemini-Inspired White Theme & 30-Day Chat Retention",
+    "summary": "Session Note",
+    "tags": "session",
+    "date": "2026-11-15"
+  },
+  {
     "path": "sessions\\2026-11-12-buffy-copilot-abort-context-summary-diff.md",
     "title": "Copilot stop / screen context + plan summary change-diff",
     "summary": "Copilot stop / screen context + plan summary change-diff",
+    "tags": "session",
+    "date": "2026-11-14"
+  },
+  {
+    "path": "sessions\\2026-11-14-1955-antigravity-byok-google-ai-studio-preset.md",
+    "title": "Central Admin BYOK - Google AI Studio API Key Preset",
+    "summary": "Added Google AI Studio (Gemini) 1-click Quick Preset into Central Admin BYOK…",
+    "tags": "session, byok, google-ai-studio, gemini, presets, admin, frontend, backend",
+    "date": "2026-11-14"
+  },
+  {
+    "path": "sessions\\2026-11-14-2115-antigravity-ask-operator-clarify-fixes.md",
+    "title": "Session Note: ask_operator Tooling, Language Adaptation, and Clarify Card Fixes",
+    "summary": "Session Note",
+    "tags": "session",
+    "date": "2026-11-14"
+  },
+  {
+    "path": "sessions\\2026-11-14-graphify-full-knowledge-graph.md",
+    "title": "Session: Full Codebase Knowledge Graph Extraction (/graphify)",
+    "summary": "Session",
     "tags": "session",
     "date": "2026-11-14"
   },

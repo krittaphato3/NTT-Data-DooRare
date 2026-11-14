@@ -11,6 +11,10 @@ export interface DisplayChatMessage {
   /** Questions the copilot is waiting on; kept so the panel survives a reload. */
   questions?: ClarifyQuestion[];
   questionsAnswered?: boolean;
+  savedAnswers?: { header: string; answer: string }[];
+  /** Attached HITL proposal; rendered inline in the message turn so it is not pushed to the bottom. */
+  proposal?: any;
+  proposalStatus?: 'pending' | 'approved' | 'declined' | 'failed';
 }
 
 export interface ChatSession {
@@ -22,7 +26,58 @@ export interface ChatSession {
   proposals?: any[];
 }
 
-const RETENTION_MS = 24 * 60 * 60 * 1000; // 24 Hours in milliseconds
+export const RETENTION_DAYS = 30;
+export const RETENTION_MS = RETENTION_DAYS * 24 * 60 * 60 * 1000; // 30 Days in milliseconds (auto-pruned after 30 days)
+
+export interface SessionDateGroup {
+  id: 'today' | 'yesterday' | 'previous7Days' | 'previous30Days';
+  title: string;
+  items: ChatSession[];
+}
+
+/**
+ * Categorizes active sessions into Today, Yesterday, Previous 7 Days, and Earlier (up to 30 days).
+ */
+export function groupSessionsByDate(sessions: ChatSession[]): SessionDateGroup[] {
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const startOfYesterday = startOfToday - 24 * 60 * 60 * 1000;
+  const startOf7Days = startOfToday - 6 * 24 * 60 * 60 * 1000;
+
+  const today: ChatSession[] = [];
+  const yesterday: ChatSession[] = [];
+  const previous7Days: ChatSession[] = [];
+  const previous30Days: ChatSession[] = [];
+
+  for (const s of sessions) {
+    const timestamp = s.updatedAt || s.createdAt || 0;
+    if (timestamp >= startOfToday) {
+      today.push(s);
+    } else if (timestamp >= startOfYesterday) {
+      yesterday.push(s);
+    } else if (timestamp >= startOf7Days) {
+      previous7Days.push(s);
+    } else {
+      previous30Days.push(s);
+    }
+  }
+
+  const groups: SessionDateGroup[] = [];
+  if (today.length > 0) {
+    groups.push({ id: 'today', title: 'วันนี้', items: today });
+  }
+  if (yesterday.length > 0) {
+    groups.push({ id: 'yesterday', title: 'เมื่อวาน', items: yesterday });
+  }
+  if (previous7Days.length > 0) {
+    groups.push({ id: 'previous7Days', title: '7 วันที่ผ่านมา', items: previous7Days });
+  }
+  if (previous30Days.length > 0) {
+    groups.push({ id: 'previous30Days', title: 'ก่อนหน้า (ภายใน 30 วัน)', items: previous30Days });
+  }
+
+  return groups;
+}
 
 /**
  * Strips leading emojis or legacy chat icon artifacts from a session title.

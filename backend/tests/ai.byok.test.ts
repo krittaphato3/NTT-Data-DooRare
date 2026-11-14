@@ -233,6 +233,32 @@ test('custom.provider: validates endpoint and constructs path correctly', async 
     },
   });
   assert.equal(responsesPath.getFullUrl(), 'http://localhost:8000/responses');
+
+  // 3. Google AI Studio OpenAI-compatible endpoint preset URL
+  const googleAiStudio = new CustomProvider({
+    provider: 'CUSTOM',
+    modelPrimary: 'gemini-1.5-flash',
+    modelFast: 'gemini-1.5-flash',
+    monthlyBudgetUsd: 100,
+    estimatedSpendUsd: 0,
+    credentials: {
+      customEndpoint: 'https://generativelanguage.googleapis.com/v1beta/openai',
+      customApiPath: '/chat/completions',
+      apiKey: 'AIzaSyD-testKey123456789',
+    },
+  });
+  assert.equal(
+    googleAiStudio.getFullUrl(),
+    'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
+  );
+});
+
+test('byok.utils: maskSecretKey masks Google AI Studio keys correctly', () => {
+  const key = 'AIzaSyD-1234567890abcdef1234567890';
+  const masked = maskSecretKey(key);
+  assert.ok(masked.startsWith('AIza'), 'masked key preserves AIza prefix');
+  assert.ok(masked.endsWith('7890'), 'masked key shows last few characters');
+  assert.ok(!masked.includes('1234567890abcdef'), 'masked key must not leak the middle payload');
 });
 
 

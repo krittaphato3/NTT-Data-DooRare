@@ -42,7 +42,7 @@ test('pharmacist proposals: OBJECT_ALLOCATION_PLAN needs a reason and a hospital
          FROM allocation_plan ap ORDER BY ap.created_at DESC LIMIT 1`,
     )
   ).rows[0];
-  if (!plan?.outsider) return t.skip('no plan with a hospital of its region outside it');
+  if (!plan?.outsider || !plan?.involved) return t.skip('no plan with an involved hospital and outsider in the database');
 
   const ok = await submitPharmacistProposalTool.execute(
     { ...base, actionType: 'OBJECT_ALLOCATION_PLAN', targetId: plan.id, payload: { reason: 'รพ.เราขาดยานี้มากกว่า' } },

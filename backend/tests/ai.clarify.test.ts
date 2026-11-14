@@ -237,3 +237,78 @@ test('registry: a value that cannot be read as a number still asks the operator'
   assert.equal(res.success, false);
   assert.equal(res.validationErrors?.[0].path, 'qty');
 });
+
+test('ask_operator: supports string options and coerces them to label objects', async () => {
+  const parsed = askOperatorTool.parameters.safeParse({
+    questions: [
+      {
+        header: 'เลือกโรงพยาบาล',
+        question: 'ต้องการยืมยาจากที่ใด?',
+        options: ['รพ.สมุทรปราการ', 'รพ.บางพลี'],
+      },
+    ],
+  });
+  assert.equal(parsed.success, true);
+  if (parsed.success) {
+    const res = await askOperatorTool.execute(parsed.data, { role: 'PHARMACIST' });
+    assert.equal(res.success, true);
+    assert.equal(res.question?.questions[0].options[0].label, 'รพ.สมุทรปราการ');
+    assert.equal(res.question?.questions[0].options[1].label, 'รพ.บางพลี');
+  }
+});
+
+test('ask_operator: supports single question root object without array wrapper', async () => {
+  const parsed = askOperatorTool.parameters.safeParse({
+    question: 'ยืมยาจำนวนเท่าใด?',
+    options: ['10', '20'],
+  });
+  assert.equal(parsed.success, true);
+  if (parsed.success) {
+    const res = await askOperatorTool.execute(parsed.data, { role: 'PHARMACIST' });
+    assert.equal(res.success, true);
+    assert.equal(res.question?.questions.length, 1);
+    assert.equal(res.question?.questions[0].question, 'ยืมยาจำนวนเท่าใด?');
+    assert.equal(res.question?.questions[0].options[0].label, '10');
+  }
+});
+
+test('ask_operator: auto-fills default clinical options if model asks about drug formulation or hospital without options', async () => {
+  const res = await askOperatorTool.execute(
+    {
+      questions: [
+        { header: 'ความแรงและรูปแบบยา', question: 'ต้องการยืมยาพาราเซตามอลรูปแบบใด?' },
+        { header: 'โรงพยาบาลผู้ให้ยืม', question: 'ต้องการยืมจาก รพ. ใด?' },
+      ],
+    },
+    { role: 'PHARMACIST' },
+  );
+  assert.equal(res.success, true);
+  assert.equal(res.question?.questions.length, 2);
+  // Drug question gets Paracetamol choices automatically
+  assert.ok(res.question?.questions[0].options.length >= 2);
+  assert.ok(res.question?.questions[0].options.some((o: any) => o.label.includes('500 mg')));
+  // Hospital question gets hospital choices automatically
+  assert.ok(res.question?.questions[1].options.length >= 2);
+  assert.ok(res.question?.questions[1].options.some((o: any) => o.label.includes('โรงพยาบาล') || o.label.includes('รพ.')));
+});
+
+test('ask_operator: supports choices alias and comma-separated options string', async () => {
+  const parsed = askOperatorTool.parameters.safeParse({
+    questions: [
+      {
+        header: 'ความเร่งด่วน',
+        prompt: 'เลือกระดับความเร่งด่วน',
+        choices: 'NORMAL, URGENT, VERY_URGENT',
+      },
+    ],
+  });
+  assert.equal(parsed.success, true);
+  if (parsed.success) {
+    const res = await askOperatorTool.execute(parsed.data, { role: 'PHARMACIST' });
+    assert.equal(res.success, true);
+    assert.equal(res.question?.questions[0].options.length, 3);
+    assert.equal(res.question?.questions[0].options[0].label, 'NORMAL');
+    assert.equal(res.question?.questions[0].options[1].label, 'URGENT');
+    assert.equal(res.question?.questions[0].options[2].label, 'VERY_URGENT');
+  }
+});

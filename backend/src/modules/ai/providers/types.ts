@@ -25,6 +25,7 @@ export interface ToolCall {
     name: string;
     arguments: string; // JSON string
   };
+  extra_content?: Record<string, unknown>;
 }
 
 export interface LLMUsage {

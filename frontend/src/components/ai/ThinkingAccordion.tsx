@@ -50,7 +50,7 @@ export const ThinkingAccordion: React.FC<ThinkingAccordionProps> = ({ thought, i
     setTimeout(() => setCopied(false), 2000);
   };
 
-  if (!thought && !isThinking) return null;
+  if (!thought || !thought.trim()) return null;
 
   return (
     <div className={`doorare-thinking-card ${isThinking ? 'thinking' : 'completed'}`}>

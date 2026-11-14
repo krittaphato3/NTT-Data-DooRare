@@ -65,11 +65,12 @@ export class MockProvider implements ILLMProvider {
         };
       }
 
+      const hasThinking = /think|reason|r1|qwq/i.test(model);
       if (userPrompt.includes('stock') || userPrompt.includes('reorder') || userPrompt.includes('borrow')) {
         const tool = tools.find((t) => t.name.includes('stock') || t.name.includes('ladder')) || tools[0];
         return {
           model,
-          thought: 'วิเคราะห์ระดับสต็อกยาและจุดสั่งซื้อซ้ำ (ROP) เปรียบเทียบปริมาณคงคลังและอัตราการใช้ย้อนหลัง...',
+          thought: hasThinking ? 'วิเคราะห์ระดับสต็อกยาและจุดสั่งซื้อซ้ำ (ROP) เปรียบเทียบปริมาณคงคลังและอัตราการใช้ย้อนหลัง...' : null,
           content: null,
           toolCalls: [
             {
@@ -94,7 +95,7 @@ export class MockProvider implements ILLMProvider {
     }
     return {
       model,
-      thought: 'ประมวลผลคำขอของผู้ใช้และสังเคราะห์ข้อมูลตามแนวทางความปลอดภัยด้านยา...',
+      thought: /think|reason|r1|qwq/i.test(model) ? 'ประมวลผลคำขอของผู้ใช้และสังเคราะห์ข้อมูลตามแนวทางความปลอดภัยด้านยา...' : null,
       content,
       usage: {
         promptTokens: 24,

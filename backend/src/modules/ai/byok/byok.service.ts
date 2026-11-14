@@ -40,7 +40,13 @@ export class ByokService {
       estimatedSpendUsd: 0,
       streamingEnabled: true,
       credentials: {
-        apiKey: process.env.OPENAI_API_KEY || process.env.ANTHROPIC_API_KEY || '',
+        apiKey:
+          process.env.OPENAI_API_KEY ||
+          process.env.ANTHROPIC_API_KEY ||
+          process.env.GEMINI_API_KEY ||
+          process.env.GOOGLE_API_KEY ||
+          process.env.GOOGLE_AI_STUDIO_API_KEY ||
+          '',
         awsRegion: process.env.AWS_REGION || 'ap-southeast-1',
         awsAccessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
         awsSecretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',

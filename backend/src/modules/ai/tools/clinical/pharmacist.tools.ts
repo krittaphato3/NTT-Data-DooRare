@@ -91,6 +91,7 @@ export const getStockAndAlertsTool: IAgentTool<{
       const sql = `
         SELECT hd.id AS "hospitalDrugId",
                hd.hospital_id AS "hospitalId",
+               hd.drug_master_id AS "drugMasterId",
                hd.local_code AS "localCode",
                hd.local_name AS "localName",
                hd.ved::text AS "ved",
@@ -913,8 +914,43 @@ export const submitPharmacistProposalTool: IAgentTool<{
       // BR-F1b-014: never propose an automated borrow of a controlled drug
       if (args.actionType === 'CREATE_BORROW_REQUEST') {
         // The validated shape carries the drug inside items[]; the top-level key is only a legacy convenience.
-        const borrowData = parseRes.data as { drugMasterId?: string; items?: { drugMasterId?: string }[] };
-        const dmId = borrowData.items?.[0]?.drugMasterId ?? borrowData.drugMasterId;
+        const borrowData = parseRes.data as { drugMasterId?: string; items?: { drugMasterId?: string; qtyRequested?: number }[] };
+        let dmId = borrowData.items?.[0]?.drugMasterId ?? borrowData.drugMasterId;
+
+        // Auto-heal hallucinated or hospital_drug UUID into the real mapped drug_master_id
+        if (dmId) {
+          const checkDm = await query<{ id: string }>('SELECT id FROM drug_master WHERE id = $1', [dmId]);
+          if (!checkDm.rows[0]) {
+            // Check if dmId is actually a hospital_drug_id
+            const checkHd = await query<{ drug_master_id: string }>(
+              'SELECT drug_master_id FROM hospital_drug WHERE id = $1 AND drug_master_id IS NOT NULL',
+              [dmId],
+            );
+            if (checkHd.rows[0]?.drug_master_id) {
+              dmId = checkHd.rows[0].drug_master_id;
+            } else {
+              // Search hospital drugs and drug_master matching title, description, or summary
+              const searchStr = `${args.title} ${args.description} ${JSON.stringify(args.summary)}`;
+              const matchRes = await query<{ drug_master_id: string }>(
+                `SELECT hd.drug_master_id
+                   FROM hospital_drug hd
+                   JOIN drug_master dm ON dm.id = hd.drug_master_id
+                  WHERE (hd.hospital_id = $1 OR $1 IS NULL)
+                    AND ($2 ILIKE ('%' || dm.generic_name || '%'))
+                  ORDER BY (CASE WHEN $2 ILIKE ('%' || dm.strength || '%') THEN 1 ELSE 2 END)
+                  LIMIT 1`,
+                [hospitalId, searchStr],
+              );
+              if (matchRes.rows[0]?.drug_master_id) {
+                dmId = matchRes.rows[0].drug_master_id;
+              }
+            }
+            if (borrowData.items?.[0] && dmId) {
+              borrowData.items[0].drugMasterId = dmId;
+            }
+          }
+        }
+
         if (dmId && (await isControlledDrugMaster(dmId))) {
           return { success: false, error: CONTROLLED_DRUG_BLOCKED_MESSAGE };
         }

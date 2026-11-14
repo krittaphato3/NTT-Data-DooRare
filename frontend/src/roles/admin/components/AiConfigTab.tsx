@@ -63,16 +63,92 @@ const PROVIDERS: {
   },
   {
     id: 'CUSTOM',
-    name: 'Custom API Endpoint',
-    tag: 'vLLM / OmniRoute / Ollama',
+    name: 'Custom / Google AI Studio',
+    tag: 'Google AI Studio · OpenRouter · vLLM',
     tagColor: '#6366F1',
-    desc: 'เชื่อมต่อผ่าน Custom Base URL เช่น vLLM, Ollama, OpenRouter, LiteLLM หรือ Private Gateway',
+    desc: 'รองรับ Google AI Studio (Gemini API Key), OpenRouter, Ollama, vLLM หรือ Private Gateway',
     icon: 'gear',
   },
 ];
 
+interface CustomPreset {
+  id: string;
+  name: string;
+  badge: string;
+  badgeColor: string;
+  endpoint: string;
+  apiPath: string;
+  modelPrimary: string;
+  modelFast: string;
+  keyPlaceholder: string;
+  keyHelpText: string;
+  keyHelpUrl?: string;
+  description: string;
+}
+
+const CUSTOM_PRESETS: CustomPreset[] = [
+  {
+    id: 'google-ai-studio',
+    name: 'Google AI Studio (Gemini)',
+    badge: 'Official Google Key',
+    badgeColor: '#1A73E8',
+    endpoint: 'https://generativelanguage.googleapis.com/v1beta/openai',
+    apiPath: '/chat/completions',
+    modelPrimary: 'gemini-flash-lite-latest',
+    modelFast: 'gemini-flash-lite-latest',
+    keyPlaceholder: 'AQ... หรือ AIzaSy... (วาง Google AI Studio API Key)',
+    keyHelpText: 'ใช้ Google AI Studio API Key เชื่อมต่อผ่าน OpenAI-compatible endpoint',
+    keyHelpUrl: 'https://aistudio.google.com/app/apikey',
+    description: 'เชื่อมต่อตรงด้วย Google AI Studio Key แนะนำโมเดลเร็ว เสถียรสูง เช่น gemini-flash-lite-latest, gemini-3.8-flash',
+  },
+  {
+    id: 'openrouter',
+    name: 'OpenRouter',
+    badge: 'Multi-Provider Hub',
+    badgeColor: '#6366F1',
+    endpoint: 'https://openrouter.ai/api/v1',
+    apiPath: '/chat/completions',
+    modelPrimary: 'deepseek-ai/DeepSeek-R1',
+    modelFast: 'antigravity/gemini-3.8-flash-tiered',
+    keyPlaceholder: 'sk-or-v1-...',
+    keyHelpText: 'OpenRouter API Key สำหรับเข้าถึงโมเดลหลากหลายค่าย',
+    keyHelpUrl: 'https://openrouter.ai/keys',
+    description: 'เข้าถึงโมเดลชั้นนำกว่า 100+ ตัวผ่าน OpenRouter Key เดียว',
+  },
+  {
+    id: 'ollama',
+    name: 'Ollama (Local / On-Prem)',
+    badge: 'Self-Hosted · $0 Cost',
+    badgeColor: '#059669',
+    endpoint: 'http://localhost:11434/v1',
+    apiPath: '/chat/completions',
+    modelPrimary: 'llama3.1:8b',
+    modelFast: 'qwen2.5:7b',
+    keyPlaceholder: '(เว้นว่างได้สำหรับ Local Ollama)',
+    keyHelpText: 'Ollama รันบน Local Host หรือ Docker ภายในเครือข่ายโรงพยาบาล',
+    description: 'ประมวลผลภายในเครื่องแบบออฟไลน์ 100% ไม่ส่งข้อมูลออกภายนอก',
+  },
+  {
+    id: 'vllm',
+    name: 'vLLM / LiteLLM Proxy',
+    badge: 'Enterprise Gateway',
+    badgeColor: '#D97706',
+    endpoint: 'http://localhost:8000/v1',
+    apiPath: '/chat/completions',
+    modelPrimary: 'custom-primary',
+    modelFast: 'custom-fast',
+    keyPlaceholder: 'Bearer Token หรือเว้นว่างหากไม่มี Auth',
+    keyHelpText: 'vLLM / LiteLLM Gateway ประจำคลัสเตอร์โรงพยาบาล',
+    description: 'Private GPU Inference Cluster รองรับ Throughput สูง',
+  },
+];
+
 const POPULAR_PRIMARY_MODELS = [
-  { id: 'anthropic.claude-3-5-sonnet-20241022-v2:0', label: 'Claude 3.5 Sonnet (AWS Bedrock / Anthropic)', badge: 'Recommended' },
+  { id: 'gemini-flash-lite-latest', label: 'Gemini Flash Lite (Google AI Studio)', badge: 'Ultra Fast (< 1s)' },
+  { id: 'gemini-3.8-flash', label: 'Gemini 3.8 Flash (Google AI Studio)', badge: 'Reasoning (Subject to load)' },
+  { id: 'gemini-flash-latest', label: 'Gemini Flash Latest (Google AI Studio)', badge: 'Standard Flash' },
+  { id: 'gemini-pro-latest', label: 'Gemini Pro Latest (Google AI Studio)', badge: 'Deep Reasoning' },
+  { id: 'anthropic.claude-3-5-sonnet-20241022-v2:0', label: 'Claude 3.5 Sonnet (AWS Bedrock / Anthropic)', badge: 'High Intelligence' },
   { id: 'gpt-4o', label: 'GPT-4o (OpenAI / Azure)', badge: 'High Intelligence' },
   { id: 'antigravity/gemini-3.8-flash-tiered', label: 'Gemini 3.8 Flash Tiered (OmniRoute / Google)', badge: 'Fast Reasoning' },
   { id: 'deepseek-ai/DeepSeek-R1', label: 'DeepSeek-R1 (OpenRouter / Self-Hosted)', badge: 'Deep Reasoning' },
@@ -80,6 +156,9 @@ const POPULAR_PRIMARY_MODELS = [
 ];
 
 const POPULAR_FAST_MODELS = [
+  { id: 'gemini-flash-lite-latest', label: 'Gemini Flash Lite (Google AI Studio)', badge: '< 1s Ultra Fast' },
+  { id: 'gemini-3.8-flash', label: 'Gemini 3.8 Flash (Google AI Studio)', badge: 'High Reasoning' },
+  { id: 'gemini-flash-latest', label: 'Gemini Flash Latest (Google AI Studio)', badge: 'Standard Flash' },
   { id: 'anthropic.claude-3-5-haiku-20241022-v1:0', label: 'Claude 3.5 Haiku (AWS Bedrock / Anthropic)', badge: '< 8s Emergency' },
   { id: 'gpt-4o-mini', label: 'GPT-4o Mini (OpenAI / Azure)', badge: 'Cost Efficient' },
   { id: 'antigravity/gemini-3.8-flash-tiered', label: 'Gemini 3.8 Flash Tiered (OmniRoute)', badge: 'High Speed' },
@@ -170,6 +249,18 @@ export function AiConfigTab({ onShowToast }: AiConfigTabProps) {
   useEffect(() => {
     void loadConfig();
   }, []);
+
+  const applyCustomPreset = (preset: CustomPreset) => {
+    setSelectedProvider('CUSTOM');
+    setCustomEndpoint(preset.endpoint);
+    setCustomApiPath(preset.apiPath);
+    setIsCustomPathInput(false);
+    setModelPrimary(preset.modelPrimary);
+    setModelFast(preset.modelFast);
+    setIsCustomPrimary(false);
+    setIsCustomFast(false);
+    onShowToast(`โหลดพรีเซ็ต ${preset.name} เรียบร้อยแล้ว (Endpoint & Models พร้อมใช้งาน)`);
+  };
 
   const handleTestConnection = async () => {
     try {
@@ -798,6 +889,72 @@ export function AiConfigTab({ onShowToast }: AiConfigTabProps) {
 
           {selectedProvider === 'CUSTOM' && (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              {/* Quick Presets Toolbar */}
+              <div style={{ gridColumn: 'span 2', marginBottom: 4 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, flexWrap: 'wrap', gap: 8 }}>
+                  <div>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: '#0F2A5C' }}>
+                      พรีเซ็ตแนะนำ (Quick Presets)
+                    </span>
+                    <span style={{ fontSize: 12, color: '#64748B', marginLeft: 8 }}>
+                      คลิกเพื่อโหลด Endpoint และโมเดลที่แนะนำโดยอัตโนมัติ
+                    </span>
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 10 }}>
+                  {CUSTOM_PRESETS.map((preset) => {
+                    const isCurrent =
+                      customEndpoint.trim().replace(/\/+$/, '') === preset.endpoint.replace(/\/+$/, '');
+                    return (
+                      <div
+                        key={preset.id}
+                        onClick={() => applyCustomPreset(preset)}
+                        style={{
+                          border: isCurrent ? '2px solid #2563EB' : '1px solid #CBD5E1',
+                          backgroundColor: isCurrent ? '#EFF6FF' : '#F8FAFC',
+                          borderRadius: 8,
+                          padding: '10px 12px',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          justifyContent: 'space-between',
+                        }}
+                      >
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                            <span style={{ fontWeight: 700, fontSize: 12.5, color: isCurrent ? '#1D4ED8' : '#1E293B' }}>
+                              {preset.name}
+                            </span>
+                            <span
+                              style={{
+                                fontSize: 10,
+                                fontWeight: 700,
+                                color: preset.badgeColor,
+                                backgroundColor: `${preset.badgeColor}18`,
+                                padding: '1px 6px',
+                                borderRadius: 10,
+                              }}
+                            >
+                              {preset.badge}
+                            </span>
+                          </div>
+                          <p style={{ margin: 0, fontSize: 11, color: '#64748B', lineHeight: 1.35 }}>
+                            {preset.description}
+                          </p>
+                        </div>
+                        {isCurrent && (
+                          <div style={{ marginTop: 6, fontSize: 10.5, fontWeight: 600, color: '#2563EB' }}>
+                            [กำลังใช้งานพรีเซ็ตนี้]
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
               <div style={{ gridColumn: 'span 2' }}>
                 <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#334155', marginBottom: 6 }}>
                   Custom API Base Endpoint URL *
@@ -807,11 +964,11 @@ export function AiConfigTab({ onShowToast }: AiConfigTabProps) {
                   className="admin-input"
                   value={customEndpoint}
                   onChange={(e) => setCustomEndpoint(e.target.value)}
-                  placeholder="e.g. https://openrouter.ai/api/v1 หรือ http://localhost:11434/v1 หรือ http://your-gpu-server:8000"
+                  placeholder="e.g. https://generativelanguage.googleapis.com/v1beta/openai หรือ https://openrouter.ai/api/v1"
                   style={{ width: '100%', fontFamily: 'monospace' }}
                 />
                 <span style={{ fontSize: 11, color: '#64748B' }}>
-                  รองรับ vLLM, Ollama, OpenRouter, LiteLLM, LMStudio หรือ Custom Gateway ภายในองค์กร
+                  รองรับ Google AI Studio OpenAI-compatible endpoint, vLLM, Ollama, OpenRouter, LiteLLM หรือ Private Gateway
                 </span>
               </div>
 
@@ -883,16 +1040,34 @@ export function AiConfigTab({ onShowToast }: AiConfigTabProps) {
               </div>
 
               <div style={{ gridColumn: 'span 2' }}>
-                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#334155', marginBottom: 6 }}>
-                  API Key / Bearer Authorization Token (ตัวเลือกเสริม หาก Endpoint ต้องใช้ยืนยันตัวตน)
-                </label>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                  <label style={{ fontSize: 13, fontWeight: 600, color: '#334155' }}>
+                    {customEndpoint.includes('generativelanguage.googleapis.com')
+                      ? 'Google AI Studio API Key (AIzaSy...)'
+                      : 'API Key / Bearer Authorization Token (ตัวเลือกเสริม หาก Endpoint ต้องใช้ยืนยันตัวตน)'}
+                  </label>
+                  {customEndpoint.includes('generativelanguage.googleapis.com') && (
+                    <a
+                      href="https://aistudio.google.com/app/apikey"
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{ fontSize: 12, color: '#2563EB', fontWeight: 600, textDecoration: 'underline' }}
+                    >
+                      รับ Google AI Studio API Key ฟรี &rarr;
+                    </a>
+                  )}
+                </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <input
                     type={showKey ? 'text' : 'password'}
                     className="admin-input"
                     value={apiKey}
                     onChange={(e) => setApiKey(e.target.value)}
-                    placeholder="sk-... หรือ Custom Token (เว้นว่างได้สำหรับ Local / Unauthenticated endpoints)"
+                    placeholder={
+                      customEndpoint.includes('generativelanguage.googleapis.com')
+                        ? 'AIzaSy... (วาง Google AI Studio API Key ที่นี่)'
+                        : 'sk-... หรือ Custom Token (เว้นว่างได้สำหรับ Local / Unauthenticated endpoints)'
+                    }
                     style={{ flex: 1, fontFamily: 'monospace' }}
                   />
                   <button
@@ -903,6 +1078,28 @@ export function AiConfigTab({ onShowToast }: AiConfigTabProps) {
                     {showKey ? 'ซ่อน' : 'แสดง'}
                   </button>
                 </div>
+
+                {customEndpoint.includes('generativelanguage.googleapis.com') && (
+                  <div
+                    style={{
+                      marginTop: 8,
+                      padding: '8px 12px',
+                      backgroundColor: '#EFF6FF',
+                      border: '1px solid #BFDBFE',
+                      borderRadius: 6,
+                      fontSize: 12,
+                      color: '#1E40AF',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                    }}
+                  >
+                    <Icon name="spark" style={{ width: 14, height: 14, color: '#2563EB', flexShrink: 0 }} />
+                    <span>
+                      <strong>Google AI Studio Preset Active:</strong> เชื่อมต่อผ่าน Google Generative Language OpenAI Compatibility endpoint (<code>/v1beta/openai/chat/completions</code>) รองรับ Real-Time Token Streaming, Tool Calling และโมเดลตระกูล Gemini (2.5 Flash, 2.5 Pro, 2.0 Flash) อย่างเป็นทางการ
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
           )}
