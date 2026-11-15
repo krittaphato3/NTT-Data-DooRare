@@ -15,7 +15,7 @@ export const MockDemoPage: React.FC = () => {
   const [executingAction, setExecutingAction] = useState<string | null>(null);
   const [logs, setLogs] = useState<string[]>([]);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const terminalEndRef = useRef<HTMLDivElement | null>(null);
+  const terminalScrollContainerRef = useRef<HTMLDivElement | null>(null);
 
   const loadStats = async () => {
     setLoadingStats(true);
@@ -31,6 +31,8 @@ export const MockDemoPage: React.FC = () => {
   };
 
   useEffect(() => {
+    // Ensure page opens at the very top
+    window.scrollTo(0, 0);
     loadStats();
     // Welcome log
     const now = new Date().toISOString().substring(11, 19);
@@ -41,8 +43,9 @@ export const MockDemoPage: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (terminalEndRef.current) {
-      terminalEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    // Only scroll the terminal log container internally; NEVER scroll the browser window
+    if (terminalScrollContainerRef.current) {
+      terminalScrollContainerRef.current.scrollTop = terminalScrollContainerRef.current.scrollHeight;
     }
   }, [logs]);
 
@@ -450,7 +453,10 @@ export const MockDemoPage: React.FC = () => {
           </div>
 
           {/* Console Log Content */}
-          <div style={{ flex: 1, padding: '16px 20px', overflowY: 'auto', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace', fontSize: '12px', lineHeight: 1.6, color: '#cbd5e1' }}>
+          <div
+            ref={terminalScrollContainerRef}
+            style={{ flex: 1, padding: '16px 20px', overflowY: 'auto', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace', fontSize: '12px', lineHeight: 1.6, color: '#cbd5e1' }}
+          >
             {logs.map((line, index) => {
               let color = '#cbd5e1';
               if (line.includes('OK:')) color = '#34d399';
@@ -465,7 +471,6 @@ export const MockDemoPage: React.FC = () => {
                 </div>
               );
             })}
-            <div ref={terminalEndRef} />
           </div>
 
           {/* Console Footer Status */}

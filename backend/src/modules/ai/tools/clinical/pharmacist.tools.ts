@@ -81,7 +81,7 @@ export const getStockAndAlertsTool: IAgentTool<{
         where.push(`(hd.local_code ILIKE $${pIdx} OR hd.local_name ILIKE $${pIdx} OR dm.generic_name ILIKE $${pIdx})`);
       }
 
-      const alertStatus = args.status || 'OPEN';
+      const alertStatus = args.status || (args.drugCode || args.hospitalDrugId ? 'ALL' : 'OPEN');
       if (alertStatus !== 'ALL') {
         params.push(alertStatus);
         where.push(`a.status = $${params.length}`);
@@ -116,11 +116,45 @@ export const getStockAndAlertsTool: IAgentTool<{
       `;
 
       const res = await query(sql, params);
+
+      // Also check canonical regional drug_master catalog if searching by keyword
+      let catalogMatches: any[] = [];
+      if (args.drugCode && args.drugCode.trim()) {
+        const dmRes = await query<{
+          drugMasterId: string;
+          genericName: string;
+          strength: string;
+          dosageForm: string;
+          baseUnit: string;
+          fullName: string;
+        }>(
+          `SELECT dm.id AS "drugMasterId",
+                  dm.generic_name AS "genericName",
+                  dm.strength AS "strength",
+                  dm.dosage_form AS "dosageForm",
+                  dm.base_unit AS "baseUnit",
+                  concat_ws(' ', dm.generic_name, dm.strength, dm.dosage_form) AS "fullName"
+             FROM drug_master dm
+            WHERE dm.generic_name ILIKE $1
+            ORDER BY dm.strength ASC
+            LIMIT 10`,
+          [`%${args.drugCode.trim()}%`],
+        );
+        catalogMatches = dmRes.rows;
+      }
+
+      const distinctFormulations = Array.from(new Set([
+        ...res.rows.map((r: any) => r.genericName),
+        ...catalogMatches.map((m: any) => m.fullName),
+      ])).filter(Boolean);
+
       return {
         success: true,
         data: {
           count: res.rows.length,
           items: res.rows,
+          catalogMatches,
+          distinctFormulations,
         },
       };
     } catch (e: any) {

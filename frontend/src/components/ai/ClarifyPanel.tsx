@@ -35,9 +35,8 @@ function getDefaultOptions(header?: string, question?: string): { label: string;
     combined.includes('strength')
   ) {
     return [
-      { label: 'Paracetamol tablet 500 mg', description: 'ยาเม็ดบรรเทาปวด ลดไข้ 500 มก.' },
-      { label: 'Paracetamol syrup 120 mg/5 mL', description: 'ยาน้ำสำหรับเด็ก' },
-      { label: 'ยาฉีด (Injection / IV)', description: 'สารละลายสำหรับหยดทางหลอดเลือดดำ' },
+      { label: 'Paracetamol 500 mg (tablet)', description: 'ยาเม็ดบรรเทาปวด ลดไข้ 500 มก.' },
+      { label: 'Paracetamol 120 mg/5 mL (syrup)', description: 'ยาน้ำสำหรับเด็ก 120 มก./5 มล.' },
     ];
   }
   if (
@@ -69,10 +68,9 @@ function getDefaultOptions(header?: string, question?: string): { label: string;
 }
 
 /**
- * The stepped clarify panel: when the copilot needs information, it asks all required questions in ONE card.
- * The operator can answer and click to go to the next question, or jump between questions via stepper tabs,
- * and submit all answers on the last question in a single turn.
- * Once submitted, the card becomes view-only without sending buttons.
+ * Unified Clarify Panel: displays all questions on one scannable, effortless card.
+ * No horizontal scrollbars, no multi-step pagination friction.
+ * The operator can click choices directly across all questions and submit with a single click.
  */
 export const ClarifyPanel: React.FC<ClarifyPanelProps> = ({
   questions,
@@ -81,8 +79,6 @@ export const ClarifyPanel: React.FC<ClarifyPanelProps> = ({
   savedAnswers,
   onSubmit,
 }) => {
-  const [currentStep, setCurrentStep] = useState(0);
-
   // Initialize picked options from savedAnswers if available
   const [picked, setPicked] = useState<Record<number, string[]>>(() => {
     const initial: Record<number, string[]> = {};
@@ -125,42 +121,13 @@ export const ClarifyPanel: React.FC<ClarifyPanelProps> = ({
     return initial;
   });
 
-  const [skipped, setSkipped] = useState<Record<number, boolean>>({});
   const [submitted, setSubmitted] = useState(false);
 
   const isViewOnly = Boolean(isAnswered || submitted);
-  const isMulti = questions.length > 1;
   const isThai = questions.some((q) => /[\u0E00-\u0E7F]/.test(`${q.header} ${q.question}`));
-
-  // Safe active question index
-  const activeIndex = Math.min(Math.max(0, currentStep), questions.length - 1);
-  const isLastQuestion = activeIndex === questions.length - 1;
-  const q = questions[activeIndex];
-
-  // Guaranteed options with fallback
-  const effectiveOptions = q
-    ? (q.options && q.options.length > 0)
-      ? q.options
-      : getDefaultOptions(q.header, q.question)
-    : [];
-
-  // A question is answered if at least one choice is picked OR custom input has at least one character
-  const isQuestionAnswered = (index: number) => {
-    const customText = (custom[index] ?? '').trim();
-    const pickedOptions = picked[index] ?? [];
-    return customText.length > 0 || pickedOptions.length > 0;
-  };
-
-  const isQuestionSkipped = (index: number) => Boolean(skipped[index]);
-
-  const isCurrentAnswered = isQuestionAnswered(activeIndex);
 
   const toggle = (index: number, label: string, multiSelect?: boolean) => {
     if (isViewOnly || disabled) return;
-    // If it was previously marked as skipped, unskip upon selecting an option
-    if (skipped[index]) {
-      setSkipped((prev) => ({ ...prev, [index]: false }));
-    }
     setPicked((prev) => {
       const current = prev[index] ?? [];
       if (multiSelect) {
@@ -169,259 +136,174 @@ export const ClarifyPanel: React.FC<ClarifyPanelProps> = ({
           [index]: current.includes(label) ? current.filter((l) => l !== label) : [...current, label],
         };
       }
-      return { ...prev, [index]: [label] };
+      return { ...prev, [index]: current.includes(label) ? [] : [label] };
     });
-
-    // QOL: Automatically advance to next question on single choice selection when not on the last question
-    if (!multiSelect && !isLastQuestion) {
-      setTimeout(() => {
-        setCurrentStep((prev) => Math.min(prev + 1, questions.length - 1));
-      }, 180);
-    }
   };
 
   const handleCustomChange = (index: number, value: string) => {
     if (isViewOnly || disabled) return;
-    // If it was previously marked as skipped, unskip upon typing
-    if (skipped[index] && value.trim().length > 0) {
-      setSkipped((prev) => ({ ...prev, [index]: false }));
-    }
     setCustom((prev) => ({ ...prev, [index]: value }));
   };
 
-  const answerFor = (index: number, skippedState = skipped) => {
+  const answerFor = (index: number) => {
     const customText = (custom[index] ?? '').trim();
     const pickedOptions = picked[index] ?? [];
     if (customText.length > 0) return customText;
     if (pickedOptions.length > 0) return pickedOptions.join(', ');
-    if (skippedState[index]) return isThai ? 'ไม่ระบุ' : 'Not specified';
     return '';
   };
 
-  const compileAnswers = (skippedState = skipped): ClarifyAnswer[] => {
+  const isQuestionAnswered = (index: number) => {
+    const customText = (custom[index] ?? '').trim();
+    const pickedOptions = picked[index] ?? [];
+    return customText.length > 0 || pickedOptions.length > 0;
+  };
+
+  const answeredCount = questions.filter((_, idx) => isQuestionAnswered(idx)).length;
+
+  const compileAnswers = (): ClarifyAnswer[] => {
     return questions
-      .map((item, index) => ({
-        header: item.header,
-        answer: answerFor(index, skippedState),
-      }))
+      .map((item, index) => {
+        let ans = answerFor(index);
+        if (!ans) {
+          // If unselected, fallback to first option or "ไม่ระบุ"
+          const qOpts = (item.options && item.options.length > 0) ? item.options : getDefaultOptions(item.header, item.question);
+          ans = qOpts[0]?.label || (isThai ? 'ไม่ระบุ' : 'Not specified');
+        }
+        return {
+          header: item.header,
+          answer: ans,
+        };
+      })
       .filter((a) => a.answer.length > 0);
   };
 
-  const submitAll = (overrideSkipped?: Record<number, boolean>) => {
-    if (disabled || isViewOnly) return;
-    const finalAnswers = compileAnswers(overrideSkipped ?? skipped);
+  const handleSubmit = () => {
+    if (disabled || isViewOnly || answeredCount === 0) return;
+    const finalAnswers = compileAnswers();
     if (finalAnswers.length === 0) return;
     setSubmitted(true);
     onSubmit(finalAnswers);
   };
 
-  const handleNext = () => {
-    if (disabled || isViewOnly || !isCurrentAnswered) return;
-    if (isMulti && !isLastQuestion) {
-      setCurrentStep((prev) => prev + 1);
-    }
-  };
-
-  const handleSkip = () => {
-    if (disabled || isViewOnly) return;
-    const updatedSkipped = { ...skipped, [activeIndex]: true };
-    setSkipped(updatedSkipped);
-
-    if (isMulti && !isLastQuestion) {
-      setCurrentStep((prev) => prev + 1);
-    } else {
-      // Last question or only question: compile and submit immediately
-      submitAll(updatedSkipped);
-    }
-  };
-
-  const handleSubmit = () => {
-    if (disabled || isViewOnly || !isCurrentAnswered) return;
-    submitAll();
-  };
-
-  return (
-    <div className="doorare-clarify-card">
-      {/* Title & Step Header */}
-      <div className="doorare-clarify-top-row">
-        <div className="doorare-clarify-title">
-          <span className="doorare-clarify-dot" />
-          <span>{isThai ? 'Copilot ขอข้อมูลเพิ่มเติม' : 'Copilot needs more information'}</span>
-        </div>
-        {isMulti && (
-          <span className="doorare-clarify-step-badge">
-            {isThai ? `ข้อที่ ${activeIndex + 1} จาก ${questions.length}` : `Question ${activeIndex + 1} of ${questions.length}`}
+  // If already answered or view-only, render a clean scannable executive summary
+  if (isViewOnly) {
+    return (
+      <div className="doorare-clarify-card decided">
+        <div className="doorare-clarify-top-row">
+          <div className="doorare-clarify-title">
+            <span className="doorare-clarify-dot answered" />
+            <span>{isThai ? 'ข้อมูลที่ระบุสำหรับการดำเนินการ' : 'Submitted Information'}</span>
+          </div>
+          <span className="doorare-clarify-step-badge answered">
+            ✓ {isThai ? 'บันทึกแล้ว' : 'Saved'}
           </span>
-        )}
-      </div>
+        </div>
 
-      {/* Stepper Tabs (when multiple questions) */}
-      {isMulti && (
-        <div className="doorare-clarify-stepper">
-          {questions.map((item, idx) => {
-            const hasAnswer = isQuestionAnswered(idx);
-            const isSkipped = isQuestionSkipped(idx);
-            const isActive = idx === activeIndex;
+        <div className="doorare-clarify-summary-list">
+          {questions.map((item, index) => {
+            const ans = (savedAnswers && savedAnswers[index]?.answer) || answerFor(index) || (isThai ? 'ไม่ระบุ' : 'Not specified');
             return (
-              <button
-                key={`${item.header}-${idx}`}
-                type="button"
-                className={`doorare-clarify-step-tab ${isActive ? 'active' : ''} ${hasAnswer ? 'answered' : ''} ${isSkipped ? 'skipped' : ''}`}
-                onClick={() => setCurrentStep(idx)}
-                disabled={disabled}
-                title={item.header}
-              >
-                <span className="doorare-step-tab-num">
-                  {hasAnswer ? '✓' : isSkipped ? '–' : idx + 1}
-                </span>
-                <span className="doorare-step-tab-text">{item.header}</span>
-              </button>
+              <div key={`${item.header}-${index}`} className="doorare-clarify-summary-item">
+                <span className="doorare-clarify-summary-num">{index + 1}</span>
+                <span className="doorare-clarify-summary-label">{item.header}:</span>
+                <span className="doorare-clarify-summary-value">{ans}</span>
+              </div>
             );
           })}
         </div>
-      )}
+      </div>
+    );
+  }
 
-      {/* Active Question Display */}
-      {q && (
-        <div className="doorare-clarify-question" key={`${q.header}-${activeIndex}`}>
-          <div className="doorare-clarify-header">{q.header}</div>
-          <div className="doorare-clarify-text">{q.question}</div>
-
-          {effectiveOptions && effectiveOptions.length > 0 && (
-            <div className="doorare-clarify-options">
-              {effectiveOptions.map((option) => {
-                const selected = (picked[activeIndex] ?? []).includes(option.label);
-                return (
-                  <button
-                    type="button"
-                    key={option.label}
-                    className={`doorare-clarify-option ${selected ? 'selected' : ''}`}
-                    onClick={() => {
-                      toggle(activeIndex, option.label, q.multiSelect);
-                    }}
-                    disabled={disabled || isViewOnly}
-                  >
-                    <span className="doorare-clarify-option-label">{option.label}</span>
-                    {option.description && (
-                      <span className="doorare-clarify-option-desc">{option.description}</span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-
-          {q.allowFreeText !== false && (
-            <input
-              className="doorare-clarify-input"
-              placeholder={
-                isViewOnly
-                  ? isThai
-                    ? 'คำตอบที่ระบุไว้'
-                    : 'Submitted answer'
-                  : isThai
-                    ? 'หรือพิมพ์คำตอบเอง...'
-                    : 'Or type your own answer...'
-              }
-              value={custom[activeIndex] ?? ''}
-              disabled={disabled || isViewOnly}
-              onChange={(e) => handleCustomChange(activeIndex, e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  if (!isLastQuestion) {
-                    handleNext();
-                  } else {
-                    handleSubmit();
-                  }
-                }
-              }}
-            />
-          )}
+  return (
+    <div className="doorare-clarify-card">
+      {/* Title & Badge */}
+      <div className="doorare-clarify-top-row">
+        <div className="doorare-clarify-title">
+          <span className="doorare-clarify-dot" />
+          <span>{isThai ? 'Copilot ขอข้อมูลเพิ่มเติมเพื่อดำเนินการต่อ' : 'Copilot needs more information'}</span>
         </div>
-      )}
+        <span className="doorare-clarify-step-badge">
+          {isThai ? `${answeredCount}/${questions.length} ข้อ` : `${answeredCount}/${questions.length} answered`}
+        </span>
+      </div>
 
-      {/* Navigation & Submission Controls */}
+      {/* Unified All-in-One Questions List (No Stepper Tabs, No Horizontal Scrollbar) */}
+      <div className="doorare-clarify-questions-list">
+        {questions.map((item, index) => {
+          const effectiveOptions = (item.options && item.options.length > 0)
+            ? item.options
+            : getDefaultOptions(item.header, item.question);
+          const pickedCurrent = picked[index] ?? [];
+
+          return (
+            <div className="doorare-clarify-question-block" key={`${item.header}-${index}`}>
+              <div className="doorare-clarify-question-header-row">
+                <span className="doorare-clarify-q-badge">{index + 1}</span>
+                <div className="doorare-clarify-header-col">
+                  <div className="doorare-clarify-header">{item.header}</div>
+                  <div className="doorare-clarify-text">{item.question}</div>
+                </div>
+              </div>
+
+              {/* Clickable Choice Pills */}
+              {effectiveOptions.length > 0 && (
+                <div className="doorare-clarify-options">
+                  {effectiveOptions.map((option) => {
+                    const selected = pickedCurrent.includes(option.label);
+                    return (
+                      <button
+                        type="button"
+                        key={option.label}
+                        className={`doorare-clarify-option ${selected ? 'selected' : ''}`}
+                        onClick={() => toggle(index, option.label, item.multiSelect)}
+                        disabled={disabled}
+                      >
+                        <span className="doorare-clarify-option-label">
+                          {selected ? '✓ ' : ''}{option.label}
+                        </span>
+                        {option.description && (
+                          <span className="doorare-clarify-option-desc">{option.description}</span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Optional Custom Input */}
+              {item.allowFreeText !== false && (
+                <input
+                  className="doorare-clarify-input"
+                  placeholder={isThai ? 'หรือพิมพ์คำตอบเอง...' : 'Or type your own answer...'}
+                  value={custom[index] ?? ''}
+                  disabled={disabled}
+                  onChange={(e) => handleCustomChange(index, e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleSubmit();
+                    }
+                  }}
+                />
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Action Row */}
       <div className="doorare-clarify-actions">
-        {isViewOnly ? (
-          <div className="doorare-clarify-submitted-banner">
-            <span className="doorare-clarify-submitted-icon">✓</span>
-            <span>{isThai ? 'ส่งคำตอบแล้ว' : 'Answers submitted'}</span>
-            {isMulti && activeIndex > 0 && (
-              <button
-                type="button"
-                className="doorare-clarify-nav-btn back"
-                style={{ marginLeft: 12 }}
-                onClick={() => setCurrentStep((prev) => prev - 1)}
-              >
-                {isThai ? '← ดูข้อย้อนหลัง' : '← Previous'}
-              </button>
-            )}
-            {isMulti && activeIndex < questions.length - 1 && (
-              <button
-                type="button"
-                className="doorare-clarify-nav-btn next"
-                style={{ marginLeft: isMulti && activeIndex > 0 ? 6 : 12 }}
-                onClick={() => setCurrentStep((prev) => prev + 1)}
-              >
-                {isThai ? 'ดูข้อถัดไป →' : 'Next →'}
-              </button>
-            )}
-          </div>
-        ) : (
-          <>
-            {isMulti && activeIndex > 0 && (
-              <button
-                type="button"
-                className="doorare-clarify-nav-btn back"
-                onClick={() => setCurrentStep((prev) => prev - 1)}
-                disabled={disabled}
-              >
-                {isThai ? '← ย้อนกลับ' : '← Back'}
-              </button>
-            )}
-
-            <button
-              type="button"
-              className="doorare-clarify-nav-btn skip"
-              onClick={handleSkip}
-              disabled={disabled}
-              title={isThai ? 'ข้ามข้อนี้หากไม่ทราบข้อมูล' : 'Skip this question if unsure'}
-            >
-              {isThai ? 'ข้าม (ไม่ระบุ)' : 'Skip'}
-            </button>
-
-            {!isLastQuestion ? (
-              <button
-                type="button"
-                className="doorare-clarify-nav-btn next"
-                onClick={handleNext}
-                disabled={disabled || !isCurrentAnswered}
-                title={!isCurrentAnswered ? (isThai ? 'กรุณาเลือกหรือพิมพ์คำตอบก่อนไปข้อถัดไป หรือกดข้าม' : 'Please answer or skip before continuing') : ''}
-              >
-                {isThai ? 'ข้อถัดไป →' : 'Next Question →'}
-              </button>
-            ) : (
-              <button
-                type="button"
-                className="doorare-clarify-submit"
-                onClick={handleSubmit}
-                disabled={disabled || !isCurrentAnswered}
-                title={!isCurrentAnswered ? (isThai ? 'กรุณาเลือกหรือพิมพ์คำตอบก่อนส่ง' : 'Please answer or skip before submitting') : ''}
-              >
-                {isThai ? (isMulti ? 'ส่งคำตอบทั้งหมด' : 'ส่งคำตอบ') : (isMulti ? 'Submit All Answers' : 'Submit Answer')}
-              </button>
-            )}
-
-            {isMulti && (
-              <span className="doorare-clarify-hint">
-                {isThai
-                  ? `ตอบแล้ว ${questions.filter((_, i) => isQuestionAnswered(i) || isQuestionSkipped(i)).length} จาก ${questions.length} ข้อ`
-                  : `${questions.filter((_, i) => isQuestionAnswered(i) || isQuestionSkipped(i)).length} of ${questions.length} answered`}
-              </span>
-            )}
-          </>
-        )}
+        <button
+          type="button"
+          className="doorare-clarify-submit"
+          onClick={handleSubmit}
+          disabled={disabled || answeredCount === 0}
+          title={answeredCount === 0 ? (isThai ? 'กรุณาเลือกหรือระบุข้อมูลอย่างน้อย 1 ข้อ' : 'Please answer at least one question') : ''}
+        >
+          {isThai ? 'ส่งข้อมูลให้ Copilot ดำเนินการต่อ →' : 'Submit Answers & Continue →'}
+        </button>
       </div>
     </div>
   );

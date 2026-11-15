@@ -4,7 +4,7 @@ import { getStoredToken } from '../../services/apiFetch';
 import { streamAiChat, type ChatMessage, type RouteContext } from '../../services/aiChatApi';
 import { DooRareBotAvatar } from './DooRareBotAvatar';
 import { MarkdownContent } from '../common/MarkdownContent';
-import { ToolExecutionLogCard, type ToolLogEntry } from './ToolExecutionLogCard';
+import { ToolExecutionLogCard, formatToolPurpose, type ToolLogEntry } from './ToolExecutionLogCard';
 import { ThinkingAccordion } from './ThinkingAccordion';
 import { AnswerInsights } from './AnswerInsights';
 import { ClarifyPanel } from './ClarifyPanel';
@@ -388,6 +388,22 @@ export const DooRareChatDrawer: React.FC = () => {
   const [attachedFile, setAttachedFile] = useState<{ name: string; size: number; content: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  const specialistContextTitle = React.useMemo(() => {
+    const search = window.location.search;
+    const pathname = window.location.pathname;
+    const p = new URLSearchParams(search).get('page') || pathname;
+    if (p.includes('incident') || p.includes('kit')) {
+      return 'ระบบสนับสนุนเวชภัณฑ์และแผนฉุกเฉินระดับเขต';
+    }
+    if (p.includes('pool') || p.includes('alloc') || p.includes('expiry')) {
+      return 'ระบบสนับสนุนการจัดสรรยาคลังกลางระดับเขต';
+    }
+    if (p.includes('req') || p.includes('lend') || p.includes('alerts')) {
+      return 'ระบบสนับสนุนการประสานยืม-คืนยาเครือข่าย';
+    }
+    return 'ระบบสนับสนุนการตัดสินใจทางคลินิกและโลจิสติกส์';
+  }, []);
+
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -647,7 +663,7 @@ export const DooRareChatDrawer: React.FC = () => {
               status: 'running',
               startTime: Date.now(),
             };
-            setActiveTool(`กำลังค้นหาข้อมูลด้วย: ${tool.name}...`);
+            setActiveTool(`กำลังดำเนินการ: ${formatToolPurpose(tool.name)}...`);
             setDisplayMessages((prev) =>
               prev.map((m) => {
                 if (m.id === assistantMsgId) {
@@ -1072,6 +1088,9 @@ export const DooRareChatDrawer: React.FC = () => {
               </div>
               <div className="doorare-chat-title-text-wrap">
                 <div className="doorare-chat-title">DooRare Copilot</div>
+                <div className="doorare-chat-context-badge" title={specialistContextTitle}>
+                  {specialistContextTitle}
+                </div>
               </div>
             </div>
 
@@ -1368,7 +1387,7 @@ export const DooRareChatDrawer: React.FC = () => {
               </div>
             </div>
             <div className="doorare-chat-disclaimer">
-              ประมวลผลด้วย AI เพื่อความปลอดภัยทางคลินิก · โปรดตรวจสอบความถูกต้องของข้อมูล
+              ระบบสนับสนุนการตัดสินใจทางคลินิก (CDSS) · ผู้ประกอบวิชาชีพต้องตรวจสอบความถูกต้องตามหลักวิชาการก่อนลงนามอนุมัติ
             </div>
           </div>
       </div>

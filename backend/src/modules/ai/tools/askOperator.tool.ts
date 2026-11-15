@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { query } from '../../../db/client.js';
 import type { IAgentTool, ToolResult } from './tool.types.js';
 
 export interface ClarifyQuestionOption {
@@ -8,6 +9,7 @@ export interface ClarifyQuestionOption {
 
 /**
  * Returns sensible clinical default options if the LLM omitted options for a question.
+ * Only returns real items present in the Health Region 6 database.
  */
 export function getDefaultClarifyOptions(header?: string, question?: string): ClarifyQuestionOption[] {
   const combined = `${header || ''} ${question || ''}`.toLowerCase();
@@ -15,7 +17,6 @@ export function getDefaultClarifyOptions(header?: string, question?: string): Cl
     return [
       { label: 'Paracetamol tablet 500 mg', description: 'ยาเม็ดบรรเทาปวด ลดไข้ 500 มก.' },
       { label: 'Paracetamol syrup 120 mg/5 mL', description: 'ยาน้ำสำหรับเด็ก 120 มก./5 มล.' },
-      { label: 'Paracetamol IV 10 mg/mL (100 mL)', description: 'ยาฉีดเข้าหลอดเลือดดำ' },
     ];
   }
   if (
@@ -28,8 +29,7 @@ export function getDefaultClarifyOptions(header?: string, question?: string): Cl
   ) {
     return [
       { label: 'Paracetamol tablet 500 mg', description: 'ยาเม็ดบรรเทาปวด ลดไข้ 500 มก.' },
-      { label: 'Paracetamol syrup 120 mg/5 mL', description: 'ยาน้ำสำหรับเด็ก' },
-      { label: 'ยาฉีด (Injection / IV)', description: 'สารละลายสำหรับหยดทางหลอดเลือดดำ' },
+      { label: 'Paracetamol syrup 120 mg/5 mL', description: 'ยาน้ำสำหรับเด็ก 120 มก./5 มล.' },
     ];
   }
   if (
@@ -193,44 +193,97 @@ Rules: 1–3 questions, at most 6 options each. After calling this, stop — do 
       rawQuestions = [args];
     }
 
-    const questions = rawQuestions.map((q: any) => {
-      const question = String(q.question || q.prompt || q.text || q.title || '').trim();
-      const header = String(q.header || q.title || q.label || (question.length > 30 ? question.slice(0, 30) : question) || 'คำถาม').trim().slice(0, 50);
-      const rawOptions = (Array.isArray(q.options) && q.options.length > 0)
-        ? q.options
-        : (Array.isArray(q.choices) && q.choices.length > 0)
-          ? q.choices
-          : (Array.isArray(q.items) && q.items.length > 0)
-            ? q.items
-            : (typeof q.options === 'string')
-              ? q.options.split(/[,|\n]/).map((s: string) => ({ label: s.trim() }))
-              : (typeof q.choices === 'string')
-                ? q.choices.split(/[,|\n]/).map((s: string) => ({ label: s.trim() }))
-                : [];
+    const questions = (await Promise.all(
+      rawQuestions.map(async (q: any) => {
+        const question = String(q.question || q.prompt || q.text || q.title || '').trim();
+        const header = String(q.header || q.title || q.label || (question.length > 30 ? question.slice(0, 30) : question) || 'คำถาม').trim().slice(0, 50);
+        const rawOptions = (Array.isArray(q.options) && q.options.length > 0)
+          ? q.options
+          : (Array.isArray(q.choices) && q.choices.length > 0)
+            ? q.choices
+            : (Array.isArray(q.items) && q.items.length > 0)
+              ? q.items
+              : (typeof q.options === 'string')
+                ? q.options.split(/[,|\n]/).map((s: string) => ({ label: s.trim() }))
+                : (typeof q.choices === 'string')
+                  ? q.choices.split(/[,|\n]/).map((s: string) => ({ label: s.trim() }))
+                  : [];
 
-      let options = rawOptions
-        .map((opt: any) => {
-          if (typeof opt === 'string') return { label: opt.trim() };
-          return {
-            label: String(opt?.label || opt?.text || opt?.value || opt?.name || opt?.choice || '').trim(),
-            description: opt?.description ? String(opt.description).trim() : undefined,
-          };
-        })
-        .filter((opt: any) => Boolean(opt.label))
-        .slice(0, 8);
+        let options = rawOptions
+          .map((opt: any) => {
+            if (typeof opt === 'string') return { label: opt.trim() };
+            return {
+              label: String(opt?.label || opt?.text || opt?.value || opt?.name || opt?.choice || '').trim(),
+              description: opt?.description ? String(opt.description).trim() : undefined,
+            };
+          })
+          .filter((opt: any) => Boolean(opt.label))
+          .slice(0, 8);
 
-      if (options.length === 0) {
-        options = getDefaultClarifyOptions(header, question);
-      }
+        // Grounding: If the question is about drug formulation / strength, check drug_master
+        // to strictly restrict choices to real database items (eliminates hallucinated options like drops/IV)
+        const combined = `${header} ${question}`.toLowerCase();
+        const isDrugQuestion =
+          combined.includes('รูปแบบ') ||
+          combined.includes('ความแรง') ||
+          combined.includes('ขนาดยา') ||
+          combined.includes('dosage') ||
+          combined.includes('strength') ||
+          combined.includes('formulation') ||
+          combined.includes('พารา') ||
+          combined.includes('paracetamol');
 
-      return {
-        header: header || 'คำถาม',
-        question: question || 'กรุณาระบุข้อมูลเพิ่มเติม',
-        options,
-        allowFreeText: q.allowFreeText !== false,
-        multiSelect: Boolean(q.multiSelect),
-      };
-    }).filter((q: any) => Boolean(q.question));
+        if (isDrugQuestion) {
+          try {
+            const drugKeywords = ['para', 'paracetamol', 'พารา', 'morphine', 'มอร์ฟีน', 'pethidine', 'เพทิดีน', 'fentanyl', 'เฟนทานิล', 'albumin', 'อัลบูมิน'];
+            let matchedKw = '';
+            for (const kw of drugKeywords) {
+              if (combined.includes(kw)) {
+                matchedKw = kw === 'พารา' ? 'paracetamol' : kw === 'มอร์ฟีน' ? 'morphine' : kw === 'เพทิดีน' ? 'pethidine' : kw === 'เฟนทานิล' ? 'fentanyl' : kw === 'อัลบูมิน' ? 'albumin' : kw;
+                break;
+              }
+            }
+            if (matchedKw) {
+              const dmRes = await query<{
+                id: string;
+                generic_name: string;
+                strength: string;
+                dosage_form: string;
+                base_unit: string;
+              }>(
+                `SELECT id, generic_name, strength, dosage_form, base_unit,
+                        concat_ws(' ', generic_name, strength, dosage_form) AS full_name
+                   FROM drug_master
+                  WHERE generic_name ILIKE $1
+                  ORDER BY strength`,
+                [`%${matchedKw}%`],
+              );
+              if (dmRes.rows.length > 0) {
+                // Strictly overwrite options with real database items
+                options = dmRes.rows.map((r) => ({
+                  label: `${r.generic_name} ${r.strength} (${r.dosage_form})`,
+                  description: `ขนาด ${r.strength} รูปแบบ ${r.dosage_form} (หน่วย: ${r.base_unit})`,
+                }));
+              }
+            }
+          } catch {
+            // fallback to normalized options
+          }
+        }
+
+        if (options.length === 0) {
+          options = getDefaultClarifyOptions(header, question);
+        }
+
+        return {
+          header: header || 'คำถาม',
+          question: question || 'กรุณาระบุข้อมูลเพิ่มเติม',
+          options,
+          allowFreeText: q.allowFreeText !== false,
+          multiSelect: Boolean(q.multiSelect),
+        };
+      })
+    )).filter((q: any) => Boolean(q.question));
 
     if (questions.length === 0) {
       return { success: false, error: 'ask_operator needs at least one question.' };
