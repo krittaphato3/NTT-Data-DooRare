@@ -62,9 +62,9 @@ demoRouter.post(
 );
 
 // GET /api/v1/demo/plan - what a fill would add (writes nothing)
-demoRouter.get('/plan', asyncHandler(async (_req, res) => res.json({ success: true, data: await planFill() })));
+demoRouter.get('/plan', asyncHandler(async (req, res) => res.json({ success: true, data: await planFill(req.query.relaxed === '1') })));
 
 // POST /api/v1/demo/fill/{f1|f2|all} - top up to the targets (only adds, safe to press again)
-demoRouter.post('/fill/f1', asyncHandler(async (_req, res) => res.json(await runFill(['f1'], 'เติมแจ้งเตือนสต็อก F1'))));
-demoRouter.post('/fill/f2', asyncHandler(async (_req, res) => res.json(await runFill(['f2'], 'เติมยาใกล้หมดอายุ F2'))));
-demoRouter.post('/fill/all', asyncHandler(async (_req, res) => res.json(await runFill(['f2', 'f1'], 'เติมข้อมูลเดโม F1 + F2'))));
+demoRouter.post('/fill/f1', asyncHandler(async (req, res) => res.json(await runFill(['f1'], 'เติมแจ้งเตือนสต็อก F1', req.query.relaxed === '1'))));
+demoRouter.post('/fill/f2', asyncHandler(async (req, res) => res.json(await runFill(['f2'], 'เติมยาใกล้หมดอายุ F2', req.query.relaxed === '1'))));
+demoRouter.post('/fill/all', asyncHandler(async (req, res) => res.json(await runFill(['f2', 'f1'], 'เติมข้อมูลเดโม F1 + F2', req.query.relaxed === '1'))));

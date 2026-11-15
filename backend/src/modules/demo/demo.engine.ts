@@ -27,6 +27,7 @@ export interface SeedOptions {
   release?: number; // lots released per scenario (default 0 = all wait for the pharmacist)
   scale?: number; // multiplies the F2 lot counts
   withU?: boolean; // add scenario U
+  relaxed?: boolean; // emergency mode: looser drug conditions
 }
 
 let db!: pg.Pool;
@@ -37,6 +38,8 @@ let SCALE = 1;
 let WITH_U = false;
 /** dry run (planDemo): the picks run exactly as in a fill but nothing is written; what would be added is collected in dryAdd */
 let DRY = false;
+/** emergency mode: looser drug conditions (1 lender instead of 2, receivers using >= 1/day, a third of the value thresholds) so something can still be added when the strict pool is used up */
+let RELAXED = false;
 const dryAdd = { f1: [] as { code: string; sev: string }[], f2: [] as { kind: string; owner: string; canAdd: number }[] };
 const DAYS = [35, 60, 45, 75];
 const MIN_VALUE_X = Number(process.env.MIN_VALUE_X ?? 8000); // far receivers cost more to reach: approving must not be blocked by the cost check
@@ -61,7 +64,7 @@ const F2: Scenario[] = [
 const ALL = ['HA', 'HB', 'HC', 'HD', 'HE'];
 
 /** Drugs every hospital lists with a verified mapping and a forecast; plain stock (no cold chain / blood / controlled). */
-const DRUGS = `
+const drugsSql = () => `
   SELECT dm.id AS drug_id, dm.generic_name AS name, h.code, hd.id AS hd_id, hd.hospital_id, hd.unit_price_thb::float8 AS price,
          f.u_per_day::float8 AS u, f.total_target::float8 AS target,
          COALESCE((SELECT sum(l.qty_on_hand - l.qty_held) FROM stock_lot l WHERE l.hospital_drug_id = hd.id AND l.expiry_date > current_date), 0)::float8 AS free,
@@ -71,7 +74,7 @@ const DRUGS = `
     JOIN hospital_drug hd ON hd.drug_master_id = dm.id AND hd.active AND hd.unit_price_thb > 0
     JOIN hospital h ON h.id = hd.hospital_id AND h.active
     JOIN drug_mapping m ON m.hospital_drug_id = hd.id AND m.status = 'VERIFIED'
-    JOIN v_latest_forecast f ON f.hospital_drug_id = hd.id AND f.granularity = 'WEEK' AND f.u_per_day >= 3 AND f.total_target IS NOT NULL
+    JOIN v_latest_forecast f ON f.hospital_drug_id = hd.id AND f.granularity = 'WEEK' AND f.u_per_day >= ${RELAXED ? 1 : 3} AND f.total_target IS NOT NULL
    WHERE NOT dm.is_blood_product AND NOT dm.is_cold_chain AND NOT dm.is_controlled
      AND NOT EXISTS (SELECT 1 FROM stock_lot l WHERE l.hospital_drug_id = hd.id AND (l.lot_no LIKE 'DEMO-NE-%' OR l.lot_no LIKE 'DEMO-EXP-%'))
      AND NOT EXISTS (SELECT 1 FROM borrow_request br JOIN borrow_request_item i ON i.request_id = br.id
@@ -174,18 +177,18 @@ async function f2() {
     const want = sc.n * SCALE - have;
     if (want <= 0) { ok(`${sc.kind} ${sc.note}: ${have} lot(s) already there`); continue; }
 
-    const rows = await q(DRUGS);
+    const rows = await q(drugsSql());
     const byDrug = new Map<string, any[]>();
     for (const r of rows) (byDrug.get(r.drug_id) ?? byDrug.set(r.drug_id, []).get(r.drug_id)!).push(r);
     // a drug that still carries a seeded owner lot (this run or an earlier one) is not used again; once it is consumed the drug is free for a refill
     const taken = new Set<string>((await q(`SELECT DISTINCT hd.drug_master_id AS id FROM stock_lot l JOIN hospital_drug hd ON hd.id = l.hospital_drug_id WHERE (l.lot_no LIKE 'DEMO-F2A-%' OR l.lot_no LIKE 'DEMO-F2X-%' OR l.lot_no LIKE 'DEMO-F2U-%') AND l.qty_on_hand > 0 AND l.expiry_date > current_date`)).map((r) => r.id));
     const fit = [...byDrug.values()]
       .filter((g) => !used.has(g[0].drug_id) && !taken.has(g[0].drug_id) && [sc.owner, ...sc.receivers].every((c) => g.some((r) => r.code === c)))
-      .filter((g) => sc.receivers.every((c) => g.find((r) => r.code === c).u >= 3))
+      .filter((g) => sc.receivers.every((c) => g.find((r) => r.code === c).u >= (RELAXED ? 1 : 3)))
       // what the receivers can absorb in the shortest lot life, in baht: an auto-approved plan must pass the transport cost check
       // (cost >= 20 % of the value is "uneconomical" and always waits for a click), so network-A scenarios need a high value
       .map((g) => ({ g, val: sc.receivers.reduce((t, c) => { const r = g.find((x) => x.code === c); return t + Math.min(r.target * 0.95, r.u * (DAYS[0] - 3)); }, 0) * g.find((x) => x.code === sc.owner).price }))
-      .filter((x) => (sc.kind === 'A' ? x.val >= MIN_VALUE_A : sc.kind === 'X' ? x.val >= MIN_VALUE_X : x.val >= 600 && x.val <= 2000))
+      .filter((x) => (sc.kind === 'A' ? x.val >= MIN_VALUE_A / (RELAXED ? 3 : 1) : sc.kind === 'X' ? x.val >= MIN_VALUE_X / (RELAXED ? 3 : 1) : x.val >= 600 && x.val <= 2000))
       .sort((a, b) => (sc.kind !== 'U' ? b.val - a.val : (a.g[0].drug_id + run + sc.owner).localeCompare(b.g[0].drug_id + run + sc.owner)))
       .map((x) => x.g);
     if (fit.length < want) warn(`${sc.kind} ${sc.owner}: only ${fit.length} suitable drug(s) for ${want} lot(s)`);
@@ -313,7 +316,7 @@ async function f1MoreAlerts() {
                                WHERE br.borrower_hospital_id = hd.hospital_id AND i.drug_master_id = dm.id AND br.status::text NOT IN ('FULFILLED','CLOSED_UNFULFILLED','CANCELLED'))`,
           [hospital.id]);
         const pick = rows
-          .filter((r) => Number(r.lenders) >= 2 && (usedBy.get(r.drug_id) ?? 0) < 3 && !cut.has(r.hd_id))
+          .filter((r) => Number(r.lenders) >= (RELAXED ? 1 : 2) && (usedBy.get(r.drug_id) ?? 0) < 3 && !cut.has(r.hd_id))
           .sort((a, b) => Number(b.lenders) - Number(a.lenders) || (usedBy.get(a.drug_id) ?? 0) - (usedBy.get(b.drug_id) ?? 0) || b.u - a.u)[0];
         if (!pick) { warn(`${code}: no drug left for ${need} more ${sev} alert(s)`); break; }
         if (DRY) {
@@ -424,6 +427,7 @@ function configure(o: SeedOptions) {
   RELEASE = Math.max(0, o.release ?? 0);
   SCALE = Math.max(1, o.scale ?? 1);
   WITH_U = !!o.withU;
+  RELAXED = !!o.relaxed;
 }
 
 /** Runs the parts in `only` (default f2 then f1). Not safe to run twice at the same time: the callers hold a lock. */
@@ -441,8 +445,8 @@ export async function runDemo(o: SeedOptions): Promise<void> {
  * so `canAdd` is what a fill could really add now (it can be less than `missing`: no drug left that meets the conditions).
  * Not safe next to a running fill (shared state): the caller refuses while one runs.
  */
-export async function planDemo(o: Pick<SeedOptions, 'db' | 'scale' | 'withU'>) {
-  db = o.db; SCALE = Math.max(1, o.scale ?? 1); WITH_U = !!o.withU;
+export async function planDemo(o: Pick<SeedOptions, 'db' | 'scale' | 'withU' | 'relaxed'>) {
+  db = o.db; SCALE = Math.max(1, o.scale ?? 1); WITH_U = !!o.withU; RELAXED = !!o.relaxed;
   const forecast = Number((await q(`SELECT count(*)::int AS n FROM forecast_run WHERE status = 'SUCCEEDED'`))[0].n);
   const open = await q(
     `SELECT h.code, a.severity::text AS sev, count(*)::int AS n FROM stock_alert a JOIN hospital h ON h.id = a.hospital_id

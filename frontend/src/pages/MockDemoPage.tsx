@@ -8,6 +8,7 @@ export const MockDemoPage: React.FC = () => {
   const [loadingStats, setLoadingStats] = useState(false);
   const [executingAction, setExecutingAction] = useState<string | null>(null);
   const [plan, setPlan] = useState<DemoPlan | null>(null);
+  const [relaxed, setRelaxed] = useState(false);
   const [logs, setLogs] = useState<string[]>([]);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const terminalScrollContainerRef = useRef<HTMLDivElement | null>(null);
@@ -83,7 +84,7 @@ export const MockDemoPage: React.FC = () => {
     setExecutingAction('plan');
     setErrorMsg(null);
     try {
-      const p = await getDemoPlan();
+      const p = await getDemoPlan(relaxed);
       setPlan(p);
       const ts = new Date().toISOString().substring(11, 19);
       const f1 = p.f1.reduce((n, r) => n + r.canAdd, 0);
@@ -236,6 +237,16 @@ export const MockDemoPage: React.FC = () => {
       <div style={{ display: 'grid', gridTemplateColumns: '1.15fr 0.85fr', gap: '24px', alignItems: 'start' }}>
         {/* Left Column: Action Cards */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {/* Emergency mode switch (applies to the plan and the fill buttons) */}
+          <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', background: relaxed ? '#fef3c7' : '#ffffff', border: `1px solid ${relaxed ? '#f59e0b' : '#cbd5e1'}`, borderRadius: '12px', padding: '14px 18px', cursor: 'pointer' }}>
+            <input type="checkbox" checked={relaxed} onChange={(e) => { setRelaxed(e.target.checked); setPlan(null); }} style={{ marginTop: '3px' }} />
+            <span style={{ fontSize: '13px', color: '#334155', lineHeight: 1.5 }}>
+              <b>โหมดฉุกเฉิน (ผ่อนเงื่อนไขเลือกยา)</b>
+              <br />
+              ใช้เมื่อโหมดปกติไม่มียาเหลือให้เติม: F1 ยอมให้มีผู้ให้ยืมแค่ 1 แห่ง, F2 ยอมให้ผู้รับใช้ยาน้อยลงและมูลค่าต่ำลง (แผนอาจต้องรอกดอนุมัติแทนอนุมัติอัตโนมัติ) alert ที่ไม่มีใครให้ยืมได้จริงยังถูกพักไว้เหมือนเดิม ข้อควรรู้: การเติม F2 จะพัก alert F1 ของยาที่ถูกใช้เป็นล็อต F2 (7 วัน) ถ้าต้องการเพิ่ม alert F1 ให้กดเติม F1 เท่านั้น
+            </span>
+          </label>
+
           {/* Card 1: what is missing (read only) */}
           <div style={{ background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '12px', padding: '20px', boxShadow: '0 2px 5px rgba(0,0,0,0.04)' }}>
             <span style={{ fontSize: '11px', fontWeight: 700, color: '#475569', background: '#e2e8f0', padding: '2px 8px', borderRadius: '4px' }}>READ ONLY</span>
@@ -324,7 +335,7 @@ export const MockDemoPage: React.FC = () => {
                 key={b.key}
                 type="button"
                 disabled={executingAction !== null}
-                onClick={() => handleAction(`fill-${b.key}`, () => runFill(b.key), b.label)}
+                onClick={() => handleAction(`fill-${b.key}`, () => runFill(b.key, relaxed), b.label)}
                 style={{
                   width: '100%',
                   marginBottom: '8px',

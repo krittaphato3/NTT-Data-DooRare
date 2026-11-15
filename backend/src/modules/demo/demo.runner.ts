@@ -34,18 +34,18 @@ function conflict(message: string) {
 }
 
 /** Read-only: what a fill would add. */
-export async function planFill() {
+export async function planFill(relaxed = false) {
   if (running) throw conflict(`กำลังทำงานอยู่ (${running}) รอให้เสร็จก่อน`);
   running = 'ดูก่อน';
   try {
-    return await planDemo({ db: pool });
+    return await planDemo({ db: pool, relaxed });
   } finally {
     running = null;
   }
 }
 
 /** Tops the demo situation up (F1 alerts to borrow from, F2 near-expiry lots). Only adds; running it again finds nothing missing. */
-export async function runFill(parts: ('f1' | 'f2')[], label: string): Promise<DemoOperationResult> {
+export async function runFill(parts: ('f1' | 'f2')[], label: string, relaxed = false): Promise<DemoOperationResult> {
   if (running) throw conflict(`กำลังทำงานอยู่ (${running}) รอให้เสร็จก่อน`);
   running = label;
   const lock = await pool.connect();
@@ -55,10 +55,10 @@ export async function runFill(parts: ('f1' | 'f2')[], label: string): Promise<De
   try {
     const got = (await lock.query('SELECT pg_try_advisory_lock($1) AS ok', [LOCK_KEY])).rows[0].ok as boolean;
     if (!got) throw conflict('อีกโปรเซสกำลังเติมข้อมูลอยู่ รอให้เสร็จก่อน');
-    push(`INFO: ${label}`);
+    push(`INFO: ${label}${relaxed ? ' (โหมดฉุกเฉิน: ผ่อนเงื่อนไขเลือกยา)' : ''}`);
     let success = true;
     try {
-      await runDemo({ db: pool, host: inProcessHost, log: push, only: parts });
+      await runDemo({ db: pool, host: inProcessHost, log: push, only: parts, relaxed });
     } catch (e) {
       success = false;
       push(`ERROR: ${(e as Error).message}`);
