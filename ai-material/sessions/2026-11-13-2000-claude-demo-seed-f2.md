@@ -138,3 +138,9 @@ summary: db:demo-seed ONLY=f2 shapes stock + lots so A-network plans auto-approv
 - Step 4 done: `demoRouter.use(requireAuth, requireRole('SYSTEM_ADMIN'))` (host-based `demoToolsGuard` and DEMO_TOOLS_ENABLED removed); `mockDemoApi.ts` uses `apiFetch` (token + /api/v1 prefix, error text from `title`); App shows a "SYSTEM_ADMIN only" message on /mock-demo for other roles. Verified: no token 401, pharmacist 403, system admin 200 (curl) and in the browser (pharmacist sees the message, system admin loads the page and plan call returns 200).
 - Not done: RESTORE.md + dump (step 5), select-drug/hospital add and use buttons (proposed, waiting for go-ahead), RDS never touched, nothing pushed. Local DB is left in a tested state: db:reset + db:demo-seed before a demo.
 - Files touched: demo.engine.ts, demo.runner.ts, demo.routes.ts, frontend MockDemoPage.tsx, mockDemoApi.ts, App.tsx, this note.
+
+## Update 13 (2026-11-15): plan refreshes after a fill; restore guide
+- `MockDemoPage.tsx` `handleAction`: after any fill button (`fill-*`, success or error) it calls `GET /demo/plan?relaxed=..` once more and updates the plan table (log line "plan refreshed after the fill"). Checked in the browser on the local DB: HA very urgent 2/3 (+1) -> fill F1 -> 3/3 without pressing the plan button. Costs one extra plan request per fill (a plan inside the fill response would make it one request; not done).
+- Wrote `~/Downloads/restore.md` for the friend (dump on local, restore on EC2 into a separate DB `doorare_demo` or over the old one after backup, checks, rollback, pre-lock checklist, emergency fill buttons). Not in the repo; dump/restore never run (RDS untouched).
+- Pushed branch `feat/mock-demo-uses-seed-script` (no PR, no merge into backend-byok yet). Open: real button test of "fill all"/F2 on the page, optional add/use-stock buttons, F3 seed.
+- Files touched: frontend/src/pages/MockDemoPage.tsx, this note.

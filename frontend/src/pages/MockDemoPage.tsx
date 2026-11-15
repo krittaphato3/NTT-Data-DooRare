@@ -69,6 +69,16 @@ export const MockDemoPage: React.FC = () => {
       } else {
         setLogs((prev) => [...prev, `[${doneTs}] FINISH: ${res.message || successLabel}`]);
       }
+      // after a fill the plan table shows the new state (what is there now and what a next press could still add)
+      if (actionKey.startsWith('fill-')) {
+        try {
+          const p = await getDemoPlan(relaxed);
+          setPlan(p);
+          setLogs((prev) => [...prev, `[${new Date().toISOString().substring(11, 19)}] INFO: plan refreshed after the fill: a next press can add ${p.canAddTotal} more`]);
+        } catch (e: any) {
+          setLogs((prev) => [...prev, `[${new Date().toISOString().substring(11, 19)}] WARN: plan not refreshed (${e.message ?? 'error'})`]);
+        }
+      }
     } catch (err: any) {
       const errTs = new Date().toISOString().substring(11, 19);
       const errMsg = err.message || 'เกิดข้อผิดพลาดในการดำเนินการ';
