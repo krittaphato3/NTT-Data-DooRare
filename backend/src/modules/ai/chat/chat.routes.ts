@@ -1,5 +1,6 @@
 import { Router, type Request, type Response } from 'express';
 import { requireAuth } from '../../../middleware/auth.js';
+import { defaultChatRateLimiter } from '../../../middleware/chatRateLimiter.js';
 import { reactEngine } from '../engine/react.engine.js';
 import type { ChatMessage } from '../providers/types.js';
 import type { RequestContext } from '../tools/tool.types.js';
@@ -22,8 +23,9 @@ function sendSseEvent(res: Response, event: string, data: unknown): void {
 /**
  * POST /api/v1/ai/chat
  * Streams ReAct reasoning, tool-calling events, and tokens via Server-Sent Events (SSE).
+ * Protected by authentication and chat rate limiting.
  */
-aiChatRouter.post('/', requireAuth, async (req: Request, res: Response) => {
+aiChatRouter.post('/', requireAuth, defaultChatRateLimiter.middleware, async (req: Request, res: Response) => {
   const { messages, routeContext } = req.body as {
     messages: ChatMessage[];
     routeContext?: {

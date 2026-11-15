@@ -1,5 +1,12 @@
 [
   {
+    "path": "sessions\\2026-11-16-0005-antigravity-responsible-ai-safeguards-2-5-6.md",
+    "title": "Session: Responsible AI Hardening (Fixes 2, 5, 6)",
+    "summary": "Session",
+    "tags": "session",
+    "date": "2026-11-16"
+  },
+  {
     "path": "sessions\\2026-11-14-2145-antigravity-webfetch-clarify-wizard-and-attachments.md",
     "title": "AI Session: WebFetch Pre-fetch Script, Single-Round Clarification Wizard, Optional Web Search & File Attachment",
     "summary": "AI Session",
@@ -23,6 +30,20 @@
   {
     "path": "sessions\\2026-11-15-1425-antigravity-mock-demo-page-and-header-fix.md",
     "title": "Session: In-App Mock Demo Control Center & Header Window Controls Fix",
+    "summary": "Session",
+    "tags": "session",
+    "date": "2026-11-15"
+  },
+  {
+    "path": "sessions\\2026-11-15-1530-antigravity-clarify-single-card-and-cdss-refinement.md",
+    "title": "Session: 2026-11-15 15:30 Clarify Single-Card Layout & CDSS Clinical Formality Refinement",
+    "summary": "Session",
+    "tags": "session",
+    "date": "2026-11-15"
+  },
+  {
+    "path": "sessions\\2026-11-15-graphify-incremental-update.md",
+    "title": "Session: Incremental Knowledge Graph Update (/graphify --update)",
     "summary": "Session",
     "tags": "session",
     "date": "2026-11-15"
