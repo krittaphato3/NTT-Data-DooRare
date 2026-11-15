@@ -40,6 +40,8 @@ let WITH_U = false;
 let DRY = false;
 /** emergency mode: looser drug conditions (1 lender instead of 2, receivers using >= 1/day, a third of the value thresholds) so something can still be added when the strict pool is used up */
 let RELAXED = false;
+/** drugs the dry F2 pass would turn into seeded lots: a real fill snoozes their F1 alerts and F1 may not use them */
+const dryF2Drugs = new Set<string>();
 const dryAdd = { f1: [] as { code: string; sev: string }[], f2: [] as { kind: string; owner: string; canAdd: number }[] };
 const DAYS = [35, 60, 45, 75];
 const MIN_VALUE_X = Number(process.env.MIN_VALUE_X ?? 8000); // far receivers cost more to reach: approving must not be blocked by the cost check
@@ -194,7 +196,7 @@ async function f2() {
     if (fit.length < want) warn(`${sc.kind} ${sc.owner}: only ${fit.length} suitable drug(s) for ${want} lot(s)`);
     if (DRY) {
       const n = Math.min(want, fit.length);
-      for (let k = 0; k < n; k++) used.add(fit[k][0].drug_id);
+      for (let k = 0; k < n; k++) { used.add(fit[k][0].drug_id); dryF2Drugs.add(fit[k][0].drug_id); }
       dryAdd.f2.push({ kind: sc.kind, owner: sc.owner, canAdd: n });
       continue;
     }
@@ -275,6 +277,20 @@ const F1_WANT = { VERY_URGENT: 3, URGENT: 3, NORMAL: 2 };
 const F1_COVER = { VERY_URGENT: 1.2, URGENT: 4, NORMAL: 4 };
 
 /**
+ * Open LOW_STOCK alerts that a real fill hides for 7 days (f1() snoozes the alerts of every drug that carries a DEMO-F2 lot). Dry run only:
+ * the drugs of lots that exist now plus the ones the dry F2 pass picked, so the plan counts F1 the way "fill all" leaves it.
+ */
+async function hiddenByF2(): Promise<{ code: string; sev: string; n: number }[]> {
+  return q(
+    `SELECT h.code, a.severity::text AS sev, count(*)::int AS n
+       FROM stock_alert a JOIN hospital h ON h.id = a.hospital_id JOIN hospital_drug hd ON hd.id = a.hospital_drug_id
+      WHERE a.type = 'LOW_STOCK' AND a.status = 'OPEN'
+        AND (hd.drug_master_id = ANY($1::uuid[])
+             OR hd.drug_master_id IN (SELECT x.drug_master_id FROM stock_lot l JOIN hospital_drug x ON x.id = l.hospital_drug_id WHERE l.lot_no LIKE 'DEMO-F2%'))
+      GROUP BY 1, 2`, [[...dryF2Drugs]]);
+}
+
+/**
  * More alerts to borrow from. The F2 shaping leaves only a few borrowable alerts (and none at HD / HE), so this tops every hospital up to
  * F1_WANT open LOW_STOCK alerts by cutting the stock of drugs that (a) no waiting F2 lot of any hospital carries (so the F2 split is not
  * disturbed), (b) have no active alert or request yet and (c) have at least 2 other hospitals that can lend it (stock of lots with more
@@ -285,7 +301,8 @@ async function f1MoreAlerts() {
   const open = await q(
     `SELECT h.code, a.severity::text AS sev, count(*)::int AS n FROM stock_alert a JOIN hospital h ON h.id = a.hospital_id
       WHERE a.type = 'LOW_STOCK' AND a.status = 'OPEN' GROUP BY 1, 2`);
-  const have = (code: string, sev: string) => Number(open.find((r) => r.code === code && r.sev === sev)?.n ?? 0);
+  const hidden = DRY ? await hiddenByF2() : [];
+  const have = (code: string, sev: string) => Number(open.find((r) => r.code === code && r.sev === sev)?.n ?? 0) - Number(hidden.find((r) => r.code === code && r.sev === sev)?.n ?? 0);
   const usedBy = new Map<string, number>(); // drug -> hospitals already cut for it in this run
   const cut = new Set<string>(); // hospital drugs already cut in this run (their alert only appears at the next evaluation)
   for (const code of ALL) {
@@ -316,7 +333,7 @@ async function f1MoreAlerts() {
                                WHERE br.borrower_hospital_id = hd.hospital_id AND i.drug_master_id = dm.id AND br.status::text NOT IN ('FULFILLED','CLOSED_UNFULFILLED','CANCELLED'))`,
           [hospital.id]);
         const pick = rows
-          .filter((r) => Number(r.lenders) >= (RELAXED ? 1 : 2) && (usedBy.get(r.drug_id) ?? 0) < 3 && !cut.has(r.hd_id))
+          .filter((r) => Number(r.lenders) >= (RELAXED ? 1 : 2) && (usedBy.get(r.drug_id) ?? 0) < 3 && !cut.has(r.hd_id) && !(DRY && dryF2Drugs.has(r.drug_id)))
           .sort((a, b) => Number(b.lenders) - Number(a.lenders) || (usedBy.get(a.drug_id) ?? 0) - (usedBy.get(b.drug_id) ?? 0) || b.u - a.u)[0];
         if (!pick) { warn(`${code}: no drug left for ${need} more ${sev} alert(s)`); break; }
         if (DRY) {
@@ -452,7 +469,7 @@ export async function planDemo(o: Pick<SeedOptions, 'db' | 'scale' | 'withU' | '
     `SELECT h.code, a.severity::text AS sev, count(*)::int AS n FROM stock_alert a JOIN hospital h ON h.id = a.hospital_id
       WHERE a.type = 'LOW_STOCK' AND a.status = 'OPEN' GROUP BY 1, 2`);
 
-  dryAdd.f1 = []; dryAdd.f2 = [];
+  dryAdd.f1 = []; dryAdd.f2 = []; dryF2Drugs.clear();
   const keepSink = sink;
   DRY = true; sink = () => undefined;
   try {
@@ -461,11 +478,13 @@ export async function planDemo(o: Pick<SeedOptions, 'db' | 'scale' | 'withU' | '
     DRY = false; sink = keepSink;
   }
 
+  const hiddenRows = forecast > 0 ? await hiddenByF2() : [];
   const f1Rows = ALL.flatMap((code) => (['VERY_URGENT', 'URGENT', 'NORMAL'] as const).map((sev) => {
     const have = Number(open.find((r) => r.code === code && r.sev === sev)?.n ?? 0);
-    const missing = Math.max(0, F1_WANT[sev] - have);
+    const hidden = Number(hiddenRows.find((r) => r.code === code && r.sev === sev)?.n ?? 0); // snoozed by the F2 part of a fill
+    const missing = Math.max(0, F1_WANT[sev] - (have - hidden));
     const canAdd = Math.min(missing, dryAdd.f1.filter((x) => x.code === code && x.sev === sev).length);
-    return { hospital: code, severity: sev, have, want: F1_WANT[sev], missing, canAdd };
+    return { hospital: code, severity: sev, have, hidden, want: F1_WANT[sev], missing, canAdd };
   }));
   const f2Rows = [];
   for (const sc of F2) {

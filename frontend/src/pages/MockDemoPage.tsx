@@ -5,10 +5,10 @@ const SEV_LABEL = { VERY_URGENT: 'ด่วนมาก', URGENT: 'ด่วน'
 
 export const MockDemoPage: React.FC = () => {
   const [stats, setStats] = useState<DbStats | null>(null);
-  const [loadingStats, setLoadingStats] = useState(false);
+  const [loadingStats, setLoadingStats] = useState(true);
   const [executingAction, setExecutingAction] = useState<string | null>(null);
   const [plan, setPlan] = useState<DemoPlan | null>(null);
-  const [relaxed, setRelaxed] = useState(false);
+  const [relaxed, setRelaxed] = useState(true);
   const [logs, setLogs] = useState<string[]>([]);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const terminalScrollContainerRef = useRef<HTMLDivElement | null>(null);
@@ -241,9 +241,9 @@ export const MockDemoPage: React.FC = () => {
           <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', background: relaxed ? '#fef3c7' : '#ffffff', border: `1px solid ${relaxed ? '#f59e0b' : '#cbd5e1'}`, borderRadius: '12px', padding: '14px 18px', cursor: 'pointer' }}>
             <input type="checkbox" checked={relaxed} onChange={(e) => { setRelaxed(e.target.checked); setPlan(null); }} style={{ marginTop: '3px' }} />
             <span style={{ fontSize: '13px', color: '#334155', lineHeight: 1.5 }}>
-              <b>โหมดฉุกเฉิน (ผ่อนเงื่อนไขเลือกยา)</b>
+              <b>ผ่อนเงื่อนไขเลือกยา (ค่าเริ่มต้น: เปิด)</b>
               <br />
-              ใช้เมื่อโหมดปกติไม่มียาเหลือให้เติม: F1 ยอมให้มีผู้ให้ยืมแค่ 1 แห่ง, F2 ยอมให้ผู้รับใช้ยาน้อยลงและมูลค่าต่ำลง (แผนอาจต้องรอกดอนุมัติแทนอนุมัติอัตโนมัติ) alert ที่ไม่มีใครให้ยืมได้จริงยังถูกพักไว้เหมือนเดิม ข้อควรรู้: การเติม F2 จะพัก alert F1 ของยาที่ถูกใช้เป็นล็อต F2 (7 วัน) ถ้าต้องการเพิ่ม alert F1 ให้กดเติม F1 เท่านั้น
+              เปิดไว้เพราะโหมดเข้มมียาให้เติมน้อยมาก ปิดเพื่อกลับไปใช้เงื่อนไขเต็มเท่า db:demo-seed: F1 ยอมให้มีผู้ให้ยืมแค่ 1 แห่ง, F2 ยอมให้ผู้รับใช้ยาน้อยลงและมูลค่าต่ำลง (แผนอาจต้องรอกดอนุมัติแทนอนุมัติอัตโนมัติ) alert ที่ไม่มีใครให้ยืมได้จริงยังถูกพักไว้เหมือนเดิม ข้อควรรู้: การเติม F2 จะพัก alert F1 ของยาที่ถูกใช้เป็นล็อต F2 (7 วัน) ถ้าต้องการเพิ่ม alert F1 ให้กดเติม F1 เท่านั้น
             </span>
           </label>
 
@@ -252,7 +252,7 @@ export const MockDemoPage: React.FC = () => {
             <span style={{ fontSize: '11px', fontWeight: 700, color: '#475569', background: '#e2e8f0', padding: '2px 8px', borderRadius: '4px' }}>READ ONLY</span>
             <h3 style={{ fontSize: '16px', fontWeight: 700, margin: '6px 0 4px 0', color: '#0f172a' }}>ดูก่อนว่าจะเติมอะไร</h3>
             <p style={{ fontSize: '13px', color: '#475569', lineHeight: 1.5, margin: '0 0 14px 0' }}>
-              นับสิ่งที่มีอยู่เทียบกับเป้า (มี/เป้า) แล้วจำลองการเลือกยาแบบเดียวกับตอนเติมจริง ไม่เขียนอะไรลงฐาน (+N = เติมได้จริง, "ไม่มียา" = ต่ำกว่าเป้าแต่ไม่มียาเข้าเงื่อนไข)
+              นับตามที่ "เติมทั้งหมด" จะทำ คือ F2 ก่อนแล้วค่อย F1 (มี/เป้า, พัก N = alert F1 ที่ถูกพักเพราะยาถูกใช้เป็นล็อต F2) แล้วจำลองการเลือกยาแบบเดียวกับตอนเติมจริง ไม่เขียนอะไรลงฐาน (+N = เติมได้จริง, "ไม่มียา" = ต่ำกว่าเป้าแต่ไม่มียาเข้าเงื่อนไข)
             </p>
             <button
               type="button"
@@ -265,7 +265,7 @@ export const MockDemoPage: React.FC = () => {
 
             {plan && (
               <div style={{ marginTop: '16px', fontSize: '12.5px', color: '#334155' }}>
-                <div style={{ fontWeight: 700, marginBottom: '6px' }}>F1 แจ้งเตือนที่ยืมได้ (มี/เป้า)</div>
+                <div style={{ fontWeight: 700, marginBottom: '6px' }}>F1 แจ้งเตือนที่ยืมได้ (มี/เป้า) <span style={{ fontWeight: 400, color: "#64748b", fontSize: "12px" }}>ประมาณการ: ผลจริงดูจาก execution.log หลังกดเติม</span></div>
                 <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '14px' }}>
                   <thead>
                     <tr style={{ background: '#f1f5f9', textAlign: 'left' }}>
@@ -283,7 +283,8 @@ export const MockDemoPage: React.FC = () => {
                           const r = plan.f1.find((x) => x.hospital === h && x.severity === k);
                           return (
                             <td key={k} style={{ padding: '5px 8px', color: !r || r.missing === 0 ? '#166534' : r.canAdd > 0 ? '#b45309' : '#94a3b8' }}>
-                              {r ? `${r.have}/${r.want}` : '-'}
+                              {r ? `${r.have - r.hidden}/${r.want}` : '-'}
+                              {r && r.hidden > 0 ? ` (พัก ${r.hidden})` : ''}
                               {r && r.canAdd > 0 ? ` (+${r.canAdd})` : ''}
                               {r && r.missing > 0 && r.canAdd < r.missing ? ' ·ไม่มียา' : ''}
                             </td>
