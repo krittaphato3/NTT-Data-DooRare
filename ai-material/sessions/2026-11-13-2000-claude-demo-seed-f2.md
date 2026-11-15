@@ -105,3 +105,10 @@ summary: db:demo-seed ONLY=f2 shapes stock + lots so A-network plans auto-approv
 - RDS: seed never runs on RDS; the user (no RDS access) dumps the local DB (`pg_dump`), the friend with EC2 access backs up RDS and restores it (dump/restore steps untested; RESTORE.md offered, not written).
 - HIS question (user asked): no real HIS integration exists. `hospital_import` table and `hospital_drug.local_code` exist, no backend import endpoint/connector; "HIS Gateways 12/12", "HIS sync every 30 min" etc. are hard-coded UI sample data. Data comes from the mock CSV.
 - Files touched: `backend/scripts/demo-seed.ts`, `scripts/db.sh`, this note.
+
+## Update 8 (2026-11-15): one engine for the script and the /demo buttons (branch feat/mock-demo-uses-seed-script)
+- Why: the friend's /mock-demo page used its own SQL seed (data off: F2 mostly at HA, drained lots without matching ledger, stacks on every press, no auth). Wanted fill buttons that work on local and RDS (backend in-process, no login/HTTP) with the same result as the script.
+- Done: seed logic moved from `backend/scripts/demo-seed.ts` to `backend/src/modules/demo/demo.engine.ts` (`runDemo`, read-only `planDemo`). Three HTTP spots (scan, forecast load, pool release) are a `SeedHost`: script = HTTP host (as before), backend = in-process host in `demo.runner.ts` (`runExpiryJobs`, `loadForecastRuns`) plus a Postgres advisory lock. New routes: `GET /demo/plan`, `POST /demo/fill/f1|f2|all` (old `/seed` and `/f2` now map to fill).
+- Verified (reset + run): script and buttons give the same numbers as before the refactor (F2 waiting HA=9 HB=6 HC=4 HD=1 HE=2; F1 open HA 8, HB 8, HC 6, HD 5, HE 2). Second press adds only a few F1 alerts (HA urgent 3, HB very urgent 3, HC urgent 2) and no F2 lots: it tops up toward the targets, it does not stack.
+- Known: `plan` shows "missing 13" for F1 even when nothing more can be found (HD/HE have few drugs): it is an upper bound, the run logs what it could not add. Page, auth (SYSTEM_ADMIN) and RESTORE.md are not done yet.
+- Files touched: demo.engine.ts, demo.runner.ts, demo.routes.ts, scripts/demo-seed.ts, this note.
