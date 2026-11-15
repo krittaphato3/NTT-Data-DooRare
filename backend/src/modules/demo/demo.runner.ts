@@ -35,7 +35,13 @@ function conflict(message: string) {
 
 /** Read-only: what a fill would add. */
 export async function planFill() {
-  return planDemo({ db: pool });
+  if (running) throw conflict(`กำลังทำงานอยู่ (${running}) รอให้เสร็จก่อน`);
+  running = 'ดูก่อน';
+  try {
+    return await planDemo({ db: pool });
+  } finally {
+    running = null;
+  }
 }
 
 /** Tops the demo situation up (F1 alerts to borrow from, F2 near-expiry lots). Only adds; running it again finds nothing missing. */

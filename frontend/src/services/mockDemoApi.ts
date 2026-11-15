@@ -38,8 +38,10 @@ export async function getDemoStats(): Promise<DbStats> {
 export interface DemoPlan {
   forecastLoaded: boolean;
   nothingToAdd: boolean;
-  f1: { hospital: string; severity: 'VERY_URGENT' | 'URGENT' | 'NORMAL'; have: number; want: number; missing: number }[];
-  f2: { kind: string; owner: string; note: string; have: number; want: number; missing: number }[];
+  /** how many items a fill could really add now (can be less than the sum of `missing`) */
+  canAddTotal: number;
+  f1: { hospital: string; severity: 'VERY_URGENT' | 'URGENT' | 'NORMAL'; have: number; want: number; missing: number; canAdd: number }[];
+  f2: { kind: string; owner: string; note: string; have: number; want: number; missing: number; canAdd: number }[];
 }
 
 /** What a fill would add (writes nothing). */

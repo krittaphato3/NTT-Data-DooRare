@@ -35,6 +35,9 @@ let sink: (line: string) => void = console.log;
 let RELEASE = 0;
 let SCALE = 1;
 let WITH_U = false;
+/** dry run (planDemo): the picks run exactly as in a fill but nothing is written; what would be added is collected in dryAdd */
+let DRY = false;
+const dryAdd = { f1: [] as { code: string; sev: string }[], f2: [] as { kind: string; owner: string; canAdd: number }[] };
 const DAYS = [35, 60, 45, 75];
 const MIN_VALUE_X = Number(process.env.MIN_VALUE_X ?? 8000); // far receivers cost more to reach: approving must not be blocked by the cost check
 const MIN_VALUE_A = Number(process.env.MIN_VALUE_A ?? 6000); // THB the receivers can absorb, so that cost < 20 % of value for the auto-approved scenarios
@@ -186,6 +189,12 @@ async function f2() {
       .sort((a, b) => (sc.kind !== 'U' ? b.val - a.val : (a.g[0].drug_id + run + sc.owner).localeCompare(b.g[0].drug_id + run + sc.owner)))
       .map((x) => x.g);
     if (fit.length < want) warn(`${sc.kind} ${sc.owner}: only ${fit.length} suitable drug(s) for ${want} lot(s)`);
+    if (DRY) {
+      const n = Math.min(want, fit.length);
+      for (let k = 0; k < n; k++) used.add(fit[k][0].drug_id);
+      dryAdd.f2.push({ kind: sc.kind, owner: sc.owner, canAdd: n });
+      continue;
+    }
 
     for (let k = 0; k < Math.min(want, fit.length); k++) {
       const g = fit[k];
@@ -222,6 +231,8 @@ async function f2() {
       }
     }
   }
+
+  if (DRY) return;
 
   say('  near-expiry scan');
   const scanned = await host.scan();
@@ -305,6 +316,13 @@ async function f1MoreAlerts() {
           .filter((r) => Number(r.lenders) >= 2 && (usedBy.get(r.drug_id) ?? 0) < 3 && !cut.has(r.hd_id))
           .sort((a, b) => Number(b.lenders) - Number(a.lenders) || (usedBy.get(a.drug_id) ?? 0) - (usedBy.get(b.drug_id) ?? 0) || b.u - a.u)[0];
         if (!pick) { warn(`${code}: no drug left for ${need} more ${sev} alert(s)`); break; }
+        if (DRY) {
+          usedBy.set(pick.drug_id, (usedBy.get(pick.drug_id) ?? 0) + 1);
+          cut.add(pick.hd_id);
+          dryAdd.f1.push({ code, sev });
+          need -= 1;
+          continue;
+        }
         // an E drug is urgent below 2 days of cover and normal above it; a V drug is very urgent below 2 days and urgent up to 7
         const days = pick.ved === 'E' && sev === 'URGENT' ? 1.2 : F1_COVER[sev];
         const keep = Math.max(1, Math.min(pick.u * days, pick.p50 * 0.8));
@@ -418,18 +436,34 @@ export async function runDemo(o: SeedOptions): Promise<void> {
   if (only.includes('f1')) await f1();
 }
 
-/** Read-only: what a run would add (the F1 alerts and F2 lots that are missing against the targets). Writes nothing. */
+/**
+ * Read-only: what a run would add. Counts what is there against the targets and then replays the real picks without writing,
+ * so `canAdd` is what a fill could really add now (it can be less than `missing`: no drug left that meets the conditions).
+ * Not safe next to a running fill (shared state): the caller refuses while one runs.
+ */
 export async function planDemo(o: Pick<SeedOptions, 'db' | 'scale' | 'withU'>) {
   db = o.db; SCALE = Math.max(1, o.scale ?? 1); WITH_U = !!o.withU;
   const forecast = Number((await q(`SELECT count(*)::int AS n FROM forecast_run WHERE status = 'SUCCEEDED'`))[0].n);
   const open = await q(
     `SELECT h.code, a.severity::text AS sev, count(*)::int AS n FROM stock_alert a JOIN hospital h ON h.id = a.hospital_id
       WHERE a.type = 'LOW_STOCK' AND a.status = 'OPEN' GROUP BY 1, 2`);
-  const f1 = ALL.flatMap((code) => (['VERY_URGENT', 'URGENT', 'NORMAL'] as const).map((sev) => {
+
+  dryAdd.f1 = []; dryAdd.f2 = [];
+  const keepSink = sink;
+  DRY = true; sink = () => undefined;
+  try {
+    if (forecast > 0) { await f2(); await f1MoreAlerts(); }
+  } finally {
+    DRY = false; sink = keepSink;
+  }
+
+  const f1Rows = ALL.flatMap((code) => (['VERY_URGENT', 'URGENT', 'NORMAL'] as const).map((sev) => {
     const have = Number(open.find((r) => r.code === code && r.sev === sev)?.n ?? 0);
-    return { hospital: code, severity: sev, have, want: F1_WANT[sev], missing: Math.max(0, F1_WANT[sev] - have) };
+    const missing = Math.max(0, F1_WANT[sev] - have);
+    const canAdd = Math.min(missing, dryAdd.f1.filter((x) => x.code === code && x.sev === sev).length);
+    return { hospital: code, severity: sev, have, want: F1_WANT[sev], missing, canAdd };
   }));
-  const f2 = [];
+  const f2Rows = [];
   for (const sc of F2) {
     if (sc.kind === 'U' && !WITH_U) continue;
     const have = Number((await q(
@@ -438,7 +472,10 @@ export async function planDemo(o: Pick<SeedOptions, 'db' | 'scale' | 'withU'>) {
           AND EXISTS (SELECT 1 FROM near_expiry_item ne WHERE ne.lot_id = sl.id AND ne.status IN ('DETECTED', 'RELEASED_TO_POOL'))`,
       [sc.owner, `DEMO-F2${sc.kind}-${sc.owner}%`]))[0].n);
     const want = sc.n * SCALE;
-    f2.push({ kind: sc.kind, owner: sc.owner, note: sc.note, have, want, missing: Math.max(0, want - have) });
+    const missing = Math.max(0, want - have);
+    const canAdd = Math.min(missing, dryAdd.f2.find((x) => x.kind === sc.kind && x.owner === sc.owner)?.canAdd ?? 0);
+    f2Rows.push({ kind: sc.kind, owner: sc.owner, note: sc.note, have, want, missing, canAdd });
   }
-  return { forecastLoaded: forecast > 0, f1, f2, nothingToAdd: f1.every((r) => r.missing === 0) && f2.every((r) => r.missing === 0) };
+  const total = f1Rows.reduce((n, r) => n + r.canAdd, 0) + f2Rows.reduce((n, r) => n + r.canAdd, 0);
+  return { forecastLoaded: forecast > 0, f1: f1Rows, f2: f2Rows, canAddTotal: total, nothingToAdd: total === 0 };
 }

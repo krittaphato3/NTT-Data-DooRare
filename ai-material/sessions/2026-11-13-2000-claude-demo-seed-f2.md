@@ -118,3 +118,10 @@ summary: db:demo-seed ONLY=f2 shapes stock + lots so A-network plans auto-approv
 - Checked in the browser (login as the test system admin): banner, plan tables, fill run with FINISH in the log. The page is already behind the app login (shows the login screen when signed out); role is not yet restricted to SYSTEM_ADMIN (step 4).
 - Note: F2 "missing" in plan can be unreachable (the script warns "only N suitable drugs" for some scenarios), so it is an upper bound.
 - Files touched: frontend/src/pages/MockDemoPage.tsx, frontend/src/services/mockDemoApi.ts, backend/src/modules/demo/demo.service.ts (database info in stats), this note.
+
+## Update 10 (2026-11-15): plan says what a fill can really add
+- Problem: the plan page said "can fill" for rows that had no drug meeting the conditions, so the F2 button added nothing (DB confirmed 0 new ledger rows / lots / alerts).
+- Done: `planDemo` replays the real picks in a dry run (`DRY` flag in demo.engine.ts: f2 scenario loop and f1MoreAlerts, nothing written) and returns `canAdd` per row and `canAddTotal`. Page shows `have/want (+N)` or grey `ไม่มียา`. `planFill` refuses while a fill runs (shared module state).
+- Verified: after a full fill the plan says 0 and a real fill adds 0 ledger rows; after resolving one HB normal alert the plan says +1 and the fill brings HB normal back to 2.
+- Conditions that limit fills (from the script): F2 drug must be at owner and every receiver (verified mapping, forecast u>=3 at receivers, not blood/cold/controlled), no DEMO lot of it waiting, receivers' absorbable value >= 6000 (A) / 8000 (X) THB; F1 drug needs forecast, no active alert/request, no waiting near-expiry lot anywhere, >=2 lenders (lots > 180 days, above own target). Relaxing them is a separate decision.
+- Files touched: demo.engine.ts, demo.runner.ts, frontend MockDemoPage.tsx, mockDemoApi.ts, this note.

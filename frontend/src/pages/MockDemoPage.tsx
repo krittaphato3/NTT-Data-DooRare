@@ -86,9 +86,10 @@ export const MockDemoPage: React.FC = () => {
       const p = await getDemoPlan();
       setPlan(p);
       const ts = new Date().toISOString().substring(11, 19);
-      const f1 = p.f1.reduce((n, r) => n + r.missing, 0);
-      const f2 = p.f2.reduce((n, r) => n + r.missing, 0);
-      setLogs((prev) => [...prev, `[${ts}] INFO: plan: F1 up to ${f1} alert(s) below target, F2 ${f2} lot(s) below target${p.forecastLoaded ? '' : ', forecast not loaded yet (the fill loads it)'}`]);
+      const f1 = p.f1.reduce((n, r) => n + r.canAdd, 0);
+      const f2 = p.f2.reduce((n, r) => n + r.canAdd, 0);
+      const miss = p.f1.reduce((n, r) => n + r.missing, 0) + p.f2.reduce((n, r) => n + r.missing, 0);
+      setLogs((prev) => [...prev, `[${ts}] INFO: plan: a fill can add F1 ${f1} alert(s) and F2 ${f2} lot(s); below target in total ${miss}${p.forecastLoaded ? '' : ' (forecast not loaded yet: the fill loads it first)'}`]);
     } catch (err: any) {
       setErrorMsg(err.message || 'อ่านแผนไม่สำเร็จ');
     } finally {
@@ -240,7 +241,7 @@ export const MockDemoPage: React.FC = () => {
             <span style={{ fontSize: '11px', fontWeight: 700, color: '#475569', background: '#e2e8f0', padding: '2px 8px', borderRadius: '4px' }}>READ ONLY</span>
             <h3 style={{ fontSize: '16px', fontWeight: 700, margin: '6px 0 4px 0', color: '#0f172a' }}>ดูก่อนว่าจะเติมอะไร</h3>
             <p style={{ fontSize: '13px', color: '#475569', lineHeight: 1.5, margin: '0 0 14px 0' }}>
-              นับสิ่งที่มีอยู่เทียบกับเป้า (มี/เป้า) ไม่เขียนอะไรลงฐาน ตัวเลขที่ขาดเป็นค่าสูงสุด ตอนเติมจริงบางรายการอาจไม่มียาให้เลือกเพิ่ม log จะบอก
+              นับสิ่งที่มีอยู่เทียบกับเป้า (มี/เป้า) แล้วจำลองการเลือกยาแบบเดียวกับตอนเติมจริง ไม่เขียนอะไรลงฐาน (+N = เติมได้จริง, "ไม่มียา" = ต่ำกว่าเป้าแต่ไม่มียาเข้าเงื่อนไข)
             </p>
             <button
               type="button"
@@ -270,8 +271,10 @@ export const MockDemoPage: React.FC = () => {
                         {(['VERY_URGENT', 'URGENT', 'NORMAL'] as const).map((k) => {
                           const r = plan.f1.find((x) => x.hospital === h && x.severity === k);
                           return (
-                            <td key={k} style={{ padding: '5px 8px', color: r && r.missing > 0 ? '#b45309' : '#166534' }}>
+                            <td key={k} style={{ padding: '5px 8px', color: !r || r.missing === 0 ? '#166534' : r.canAdd > 0 ? '#b45309' : '#94a3b8' }}>
                               {r ? `${r.have}/${r.want}` : '-'}
+                              {r && r.canAdd > 0 ? ` (+${r.canAdd})` : ''}
+                              {r && r.missing > 0 && r.canAdd < r.missing ? ' ·ไม่มียา' : ''}
                             </td>
                           );
                         })}
@@ -285,14 +288,20 @@ export const MockDemoPage: React.FC = () => {
                     {plan.f2.map((r, i) => (
                       <tr key={i} style={{ borderTop: '1px solid #e2e8f0' }}>
                         <td style={{ padding: '5px 8px', fontWeight: 600, width: '60px' }}>{r.owner} ({r.kind})</td>
-                        <td style={{ padding: '5px 8px', color: r.missing > 0 ? '#b45309' : '#166534', width: '60px' }}>{r.have}/{r.want}</td>
+                        <td style={{ padding: '5px 8px', color: r.missing === 0 ? '#166534' : r.canAdd > 0 ? '#b45309' : '#94a3b8', width: '130px' }}>
+                          {r.have}/{r.want}
+                          {r.canAdd > 0 ? ` (+${r.canAdd})` : ''}
+                          {r.missing > 0 && r.canAdd < r.missing ? ' ·ไม่มียา' : ''}
+                        </td>
                         <td style={{ padding: '5px 8px', color: '#64748b' }}>{r.note}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
-                <div style={{ marginTop: '10px', fontWeight: 600, color: plan.nothingToAdd ? '#166534' : '#b45309' }}>
-                  {plan.nothingToAdd ? 'ครบเป้าแล้ว ไม่มีอะไรต้องเติม' : 'มีรายการต่ำกว่าเป้า กดเติมได้'}
+                <div style={{ marginTop: '10px', fontWeight: 600, color: plan.nothingToAdd ? '#64748b' : '#b45309' }}>
+                  {plan.nothingToAdd
+                    ? 'ตอนนี้เติมอะไรไม่ได้ (ครบเป้าแล้ว หรือไม่มียาที่เข้าเงื่อนไขเหลือ ช่องสีเทา "ไม่มียา")'
+                    : `กดเติมแล้วจะได้เพิ่ม ${plan.canAddTotal} รายการ (ช่อง +N)`}
                 </div>
               </div>
             )}
