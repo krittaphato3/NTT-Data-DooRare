@@ -1,8 +1,10 @@
 import { Router } from 'express';
 import { asyncHandler } from '../../middleware/asyncHandler.js';
 import { DemoService } from './demo.service.js';
+import { demoToolsGuard, runSeedScript } from './demo.runner.js';
 
 export const demoRouter = Router();
+demoRouter.use(demoToolsGuard);
 
 // GET /api/v1/demo/stats - Live database statistics
 demoRouter.get(
@@ -17,7 +19,7 @@ demoRouter.get(
 demoRouter.post(
   '/seed',
   asyncHandler(async (_req, res) => {
-    const result = await DemoService.seedFull();
+    const result = await runSeedScript('f2,f1', 'สร้างชุดข้อมูลจำลอง F1 + F2');
     res.json(result);
   }),
 );
@@ -26,7 +28,7 @@ demoRouter.post(
 demoRouter.post(
   '/f2',
   asyncHandler(async (_req, res) => {
-    const result = await DemoService.seedDemoF2();
+    const result = await runSeedScript('f2', 'สร้างยาใกล้หมดอายุ F2');
     res.json(result);
   }),
 );

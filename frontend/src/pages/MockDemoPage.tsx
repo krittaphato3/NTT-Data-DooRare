@@ -67,7 +67,12 @@ export const MockDemoPage: React.FC = () => {
         await loadStats();
       }
       const doneTs = new Date().toISOString().substring(11, 19);
-      setLogs((prev) => [...prev, `[${doneTs}] FINISH: ${res.message || successLabel} สำเร็จ`]);
+      if (res.success === false) {
+        setErrorMsg(res.message || 'ไม่สำเร็จ');
+        setLogs((prev) => [...prev, `[${doneTs}] ERROR: ${res.message || successLabel}`]);
+      } else {
+        setLogs((prev) => [...prev, `[${doneTs}] FINISH: ${res.message || successLabel}`]);
+      }
     } catch (err: any) {
       const errTs = new Date().toISOString().substring(11, 19);
       const errMsg = err.message || 'เกิดข้อผิดพลาดในการดำเนินการ';
