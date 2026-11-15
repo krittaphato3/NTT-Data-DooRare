@@ -55,6 +55,16 @@
 .doorare-chat-overlay.open {
   opacity: 1;
   pointer-events: auto;
+  animation: doorareOverlayFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes doorareOverlayFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 /* Floating Messenger-Style Popup Window (Default Mode) */
@@ -62,8 +72,8 @@
   position: fixed;
   bottom: 20px;
   right: 24px;
-  width: 380px;
-  height: 580px;
+  width: 440px;
+  height: 640px;
   max-width: calc(100vw - 32px);
   max-height: calc(100vh - 40px);
   background: #ffffff;
@@ -75,16 +85,21 @@
   flex-direction: row;
   overflow: hidden;
   transform: translateY(20px) scale(0.96);
+  transform-origin: bottom right;
   opacity: 0;
   pointer-events: none;
-  transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1),
-              height 0.3s cubic-bezier(0.16, 1, 0.3, 1),
-              bottom 0.3s cubic-bezier(0.16, 1, 0.3, 1),
-              right 0.3s cubic-bezier(0.16, 1, 0.3, 1),
-              border-radius 0.2s ease,
-              box-shadow 0.2s ease,
-              opacity 0.2s ease,
-              transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: width 0.38s cubic-bezier(0.16, 1, 0.3, 1),
+              height 0.38s cubic-bezier(0.16, 1, 0.3, 1),
+              max-width 0.38s cubic-bezier(0.16, 1, 0.3, 1),
+              max-height 0.38s cubic-bezier(0.16, 1, 0.3, 1),
+              bottom 0.38s cubic-bezier(0.16, 1, 0.3, 1),
+              right 0.38s cubic-bezier(0.16, 1, 0.3, 1),
+              border-radius 0.32s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.25s ease,
+              box-shadow 0.32s ease,
+              opacity 0.22s ease,
+              transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: width, height, bottom, right;
 }
 
 .doorare-chat-drawer.open {
@@ -97,16 +112,16 @@
 .doorare-chat-drawer.fullscreen {
   bottom: 0 !important;
   right: 0 !important;
-  left: 0 !important;
-  top: 0 !important;
+  top: auto !important;
+  left: auto !important;
   width: 100vw !important;
   height: 100vh !important;
   max-width: 100vw !important;
   max-height: 100vh !important;
   border-radius: 0 !important;
-  border: none !important;
+  border-color: transparent !important;
   box-shadow: none !important;
-  transform: none !important;
+  transform: translateY(0) scale(1) !important;
 }
 
 /* Gemini-Inspired Collapsed Mini Icon Rail (Leftmost rail in Fullscreen) */
@@ -121,6 +136,22 @@
   padding: 14px 0 10px 0;
   flex-shrink: 0;
   z-index: 10;
+  animation: doorareRailSlideIn 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.doorare-chat-sidebar:not(.drawer-overlay) {
+  animation: doorareRailSlideIn 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes doorareRailSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 .doorare-mini-rail-top {
@@ -535,22 +566,6 @@
   text-overflow: ellipsis;
 }
 
-.doorare-chat-context-badge {
-  font-size: 10px;
-  font-weight: 500;
-  color: #0369a1;
-  background: #f0f9ff;
-  border: 1px solid #bae6fd;
-  padding: 1px 6px;
-  border-radius: 4px;
-  display: inline-block;
-  margin-top: 2px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 240px;
-}
-
 .doorare-chat-header-actions {
   display: flex;
   align-items: center;
@@ -661,11 +676,6 @@
   font-size: 14.5px;
 }
 
-.doorare-chat-drawer.fullscreen .doorare-chat-context-badge {
-  font-size: 10.5px;
-  max-width: none;
-}
-
 .doorare-chat-drawer.fullscreen .doorare-chat-header-action-btn {
   height: 32px;
   padding: 0 12px;
@@ -688,11 +698,15 @@
 .doorare-chat-messages {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 16px 14px;
   display: flex;
   flex-direction: column;
   gap: 14px;
   background: #f8fafc;
+  box-sizing: border-box;
+  width: 100%;
+  transition: max-width 0.38s cubic-bezier(0.16, 1, 0.3, 1), padding 0.3s ease;
 }
 
 /* Sleek WebKit scrollbar */
@@ -926,6 +940,7 @@
   padding: 14px 18px 12px 18px;
   background: #ffffff;
   border-top: 1px solid #e2e8f0;
+  transition: max-width 0.38s cubic-bezier(0.16, 1, 0.3, 1), padding 0.3s ease;
 }
 
 .doorare-input-capsule {
@@ -1632,6 +1647,138 @@
 /* ========================================================
    Message Action Buttons & Copy Feedback
    ======================================================== */
+
+/* ========================================================
+   Message Action Toolbars & Inline Editing
+   ======================================================== */
+
+.doorare-msg-action-bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  opacity: 0;
+  transition: opacity 0.15s ease-in-out;
+}
+
+.doorare-chat-msg-row:hover .doorare-msg-action-bar,
+.doorare-msg-action-bar:focus-within {
+  opacity: 1;
+}
+
+.doorare-msg-action-bar.user {
+  justify-content: flex-end;
+}
+
+.doorare-msg-action-bar.assistant {
+  justify-content: flex-start;
+  margin-left: 2px;
+}
+
+.doorare-msg-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 3px 6px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.doorare-msg-action-btn:hover:not(:disabled) {
+  background: #f1f5f9;
+  color: #0f172a;
+  border-color: #e2e8f0;
+}
+
+.doorare-msg-action-btn.delete:hover:not(:disabled) {
+  background: #fef2f2;
+  color: #dc2626;
+  border-color: #fecaca;
+}
+
+.doorare-msg-action-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Inline Editing Box */
+.doorare-chat-edit-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  min-width: 260px;
+  background: #ffffff;
+  border: 1.5px solid #2563eb;
+  border-radius: 12px;
+  padding: 10px 12px;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.08);
+}
+
+.doorare-chat-edit-textarea {
+  width: 100%;
+  border: none;
+  outline: none;
+  resize: vertical;
+  font-family: inherit;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: #0f172a;
+  background: transparent;
+  min-height: 48px;
+  max-height: 220px;
+}
+
+.doorare-chat-edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 8px;
+}
+
+.doorare-chat-edit-btn {
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.doorare-chat-edit-btn.cancel {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+}
+
+.doorare-chat-edit-btn.cancel:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.doorare-chat-edit-btn.submit {
+  background: #2563eb;
+  color: #ffffff;
+  border: 1px solid #2563eb;
+}
+
+.doorare-chat-edit-btn.submit:hover:not(:disabled) {
+  background: #1d4ed8;
+}
+
+.doorare-chat-edit-btn.submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 
 .doorare-bubble-actions {
   display: flex;
@@ -2378,37 +2525,49 @@
    Formal Clinical Proposal Card
    ======================================================== */
 .doorare-chat-proposal-card.formal {
-  margin-top: 12px;
+  margin-top: 10px;
   background: #ffffff;
   border: 1px solid #bfdbfe;
   border-radius: 14px;
-  padding: 16px 18px;
+  padding: 12px 14px;
   box-shadow: 0 4px 16px rgba(37, 99, 235, 0.08);
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   transition: all 0.2s ease;
+  box-sizing: border-box;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .doorare-proposal-header-formal {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  padding-bottom: 12px;
+  flex-direction: column;
+  gap: 6px;
+  padding-bottom: 10px;
   border-bottom: 1px solid #f1f5f9;
+  width: 100%;
 }
 
-.doorare-proposal-header-left {
+.doorare-proposal-header-top-row {
   display: flex;
-  align-items: flex-start;
-  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+}
+
+.doorare-proposal-meta-tag {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
 }
 
 .doorare-proposal-icon-box {
-  width: 36px;
-  height: 36px;
-  border-radius: 9px;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
   background: #eff6ff;
   border: 1px solid #dbeafe;
   display: flex;
@@ -2421,24 +2580,26 @@
   font-size: 11px;
   font-weight: 700;
   color: #2563eb;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
 }
 
 .doorare-proposal-main-title {
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 700;
   color: #0f172a;
-  margin-top: 2px;
-  line-height: 1.4;
+  line-height: 1.45;
+  word-break: break-word;
+  width: 100%;
 }
 
 .doorare-proposal-status-chip {
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 600;
-  padding: 4px 10px;
+  padding: 2px 8px;
   border-radius: 9999px;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .doorare-proposal-status-chip.pending {
@@ -2451,11 +2612,13 @@
 .doorare-proposal-spec-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  gap: 8px 10px;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
   border-radius: 10px;
-  padding: 12px 14px;
+  padding: 10px 12px;
+  box-sizing: border-box;
+  width: 100%;
 }
 
 .doorare-spec-item {
@@ -2547,15 +2710,15 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 14px;
-  padding: 4px 2px 0 2px;
+  gap: 6px 12px;
+  padding: 2px 2px 0 2px;
 }
 
 .doorare-audit-item {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-size: 11px;
+  font-size: 10.5px;
   color: #475569;
   font-weight: 500;
 }
@@ -2563,8 +2726,9 @@
 /* Formal Action Buttons */
 .doorare-proposal-formal-actions {
   display: flex;
-  gap: 10px;
-  margin-top: 4px;
+  gap: 8px;
+  margin-top: 2px;
+  width: 100%;
 }
 
 .doorare-formal-btn-approve {
@@ -2573,14 +2737,14 @@
   color: #ffffff;
   border: 1px solid #15803d;
   border-radius: 8px;
-  padding: 9px 16px;
-  font-size: 13px;
+  padding: 8px 14px;
+  font-size: 12.5px;
   font-weight: 600;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 7px;
+  gap: 6px;
   box-shadow: 0 2px 6px rgba(22, 163, 74, 0.25);
   transition: all 0.15s ease;
 }
@@ -2604,8 +2768,8 @@
   color: #64748b;
   border: 1px solid #cbd5e1;
   border-radius: 8px;
-  padding: 9px 14px;
-  font-size: 12.5px;
+  padding: 8px 12px;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   display: inline-flex;
@@ -2669,6 +2833,8 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
+  flex: 1;
+  min-width: 0;
 }
 
 .doorare-decided-title {
@@ -2721,6 +2887,43 @@
 .doorare-decided-chip-v.highlight {
   color: #15803d;
   font-weight: 700;
+}
+
+.doorare-decided-actions-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-top: 8px;
+  border-top: 1px solid rgba(22, 163, 74, 0.15);
+  margin-top: 4px;
+}
+
+.doorare-proposal-open-page-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #15803d;
+  background: #ffffff;
+  border: 1.5px solid #86efac;
+  box-shadow: 0 1px 3px rgba(22, 163, 74, 0.12);
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.doorare-proposal-open-page-btn:hover {
+  background: #f0fdf4;
+  border-color: #16a34a;
+  color: #166534;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(22, 163, 74, 0.18);
+}
+
+.doorare-proposal-open-page-btn:active {
+  transform: translateY(0);
 }
 
 .doorare-proposal-error-banner {

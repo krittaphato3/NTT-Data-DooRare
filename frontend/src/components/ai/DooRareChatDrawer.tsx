@@ -26,6 +26,7 @@ interface ProposalCardProps {
     title: string;
     description: string;
     summary: Record<string, unknown>;
+    targetId?: string;
     actionApi: {
       endpoint: string;
       method: string;
@@ -33,14 +34,103 @@ interface ProposalCardProps {
     };
   };
   initialStatus?: 'pending' | 'approved' | 'declined' | 'failed';
-  onActionComplete: (status: 'approved' | 'declined' | 'failed', msg: string) => void;
+  targetId?: string;
+  targetRequestNo?: string;
+  onActionComplete: (
+    status: 'approved' | 'declined' | 'failed',
+    msg: string,
+    data?: { id?: string; requestNo?: string },
+  ) => void;
+  onNavigateProposal?: (targetUrl: string, targetId?: string) => void;
 }
 
-const ProposalCard: React.FC<ProposalCardProps> = ({ proposal, initialStatus, onActionComplete }) => {
+const ProposalCard: React.FC<ProposalCardProps> = ({
+  proposal,
+  initialStatus,
+  targetId,
+  targetRequestNo,
+  onActionComplete,
+  onNavigateProposal,
+}) => {
   const [loading, setLoading] = useState(false);
-  const [decided, setDecided] = useState<'approved' | 'declined' | null>(() =>
-    initialStatus === 'approved' || initialStatus === 'declined' ? initialStatus : null,
-  );
+  const [decided, setDecided] = useState<'approved' | 'declined' | null>(() => {
+    if (initialStatus === 'approved' || initialStatus === 'declined') return initialStatus;
+    const propStatus = (proposal as any)?.status?.toLowerCase();
+    if (propStatus === 'approved' || propStatus === 'declined') return propStatus;
+    return null;
+  });
+  const [createdEntity, setCreatedEntity] = useState<{ id?: string; requestNo?: string } | null>(() => {
+    const propReqNo = targetRequestNo || (proposal as any)?.requestNo || (proposal as any)?.summary?.request_no || (proposal as any)?.summary?.requestNo;
+    const propId = targetId || (proposal as any)?.targetId || (proposal as any)?.id || (proposal as any)?.summary?.id;
+    if (propReqNo || propId) {
+      return { id: propId, requestNo: propReqNo };
+    }
+    return null;
+  });
+
+  useEffect(() => {
+    const isApp = initialStatus === 'approved' || (proposal as any)?.status === 'APPROVED' || (proposal as any)?.status === 'approved';
+    const isDec = initialStatus === 'declined' || (proposal as any)?.status === 'DECLINED' || (proposal as any)?.status === 'declined';
+    if (isApp) {
+      setDecided('approved');
+    } else if (isDec) {
+      setDecided('declined');
+    }
+  }, [initialStatus, proposal]);
+
+  useEffect(() => {
+    const propReqNo = targetRequestNo || (proposal as any)?.requestNo || (proposal as any)?.summary?.request_no || (proposal as any)?.summary?.requestNo;
+    const propId = targetId || (proposal as any)?.targetId || (proposal as any)?.id;
+    if (propReqNo || propId) {
+      setCreatedEntity((prev) => ({
+        id: propId || prev?.id,
+        requestNo: propReqNo || prev?.requestNo,
+      }));
+    }
+  }, [targetId, targetRequestNo, proposal]);
+
+  // Auto-reconciliation: If loaded from history without saved status, check if the borrow request
+  // already exists in the backend so it doesn't revert to unapproved.
+  useEffect(() => {
+    if (decided !== null) return;
+    const isBorrow =
+      proposal.type === 'CREATE_BORROW_REQUEST' ||
+      proposal.actionApi?.endpoint?.includes('/borrow-requests');
+    if (!isBorrow) return;
+
+    const token = getStoredToken();
+    const payload = proposal.actionApi?.payload || {};
+    const s = proposal.summary || {};
+    const drugName = String(s.drug_name || s.drug || s.item_code || proposal.title || '').toLowerCase();
+    const payloadDmId = (payload.drugMasterId || (payload.items as any)?.[0]?.drugMasterId) as string | undefined;
+
+    fetch('/api/v1/borrow-requests?role=borrower', {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        const items: any[] = data.items || data.data || (Array.isArray(data) ? data : []);
+        const matched = items.find((item) => {
+          const itemDmId = item.drug?.id || item.drugMasterId;
+          const matchDm = payloadDmId && itemDmId && payloadDmId === itemDmId;
+          const itemDrugName = (item.drug?.name || item.drug?.genericName || item.drug || '').toLowerCase();
+          const matchName =
+            drugName &&
+            itemDrugName &&
+            (drugName.includes(itemDrugName) || itemDrugName.includes(drugName.split(' ')[0]));
+          return matchDm || matchName;
+        });
+
+        if (matched) {
+          const reqNo = matched.requestNo || matched.id;
+          const uId = matched.id || matched.uuid;
+          setDecided('approved');
+          setCreatedEntity({ id: uId, requestNo: reqNo });
+          onActionComplete('approved', `ดำเนินการสำเร็จ: ${proposal.title}`, { id: uId, requestNo: reqNo });
+        }
+      })
+      .catch(() => {});
+  }, [decided, proposal, onActionComplete]);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [showTechnicalDetails, setShowTechnicalDetails] = useState(false);
   // Write routes (borrow requests, pool release, plan approval, emergency borrowing, allocation agent...) require an
@@ -81,13 +171,29 @@ const ProposalCard: React.FC<ProposalCardProps> = ({ proposal, initialStatus, on
       }
 
       const resJson = await res.json().catch(() => ({}));
-      if (resJson?.id || resJson?.data?.id) {
-        const createdId = resJson.id || resJson.data.id;
+      const createdId = resJson?.id || resJson?.data?.id || proposal.targetId;
+      const requestNo = resJson?.data?.requestNo || resJson?.requestNo || proposal.summary?.request_no || proposal.summary?.requestNo;
+      if (createdId || requestNo) {
+        setCreatedEntity({ id: createdId, requestNo });
+      }
+
+      if (createdId) {
+        if (typeof proposal.actionApi?.endpoint === 'string' && proposal.actionApi.endpoint.includes('/borrow-requests')) {
+          // Auto-propose lender ladder so the request immediately moves from DRAFT to PENDING_APPROVAL / ESCALATED
+          await fetch(`/api/v1/borrow-requests/${createdId}/propose`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Idempotency-Key': crypto.randomUUID(),
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+          }).catch((err) => console.warn('Auto-propose failed:', err));
+        }
         window.dispatchEvent(new CustomEvent('doorare:incident-created', { detail: { id: createdId } }));
       }
       setIsDuplicateConflict(false);
       setDecided('approved');
-      onActionComplete('approved', `ดำเนินการสำเร็จ: ${proposal.title}`);
+      onActionComplete('approved', `ดำเนินการสำเร็จ: ${proposal.title}`, { id: createdId, requestNo });
     } catch (err: any) {
       const msg = err.message || 'เกิดข้อผิดพลาดในการดำเนินการ';
       setErrorMsg(msg);
@@ -105,6 +211,55 @@ const ProposalCard: React.FC<ProposalCardProps> = ({ proposal, initialStatus, on
   const handleDecline = () => {
     setDecided('declined');
     onActionComplete('declined', `ปฏิเสธข้อเสนอ: ${proposal.title}`);
+  };
+
+  const handleOpenProposal = () => {
+    const targetIdentifier = createdEntity?.requestNo || createdEntity?.id;
+    const isBorrow =
+      proposal.type === 'CREATE_BORROW_REQUEST' ||
+      proposal.actionApi?.endpoint?.includes('/borrow-requests');
+
+    if (isBorrow) {
+      const targetUrl = targetIdentifier
+        ? `?page=requests&request=${encodeURIComponent(targetIdentifier)}`
+        : '?page=requests';
+
+      if (onNavigateProposal) {
+        onNavigateProposal(targetUrl, targetIdentifier);
+      } else if (window.location.search.includes('page=requests')) {
+        if (targetIdentifier) {
+          window.history.pushState(null, '', targetUrl);
+          window.dispatchEvent(
+            new CustomEvent('doorare:open-borrow-request', {
+              detail: { id: targetIdentifier, requestNo: createdEntity?.requestNo },
+            }),
+          );
+        }
+      } else {
+        window.location.href = targetUrl;
+      }
+      return;
+    }
+
+    if (proposal.actionApi?.endpoint?.includes('/incidents')) {
+      const incId = createdEntity?.id || proposal.targetId;
+      const targetUrl = incId ? `?page=incident&id=${encodeURIComponent(incId)}` : '?page=incident';
+      if (onNavigateProposal) {
+        onNavigateProposal(targetUrl, incId);
+      } else {
+        window.location.href = targetUrl;
+      }
+      return;
+    }
+
+    if (proposal.actionApi?.endpoint?.includes('/pool')) {
+      window.location.href = '?page=pool';
+      return;
+    }
+    if (proposal.actionApi?.endpoint?.includes('/stock-alerts')) {
+      window.location.href = '?page=alerts';
+      return;
+    }
   };
 
   const s = proposal.summary || {};
@@ -174,6 +329,23 @@ const ProposalCard: React.FC<ProposalCardProps> = ({ proposal, initialStatus, on
             </div>
           )}
         </div>
+        {decided === 'approved' && (
+          <div className="doorare-decided-actions-row">
+            <button
+              type="button"
+              className="doorare-proposal-open-page-btn"
+              onClick={handleOpenProposal}
+              title="เปิดไปยังหน้ายืมยาและเปิดเอกสารคำขอนี้ทันที"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                <polyline points="15 3 21 3 21 9" />
+                <line x1="10" y1="14" x2="21" y2="3" />
+              </svg>
+              <span>เปิดดูคำขอยืมนี้ในหน้ารายการ {createdEntity?.requestNo ? `(${createdEntity.requestNo})` : ''}</span>
+            </button>
+          </div>
+        )}
       </div>
     );
   }
@@ -182,23 +354,23 @@ const ProposalCard: React.FC<ProposalCardProps> = ({ proposal, initialStatus, on
     <div className="doorare-chat-proposal-card formal">
       {/* Top Banner */}
       <div className="doorare-proposal-header-formal">
-        <div className="doorare-proposal-header-left">
-          <div className="doorare-proposal-icon-box">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-              <polyline points="14 2 14 8 20 8" />
-              <line x1="16" y1="13" x2="8" y2="13" />
-              <line x1="16" y1="17" x2="8" y2="17" />
-            </svg>
+        <div className="doorare-proposal-header-top-row">
+          <div className="doorare-proposal-meta-tag">
+            <div className="doorare-proposal-icon-box">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+                <line x1="16" y1="13" x2="8" y2="13" />
+                <line x1="16" y1="17" x2="8" y2="17" />
+              </svg>
+            </div>
+            <span className="doorare-proposal-meta-title">ใบเสนอคำขอยืมยาทางการแพทย์</span>
           </div>
-          <div>
-            <div className="doorare-proposal-meta-title">ใบเสนอคำขอยืมยาทางการแพทย์ (Clinical Order Proposal)</div>
-            <div className="doorare-proposal-main-title">{proposal.title}</div>
-          </div>
+          <span className="doorare-proposal-status-chip pending">
+            รออนุมัติ (Pending)
+          </span>
         </div>
-        <span className="doorare-proposal-status-chip pending">
-          รอการอนุมัติ (Pending Authorization)
-        </span>
+        <div className="doorare-proposal-main-title">{proposal.title}</div>
       </div>
 
       {/* Structured Clinical Specification Grid */}
@@ -384,25 +556,11 @@ export const DooRareChatDrawer: React.FC = () => {
   const [activeTool, setActiveTool] = useState<string | null>(null);
   const [proposals, setProposals] = useState<any[]>([]);
   const [copiedMsgId, setCopiedMsgId] = useState<string | null>(null);
+  const [editingMsgId, setEditingMsgId] = useState<string | null>(null);
+  const [editText, setEditText] = useState('');
   const [webSearchEnabled, setWebSearchEnabled] = useState(false);
   const [attachedFile, setAttachedFile] = useState<{ name: string; size: number; content: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-
-  const specialistContextTitle = React.useMemo(() => {
-    const search = window.location.search;
-    const pathname = window.location.pathname;
-    const p = new URLSearchParams(search).get('page') || pathname;
-    if (p.includes('incident') || p.includes('kit')) {
-      return 'ระบบสนับสนุนเวชภัณฑ์และแผนฉุกเฉินระดับเขต';
-    }
-    if (p.includes('pool') || p.includes('alloc') || p.includes('expiry')) {
-      return 'ระบบสนับสนุนการจัดสรรยาคลังกลางระดับเขต';
-    }
-    if (p.includes('req') || p.includes('lend') || p.includes('alerts')) {
-      return 'ระบบสนับสนุนการประสานยืม-คืนยาเครือข่าย';
-    }
-    return 'ระบบสนับสนุนการตัดสินใจทางคลินิกและโลจิสติกส์';
-  }, []);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -536,11 +694,75 @@ export const DooRareChatDrawer: React.FC = () => {
   };
 
   const handleCopyMessage = (msgId: string, text: string) => {
-    navigator.clipboard.writeText(text);
+    // Strip leading attachment text if present
+    const cleanText = text.replace(/^📎\s*\[[^\]]+\]\n?/, '').trim();
+    navigator.clipboard.writeText(cleanText || text);
     setCopiedMsgId(msgId);
     setTimeout(() => {
       setCopiedMsgId((cur) => (cur === msgId ? null : cur));
     }, 2000);
+  };
+
+  const handleStartEdit = (msgId: string, currentContent: string) => {
+    if (isStreaming) return;
+    setEditingMsgId(msgId);
+    const cleanText = currentContent.replace(/^📎\s*\[[^\]]+\]\n?/, '').trim();
+    setEditText(cleanText || currentContent);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingMsgId(null);
+    setEditText('');
+  };
+
+  const handleSaveEdit = (msgId: string, newText: string) => {
+    const trimmed = newText.trim();
+    if (!trimmed || isStreaming) return;
+    const msgIndex = displayMessages.findIndex((m) => m.id === msgId);
+    if (msgIndex === -1) return;
+
+    // Cascade delete: all messages under the edited prompt are deleted
+    const baseMessages = displayMessages.slice(0, msgIndex);
+    setEditingMsgId(null);
+    setEditText('');
+    handleSend(trimmed, baseMessages);
+  };
+
+  const handleDeleteMessageCascade = (msgId: string) => {
+    if (isStreaming) return;
+    const msgIndex = displayMessages.findIndex((m) => m.id === msgId);
+    if (msgIndex === -1) return;
+
+    // Cascade delete: delete this prompt and all messages under it
+    const updated = displayMessages.slice(0, msgIndex);
+    setDisplayMessages(updated);
+
+    if (activeSessionIdRef.current) {
+      const curSession = sessions.find((s) => s.id === activeSessionIdRef.current);
+      if (curSession) {
+        saveSession({ ...curSession, messages: updated, updatedAt: Date.now() }, userScope);
+      }
+    }
+  };
+
+  const handleRetry = (asstMsgId: string) => {
+    if (isStreaming) return;
+    const asstIndex = displayMessages.findIndex((m) => m.id === asstMsgId);
+    if (asstIndex === -1) return;
+
+    // Find the user message immediately preceding this assistant response
+    let userIndex = -1;
+    for (let i = asstIndex - 1; i >= 0; i--) {
+      if (displayMessages[i].role === 'user') {
+        userIndex = i;
+        break;
+      }
+    }
+    if (userIndex === -1) return;
+
+    const retryPrompt = displayMessages[userIndex].content;
+    const baseMessages = displayMessages.slice(0, userIndex);
+    handleSend(retryPrompt, baseMessages);
   };
 
   const handleStopGeneration = () => {
@@ -563,6 +785,24 @@ export const DooRareChatDrawer: React.FC = () => {
     }
   };
 
+  const handleNavigateProposal = (targetUrl: string, targetId?: string) => {
+    if (isFullScreen) {
+      setIsFullScreen(false);
+    }
+    setIsOpen(false);
+
+    if (window.location.search.includes('page=requests')) {
+      window.history.pushState(null, '', targetUrl);
+      if (targetId) {
+        window.dispatchEvent(
+          new CustomEvent('doorare:open-borrow-request', { detail: { id: targetId } }),
+        );
+      }
+    } else {
+      window.location.href = targetUrl;
+    }
+  };
+
   // Context Auto-Injector: Extracts current window location, title, and query active ID
   const getRouteContext = (): RouteContext => {
     const params = new URLSearchParams(window.location.search);
@@ -582,7 +822,7 @@ export const DooRareChatDrawer: React.FC = () => {
     };
   };
 
-  const handleSend = async (textToSend?: string) => {
+  const handleSend = async (textToSend?: string, customBaseMessages?: DisplayChatMessage[]) => {
     const rawPrompt = (textToSend || input).trim();
     if (!rawPrompt && !attachedFile) return;
     if (isStreaming) return;
@@ -612,7 +852,8 @@ export const DooRareChatDrawer: React.FC = () => {
       toolLogs: [],
     };
 
-    setDisplayMessages((prev) => [...prev, userMsg, assistantPlaceholder]);
+    const baseList = customBaseMessages ?? displayMessages;
+    setDisplayMessages([...baseList, userMsg, assistantPlaceholder]);
 
     setIsStreaming(true);
     setActiveTool(null);
@@ -623,7 +864,7 @@ export const DooRareChatDrawer: React.FC = () => {
 
     // API messages payload for the backend
     const apiMessages: ChatMessage[] = [
-      ...displayMessages
+      ...baseList
         .filter((m) => m.content.trim().length > 0)
         .map((m) => ({ role: m.role, content: m.content })),
       { role: 'user', content: fullPrompt },
@@ -741,8 +982,8 @@ export const DooRareChatDrawer: React.FC = () => {
                       ...m,
                       isThinking: false,
                       content: m.content
-                        ? `${m.content}\n\n⚠️ ขออภัย เกิดข้อผิดพลาด: ${errMsg}`
-                        : `⚠️ ขออภัย เกิดข้อผิดพลาด: ${errMsg}`,
+                        ? `${m.content}\n\n[เกิดข้อผิดพลาด]: ${errMsg}`
+                        : `[เกิดข้อผิดพลาด]: ${errMsg}`,
                     }
                   : m,
               ),
@@ -1088,9 +1329,6 @@ export const DooRareChatDrawer: React.FC = () => {
               </div>
               <div className="doorare-chat-title-text-wrap">
                 <div className="doorare-chat-title">DooRare Copilot</div>
-                <div className="doorare-chat-context-badge" title={specialistContextTitle}>
-                  {specialistContextTitle}
-                </div>
               </div>
             </div>
 
@@ -1115,7 +1353,7 @@ export const DooRareChatDrawer: React.FC = () => {
                 </button>
               )}
 
-              {/* Quit button stays the same visually (✕), but acts as minimize */}
+              {/* Quit button stays the same visually (✕), but acts as minimize in fullscreen */}
               <button
                 type="button"
                 className="doorare-chat-close-btn"
@@ -1192,22 +1430,143 @@ export const DooRareChatDrawer: React.FC = () => {
                       </div>
                     )}
 
-                    {msg.content ? (
-                      <div className={`doorare-chat-bubble ${msg.role}`}>
-                        <MarkdownContent content={msg.content} />
-                        {msg.role === 'assistant' && (
-                          <div className="doorare-bubble-actions">
+                    {msg.role === 'user' && editingMsgId === msg.id ? (
+                      <div className="doorare-chat-edit-wrapper">
+                        <textarea
+                          className="doorare-chat-edit-textarea"
+                          value={editText}
+                          onChange={(e) => setEditText(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                              e.preventDefault();
+                              handleSaveEdit(msg.id, editText);
+                            } else if (e.key === 'Escape') {
+                              handleCancelEdit();
+                            }
+                          }}
+                          autoFocus
+                          rows={Math.max(2, Math.min(8, editText.split('\n').length))}
+                        />
+                        <div className="doorare-chat-edit-actions">
+                          <button
+                            type="button"
+                            className="doorare-chat-edit-btn cancel"
+                            onClick={handleCancelEdit}
+                          >
+                            ยกเลิก
+                          </button>
+                          <button
+                            type="button"
+                            className="doorare-chat-edit-btn submit"
+                            onClick={() => handleSaveEdit(msg.id, editText)}
+                            disabled={!editText.trim() || isStreaming}
+                          >
+                            ส่งใหม่
+                          </button>
+                        </div>
+                      </div>
+                    ) : msg.content ? (
+                      <>
+                        <div className={`doorare-chat-bubble ${msg.role}`}>
+                          <MarkdownContent content={msg.content} />
+                        </div>
+
+                        {/* Action buttons on hover */}
+                        {msg.role === 'user' && (
+                          <div className="doorare-msg-action-bar user">
                             <button
                               type="button"
-                              className="doorare-bubble-copy-btn"
+                              className="doorare-msg-action-btn"
                               onClick={() => handleCopyMessage(msg.id, msg.content)}
-                              title="คัดลอกคำตอบ"
+                              title="คัดลอกข้อความ (Copy)"
                             >
-                              {copiedMsgId === msg.id ? '✓ คัดลอกแล้ว' : 'คัดลอก'}
+                              {copiedMsgId === msg.id ? (
+                                <>
+                                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                    <polyline points="20 6 9 17 4 12" />
+                                  </svg>
+                                  <span style={{ color: '#16a34a' }}>คัดลอกแล้ว</span>
+                                </>
+                              ) : (
+                                <>
+                                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                                  </svg>
+                                  <span>คัดลอก</span>
+                                </>
+                              )}
+                            </button>
+                            <button
+                              type="button"
+                              className="doorare-msg-action-btn"
+                              onClick={() => handleStartEdit(msg.id, msg.content)}
+                              title="แก้ไขข้อความ (Edit)"
+                              disabled={isStreaming}
+                            >
+                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M12 20h9" />
+                                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                              </svg>
+                              <span>แก้ไข</span>
+                            </button>
+                            <button
+                              type="button"
+                              className="doorare-msg-action-btn delete"
+                              onClick={() => handleDeleteMessageCascade(msg.id)}
+                              title="ลบข้อความนี้และข้อความด้านล่างทั้งหมด (Delete)"
+                              disabled={isStreaming}
+                            >
+                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <polyline points="3 6 5 6 21 6" />
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                              </svg>
+                              <span>ลบ</span>
                             </button>
                           </div>
                         )}
-                      </div>
+
+                        {msg.role === 'assistant' && (
+                          <div className="doorare-msg-action-bar assistant">
+                            <button
+                              type="button"
+                              className="doorare-msg-action-btn"
+                              onClick={() => handleRetry(msg.id)}
+                              title="ลองใหม่ / สร้างคำตอบใหม่ (Retry)"
+                              disabled={isStreaming}
+                            >
+                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <polyline points="1 4 1 10 7 10" />
+                                <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
+                              </svg>
+                              <span>ลองใหม่</span>
+                            </button>
+                            <button
+                              type="button"
+                              className="doorare-msg-action-btn"
+                              onClick={() => handleCopyMessage(msg.id, msg.content)}
+                              title="คัดลอกคำตอบ (Copy)"
+                            >
+                              {copiedMsgId === msg.id ? (
+                                <>
+                                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                    <polyline points="20 6 9 17 4 12" />
+                                  </svg>
+                                  <span style={{ color: '#16a34a' }}>คัดลอกแล้ว</span>
+                                </>
+                              ) : (
+                                <>
+                                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                                  </svg>
+                                  <span>คัดลอก</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        )}
+                      </>
                     ) : null}
 
                     {msg.role === 'assistant' && msg.questions && msg.questions.length > 0 && (
@@ -1231,13 +1590,38 @@ export const DooRareChatDrawer: React.FC = () => {
                       <ProposalCard
                         proposal={msg.proposal}
                         initialStatus={msg.proposalStatus}
-                        onActionComplete={(status) => {
-                          setDisplayMessages((prev) =>
-                            prev.map((m) =>
-                              m.id === msg.id ? { ...m, proposalStatus: status } : m,
-                            ),
-                          );
+                        targetId={msg.proposalTargetId}
+                        targetRequestNo={msg.proposalRequestNo}
+                        onActionComplete={(status, _text, data) => {
+                          setDisplayMessages((prev) => {
+                            const updated = prev.map((m) =>
+                              m.id === msg.id
+                                ? {
+                                    ...m,
+                                    proposalStatus: status,
+                                    proposalTargetId: data?.id || m.proposalTargetId,
+                                    proposalRequestNo: data?.requestNo || m.proposalRequestNo,
+                                    proposal: m.proposal
+                                      ? {
+                                          ...m.proposal,
+                                          status:
+                                            status === 'approved'
+                                              ? 'APPROVED'
+                                              : status === 'declined'
+                                                ? 'DECLINED'
+                                                : m.proposal.status,
+                                          targetId: data?.id || m.proposal.targetId,
+                                          requestNo: data?.requestNo || m.proposal.requestNo,
+                                        }
+                                      : m.proposal,
+                                  }
+                                : m,
+                            );
+                            persistCurrentSession(updated, proposals);
+                            return updated;
+                          });
                         }}
+                        onNavigateProposal={handleNavigateProposal}
                       />
                     )}
 

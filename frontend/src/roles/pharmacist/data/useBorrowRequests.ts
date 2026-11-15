@@ -16,10 +16,13 @@ export function useBorrowRequests() {
         listReturnObligations({ direction: 'owe' }).then((o) => o.items).catch(() => []),
       ]);
       onLoadSuccess('borrow-requests');
-      setState({ source: 'live', requests: res.items.map((r) => borrowRequestToView(r, Date.now(), returnStateOf(r.requestNo, owed))), error: null });
+      const reqs = res.items.map((r) => borrowRequestToView(r, Date.now(), returnStateOf(r.requestNo, owed)));
+      setState({ source: 'live', requests: reqs, error: null });
+      return reqs;
     } catch (error) {
       const f = onLoadFailure('borrow-requests', error, BORROW_REQUESTS, []);
       setState({ source: f.source, requests: f.data, error: f.error });
+      return f.data;
     }
   }, []);
   useEffect(() => {

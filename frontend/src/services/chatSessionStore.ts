@@ -15,6 +15,8 @@ export interface DisplayChatMessage {
   /** Attached HITL proposal; rendered inline in the message turn so it is not pushed to the bottom. */
   proposal?: any;
   proposalStatus?: 'pending' | 'approved' | 'declined' | 'failed';
+  proposalTargetId?: string;
+  proposalRequestNo?: string;
 }
 
 export interface ChatSession {

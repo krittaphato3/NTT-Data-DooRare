@@ -167,7 +167,7 @@ export class BorrowService {
     const item = items[0] && typeof items[0] === 'object' ? (items[0] as Record<string, unknown>) : {};
     const reason = typeof body.reason === 'string' ? body.reason.trim() : '';
 
-    return withTransaction(async (client) => {
+    const created = await withTransaction(async (client) => {
       let alert: { id: string; drug_master_id: string; status: string } | null = null;
       let drugMasterId = isUuid(item.drugMasterId) ? item.drugMasterId : null;
       if (body.stockAlertId !== undefined) {
@@ -246,6 +246,16 @@ export class BorrowService {
       const view = await requestView(client, await loadDetail(client, id), user);
       return { ok: true, id, version: view.version, data: { ...view, need } };
     });
+
+    if ((body as any).autoPropose !== false) {
+      try {
+        const proposed = await this.propose(req, created.id);
+        return { ok: true, id: created.id, version: proposed.version, data: proposed.data };
+      } catch {
+        return created;
+      }
+    }
+    return created;
   }
 
   async list(user: AuthSessionUser, raw: Record<string, unknown>) {
