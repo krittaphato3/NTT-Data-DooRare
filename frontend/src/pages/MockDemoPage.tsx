@@ -1,18 +1,37 @@
 import React, { useState, useEffect, useRef } from 'react';
-import {
-  getDemoStats,
-  runFullDemoSeed,
-  runF2NearExpirySeed,
-  runRoleScenarios,
-  toggleNetworkSplit,
-  cleanDemoRecords,
-  type DbStats,
-} from '../services/mockDemoApi';
+import { getDemoStats, getDemoPlan, runFill, type DbStats, type DemoPlan, type DemoOperationResponse } from '../services/mockDemoApi';
+
+const SEV_LABEL = { VERY_URGENT: 'ด่วนมาก', URGENT: 'ด่วน', NORMAL: 'ปกติ' } as const;
+
+const F2_HOW: Record<string, string> = { A: 'อนุมัติอัตโนมัติ', X: 'รอเห็นชอบ', U: 'ต้องเลือกวิธีขนส่งก่อน' };
+
+/** The readable "what was added" block for the log panel (one short line per item). */
+function summaryLines(added: NonNullable<DemoOperationResponse['added']>): string[] {
+  const out: string[] = ['', '== สรุปสิ่งที่เพิ่มเข้ามา =='];
+  if (added.f2.length === 0 && added.f1.length === 0) {
+    out.push('ไม่มีอะไรเพิ่ม (ครบเท่าที่หายาเข้าเงื่อนไขได้แล้ว)');
+  }
+  if (added.f2.length > 0) {
+    out.push(`F2 ล็อตใกล้หมดอายุ +${added.f2.length}`);
+    for (const x of added.f2) out.push(`  • ${x.owner} → ${x.receivers.join(', ')}: ${x.name} ${x.qty.toLocaleString()} หน่วย (อีก ${x.days} วัน) ${F2_HOW[x.kind] ?? ''}`.trimEnd());
+  }
+  if (added.f1.length > 0) {
+    out.push(`F1 แจ้งเตือนที่ยืมได้ +${added.f1.length}`);
+    for (const code of [...new Set(added.f1.map((x) => x.code))]) {
+      out.push(`  • ${code}: ${added.f1.filter((x) => x.code === code).map((x) => `${SEV_LABEL[x.sev as keyof typeof SEV_LABEL] ?? x.sev} ${x.name}`).join(' · ')}`);
+    }
+  }
+  if (added.snoozed > 0) out.push(`พัก alert F1 ของยาที่ใช้เป็นล็อต F2: ${added.snoozed} (7 วัน)`);
+  return out;
+}
 
 export const MockDemoPage: React.FC = () => {
   const [stats, setStats] = useState<DbStats | null>(null);
-  const [loadingStats, setLoadingStats] = useState(false);
+  const [loadingStats, setLoadingStats] = useState(true);
   const [executingAction, setExecutingAction] = useState<string | null>(null);
+  const [plan, setPlan] = useState<DemoPlan | null>(null);
+  const [relaxed, setRelaxed] = useState(true);
+  const [verbose, setVerbose] = useState(false); // full technical log of a fill (default: only the readable summary)
   const [logs, setLogs] = useState<string[]>([]);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const terminalScrollContainerRef = useRef<HTMLDivElement | null>(null);
@@ -38,7 +57,7 @@ export const MockDemoPage: React.FC = () => {
     const now = new Date().toISOString().substring(11, 19);
     setLogs([
       `[${now}] INFO: Mock Demo Generator console initialized.`,
-      `[${now}] INFO: Ready to generate test data, manage regional pool lots, and simulate role scenarios.`,
+      `[${now}] INFO: Press 'ดูก่อน' to see what is missing, then a fill button: it only adds what is missing against the targets.`,
     ]);
   }, []);
 
@@ -58,8 +77,11 @@ export const MockDemoPage: React.FC = () => {
 
     try {
       const res = await actionFn();
-      if (res.logs && Array.isArray(res.logs)) {
+      if (res.logs && Array.isArray(res.logs) && (verbose || !res.added || res.success === false)) {
         setLogs((prev) => [...prev, ...res.logs]);
+      }
+      if (res.added && res.success !== false) {
+        setLogs((prev) => [...prev, ...summaryLines(res.added!)]);
       }
       if (res.stats) {
         setStats(res.stats);
@@ -67,12 +89,46 @@ export const MockDemoPage: React.FC = () => {
         await loadStats();
       }
       const doneTs = new Date().toISOString().substring(11, 19);
-      setLogs((prev) => [...prev, `[${doneTs}] FINISH: ${res.message || successLabel} สำเร็จ`]);
+      if (res.success === false) {
+        setErrorMsg(res.message || 'ไม่สำเร็จ');
+        setLogs((prev) => [...prev, `[${doneTs}] ERROR: ${res.message || successLabel}`]);
+      } else {
+        setLogs((prev) => [...prev, `[${doneTs}] FINISH: ${res.message || successLabel}`]);
+      }
+      // after a fill the plan table shows the new state (what is there now and what a next press could still add)
+      if (actionKey.startsWith('fill-')) {
+        try {
+          const p = await getDemoPlan(relaxed);
+          setPlan(p);
+          setLogs((prev) => [...prev, `[${new Date().toISOString().substring(11, 19)}] INFO: plan refreshed after the fill: a next press can add ${p.canAddTotal} more`]);
+        } catch (e: any) {
+          setLogs((prev) => [...prev, `[${new Date().toISOString().substring(11, 19)}] WARN: plan not refreshed (${e.message ?? 'error'})`]);
+        }
+      }
     } catch (err: any) {
       const errTs = new Date().toISOString().substring(11, 19);
       const errMsg = err.message || 'เกิดข้อผิดพลาดในการดำเนินการ';
       setErrorMsg(errMsg);
       setLogs((prev) => [...prev, `[${errTs}] ERROR: ${errMsg}`]);
+    } finally {
+      setExecutingAction(null);
+    }
+  };
+
+  const handlePlan = async () => {
+    if (executingAction) return;
+    setExecutingAction('plan');
+    setErrorMsg(null);
+    try {
+      const p = await getDemoPlan(relaxed);
+      setPlan(p);
+      const ts = new Date().toISOString().substring(11, 19);
+      const f1 = p.f1.reduce((n, r) => n + r.canAdd, 0);
+      const f2 = p.f2.reduce((n, r) => n + r.canAdd, 0);
+      const miss = p.f1.reduce((n, r) => n + r.missing, 0) + p.f2.reduce((n, r) => n + r.missing, 0);
+      setLogs((prev) => [...prev, `[${ts}] INFO: plan: a fill can add F1 ${f1} alert(s) and F2 ${f2} lot(s); below target in total ${miss}${p.forecastLoaded ? '' : ' (forecast not loaded yet: the fill loads it first)'}`]);
+    } catch (err: any) {
+      setErrorMsg(err.message || 'อ่านแผนไม่สำเร็จ');
     } finally {
       setExecutingAction(null);
     }
@@ -134,6 +190,13 @@ export const MockDemoPage: React.FC = () => {
             <span>รีเฟรชสถิติ</span>
           </button>
 
+          <a
+            href="/mock-stock"
+            style={{ padding: '9px 18px', background: '#ffffff', color: '#0369a1', border: '1px solid #0284c7', borderRadius: '8px', fontSize: '13px', fontWeight: 600, textDecoration: 'none' }}
+          >
+            ปรับสต็อกยา (เลือกยา/รพ.)
+          </a>
+
           <button
             type="button"
             onClick={navigateBack}
@@ -167,13 +230,18 @@ export const MockDemoPage: React.FC = () => {
           <h2 style={{ fontSize: '15px', fontWeight: 700, margin: 0, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
             สถานะฐานข้อมูลปัจจุบัน (Live DB Status)
           </h2>
-          {stats?.isNetworkSplit ? (
-            <span style={{ fontSize: '12px', background: '#fef3c7', color: '#92400e', padding: '3px 8px', borderRadius: '6px', fontWeight: 600 }}>
-              สถานะ: แยกเครือข่าย B (HD, HE อยู่ใน Network B)
-            </span>
-          ) : (
-            <span style={{ fontSize: '12px', background: '#dcfce7', color: '#166534', padding: '3px 8px', borderRadius: '6px', fontWeight: 600 }}>
-              สถานะ: เครือข่ายเดียวปกติ (Network A ทั้งหมด)
+          {stats?.database && (
+            <span
+              style={{
+                fontSize: '12px',
+                background: stats.database.local ? '#dcfce7' : '#fee2e2',
+                color: stats.database.local ? '#166534' : '#991b1b',
+                padding: '3px 8px',
+                borderRadius: '6px',
+                fontWeight: 700,
+              }}
+            >
+              ฐาน: {stats.database.host}/{stats.database.name} ({stats.database.local ? 'LOCAL' : 'REMOTE'})
             </span>
           )}
         </div>
@@ -212,212 +280,122 @@ export const MockDemoPage: React.FC = () => {
       <div style={{ display: 'grid', gridTemplateColumns: '1.15fr 0.85fr', gap: '24px', alignItems: 'start' }}>
         {/* Left Column: Action Cards */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {/* Card 1: Complete Demo Seed */}
+          {/* Emergency mode switch (applies to the plan and the fill buttons) */}
+          <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', background: relaxed ? '#fef3c7' : '#ffffff', border: `1px solid ${relaxed ? '#f59e0b' : '#cbd5e1'}`, borderRadius: '12px', padding: '14px 18px', cursor: 'pointer' }}>
+            <input type="checkbox" checked={relaxed} onChange={(e) => { setRelaxed(e.target.checked); setPlan(null); }} style={{ marginTop: '3px' }} />
+            <span style={{ fontSize: '13px', color: '#334155', lineHeight: 1.5 }}>
+              <b>ผ่อนเงื่อนไขเลือกยา (ค่าเริ่มต้น: เปิด)</b>
+              <br />
+              เปิดไว้เพราะโหมดเข้มมียาให้เติมน้อยมาก ปิดเพื่อกลับไปใช้เงื่อนไขเต็มเท่า db:demo-seed: F1 ยอมให้มีผู้ให้ยืมแค่ 1 แห่ง, F2 ยอมให้ผู้รับใช้ยาน้อยลงและมูลค่าต่ำลง (แผนอาจต้องรอกดอนุมัติแทนอนุมัติอัตโนมัติ) alert ที่ไม่มีใครให้ยืมได้จริงยังถูกพักไว้เหมือนเดิม ข้อควรรู้: การเติม F2 จะพัก alert F1 ของยาที่ถูกใช้เป็นล็อต F2 (7 วัน) ถ้าต้องการเพิ่ม alert F1 ให้กดเติม F1 เท่านั้น
+            </span>
+          </label>
+
+          {/* Card 1: what is missing (read only) */}
           <div style={{ background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '12px', padding: '20px', boxShadow: '0 2px 5px rgba(0,0,0,0.04)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-              <div>
-                <span style={{ fontSize: '11px', fontWeight: 700, color: '#0284c7', background: '#e0f2fe', padding: '2px 8px', borderRadius: '4px' }}>
-                  ONE-CLICK SEED
-                </span>
-                <h3 style={{ fontSize: '16px', fontWeight: 700, margin: '6px 0 4px 0', color: '#0f172a' }}>
-                  สร้างชุดข้อมูลจำลองสมบูรณ์ (F1 Borrow + F2 Expiry)
-                </h3>
-              </div>
-            </div>
-            <p style={{ fontSize: '13px', color: '#475569', lineHeight: 1.5, margin: '0 0 16px 0' }}>
-              รันการเตรียมข้อมูลครบถ้วน: เพิ่ม Lot ยาใกล้หมดอายุ (F2) ทั้ง 3 รูปแบบ (ในเครือข่าย A, ข้ามเครือข่าย X, และต้นทุนขนส่งสูง U), ตรวจจับเข้าสู่ระบบใกล้หมดอายุ, และปรับแต่งสต็อกเพื่อสร้างการแจ้งเตือนขอยืมยา (F1) ให้กับทั้ง 5 โรงพยาบาล
+            <span style={{ fontSize: '11px', fontWeight: 700, color: '#475569', background: '#e2e8f0', padding: '2px 8px', borderRadius: '4px' }}>READ ONLY</span>
+            <h3 style={{ fontSize: '16px', fontWeight: 700, margin: '6px 0 4px 0', color: '#0f172a' }}>ดูก่อนว่าจะเติมอะไร</h3>
+            <p style={{ fontSize: '13px', color: '#475569', lineHeight: 1.5, margin: '0 0 14px 0' }}>
+              นับตามที่ "เติมทั้งหมด" จะทำ คือ F2 ก่อนแล้วค่อย F1 (มี/เป้า, พัก N = alert F1 ที่ถูกพักเพราะยาถูกใช้เป็นล็อต F2) แล้วจำลองการเลือกยาแบบเดียวกับตอนเติมจริง ไม่เขียนอะไรลงฐาน (+N = เติมได้จริง, "ไม่มียา" = ต่ำกว่าเป้าแต่ไม่มียาเข้าเงื่อนไข)
             </p>
             <button
               type="button"
               disabled={executingAction !== null}
-              onClick={() => handleAction('seed-full', runFullDemoSeed, 'สร้างชุดข้อมูลจำลองสมบูรณ์ (F1 + F2)')}
-              style={{
-                width: '100%',
-                padding: '11px 16px',
-                background: executingAction === 'seed-full' ? '#94a3b8' : '#0284c7',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '8px',
-                fontSize: '13.5px',
-                fontWeight: 600,
-                cursor: executingAction !== null ? 'not-allowed' : 'pointer',
-                boxShadow: '0 2px 4px rgba(2,132,199,0.2)',
-                transition: 'background 0.15s ease',
-              }}
+              onClick={handlePlan}
+              style={{ width: '100%', padding: '10px 16px', background: '#ffffff', color: '#0f172a', border: '1px solid #94a3b8', borderRadius: '8px', fontSize: '13.5px', fontWeight: 600, cursor: executingAction !== null ? 'not-allowed' : 'pointer' }}
             >
-              {executingAction === 'seed-full' ? 'กำลังดำเนินการ...' : 'เริ่มสร้างชุดข้อมูล F1 + F2 (Full Seed)'}
+              {executingAction === 'plan' ? 'กำลังอ่าน...' : 'ดูก่อน (Plan)'}
             </button>
+
+            {plan && (
+              <div style={{ marginTop: '16px', fontSize: '12.5px', color: '#334155' }}>
+                <div style={{ fontWeight: 700, marginBottom: '6px' }}>F1 แจ้งเตือนที่ยืมได้ (มี/เป้า) <span style={{ fontWeight: 400, color: "#64748b", fontSize: "12px" }}>ประมาณการ: ผลจริงดูจาก execution.log หลังกดเติม</span></div>
+                <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '14px' }}>
+                  <thead>
+                    <tr style={{ background: '#f1f5f9', textAlign: 'left' }}>
+                      <th style={{ padding: '5px 8px' }}>รพ.</th>
+                      {(['VERY_URGENT', 'URGENT', 'NORMAL'] as const).map((k) => (
+                        <th key={k} style={{ padding: '5px 8px' }}>{SEV_LABEL[k]}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {['HA', 'HB', 'HC', 'HD', 'HE'].map((h) => (
+                      <tr key={h} style={{ borderTop: '1px solid #e2e8f0' }}>
+                        <td style={{ padding: '5px 8px', fontWeight: 600 }}>{h}</td>
+                        {(['VERY_URGENT', 'URGENT', 'NORMAL'] as const).map((k) => {
+                          const r = plan.f1.find((x) => x.hospital === h && x.severity === k);
+                          return (
+                            <td key={k} style={{ padding: '5px 8px', color: !r || r.missing === 0 ? '#166534' : r.canAdd > 0 ? '#b45309' : '#94a3b8' }}>
+                              {r ? `${r.have - r.hidden}/${r.want}` : '-'}
+                              {r && r.hidden > 0 ? ` (พัก ${r.hidden})` : ''}
+                              {r && r.canAdd > 0 ? ` (+${r.canAdd})` : ''}
+                              {r && r.missing > 0 && r.canAdd < r.missing ? ' ·ไม่มียา' : ''}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <div style={{ fontWeight: 700, marginBottom: '6px' }}>F2 ล็อตใกล้หมดอายุที่รออยู่ (มี/เป้า)</div>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <tbody>
+                    {plan.f2.map((r, i) => (
+                      <tr key={i} style={{ borderTop: '1px solid #e2e8f0' }}>
+                        <td style={{ padding: '5px 8px', fontWeight: 600, width: '60px' }}>{r.owner} ({r.kind})</td>
+                        <td style={{ padding: '5px 8px', color: r.missing === 0 ? '#166534' : r.canAdd > 0 ? '#b45309' : '#94a3b8', width: '130px' }}>
+                          {r.have}/{r.want}
+                          {r.canAdd > 0 ? ` (+${r.canAdd})` : ''}
+                          {r.missing > 0 && r.canAdd < r.missing ? ' ·ไม่มียา' : ''}
+                        </td>
+                        <td style={{ padding: '5px 8px', color: '#64748b' }}>{r.note}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <div style={{ marginTop: '10px', fontWeight: 600, color: plan.nothingToAdd ? '#64748b' : '#b45309' }}>
+                  {plan.nothingToAdd
+                    ? 'ตอนนี้เติมอะไรไม่ได้ (ครบเป้าแล้ว หรือไม่มียาที่เข้าเงื่อนไขเหลือ ช่องสีเทา "ไม่มียา")'
+                    : `กดเติมแล้วจะได้เพิ่ม ${plan.canAddTotal} รายการ (ช่อง +N)`}
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Card 2: Seed F2 Near-Expiry Pools Only */}
+          {/* Card 2: fill buttons */}
           <div style={{ background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '12px', padding: '20px', boxShadow: '0 2px 5px rgba(0,0,0,0.04)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-              <div>
-                <span style={{ fontSize: '11px', fontWeight: 700, color: '#d97706', background: '#fef3c7', padding: '2px 8px', borderRadius: '4px' }}>
-                  F2 REGIONAL POOL
-                </span>
-                <h3 style={{ fontSize: '16px', fontWeight: 700, margin: '6px 0 4px 0', color: '#0f172a' }}>
-                  สร้างเฉพาะยาใกล้หมดอายุ (F2 Near-Expiry Only)
-                </h3>
-              </div>
-            </div>
-            <p style={{ fontSize: '13px', color: '#475569', lineHeight: 1.5, margin: '0 0 16px 0' }}>
-              เพิ่มเฉพาะสต็อกยาใกล้หมดอายุ (35, 45, 60, 75 วัน) ให้กับ HA, HB, HC และทำการสแกนตรวจจับ เพื่อให้เภสัชกรเห็นรายการยารอส่งเข้าคลังกลาง (Regional Pool) หรือจัดสรรได้ทันที
+            <span style={{ fontSize: '11px', fontWeight: 700, color: '#0284c7', background: '#e0f2fe', padding: '2px 8px', borderRadius: '4px' }}>FILL (ADD ONLY)</span>
+            <h3 style={{ fontSize: '16px', fontWeight: 700, margin: '6px 0 4px 0', color: '#0f172a' }}>เติมข้อมูลเดโมให้ครบเป้า</h3>
+            <p style={{ fontSize: '13px', color: '#475569', lineHeight: 1.5, margin: '0 0 14px 0' }}>
+              เติมเฉพาะที่ขาด ไม่ลบอะไร กดซ้ำได้ ไม่ทบ ใช้ชุดตรรกะเดียวกับ <code>npm run db:demo-seed</code> (เลือกเฉพาะยาที่มีผู้ให้ยืมจริง) ใช้หลัง <code>db:reset</code> หรือหลังเดโมไปหลายรอบแล้วอยากเติมกลับ
+              ย้อนสต็อกที่ถูกยืมไปแล้วไม่ได้ ถ้ายาที่เข้าเงื่อนไขหมด ต้อง reset หรือ restore dump ใหม่
             </p>
-            <button
-              type="button"
-              disabled={executingAction !== null}
-              onClick={() => handleAction('seed-f2', runF2NearExpirySeed, 'สร้างเฉพาะยาใกล้หมดอายุ F2')}
-              style={{
-                width: '100%',
-                padding: '11px 16px',
-                background: executingAction === 'seed-f2' ? '#94a3b8' : '#d97706',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '8px',
-                fontSize: '13.5px',
-                fontWeight: 600,
-                cursor: executingAction !== null ? 'not-allowed' : 'pointer',
-                boxShadow: '0 2px 4px rgba(217,119,6,0.2)',
-                transition: 'background 0.15s ease',
-              }}
-            >
-              {executingAction === 'seed-f2' ? 'กำลังดำเนินการ...' : 'สร้างเฉพาะยาใกล้หมดอายุ (F2 Only)'}
-            </button>
-          </div>
-
-          {/* Card 3: Role Scenarios (4 Roles) */}
-          <div style={{ background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '12px', padding: '20px', boxShadow: '0 2px 5px rgba(0,0,0,0.04)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-              <div>
-                <span style={{ fontSize: '11px', fontWeight: 700, color: '#7c3aed', background: '#f3e8ff', padding: '2px 8px', borderRadius: '4px' }}>
-                  ROLE SCENARIOS
-                </span>
-                <h3 style={{ fontSize: '16px', fontWeight: 700, margin: '6px 0 4px 0', color: '#0f172a' }}>
-                  จำลองงานค้าง 4 บทบาท (Role Scenarios)
-                </h3>
-              </div>
-            </div>
-            <p style={{ fontSize: '13px', color: '#475569', lineHeight: 1.5, margin: '0 0 16px 0' }}>
-              สร้างคำขอยืมฉุกเฉินสำหรับห้องฉุกเฉิน (ER), งานค้างรอตอบรับสำหรับเภสัชกร, งานหยิบยา/แพ็คสำหรับเจ้าหน้าที่คลังสินค้า (Warehouse), และงานจัดส่งที่กำลังเดินทางสำหรับพนักงานขับรถ (Driver)
-            </p>
-            <button
-              type="button"
-              disabled={executingAction !== null}
-              onClick={() => handleAction('seed-scenarios', runRoleScenarios, 'สร้างงานจำลอง 4 บทบาท')}
-              style={{
-                width: '100%',
-                padding: '11px 16px',
-                background: executingAction === 'seed-scenarios' ? '#94a3b8' : '#7c3aed',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '8px',
-                fontSize: '13.5px',
-                fontWeight: 600,
-                cursor: executingAction !== null ? 'not-allowed' : 'pointer',
-                boxShadow: '0 2px 4px rgba(124,58,237,0.2)',
-                transition: 'background 0.15s ease',
-              }}
-            >
-              {executingAction === 'seed-scenarios' ? 'กำลังดำเนินการ...' : 'สร้างสถานการณ์งานค้าง 4 บทบาท'}
-            </button>
-          </div>
-
-          {/* Card 4: Network Partitioning */}
-          <div style={{ background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '12px', padding: '20px', boxShadow: '0 2px 5px rgba(0,0,0,0.04)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-              <div>
-                <span style={{ fontSize: '11px', fontWeight: 700, color: '#0f766e', background: '#ccfbf1', padding: '2px 8px', borderRadius: '4px' }}>
-                  NETWORK PARTITIONING
-                </span>
-                <h3 style={{ fontSize: '16px', fontWeight: 700, margin: '6px 0 4px 0', color: '#0f172a' }}>
-                  การแบ่ง / รวมเครือข่ายโรงพยาบาล (Network Splitting)
-                </h3>
-              </div>
-            </div>
-            <p style={{ fontSize: '13px', color: '#475569', lineHeight: 1.5, margin: '0 0 16px 0' }}>
-              ย้าย รพ.บางบ่อ (HD) และ รพ.บางเสาธง (HE) ไปยัง 'เครือข่ายตัวอย่าง B' เพื่อทดสอบสถานการณ์แผนจัดสรรข้ามเครือข่ายที่ต้องรอการกดเห็นชอบ (Manual Approval) แทนการอนุมัติอัตโนมัติ
-            </p>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+            {([
+              { key: 'all' as const, label: 'เติมทั้งหมด (F2 + F1)', color: '#0284c7' },
+              { key: 'f1' as const, label: 'เติมแจ้งเตือนสต็อก (F1) เท่านั้น', color: '#475569' },
+              { key: 'f2' as const, label: 'เติมยาใกล้หมดอายุ (F2) เท่านั้น', color: '#475569' },
+            ]).map((b) => (
               <button
+                key={b.key}
                 type="button"
                 disabled={executingAction !== null}
-                onClick={() => handleAction('network-split', () => toggleNetworkSplit(true), 'แยกเครือข่าย B')}
+                onClick={() => handleAction(`fill-${b.key}`, () => runFill(b.key, relaxed), b.label)}
                 style={{
-                  padding: '10px 14px',
-                  background: stats?.isNetworkSplit ? '#f1f5f9' : '#0f766e',
-                  color: stats?.isNetworkSplit ? '#94a3b8' : '#ffffff',
-                  border: '1px solid #cbd5e1',
+                  width: '100%',
+                  marginBottom: '8px',
+                  padding: '11px 16px',
+                  background: executingAction === `fill-${b.key}` ? '#94a3b8' : b.color,
+                  color: '#ffffff',
+                  border: 'none',
                   borderRadius: '8px',
-                  fontSize: '13px',
+                  fontSize: '13.5px',
                   fontWeight: 600,
-                  cursor: executingAction !== null || stats?.isNetworkSplit ? 'not-allowed' : 'pointer',
-                  transition: 'background 0.15s ease',
+                  cursor: executingAction !== null ? 'not-allowed' : 'pointer',
                 }}
               >
-                {executingAction === 'network-split' ? 'กำลังดำเนินการ...' : 'แยกเป็นเครือข่าย B (Split)'}
+                {executingAction === `fill-${b.key}` ? 'กำลังดำเนินการ...' : b.label}
               </button>
-
-              <button
-                type="button"
-                disabled={executingAction !== null}
-                onClick={() => handleAction('network-unify', () => toggleNetworkSplit(false), 'รวมเครือข่าย A')}
-                style={{
-                  padding: '10px 14px',
-                  background: !stats?.isNetworkSplit ? '#f1f5f9' : '#475569',
-                  color: !stats?.isNetworkSplit ? '#94a3b8' : '#ffffff',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '8px',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  cursor: executingAction !== null || !stats?.isNetworkSplit ? 'not-allowed' : 'pointer',
-                  transition: 'background 0.15s ease',
-                }}
-              >
-                {executingAction === 'network-unify' ? 'กำลังดำเนินการ...' : 'รวมเป็นเครือข่ายเดียว (Unify)'}
-              </button>
-            </div>
-          </div>
-
-          {/* Card 5: Clean Demo Data */}
-          <div style={{ background: '#ffffff', border: '1px solid #fecaca', borderRadius: '12px', padding: '20px', boxShadow: '0 2px 5px rgba(0,0,0,0.04)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-              <div>
-                <span style={{ fontSize: '11px', fontWeight: 700, color: '#dc2626', background: '#fee2e2', padding: '2px 8px', borderRadius: '4px' }}>
-                  CLEANUP & RESET
-                </span>
-                <h3 style={{ fontSize: '16px', fontWeight: 700, margin: '6px 0 4px 0', color: '#991b1b' }}>
-                  ล้างข้อมูลจำลองทั้งหมด (Purge Demo Data)
-                </h3>
-              </div>
-            </div>
-            <p style={{ fontSize: '13px', color: '#7f1d1d', lineHeight: 1.5, margin: '0 0 16px 0' }}>
-              ลบเฉพาะข้อมูลจำลอง (Lot ยาที่ขึ้นต้นด้วย DEMO-*, คำขอจำลอง, แผนจัดสรร และภารกิจขนส่งที่เกี่ยวข้อง) โดยไม่กระทบข้อมูลหลัก (Master Data) ของโรงพยาบาลและยา
-            </p>
-            <button
-              type="button"
-              disabled={executingAction !== null}
-              onClick={() => {
-                if (window.confirm('คุณต้องการลบข้อมูลจำลอง DEMO ทั้งหมดใช่หรือไม่?')) {
-                  handleAction('clean-demo', cleanDemoRecords, 'ล้างข้อมูลจำลองทั้งหมด');
-                }
-              }}
-              style={{
-                width: '100%',
-                padding: '11px 16px',
-                background: executingAction === 'clean-demo' ? '#94a3b8' : '#dc2626',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '8px',
-                fontSize: '13.5px',
-                fontWeight: 600,
-                cursor: executingAction !== null ? 'not-allowed' : 'pointer',
-                boxShadow: '0 2px 4px rgba(220,38,38,0.2)',
-                transition: 'background 0.15s ease',
-              }}
-            >
-              {executingAction === 'clean-demo' ? 'กำลังล้างข้อมูล...' : 'ล้างข้อมูลจำลอง (Purge Demo Data)'}
-            </button>
+            ))}
           </div>
         </div>
 
@@ -434,7 +412,11 @@ export const MockDemoPage: React.FC = () => {
               </span>
             </div>
 
-            <div style={{ display: 'flex', gap: '8px' }}>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <label style={{ fontSize: '11px', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                <input type="checkbox" checked={verbose} onChange={(e) => setVerbose(e.target.checked)} />
+                log เต็ม
+              </label>
               <button
                 type="button"
                 onClick={handleCopyLogs}

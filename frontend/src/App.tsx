@@ -50,9 +50,10 @@ import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { LoginPage } from './pages/LoginPage';
 import { DooRareChatDrawer } from './components/ai/DooRareChatDrawer';
 import { MockDemoPage } from './pages/MockDemoPage';
+import { MockStockPage } from './pages/MockStockPage';
 
 
-type Page = 'dashboard' | 'inbox' | 'kit' | 'stock' | 'drugs' | 'transport' | 'requests' | 'lend' | 'incident' | 'alerts' | 'report' | 'expiry' | 'pool' | 'docs' | 'users' | 'audit' | 'config' | 'sync' | 'admin' | 'mock-demo';
+type Page = 'dashboard' | 'inbox' | 'kit' | 'stock' | 'drugs' | 'transport' | 'requests' | 'lend' | 'incident' | 'alerts' | 'report' | 'expiry' | 'pool' | 'docs' | 'users' | 'audit' | 'config' | 'sync' | 'admin' | 'mock-demo' | 'mock-stock';
 
 /** System Admin user profile (Health Region 6). */
 const SYSTEM_ADMIN_USER = {
@@ -130,8 +131,10 @@ function initialRoute(): { page: Page; transportRole: TransportRole; warehouse: 
     const isSystemAdmin = r === 'admin';
     const p = q.get('page');
     const isMockDemo = window.location.pathname.startsWith('/mock-demo') || p === 'mock-demo';
-    let page: Page = isMockDemo ? 'mock-demo' : isDriver ? 'transport' : isSystemAdmin ? 'admin' : 'dashboard';
-    if (isMockDemo) page = 'mock-demo';
+    const isMockStock = window.location.pathname.startsWith('/mock-stock') || p === 'mock-stock';
+    let page: Page = isMockStock ? 'mock-stock' : isMockDemo ? 'mock-demo' : isDriver ? 'transport' : isSystemAdmin ? 'admin' : 'dashboard';
+    if (isMockStock) page = 'mock-stock';
+    else if (isMockDemo) page = 'mock-demo';
     else if (p === 'admin' || p === 'adm') page = 'admin';
     else if (p === 'transport') page = 'transport';
     else if (p === 'sync') page = 'sync';
@@ -497,10 +500,18 @@ function AuthenticatedShell() {
     .filter(Boolean)
     .join(' ');
 
-  if (route.page === 'mock-demo') {
+  if (route.page === 'mock-demo' || route.page === 'mock-stock') {
+    // the demo tools write to the database: system administrators only (the backend checks the same on every call)
+    if (!user?.allRoles.includes('SYSTEM_ADMIN')) {
+      return (
+        <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Noto Sans Thai', sans-serif", color: '#334155' }}>
+          หน้านี้สำหรับผู้ดูแลระบบ (SYSTEM_ADMIN) เท่านั้น กรุณาเข้าสู่ระบบด้วยบัญชีผู้ดูแลระบบ
+        </div>
+      );
+    }
     return (
       <div className="mock-demo-shell">
-        <MockDemoPage />
+        {route.page === 'mock-stock' ? <MockStockPage /> : <MockDemoPage />}
         <DooRareChatDrawer />
       </div>
     );

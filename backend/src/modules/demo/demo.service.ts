@@ -2,6 +2,7 @@ import { pool, query } from '../../db/client.js';
 import { runExpiryJobs } from '../expiry/expiry.routes.js';
 import { loadForecastRuns, reevaluateAlerts } from '../forecasts/forecasts.runs.js';
 import { systemAuditContext } from '../../core/audit.js';
+import type { DemoAdded } from './demo.engine.js';
 
 export interface DbStats {
   hospitals: number;
@@ -14,6 +15,8 @@ export interface DbStats {
   nearExpiryPool: number;
   allocationPlans: number;
   isNetworkSplit: boolean;
+  /** which database this backend writes to (for the banner on the demo page) */
+  database: { host: string; name: string; local: boolean };
   networks: { code: string; name: string; network: string }[];
 }
 
@@ -22,6 +25,8 @@ export interface DemoOperationResult {
   message: string;
   logs: string[];
   stats: DbStats;
+  /** what a fill added (fill buttons only) */
+  added?: DemoAdded;
 }
 
 export class DemoService {
@@ -74,6 +79,11 @@ export class DemoService {
       nearExpiryPool: nePoolRes.rows[0]?.count || 0,
       allocationPlans: plansRes.rows[0]?.count || 0,
       isNetworkSplit,
+      database: {
+        host: process.env.DB_HOST || '127.0.0.1',
+        name: process.env.DB_NAME || 'doorare',
+        local: ['127.0.0.1', 'localhost', '::1', 'db'].includes(process.env.DB_HOST || '127.0.0.1'),
+      },
       networks,
     };
   }
