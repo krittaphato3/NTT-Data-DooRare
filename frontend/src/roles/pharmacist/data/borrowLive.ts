@@ -59,7 +59,7 @@ function agentNoteOf(r: ApiBorrowRequest): NonNullable<BorrowRequest['agentNote'
     return { code: 'F1_T2', text: `${a.summary}${a.priorityAfter.length ? ` · ถ้ารอบแรกไม่พอ ขอต่อ: ${a.priorityAfter.join(' → ')}` : ''} · เภสัชกรตรวจและอนุมัติก่อนส่ง`, model: a.model, confidence: a.confidence, status: 'OK' };
   }
   const why = a?.status === 'SKIPPED' ? 'ปิด Agent อยู่' : a?.flags.includes('NO_LLM_CONFIGURED') ? 'ยังไม่ได้ตั้งค่า LLM' : a ? 'Agent ตอบไม่ได้หรือไม่ผ่านการตรวจ' : 'ไม่ได้ใช้ Agent';
-  return { code: 'F1_T2', text: `${why} — ใช้ลำดับตามคะแนน Si และข้อความแม่แบบ · เภสัชกรตรวจและอนุมัติก่อนส่ง`, status: a?.status ?? 'SKIPPED', model: a?.model ?? null };
+  return { code: 'F1_T2', text: `${why} — ระบบจัดลำดับให้อัตโนมัติ · เภสัชกรตรวจและอนุมัติก่อนส่ง`, status: a?.status ?? 'SKIPPED', model: a?.model ?? null };
 }
 
 export function borrowRequestToView(r: ApiBorrowRequest, now = Date.now(), returnState?: ReturnState): BorrowRequest {
@@ -130,8 +130,8 @@ export function borrowRequestToView(r: ApiBorrowRequest, now = Date.now(), retur
     note: waiting ? `รอ ${waiting.lender.name} · ${legDetail(waiting, unit).split(' · ').slice(-1)[0]}` : r.status === 'ESCALATED' ? `ยังขาด ${n(r.stop?.remaining ?? 0)} · แจ้งผู้ดูแลแล้ว` : r.status === 'PENDING_APPROVAL' ? 'ร่างข้อความแล้ว · รออนุมัติ' : r.status === 'FULFILLED' ? `ครบ ${n(r.qtyFulfilled)}` : r.status === 'CANCELLED' ? (r.reason ?? 'ยกเลิก') : 'กำลังดำเนินการ',
     action: r.status === 'PENDING_APPROVAL' ? 'approve' : r.status === 'ESCALATED' && r.drug.kind !== 'KIT' ? 'addLender' : (returnState === 'PENDING' || returnState === 'OVERDUE') ? 'recordReturn' : 'detail',
     banner: banner(r, waiting),
-    contextLabel: r.context === 'STOCK_ALERT' ? 'STOCK_ALERT · จากแจ้งเตือนสต็อก' : r.context === 'EMERGENCY' ? 'EMERGENCY · เหตุฉุกเฉิน' : 'MANUAL · สร้างเอง (UI-10)',
-    firstRound: `${n(r.firstRoundQty ?? r.qtyRequested)} ${unit}${r.rValue !== null ? ` · R = ${r.rValue}` : ''}`,
+    contextLabel: r.context === 'STOCK_ALERT' ? 'จากแจ้งเตือนสต็อก' : r.context === 'EMERGENCY' ? 'เหตุฉุกเฉิน' : 'สร้างเอง',
+    firstRound: `${n(r.firstRoundQty ?? r.qtyRequested)} ${unit}`,
     sendMode,
     createdBy: `${r.createdBy} · ${fmtThaiTime(r.createdAt, new Date(now))}`,
     ...(r.approvedBy ? { approvedBy: `${r.approvedBy} (PHARMACIST)` } : {}),

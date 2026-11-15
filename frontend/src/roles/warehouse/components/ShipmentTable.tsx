@@ -21,6 +21,8 @@ interface ShipmentTableProps {
   canCancel: boolean;
   /** true = driver role: milestones are 'ออกเดินทาง' and 'ถึงแล้ว + รูป'. */
   isDriver?: boolean;
+  /** Set when `rows` is one page of a longer list. */
+  paging?: { page: number; pageCount: number; total: number; pageSize: number; onPage: (p: number) => void };
 }
 
 function actionFor(r: ShipmentRowState, canOperate: boolean, canCancel: boolean, isDriver?: boolean): [string, string] {
@@ -39,7 +41,7 @@ function actionFor(r: ShipmentRowState, canOperate: boolean, canCancel: boolean,
   return ['ดูรายละเอียด', 'btn-s'];
 }
 
-export function ShipmentTable({ rows, activeId, onOpen, onAction, canOperate, canCancel, isDriver }: ShipmentTableProps) {
+export function ShipmentTable({ rows, activeId, onOpen, onAction, canOperate, canCancel, isDriver, paging }: ShipmentTableProps) {
   return (
     <>
       <div className="scroll-x">
@@ -72,7 +74,7 @@ export function ShipmentTable({ rows, activeId, onOpen, onAction, canOperate, ca
                     </button>
                     <span style={{ display: 'block', marginTop: 2 }}>
                       <span className={`badge ${s.kind === 'F1' ? 't-blue' : 't-teal'}`} style={{ height: 18, fontSize: 11 }}>
-                        {s.kind === 'F1' ? 'ยืม · BORROW_LEG' : 'โอนใกล้หมดอายุ · ALLOCATION_LINE'}
+                        {s.kind === 'F1' ? 'ยืม' : 'โอนใกล้หมดอายุ'}
                       </span>
                     </span>
                     <span className="code" style={{ display: 'block', fontSize: 11 }}>
@@ -128,10 +130,16 @@ export function ShipmentTable({ rows, activeId, onOpen, onAction, canOperate, ca
                     </span>
                   </td>
                   <td>
-                    <span className="num" style={{ fontSize: 12.5, color: '#0F2A5C' }}>
-                      {s.photos.length}
-                    </span>
-                    <span style={{ fontSize: 11.5 }}> / 10</span>
+                    {s.photos.length ? (
+                      <>
+                        <span className="num" style={{ fontSize: 12.5, color: '#0F2A5C' }}>
+                          {s.photos.length}
+                        </span>
+                        <span style={{ fontSize: 11.5 }}> รูป</span>
+                      </>
+                    ) : (
+                      <span style={{ fontSize: 12.5, color: '#94A3B8' }}>—</span>
+                    )}
                   </td>
                   <td style={{ fontSize: 12, lineHeight: '17px' }}>
                     <span className="num" style={{ color: '#0F2A5C' }}>
@@ -152,9 +160,28 @@ export function ShipmentTable({ rows, activeId, onOpen, onAction, canOperate, ca
         </table>
       </div>
       <div className="tbl-foot">
-        <span>
-          แสดง <span className="num">{rows.length}</span> งาน
-        </span>
+        {paging && paging.total > 0 ? (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+            แสดง <span className="num">{paging.page * paging.pageSize + 1}–{paging.page * paging.pageSize + rows.length}</span> จาก <span className="num">{paging.total}</span> งาน
+            {paging.pageCount > 1 && (
+              <>
+                <button className="btn btn-sm btn-s" disabled={paging.page === 0} onClick={() => paging.onPage(paging.page - 1)} aria-label="หน้าก่อน">
+                  ‹ ก่อนหน้า
+                </button>
+                <span className="num">
+                  {paging.page + 1}/{paging.pageCount}
+                </span>
+                <button className="btn btn-sm btn-s" disabled={paging.page >= paging.pageCount - 1} onClick={() => paging.onPage(paging.page + 1)} aria-label="หน้าถัดไป">
+                  ถัดไป ›
+                </button>
+              </>
+            )}
+          </span>
+        ) : (
+          <span>
+            แสดง <span className="num">{rows.length}</span> งาน
+          </span>
+        )}
         <span>ยกเลิกได้เฉพาะก่อนขึ้นรถ และต้องได้ความยินยอมทั้งสองฝ่าย</span>
       </div>
     </>

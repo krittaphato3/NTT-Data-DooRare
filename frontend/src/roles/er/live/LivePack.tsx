@@ -14,7 +14,7 @@ export function LiveKitStockCard({ rows, note }: { rows?: ApiKitStockRow[]; note
   return (
     <div className="card" style={{ padding: '14px 16px' }}>
       <div style={{ fontSize: 13.5, fontWeight: 700, color: '#0f2a5c', marginBottom: 10 }}>
-        ชุดพร้อมใช้ในคลัง <span style={{ fontSize: 12, fontWeight: 400, color: '#94a3b8' }}>kit_stock</span>
+        ชุดพร้อมใช้ในคลัง
       </div>
       <div style={{ overflowX: 'auto' }}>
         <table className="qt">
@@ -43,7 +43,7 @@ export function LiveKitStockCard({ rows, note }: { rows?: ApiKitStockRow[]; note
       </div>
       {note !== false && (
         <div style={{ borderTop: '1px solid #e2e8f0', marginTop: 12, paddingTop: 8, fontSize: 10.5, color: '#94a3b8', lineHeight: '15px' }}>
-          จองไว้ = ชุดที่แผนเหตุฉุกเฉินจะใช้ (ให้ยืมไม่ได้) · สต็อกเปลี่ยนเมื่อยืนยันจัดชุด ส่งออก/รับเข้า หรือใช้จริงเท่านั้น (ASM-13) · ถ้าของแยกมีไม่ครบ ระบบไม่ให้ยืนยัน
+          จองไว้ = ชุดที่แผนเหตุฉุกเฉินจะใช้ (ให้ยืมไม่ได้) · สต็อกเปลี่ยนเมื่อยืนยันจัดชุด ส่งออก/รับเข้า หรือใช้จริงเท่านั้น · ถ้าของแยกมีไม่ครบ ระบบไม่ให้ยืนยัน
         </div>
       )}
     </div>

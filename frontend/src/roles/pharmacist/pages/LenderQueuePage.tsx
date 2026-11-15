@@ -547,7 +547,7 @@ function DetailPanel({
       >
         <div>
           <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 4 }}>
-            คิวตอบคำขอยืม (เราเป็นผู้ให้ยืม) - Lender response - UI-06
+            คิวตอบคำขอยืม (เราเป็นผู้ให้ยืม)
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             <span
@@ -681,7 +681,7 @@ function DetailPanel({
                   fontWeight: 500,
                 }}
               >
-                F-13 LendableStock
+                จำนวนที่ให้ยืมได้
               </span>
             </div>
             <div
@@ -1180,7 +1180,7 @@ export function LenderQueuePage({ role = 'PHARMACIST', embedded = false }: { rol
                 คำขอของเรา
               </div>
               <div style={{ fontSize: 11.5, color: '#64748b' }}>
-                เราเป็นผู้ยืม · UI-05
+                เราเป็นผู้ยืม
               </div>
             </div>
           </div>
@@ -1235,7 +1235,7 @@ export function LenderQueuePage({ role = 'PHARMACIST', embedded = false }: { rol
                 คิวตอบคำขอยืม
               </div>
               <div style={{ fontSize: 11.5, color: '#64748b' }}>
-                เราเป็นผู้ให้ยืม · UI-06
+                เราเป็นผู้ให้ยืม
               </div>
             </div>
           </div>
@@ -1271,7 +1271,7 @@ export function LenderQueuePage({ role = 'PHARMACIST', embedded = false }: { rol
             marginBottom: 10,
           }}
         >
-          สถานะรอบที่ส่งถึงเรา (SM-1b){' '}
+          สถานะรอบที่ส่งถึงเรา{' '}
           {tile && (
             <button type="button" className="link" style={{ marginLeft: 8, fontWeight: 400 }} onClick={() => setTile(null)}>
               ล้างตัวกรองสถานะ

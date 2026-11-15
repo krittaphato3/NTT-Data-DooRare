@@ -247,13 +247,13 @@ export function LiveSummaryPanel({ incidentId, role, mayWrite, onChanged }: Prop
         )}
         <div style={{ marginTop: 16, borderTop: '1px solid #e2e8f0', paddingTop: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-            <button type="button" className="btn btn-s btn-sm" disabled title="ยังไม่รองรับการออกเอกสารสรุปเหตุการณ์ในระบบ (INCIDENT_REPORT)">
+            <button type="button" className="btn btn-s btn-sm" disabled title="ยังไม่รองรับการออกเอกสารสรุปเหตุการณ์ในระบบ">
               <Icon name="printer" className="ic14" />
-              สรุปยืม-คืน INCIDENT_REPORT
+              สรุปยืม-คืน
             </button>
-            <button type="button" className="btn btn-s btn-sm" disabled title="ยังไม่รองรับการออกเอกสารสรุปเหตุการณ์ในระบบ (UCEP_REPORT)">
+            <button type="button" className="btn btn-s btn-sm" disabled title="ยังไม่รองรับการออกเอกสารสรุปเหตุการณ์ในระบบ">
               <Icon name="printer" className="ic14" />
-              สรุปการใช้เวชภัณฑ์ UCEP_REPORT
+              สรุปการใช้เวชภัณฑ์
             </button>
           </div>
           <div style={{ fontSize: 11, color: '#94a3b8' }}>ใช้ประกอบการเบิก พ.ร.บ./UCEP ตามช่องทางปกติของโรงพยาบาล — ระบบไม่ขึ้นเบิกให้ · เอกสารสรุปยังออกจากระบบไม่ได้ ใช้ตารางด้านบนประกอบ</div>

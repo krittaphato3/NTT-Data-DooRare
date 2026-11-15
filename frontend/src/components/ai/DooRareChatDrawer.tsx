@@ -786,7 +786,7 @@ export const DooRareChatDrawer: React.FC = () => {
                 title={
                   isFullScreen
                     ? 'ย่อเป็นหน้าต่าง Messenger (Minimize to Popup)'
-                    : 'ขยายเต็มหน้าจอ (Full Screen like ChatGPT / Claude / Gemini)'
+                    : 'ขยายเต็มจอ'
                 }
               >
                 {isFullScreen ? (

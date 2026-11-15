@@ -24,9 +24,9 @@ export function LiveKitTable({ plan, editable, disabledHint, onPack, onRemove }:
     <div className="card" style={{ padding: '14px 16px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, flexWrap: 'wrap', gap: 6 }}>
         <div style={{ fontSize: 13.5, fontWeight: 700, color: '#0f2a5c' }}>
-          ชุดสำเร็จรูป (Preset Kit ต่อผู้ป่วย) <span style={{ fontSize: 12, fontWeight: 400, color: '#94a3b8' }}>F-27 · แผนฉบับที่ {plan.revision}</span>
+          ชุดสำเร็จรูป (Preset Kit ต่อผู้ป่วย) <span style={{ fontSize: 12, fontWeight: 400, color: '#94a3b8' }}>แผนฉบับที่ {plan.revision}</span>
         </div>
-        <div style={{ fontSize: 11.5, color: '#64748b' }}>ลำดับ: ใช้ชุดพร้อมใช้ → จัดเพิ่มจากของแยก (ครบทุกชิ้น) → ยืมทั้งชุด · ไม่ยืมแยกชิ้น (BR-F3-013)</div>
+        <div style={{ fontSize: 11.5, color: '#64748b' }}>ลำดับ: ใช้ชุดพร้อมใช้ → จัดเพิ่มจากของแยก (ครบทุกชิ้น) → ยืมทั้งชุด · ไม่ยืมแยกชิ้น</div>
       </div>
       {plan.kits.length === 0 ? (
         <div style={{ fontSize: 12.5, color: '#64748b' }}>ไม่มีชุดยาในแผนนี้</div>
@@ -60,7 +60,7 @@ export function LiveKitTable({ plan, editable, disabledHint, onPack, onRemove }:
                       </div>
                       <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>{ruleText(k.rule, 'ชุด')}</div>
                       {k.borrowSet > 0 && !k.noRecipe && k.packMax !== null && k.packMax < k.estimated - k.useReady && (
-                        <div style={{ fontSize: 11, color: '#92400e', marginTop: 2 }}>ของแยกจัดได้อีกสูงสุด {k.packMax} ชุด · ขาดชิ้นเดียวก็ยืมทั้งชุด (BR-F3-013)</div>
+                        <div style={{ fontSize: 11, color: '#92400e', marginTop: 2 }}>ของแยกจัดได้อีกสูงสุด {k.packMax} ชุด · ขาดชิ้นเดียวก็ยืมทั้งชุด</div>
                       )}
                     </td>
                     <td className="r" style={{ fontWeight: 600 }}>{num(k.estimated)}</td>
@@ -98,7 +98,7 @@ export function LiveKitTable({ plan, editable, disabledHint, onPack, onRemove }:
       )}
       {editable && disabledHint && <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 8 }}>{disabledHint}</div>}
       <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 8, lineHeight: '16px' }}>
-        ลดจำนวนที่จัดเองได้อย่างเดียว ส่วนที่ลดจะกลายเป็นยืมทั้งชุดอัตโนมัติ (BR-F3-014) · ระบบไม่เปิดชุดที่แพ็กแล้วมาใช้ (BR-F3-010)
+        ลดจำนวนที่จัดเองได้อย่างเดียว ส่วนที่ลดจะกลายเป็นยืมทั้งชุดอัตโนมัติ · ระบบไม่เปิดชุดที่แพ็กแล้วมาใช้
       </div>
     </div>
   );
@@ -116,7 +116,7 @@ export function LiveExtrasTable({ plan, editable, onRemove, onSetQty }: ExtraTab
   return (
     <div className="card" style={{ padding: '14px 16px' }}>
       <div style={{ fontSize: 13.5, fontWeight: 700, color: '#0f2a5c', marginBottom: 10 }}>
-        ยาและเวชภัณฑ์นอกชุด <span style={{ fontSize: 12, fontWeight: 400, color: '#94a3b8' }}>BR-F3-003 · ระบบคิดจำนวนจากกฎต่อผู้ป่วย</span>
+        ยาและเวชภัณฑ์นอกชุด <span style={{ fontSize: 12, fontWeight: 400, color: '#94a3b8' }}>ระบบคิดจำนวนจากกฎต่อผู้ป่วย</span>
       </div>
       {plan.extras.length === 0 ? (
         <div style={{ fontSize: 12.5, color: '#64748b' }}>ไม่มีรายการนอกชุดในแผนนี้</div>
@@ -201,7 +201,7 @@ export function PlanNotes({ plan }: { plan: ApiPlan }) {
       </ul>
       {plan.shortfall.length > 0 && (
         <div style={{ marginTop: 8 }}>
-          <b style={{ color: '#0f2a5c' }}>ผลตรวจรวมแบบ one-pass (กระจายชุดตามสูตร เทียบของแยก + ของในชุดพร้อมใช้):</b>
+          <b style={{ color: '#0f2a5c' }}>ผลตรวจรวม (กระจายชุดตามสูตร เทียบของแยก + ของในชุดพร้อมใช้):</b>
           <ul style={{ margin: '4px 0 0', paddingLeft: 18 }}>
             {plan.shortfall.map((s) => (
               <li key={s.item}>

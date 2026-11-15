@@ -36,9 +36,11 @@ export function BorrowStatusTiles({ counts, active, onPick }: BorrowStatusTilesP
               <Icon name={g.icon} className="ic14" />
               {g.label}
             </span>
-            <span className="code" style={{ fontSize: 10.5, lineHeight: '14px' }}>
-              {g.codes}
-            </span>
+            {g.codes && (
+              <span className="code" style={{ fontSize: 10.5, lineHeight: '14px' }}>
+                {g.codes}
+              </span>
+            )}
           </button>
         );
       })}

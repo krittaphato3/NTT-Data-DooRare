@@ -100,7 +100,7 @@ export function ShipmentDrawer(p: ShipmentDrawerProps) {
     <aside className="tr-drawer" aria-label="รายละเอียดงานขนส่ง">
       <div className="tr-drawer-head">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-          <span className="sub">{out ? 'ส่งออกจากเรา' : 'รับเข้าเรา'} · งานขนส่ง · UI-14</span>
+          <span className="sub">{out ? 'ส่งออกจากเรา' : 'รับเข้าเรา'} · งานขนส่ง</span>
           <button className="icbtn" aria-label="ปิด / Close" onClick={p.onClose}>
             <Icon name="x" />
           </button>
@@ -153,7 +153,7 @@ export function ShipmentDrawer(p: ShipmentDrawerProps) {
 
         <div>
           <h3 className="tr-h3">
-            ขั้นตอน <span className="en">SM-6</span>
+            ขั้นตอน
           </h3>
           <ol className="stepper">
             {STEPS.map((st, i) => {
@@ -171,7 +171,7 @@ export function ShipmentDrawer(p: ShipmentDrawerProps) {
                   </span>
                   <span className="step-body">
                     <span className="step-label" style={{ color: done || cur ? '#0F2A5C' : '#475569', fontWeight: cur ? 600 : 400 }}>
-                      {st.label} <span className="code" style={{ fontSize: 10.5 }}>{st.code}</span>
+                      {st.label}
                     </span>
                     <span className="step-sub">{sub}</span>
                   </span>

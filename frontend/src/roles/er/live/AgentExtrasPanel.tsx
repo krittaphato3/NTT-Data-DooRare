@@ -60,7 +60,7 @@ export function AgentExtrasPanel({ incidentId, extrasInPlan, onAdd, mayAsk, disa
     <div className="card" style={{ padding: '14px 16px' }} data-part="agent-extras">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
         <div style={{ fontSize: 13.5, fontWeight: 700, color: '#0f2a5c' }}>
-          ข้อเสนอของ Agent · รายการนอกชุด <span style={{ fontSize: 12, fontWeight: 400, color: '#94a3b8' }}>AGT-F3</span>
+          ข้อเสนอของ Agent · รายการนอกชุด
         </div>
         {mayAsk && (
           <button type="button" className="btn btn-s btn-sm" disabled={loading || disabled} onClick={ask}>
