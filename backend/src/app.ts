@@ -27,6 +27,7 @@ import { aiChatRouter } from './modules/ai/chat/chat.routes.js';
 import { usersRouter } from './modules/admin/users.routes.js';
 import { auditRouter } from './modules/admin/audit.routes.js';
 import { locationRouter } from './modules/location/location.routes.js';
+import { demoRouter } from './modules/demo/demo.routes.js';
 
 export const app = express();
 
@@ -80,6 +81,7 @@ app.use('/api/v1/ai/chat', aiChatRouter); // Streaming ReAct Copilot
 app.use('/api/v1/users', usersRouter); // API-AD-006 / API-AD-007 + PATCH
 app.use('/api/v1/audit-log', auditRouter); // API-AD-003 (+ /verify)
 app.use('/api/v1/location', locationRouter); // Amazon Location Service v2 Routes API
+app.use('/api/v1/demo', demoRouter); // Mock Demo Generator API
 app.get('/api/v1/me', authController.getMe); // API-PL-001
 
 // Global error handler

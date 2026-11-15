@@ -49,9 +49,10 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { LoginPage } from './pages/LoginPage';
 import { DooRareChatDrawer } from './components/ai/DooRareChatDrawer';
+import { MockDemoPage } from './pages/MockDemoPage';
 
 
-type Page = 'dashboard' | 'inbox' | 'kit' | 'stock' | 'drugs' | 'transport' | 'requests' | 'lend' | 'incident' | 'alerts' | 'report' | 'expiry' | 'pool' | 'docs' | 'users' | 'audit' | 'config' | 'sync' | 'admin';
+type Page = 'dashboard' | 'inbox' | 'kit' | 'stock' | 'drugs' | 'transport' | 'requests' | 'lend' | 'incident' | 'alerts' | 'report' | 'expiry' | 'pool' | 'docs' | 'users' | 'audit' | 'config' | 'sync' | 'admin' | 'mock-demo';
 
 /** System Admin user profile (Health Region 6). */
 const SYSTEM_ADMIN_USER = {
@@ -128,8 +129,10 @@ function initialRoute(): { page: Page; transportRole: TransportRole; warehouse: 
     const isEr = r === 'er';
     const isSystemAdmin = r === 'admin';
     const p = q.get('page');
-    let page: Page = isDriver ? 'transport' : isSystemAdmin ? 'admin' : 'dashboard';
-    if (p === 'admin' || p === 'adm') page = 'admin';
+    const isMockDemo = window.location.pathname.startsWith('/mock-demo') || p === 'mock-demo';
+    let page: Page = isMockDemo ? 'mock-demo' : isDriver ? 'transport' : isSystemAdmin ? 'admin' : 'dashboard';
+    if (isMockDemo) page = 'mock-demo';
+    else if (p === 'admin' || p === 'adm') page = 'admin';
     else if (p === 'transport') page = 'transport';
     else if (p === 'sync') page = 'sync';
     else if (p === 'inbox') page = 'inbox';
@@ -493,6 +496,15 @@ function AuthenticatedShell() {
   const shellClass = ['shell', collapsed ? 'shell-collapsed' : '', navOpen ? 'shell-nav-open' : '']
     .filter(Boolean)
     .join(' ');
+
+  if (route.page === 'mock-demo') {
+    return (
+      <div className="mock-demo-shell">
+        <MockDemoPage />
+        <DooRareChatDrawer />
+      </div>
+    );
+  }
 
   return (
     <div className={shellClass}>

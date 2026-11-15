@@ -104,6 +104,28 @@ export function TopBar({ query, onQuery, isAdmin, navOpen, onMenu, notifications
           </button>
         </>
       )}
+      <a
+        href="/mock-demo"
+        className="topbar-scope"
+        title="ไปยังหน้าจัดการข้อมูลจำลอง (Mock Demo Control Center)"
+        style={{
+          textDecoration: 'none',
+          color: '#0284c7',
+          background: '#e0f2fe',
+          fontWeight: 700,
+          fontSize: '12px',
+          border: '1px solid #bae6fd',
+          cursor: 'pointer',
+          padding: '4px 10px',
+          borderRadius: '6px',
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '5px',
+        }}
+      >
+        <Icon name="spark" className="ic14" />
+        <span>Mock Demo</span>
+      </a>
       <div className="menu-wrap bell-wrap" ref={bellRef}>
         <button
           className="icbtn bell-btn"

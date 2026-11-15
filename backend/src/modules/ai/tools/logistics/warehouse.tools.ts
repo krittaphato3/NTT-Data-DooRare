@@ -913,11 +913,11 @@ export const verifyBatchBarcodeTool: IAgentTool<{
                 hd.id AS hospital_drug_id,
                 hd.local_code,
                 hd.local_name,
-                dm.generic_name,
-                dm.base_unit
+                COALESCE(dm.generic_name, hd.local_name) AS generic_name,
+                COALESCE(dm.base_unit, 'หน่วย') AS base_unit
            FROM stock_lot sl
            JOIN hospital_drug hd ON hd.id = sl.hospital_drug_id
-           JOIN drug_master dm ON dm.id = hd.drug_master_id
+           LEFT JOIN drug_master dm ON dm.id = hd.drug_master_id
           WHERE ${where}
           ORDER BY sl.expiry_date ASC`,
         params,
