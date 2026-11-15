@@ -49,6 +49,13 @@
     "date": "2026-11-14"
   },
   {
+    "path": "sessions\\2026-11-13-2000-claude-demo-seed-f2.md",
+    "title": "Demo seed (one command) - part 1: F2 near-expiry / pool / approval scenarios",
+    "summary": "db:demo-seed ONLY=f2 shapes stock + lots so A-network plans auto-approve and cross-network…",
+    "tags": "session, demo, mock-data, f2, seed, network, rds, cognito, detailed",
+    "date": "2026-11-13"
+  },
+  {
     "path": "context\\architecture.md",
     "title": "Architecture",
     "summary": "Architecture",
