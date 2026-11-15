@@ -14,7 +14,8 @@ import type { ApiValue } from '../../../services/expiryApi';
 import { useAuth } from '../../../context/AuthContext';
 import {
   EXPIRY_KPIS,
-  fefoUsable,
+  REPEAT_LABEL,
+  cleanNote,
   lotValue,
   releasable,
 } from '../data/nearExpiry';
@@ -29,26 +30,26 @@ interface TabDef {
 }
 
 const TABS: TabDef[] = [
-  { id: 'review', label: 'ตรวจรอบนี้' },
+  { id: 'review', label: 'รอตัดสินใจ' },
   { id: 'new7', label: 'ใหม่กว่า 7 วัน' },
-  { id: 'released', label: 'ปล่อยแล้ว · จัดสรรแล้ว' },
+  { id: 'released', label: 'ปล่อยแล้ว' },
   { id: 'kept', label: 'เก็บไว้ใช้เอง' },
   { id: 'all', label: 'ทั้งหมด' },
 ];
 
-/** Short advice line per status — the คำแนะนำ column in the mockup. */
+/** Short status line for lots that are no longer waiting for a decision. */
 function advice(i: NearExpiryItem): { text: string; cls: string } {
-  if (i.status === 'EXPIRED') return { text: 'หมดอายุแล้ว · รอตัดบัญชี (write-off)', cls: 'ne-adv-dead' };
-  if (i.status === 'TRANSFERRED') return { text: `โอนให้ รพ.อื่นแล้ว${i.planId ? ` · แผน ${i.planId}` : ''}`, cls: 'ne-adv-ok' };
-  if (i.status === 'DISMISSED') return { text: i.note ?? 'ปิดรายการ', cls: 'ne-adv-kept' };
+  if (i.status === 'EXPIRED') return { text: 'หมดอายุแล้ว · รอตัดออกจากบัญชี', cls: 'ne-adv-dead' };
+  if (i.status === 'TRANSFERRED') return { text: 'โอนให้ รพ.อื่นแล้ว', cls: 'ne-adv-ok' };
+  if (i.status === 'DISMISSED') return { text: cleanNote(i.note) || 'ปิดรายการ', cls: 'ne-adv-kept' };
   if (i.status === 'KEPT') return { text: i.keptReason ?? 'เก็บไว้ใช้เอง', cls: 'ne-adv-kept' };
   if (i.status === 'ALLOCATED')
-    return { text: `อยู่ในแผน ${i.planId} · รอเอกสาร/ขนส่ง`, cls: 'ne-adv-ok' };
+    return { text: 'อยู่ในแผนจัดสรร · รอเอกสารและขนส่ง', cls: 'ne-adv-ok' };
   if (i.status === 'RELEASED')
-    return { text: `ปล่อยแล้ว ${i.releasedQty} ${i.unit} · รอ Agent จัดสรร`, cls: 'ne-adv-ok' };
+    return { text: `ปล่อยแล้ว ${i.releasedQty} ${i.unit} · รอจัดสรร`, cls: 'ne-adv-ok' };
   const r = releasable(i);
-  if (r === 0) return { text: `FEFO ใช้ทันหมด ${fefoUsable(i)} ${i.unit} · ไม่ต้องปล่อย`, cls: 'ne-adv-kept' };
-  return { text: `ปล่อยได้ ${r} ${i.unit} · เก็บใช้ ${fefoUsable(i)} ${i.unit} (FEFO)`, cls: 'ne-adv-go' };
+  if (r === 0) return { text: 'ใช้ทันก่อนหมดอายุ · ไม่ต้องปล่อย', cls: 'ne-adv-kept' };
+  return { text: `ปล่อยได้ ${r} ${i.unit}`, cls: 'ne-adv-go' };
 }
 
 /**
@@ -66,6 +67,8 @@ export function NearExpiryPage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
   const mayRelease = mayActFor(role, 'PHARMACIST', 'releaseNearExpiry');
   /** Quantity the pharmacist chose to release per lot (default = the FEFO suggestion). */
   const [relQty, setRelQty] = useState<Record<string, number>>({});
+  /** Row whose quantity box is open (the suggested amount is shown as plain text until the user asks to change it). */
+  const [editId, setEditId] = useState<string | null>(null);
   /** Dialog for a row action: release a quantity, or keep the whole lot (needs a reason). */
   const [rowAction, setRowAction] = useState<{ kind: 'release'; item: NearExpiryItem; rel: number } | { kind: 'keep'; item: NearExpiryItem } | null>(null);
   const { user } = useAuth();
@@ -114,9 +117,9 @@ export function NearExpiryPage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
   } as Record<ExpiryTab, number>;
   const kpis = live
     ? [
-        { label: 'รอตัดสินใจ', en: 'DETECTED', value: `${counts.review} ล็อต`, sub: `รวมมูลค่า ฿${Math.round(items.filter((i) => i.status === 'PENDING').reduce((s, i) => s + lotValue(i), 0)).toLocaleString()} · ใหม่กว่า 7 วัน ${counts.new7} ล็อต`, accent: '#D97706', accentBg: '#FFF7ED' },
-        { label: 'ปล่อยเข้าคลังกลาง · จัดสรรแล้ว', en: 'RELEASED · ALLOCATED', value: `${counts.released} ล็อต`, sub: `รวมมูลค่า ฿${Math.round(items.filter((i) => ['RELEASED', 'ALLOCATED', 'TRANSFERRED'].includes(i.status)).reduce((s, i) => s + lotValue(i), 0)).toLocaleString()}`, accent: '#166534', accentBg: '#F0FDF4' },
-        { label: 'มูลค่าที่เลี่ยงการหมดอายุ 12 เดือน', en: 'VALUE AVOIDED', value: value ? `฿${Math.round(value.totals.transferredValueThb).toLocaleString()}` : '–', sub: value ? `ค่าขนส่งสุทธิ ฿${Math.round(value.totals.transportCostThb).toLocaleString()} · หมดอายุจริง ฿${Math.round(value.totals.expiredWriteOffThb).toLocaleString()}` : 'ยังไม่มีข้อมูล', accent: '#B91C1C', accentBg: '#FEF2F2' },
+        { label: 'รอตัดสินใจ', en: 'pending', value: `${counts.review} ล็อต`, sub: `รวมมูลค่า ฿${Math.round(items.filter((i) => i.status === 'PENDING').reduce((s, i) => s + lotValue(i), 0)).toLocaleString()} · ใหม่กว่า 7 วัน ${counts.new7} ล็อต`, accent: '#D97706', accentBg: '#FFF7ED' },
+        { label: 'ปล่อยเข้าคลังกลางแล้ว', en: 'released', value: `${counts.released} ล็อต`, sub: `รวมมูลค่า ฿${Math.round(items.filter((i) => ['RELEASED', 'ALLOCATED', 'TRANSFERRED'].includes(i.status)).reduce((s, i) => s + lotValue(i), 0)).toLocaleString()}`, accent: '#166534', accentBg: '#F0FDF4' },
+        { label: 'มูลค่ายาที่ไม่ต้องทิ้ง (12 เดือน)', en: 'avoided', value: value ? `฿${Math.round(value.totals.transferredValueThb).toLocaleString()}` : '–', sub: value ? `ค่าขนส่ง ฿${Math.round(value.totals.transportCostThb).toLocaleString()} · หมดอายุทิ้งไปแล้ว ฿${Math.round(value.totals.expiredWriteOffThb).toLocaleString()}` : 'ยังไม่มีข้อมูล', accent: '#1D4ED8', accentBg: '#EFF6FF' },
       ]
     : EXPIRY_KPIS;
 
@@ -148,7 +151,7 @@ export function NearExpiryPage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
     setActionError(null);
     setScanNote(null);
     scanNearExpiryNow()
-      .then((r) => { setScanNote(`ตรวจเสร็จ: พบล็อตใหม่ ${r.detected} ล็อต · กลับมาให้ตัดสินใจใหม่ ${r.reevaluated} · อัปเดตวัน/มูลค่า ${r.refreshed} · หมดอายุ ${r.writeOffs}`); return ne.reload(); })
+      .then((r) => { setScanNote(['ตรวจเสร็จแล้ว', r.detected > 0 ? `พบล็อตใหม่ ${r.detected} ล็อต` : 'ไม่พบล็อตใหม่', r.reevaluated > 0 ? `กลับมาให้ตัดสินใจใหม่ ${r.reevaluated}` : '', r.writeOffs > 0 ? `หมดอายุแล้ว ${r.writeOffs}` : ''].filter(Boolean).join(' · ')); return ne.reload(); })
       .catch((e: Error) => setActionError(e.message))
       .finally(() => setBusy(false));
   };
@@ -211,30 +214,27 @@ export function NearExpiryPage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
             <a href={homeHrefFor(role)} className="link" style={{ fontSize: 12, fontWeight: 400 }}>
               หน้าหลัก
             </a>{' '}
-            <span aria-hidden="true">›</span> <span aria-current="page">หน้าใกล้หมดอายุ</span>
+            <span aria-hidden="true">›</span> <span aria-current="page">ยาใกล้หมดอายุ</span>
           </nav>
-          <h1 className="tr-title">
-            หน้าใกล้หมดอายุ <span>/ Near-expiry review · UI-07</span>
-          </h1>
+          <h1 className="tr-title">ยาใกล้หมดอายุ</h1>
           <div style={{ fontSize: 13 }}>
-            {user?.hospitalName ?? 'รพ.สมุทรปราการ'} · ระบบตรวจล็อตใกล้หมดอายุอัตโนมัติ (JOB-05) · เกณฑ์ใกล้หมดอายุ 180 วัน
-            (ตั้งค่าต่อรายการ) · จำนวนที่ปล่อยเข้าคลังกลางห้ามนับเป็นสต็อกใช้งาน (FR-F2a-013)
+            {user?.hospitalName ?? 'รพ.สมุทรปราการ'} · ระบบตรวจให้อัตโนมัติ ล็อตที่เหลืออายุไม่ถึง 180 วันจะขึ้นที่นี่
           </div>
         </div>
         <div className="pagehead-actions">
           {live && (
-            <button className="btn btn-p" onClick={scanNow} disabled={busy} title="ตรวจล็อตที่เข้าเกณฑ์ใกล้หมดอายุของทุกโรงพยาบาลตอนนี้ (ระบบก็ตรวจให้เองตามรอบเวลา)">
+            <button className="btn btn-p" onClick={scanNow} disabled={busy} title="ตรวจล็อตใกล้หมดอายุของทุกโรงพยาบาลตอนนี้ (ระบบตรวจให้เองทุก 15 นาทีอยู่แล้ว)">
               <Icon name="refresh" />
-              {busy ? 'กำลังตรวจ…' : 'ตรวจล็อตใกล้หมดอายุตอนนี้'}
+              {busy ? 'กำลังตรวจ…' : 'ตรวจตอนนี้'}
             </button>
           )}
-          <button className="btn btn-s" onClick={exportCsv} title="ส่งออกข้อมูลเป็น CSV">
+          <button className="btn btn-s" onClick={exportCsv} title="ส่งออกข้อมูลเป็นไฟล์ CSV">
             <Icon name="download" />
-            CSV
+            ส่งออก CSV
           </button>
           <button className="btn btn-s" onClick={() => window.print()} title="พิมพ์หรือบันทึกเป็น PDF">
             <Icon name="fileText" />
-            PDF
+            พิมพ์
           </button>
         </div>
       </section>
@@ -248,10 +248,8 @@ export function NearExpiryPage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
       {/* KPI row — colored accent tiles from the mockup */}
       <section className="ne-kpis">
         {kpis.map((k) => (
-          <div key={k.en} className="ne-kpi" style={{ background: k.accentBg, borderColor: k.accent }}>
-            <div className="ne-kpi-label">
-              {k.label} <span className="en">{k.en}</span>
-            </div>
+          <div key={k.label} className="ne-kpi" style={{ background: k.accentBg, borderColor: k.accent }}>
+            <div className="ne-kpi-label">{k.label}</div>
             <div className="ne-kpi-val" style={{ color: k.accent }}>
               {k.value}
             </div>
@@ -275,7 +273,7 @@ export function NearExpiryPage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
             ))}
           </div>
           <div className="sub">
-            เรียงตามมูลค่าที่จะเสียถ้าปล่อยทิ้งไว้ (FEFO) · สีแดง = ยาที่เคยหมดอายุซ้ำ (F2b) · กดแถวเพื่อดูสูตรและตัดสินใจ
+            เรียงจากมูลค่าที่เสี่ยงเสียหายมากสุด · แถบแดงซ้าย = ยาที่เคยหมดอายุมาแล้ว · กดแถวเพื่อดูรายละเอียด
           </div>
         </div>
 
@@ -283,12 +281,12 @@ export function NearExpiryPage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
           <table className="tbl ne-tbl" aria-label="รายการยาใกล้หมดอายุ">
             <thead>
               <tr>
-                <th style={{ width: 40 }}>ทย.</th>
-                <th>ยา</th>
-                <th style={{ width: 110 }}>คงคลัง</th>
-                <th style={{ width: 220 }}>หมดอายุ</th>
-                <th style={{ width: 90, textAlign: 'right' }}>มูลค่า</th>
-                <th style={{ width: 330 }}>ตัดสินใจ: เก็บไว้ใช้ / ปล่อยเข้าพูล</th>
+                <th style={{ width: 40 }}><span className="srt">ระดับความจำเป็นของยา</span></th>
+                <th style={{ width: '28%' }}>ยา</th>
+                <th style={{ width: '11%' }}>คงคลัง</th>
+                <th style={{ width: '17%' }}>หมดอายุ</th>
+                <th style={{ width: '11%', textAlign: 'right' }}>มูลค่า</th>
+                <th style={{ width: 420 }}>ตัดสินใจ</th>
               </tr>
             </thead>
             <tbody>
@@ -312,18 +310,13 @@ export function NearExpiryPage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                           <b style={{ color: '#0F2A5C', fontWeight: 600 }}>{i.drug}</b>
                           {i.repeatFlag && (
-                            <span className="badge t-red" style={{ height: 18, fontSize: 10.5, fontWeight: 700 }}>
-                              {i.repeatFlag}
-                            </span>
-                          )}
-                          {i.status === 'EXPIRED' && (
-                            <span className="badge t-grey" style={{ height: 18, fontSize: 10.5 }}>
-                              EXPIRED
+                            <span className="badge t-red" style={{ height: 20, fontSize: 12, fontWeight: 600 }} title="ยาตัวนี้เคยหมดอายุมาแล้วในรอบ 12 เดือน">
+                              {REPEAT_LABEL[i.repeatFlag]}
                             </span>
                           )}
                         </div>
                         <div className="sub" style={{ marginTop: 2 }}>
-                          รหัส {i.code} · ล็อต {i.lot}
+                          {i.code} · ล็อต {i.lot}
                         </div>
                       </button>
                     </td>
@@ -333,24 +326,22 @@ export function NearExpiryPage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
                       </span>
                       {i.releasedQty !== undefined && i.status !== 'PENDING' && (
                         <div className="sub">
-                          ถูกกันไว้ {i.releasedQty} {i.unit}
+                          ปล่อยแล้ว {i.releasedQty} {i.unit}
                         </div>
                       )}
                     </td>
                     <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ color: '#0F2A5C' }}>{i.expiry}</span>
-                      </div>
-                      <div className="ne-bar" title={`${i.daysLeft} วัน / เกณฑ์ ${i.thresholdDays} วัน`}>
+                      <div style={{ color: '#0F2A5C' }}>{i.expiry}</div>
+                      <div className="ne-bar" title={`เหลือ ${i.daysLeft} วัน จากเกณฑ์ ${i.thresholdDays} วัน`}>
                         <span
                           style={{
                             width: `${pct * 100}%`,
-                            background: i.daysLeft < 0 ? '#94A3B8' : pct > 0.66 ? '#F59E0B' : '#EA580C',
+                            background: i.daysLeft < 0 ? '#94A3B8' : i.daysLeft <= 30 ? '#DC2626' : pct > 0.66 ? '#F59E0B' : '#EA580C',
                           }}
                         />
                       </div>
-                      <div className="sub num">
-                        {i.daysLeft >= 0 ? `เหลือ ${i.daysLeft} วัน` : 'หมดอายุแล้ว'} / เกณฑ์ {i.thresholdDays} วัน
+                      <div className="sub num" style={i.daysLeft >= 0 && i.daysLeft <= 30 ? { color: '#B91C1C', fontWeight: 600 } : undefined}>
+                        {i.daysLeft >= 0 ? `เหลือ ${i.daysLeft} วัน` : 'หมดอายุแล้ว'}
                       </div>
                     </td>
                     <td style={{ textAlign: 'right' }}>
@@ -364,64 +355,76 @@ export function NearExpiryPage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
                           const maxRel = releasable(i);
                           const rel = Math.min(maxRel, Math.max(0, relQty[i.id] ?? maxRel));
                           const stay = i.qty - rel;
+                          const editing = editId === i.id || (maxRel > 0 && rel !== maxRel);
                           const keepAll = (auto: boolean) => {
                             if (!auto) { setRowAction({ kind: 'keep', item: i }); return; }
-                            const why = 'FEFO ใช้ทันก่อนหมดอายุ ไม่ต้องปล่อยเข้าคลังกลาง';
+                            const why = 'ใช้ทันก่อนหมดอายุ ไม่ต้องปล่อยเข้าคลังกลาง';
                             if (live) decideLive(i, 'KEPT', undefined, why);
                             else decide(i.id, 'KEPT');
                           };
                           return (
                             <div className="ne-act">
-                              <div className="ne-split" title="เขียว = เก็บไว้ใช้เอง · ฟ้า = ปล่อยเข้าคลังกลาง">
-                                <span className="ne-split-keep" style={{ flex: stay }} />
-                                <span className="ne-split-rel" style={{ flex: rel }} />
-                              </div>
-                              <div className="ne-split-txt num">
-                                <span className="k">เก็บไว้ใช้เอง <b>{stay.toLocaleString()}</b></span>
-                                <span className="r">ปล่อยเข้าพูล <b>{rel.toLocaleString()}</b> {i.unit}</span>
-                              </div>
                               {maxRel > 0 ? (
                                 <>
-                                  <label className="ne-act-row">
-                                    <span className="sub">จำนวนที่จะปล่อย</span>
-                                    <input
-                                      className="ne-qtyinput num"
-                                      type="number"
-                                      min={0}
-                                      max={maxRel}
-                                      value={rel}
-                                      disabled={!mayRelease || busy}
-                                      aria-label={`จำนวนที่จะปล่อย ${i.drug}`}
-                                      onChange={(e) => setRelQty((m) => ({ ...m, [i.id]: Math.max(0, Math.min(maxRel, Math.floor(Number(e.target.value) || 0))) }))}
-                                    />
-                                    <span className="sub">/ สูงสุด {maxRel.toLocaleString()} {i.unit}</span>
-                                    {rel !== maxRel && (
-                                      <button type="button" className="link" onClick={() => setRelQty((m) => ({ ...m, [i.id]: maxRel }))}>ใช้ค่าแนะนำ</button>
-                                    )}
-                                  </label>
-                                  <div className="ne-act-btns">
+                                  {editing ? (
+                                    <div className="ne-edit">
+                                      <span>ปล่อย</span>
+                                      <label className="ne-qty" title={`ปล่อยได้สูงสุด ${maxRel.toLocaleString()} ${i.unit}`}>
+                                        <input
+                                          className="num"
+                                          type="number"
+                                          min={0}
+                                          max={maxRel}
+                                          value={rel}
+                                          disabled={!mayRelease || busy}
+                                          aria-label={`จำนวนที่จะปล่อย ${i.drug}`}
+                                          onChange={(e) => setRelQty((m) => ({ ...m, [i.id]: Math.max(0, Math.min(maxRel, Math.floor(Number(e.target.value) || 0))) }))}
+                                        />
+                                        <span>{i.unit}</span>
+                                      </label>
+                                      <span className="ne-hint num">จาก {maxRel.toLocaleString()}</span>
+                                      <button
+                                        type="button"
+                                        className="link"
+                                        onClick={() => { setRelQty((m) => ({ ...m, [i.id]: maxRel })); setEditId(null); }}
+                                      >
+                                        ใช้ค่าแนะนำ
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <div className="ne-sum num">
+                                      <span>ปล่อยได้ <b>{rel.toLocaleString()} {i.unit}</b></span>
+                                      <span className="ne-sum-keep">เก็บไว้ใช้เอง {stay.toLocaleString()}</span>
+                                    </div>
+                                  )}
+                                  <div className="ne-act-line">
                                     <button
                                       className="btn btn-p btn-sm"
                                       disabled={!mayRelease || busy || rel <= 0}
                                       title={mayRelease ? (rel <= 0 ? 'ใส่จำนวนที่จะปล่อยก่อน' : undefined) : 'เฉพาะเภสัชกรเจ้าของล็อตปล่อยเข้าคลังกลางได้'}
                                       onClick={() => setRowAction({ kind: 'release', item: i, rel })}
                                     >
-                                      ปล่อย {rel.toLocaleString()} เข้าคลังกลาง
+                                      ปล่อยเข้าคลังกลาง
                                     </button>
-                                    <button className="btn btn-s btn-sm" disabled={!mayRelease || busy} onClick={() => keepAll(false)}>
-                                      เก็บไว้ใช้เองทั้งล็อต
+                                    <button className="btn btn-g btn-sm" disabled={!mayRelease || busy} onClick={() => keepAll(false)}>
+                                      เก็บไว้ทั้งล็อต
                                     </button>
-                                    <button className="link" onClick={() => open(i.id)}>รายละเอียด</button>
+                                    {!editing && mayRelease && (
+                                      <button type="button" className="link ne-adjust" disabled={busy} onClick={() => setEditId(i.id)}>
+                                        ปรับจำนวน
+                                      </button>
+                                    )}
                                   </div>
                                 </>
                               ) : (
-                                <div className="ne-act-btns">
-                                  <span className={a.cls}>FEFO ใช้ทันหมด · ไม่ต้องปล่อย</span>
-                                  <button className="btn btn-p btn-sm" disabled={!mayRelease || busy} onClick={() => keepAll(true)}>
-                                    ยืนยันเก็บไว้ใช้เอง
-                                  </button>
-                                  <button className="link" onClick={() => open(i.id)}>รายละเอียด</button>
-                                </div>
+                                <>
+                                  <div className="ne-sum"><span className="ne-sum-keep">ใช้ทันก่อนหมดอายุ · ไม่ต้องปล่อย</span></div>
+                                  <div className="ne-act-line">
+                                    <button className="btn btn-p btn-sm" disabled={!mayRelease || busy} onClick={() => keepAll(true)}>
+                                      ยืนยันเก็บไว้ใช้เอง
+                                    </button>
+                                  </div>
+                                </>
                               )}
                             </div>
                           );
@@ -446,9 +449,9 @@ export function NearExpiryPage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
 
         <div className="tbl-foot">
           <span>
-            แสดง {rows.length} รายการ · เก็บประวัติ 12 เดือน · ยาที่ปล่อยแล้วถูกกันออกจากสต็อกใช้งานทันที
+            แสดง {rows.length} รายการ · ยาที่ปล่อยเข้าคลังกลางแล้วจะไม่นับเป็นสต็อกใช้งาน
           </span>
-          <span className="num">JOB-05 · ตรวจทุก 15 นาที</span>
+          <span>ตรวจอัตโนมัติทุก 15 นาที</span>
         </div>
       </section>
 

@@ -79,7 +79,7 @@ export const ALERT_TYPE_META: Record<AlertType, AlertTypeMeta> = {
   DATA_STALE: { th: 'ข้อมูลเก่า', en: 'Stale data', cls: 't-grey', icon: 'clock' },
   ORDER_AHEAD: { th: 'เตรียมสั่งล่วงหน้า', en: 'Order ahead', cls: 't-amber', icon: 'clock' },
   ORDER_EARLIER: { th: 'ควรสั่งซื้อให้เร็วขึ้น', en: 'Order earlier', cls: 't-amber', icon: 'clock' },
-  MIN_MAX: { th: 'ต่ำกว่า Min', en: 'Below min', cls: 't-red', icon: 'tri' },
+  MIN_MAX: { th: 'ต่ำกว่าระดับขั้นต่ำ', en: 'Below min', cls: 't-red', icon: 'tri' },
 };
 
 /** Status text under the Predict/Total-Target bar. */
@@ -98,8 +98,6 @@ export interface SummaryCard {
   key: AlertType | 'NEAR_EXPIRY';
   /** Bold Thai heading. */
   labelTh: string;
-  /** Small uppercase muted code next to the heading; omitted for near-expiry. */
-  code?: string;
   count: number;
   /** Thai-only sub-label under the count. */
   subTh: string;
@@ -122,31 +120,30 @@ export const SUMMARY_ACCENT: Record<SummaryTone, string> = {
 
 export const ALERT_SUMMARY: SummaryCard[] = [
   {
-    key: 'LOW_STOCK', labelTh: 'สต็อกต่ำ', code: 'LOW_STOCK', count: 5,
+    key: 'LOW_STOCK', labelTh: 'สต็อกต่ำ', count: 5,
     subTh: 'เร่งด่วนมาก 1 · เร่งด่วน 3 · ปกติ 1', tone: 'crit',
   },
   {
-    key: 'OVERSTOCK', labelTh: 'สต็อกเกิน', code: 'OVERSTOCK', count: 2,
+    key: 'OVERSTOCK', labelTh: 'สต็อกเกิน', count: 2,
     subTh: 'เกิน 2 เท่าของเป้า · ข้อมูลเท่านั้น', tone: 'blue',
   },
   {
-    key: 'LOW_CONFIDENCE', labelTh: 'พยากรณ์ไม่มั่นใจ', code: 'LOW_CONFIDENCE', count: 1,
-    subTh: 'ประวัติ < 90 วัน (COLD_START)', tone: 'warn',
+    key: 'LOW_CONFIDENCE', labelTh: 'พยากรณ์ไม่มั่นใจ', count: 1,
+    subTh: 'ประวัติการใช้ยาไม่ถึง 90 วัน', tone: 'warn',
   },
   {
-    key: 'DATA_STALE', labelTh: 'ข้อมูลเก่า', code: 'DATA_STALE', count: 0,
+    key: 'DATA_STALE', labelTh: 'ข้อมูลเก่า', count: 0,
     subTh: 'นำเข้าล่าสุด 06:10 น. · เตือนเมื่อเกิน 7 วัน', tone: 'grey',
   },
   {
-    key: 'NEAR_EXPIRY', labelTh: 'ใกล้หมดอายุ\u00A0≤\u00A0180\u00A0วัน', count: 3,
-    subTh: 'ลิสต์ตรวจสอบ · ไปหน้า UI-07', tone: 'teal', href: '#UI-07',
+    key: 'NEAR_EXPIRY', labelTh: 'ใกล้หมดอายุ', count: 3,
+    subTh: 'ภายใน 180 วัน', tone: 'teal', href: '#UI-07',
   },
 ];
 
 /** Header context line (design image): pharmacy, forecast round, cadence, latest eval, HIS sync. */
 export const PHARMACY_CONTEXT = {
-  subtitle:
-    'รพ.สมุทรปราการ · พยากรณ์รอบ 01:00 น. · ประเมินแจ้งเตือนทุก 15 นาที (ล่าสุด 19:00 น.) · สต็อกจาก HIS นำเข้า 06:10 น.',
+  subtitle: 'รพ.สมุทรปราการ · ประเมินล่าสุด 19:00 น. · สต็อกอัปเดต 06:10 น.',
 };
 
 /* ------------------------------------------------------- tabs & filters */
@@ -161,12 +158,12 @@ export interface AlertTab {
 
 export const ALERT_TABS: AlertTab[] = [
   { key: 'pending', labelTh: 'รอจัดการ' },
-  { key: 'handled', labelTh: 'จัดการแล้ว / กำลังยืม' },
-  { key: 'all', labelTh: 'แจ้งเตือนทั้งหมด' },
+  { key: 'handled', labelTh: 'จัดการแล้ว' },
+  { key: 'all', labelTh: 'ทั้งหมด' },
 ];
 
 export const SEVERITY_FILTERS: { key: 'all' | Severity; labelTh: string; labelEn: string }[] = [
-  { key: 'all', labelTh: 'ทั้งหมด', labelEn: 'All' },
+  { key: 'all', labelTh: 'ทุกระดับ', labelEn: 'All' },
   { key: 'critical', labelTh: 'เร่งด่วนมาก', labelEn: 'Critical' },
   { key: 'urgent', labelTh: 'เร่งด่วน', labelEn: 'Urgent' },
   { key: 'normal', labelTh: 'เตือนทั่วไป', labelEn: 'Routine' },
@@ -175,10 +172,22 @@ export const SEVERITY_FILTERS: { key: 'all' | Severity; labelTh: string; labelEn
 export const VED_FILTERS: Ved[] = ['V', 'E', 'D'];
 
 export const SORT_OPTIONS: { value: SortMode; label: string }[] = [
-  { value: 'default', label: 'ความเร่งด่วน → ยาสำคัญ (V) → วันคงเหลือ' },
-  { value: 'days', label: 'วันคงเหลือน้อยก่อน' },
-  { value: 'abc', label: 'มูลค่า ABC สูงก่อน' },
+  { value: 'default', label: 'เร่งด่วนที่สุดก่อน' },
+  { value: 'days', label: 'ใช้ได้อีกน้อยวันก่อน' },
+  { value: 'abc', label: 'มูลค่ายาสูงก่อน' },
 ];
+
+/**
+ * Short drug name for table rows: "SOLUTION FOR INJECTION-Dexamethasone 4 mg/1 mL" becomes the name "Dexamethasone" and the
+ * strength "4 mg/1 mL" (the dosage form stays in the tooltip / detail). Unknown shapes pass through unchanged.
+ */
+export function drugShort(raw: string): { name: string; strength: string } {
+  const cleaned = raw.replace(/\s*-\s*$/, '').trim();
+  const m = cleaned.match(/^([A-Z][A-Z ,/()]*[A-Z)])-(.+)$/);
+  const rest = (m ? m[2] : cleaned).trim();
+  const s = rest.match(/^(.*?[^\d\s])\s+(\d.*)$/);
+  return { name: s ? s[1] : rest, strength: s ? s[2] : '' };
+}
 
 /* ----------------------------------------------------------------- rows */
 
@@ -275,7 +284,7 @@ export const ALERT_ROWS: StockAlertRow[] = [
   {
     id: 'alp', drug: 'ALprostadil 500 mcg/mL inj (CASE)', code: '1002160', ved: 'V', abc: 'A',
     onHand: 3, unit: 'AMP', daysLeft: 6, dailyUse: 0.5, predict: 4, totalTarget: 7,
-    note: 'สต็อก < Predict → จัดหา/ยืม', noteTone: 'crit',
+    note: 'ต่ำกว่าที่ควรมี', noteTone: 'crit',
     method: 'QUANTILE_LGBM', methodNote: 'ปกติ', lowConfidence: false,
     alert: { alertId: 'AL-2026-1002160', type: 'LOW_STOCK', severity: 'urgent', status: 'open', time: '14:15' },
   },
@@ -289,42 +298,42 @@ export const ALERT_ROWS: StockAlertRow[] = [
   {
     id: 'adr', drug: 'ADRENaline 1 mg/mL inj (HAD)', code: '1000147', ved: 'V', abc: 'B',
     onHand: 15, unit: 'AMP', daysLeft: 1.5, dailyUse: 10, predict: 70, totalTarget: 96,
-    note: 'สต็อก < Predict → จัดหา/ยืม', noteTone: 'crit',
+    note: 'ต่ำกว่าที่ควรมี', noteTone: 'crit',
     method: 'MA_ES', methodNote: 'ปกติ', lowConfidence: false,
     alert: { alertId: 'AL-2026-1000147', type: 'LOW_STOCK', severity: 'critical', status: 'linked', time: '19:02', brNo: 'BR-2026-000125' },
   },
   {
     id: 'fu120', drug: '5-FU 120 SYRINGE', code: '1000017', ved: 'E', abc: 'A',
     onHand: 10, unit: 'SYRINGE', daysLeft: 1.25, dailyUse: 8, predict: 56, totalTarget: 66,
-    note: 'สต็อก < Predict → จัดหา/ยืม', noteTone: 'crit',
+    note: 'ต่ำกว่าที่ควรมี', noteTone: 'crit',
     method: 'MA_ES', methodNote: 'ปกติ', lowConfidence: false,
     alert: { alertId: 'AL-2026-1000017', type: 'LOW_STOCK', severity: 'urgent', status: 'linked', time: '15:45', brNo: 'BR-2026-000124' },
   },
   {
     id: 'cef', drug: 'CefTRIAXone 1 g inj', code: '1000402', ved: 'E', abc: 'B',
     onHand: 8, unit: 'VIAL', daysLeft: 0.89, dailyUse: 9, predict: 63, totalTarget: 76,
-    note: 'สต็อก < Predict → จัดหา/ยืม', noteTone: 'crit',
+    note: 'ต่ำกว่าที่ควรมี', noteTone: 'crit',
     method: 'MA_ES', methodNote: 'ปกติ', lowConfidence: false,
     alert: { alertId: 'AL-2026-1000402', type: 'LOW_STOCK', severity: 'urgent', status: 'linked', time: '09:15', brNo: 'BR-2026-000109' },
   },
   {
     id: 'glv', drug: 'ถุงมือไนไตรล์ M 100 ชิ้น/กล่อง', code: 'SUP-0004', ved: 'E', abc: 'B',
     onHand: 24, unit: 'BOX', daysLeft: 8, dailyUse: 3, predict: 21, totalTarget: 27,
-    note: 'สต็อก ≥ Predict < เป้า → เตรียมสั่งล่วงหน้า', noteTone: 'warn',
+    note: 'ต่ำกว่าเป้า · เตรียมสั่งซื้อ', noteTone: 'warn',
     method: 'MA_ES', methodNote: 'ปกติ', lowConfidence: false,
     alert: { alertId: 'AL-2026-SUP0004', type: 'LOW_STOCK', severity: 'normal', status: 'open', time: '11:30' },
   },
   {
     id: 'omp', drug: 'Omeprazole 40 mg inj', code: '1000671', ved: 'E', abc: 'C',
     onHand: 150, unit: 'VIAL', daysLeft: 100, dailyUse: 1.5, predict: 11, totalTarget: 14,
-    note: 'สต็อก > 2× เป้า → ข้อมูลเท่านั้น', noteTone: 'info',
+    note: 'เกิน 2 เท่าของเป้า', noteTone: 'info',
     method: 'MA_ES', methodNote: 'ปกติ', lowConfidence: false,
     alert: { alertId: 'AL-2026-1000671', type: 'OVERSTOCK', severity: 'normal', status: 'open', time: '10 ต.ค.' },
   },
   {
     id: 'vk1', drug: 'Phytomenadione (Vit K1) 10 mg/mL inj', code: '1000731', ved: 'E', abc: 'C',
     onHand: 85, unit: 'AMP', daysLeft: 283.33, dailyUse: 0.3, predict: 2, totalTarget: 4,
-    note: 'สต็อก > 2× เป้า → ข้อมูลเท่านั้น', noteTone: 'info',
+    note: 'เกิน 2 เท่าของเป้า', noteTone: 'info',
     method: 'QUANTILE_LGBM', methodNote: 'ปกติ', lowConfidence: false,
     alert: { alertId: 'AL-2026-1000731', type: 'OVERSTOCK', severity: 'normal', status: 'open', time: '10 ต.ค.' },
   },
@@ -332,7 +341,7 @@ export const ALERT_ROWS: StockAlertRow[] = [
   {
     id: 'nor', drug: 'NORepinephrine 4 mg/4 mL inj', code: '1000588', ved: 'V', abc: 'B',
     onHand: 48, unit: 'AMP', daysLeft: 8, dailyUse: 6, predict: 42, totalTarget: 55,
-    note: 'สต็อก ≥ Predict < เป้า → เตรียมสั่งล่วงหน้า', noteTone: 'warn',
+    note: 'ต่ำกว่าเป้า · เตรียมสั่งซื้อ', noteTone: 'warn',
     method: 'MA_ES', methodNote: 'ปกติ', lowConfidence: false, alert: null,
   },
   {
@@ -344,25 +353,25 @@ export const ALERT_ROWS: StockAlertRow[] = [
   {
     id: 'amp', drug: 'AMPIcillin 1 g inj', code: '1000245', ved: 'E', abc: 'B',
     onHand: 190, unit: 'VIAL', daysLeft: 15.8, dailyUse: 12, predict: 84, totalTarget: 102,
-    note: 'สต็อก ≥ เป้า → ไม่ต้องดำเนินการ', noteTone: 'ok',
+    note: 'ไม่ต้องดำเนินการ', noteTone: 'ok',
     method: 'MA_ES', methodNote: 'ปกติ', lowConfidence: false, alert: null,
   },
   {
     id: 'fu025', drug: '5-FU 0.25 DOSE', code: '1000016', ved: 'E', abc: 'C',
     onHand: 12, unit: 'DOSE', daysLeft: 12, dailyUse: 1, predict: 7, totalTarget: 9,
-    note: 'สต็อก ≥ เป้า → ไม่ต้องดำเนินการ', noteTone: 'ok',
+    note: 'ไม่ต้องดำเนินการ', noteTone: 'ok',
     method: 'MA_ES', methodNote: 'ปกติ', lowConfidence: false, alert: null,
   },
   {
     id: 'aml', drug: 'AMLOdipine 5 mg tab', code: '1000223', ved: 'D', abc: 'C',
     onHand: 2400, unit: 'เม็ด', daysLeft: 16, dailyUse: 150, predict: null, totalTarget: null, min: 1050, max: 3150,
-    note: 'อยู่ในช่วง Min-Max → แจ้งเตือนอย่างเดียว', noteTone: 'info',
+    note: 'อยู่ในระดับปกติ', noteTone: 'info',
     method: 'MIN_MAX', methodNote: 'ปกติ', lowConfidence: false, alert: null,
   },
   {
     id: 'ate', drug: 'ATEnolol 50 mg tab', code: '1000313', ved: 'D', abc: 'C',
     onHand: 6800, unit: 'เม็ด', daysLeft: 20.6, dailyUse: 330, predict: null, totalTarget: null, min: 2100, max: 6300,
-    note: 'สต็อก > ค่า Max → แจ้งเตือนอย่างเดียว', noteTone: 'info',
+    note: 'เกินระดับสูงสุด', noteTone: 'info',
     method: 'MIN_MAX', methodNote: 'ปกติ', lowConfidence: false, alert: null,
   },
 ];
@@ -381,9 +390,9 @@ export interface HistoryEntry {
 /** Audit trail preview for the header "ประวัติ" dialog (audit_log style). */
 export const ALERT_HISTORY: HistoryEntry[] = [
   { time: '19:02', actor: 'ระบบ', text: 'ยก ADRENaline 1 mg/mL inj เป็น เร่งด่วนมาก · ผูกคำขอ BR-2026-000125' },
-  { time: '17:45', actor: 'เภสัชกร', text: 'รับทราบ Tenecteplase 50 mg inj (LOW_CONFIDENCE · COLD_START)' },
+  { time: '17:45', actor: 'เภสัชกร', text: 'รับทราบ Tenecteplase 50 mg inj (ข้อมูลพยากรณ์น้อย)' },
   { time: '15:45', actor: 'เภสัชกร', text: 'ผูก 5-FU 120 SYRINGE กับคำขอ BR-2026-000124' },
-  { time: '14:15', actor: 'ระบบ', text: 'เปิด LOW_STOCK ALprostadil 500 mcg/mL inj (เหลือ 6 วัน)' },
-  { time: '11:30', actor: 'ระบบ', text: 'เปิด LOW_STOCK ถุงมือไนไตรล์ M (สต็อก ≥ Predict < เป้า)' },
+  { time: '14:15', actor: 'ระบบ', text: 'เปิดแจ้งเตือนสต็อกต่ำ ALprostadil 500 mcg/mL inj (เหลือ 6 วัน)' },
+  { time: '11:30', actor: 'ระบบ', text: 'เปิดแจ้งเตือนสต็อกต่ำ ถุงมือไนไตรล์ M (ต่ำกว่าเป้า)' },
   { time: '10 ต.ค.', actor: 'ระบบ', text: 'เปิด OVERSTOCK Omeprazole 40 mg inj · Phytomenadione (Vit K1)' },
 ];

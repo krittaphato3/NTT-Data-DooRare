@@ -25,11 +25,11 @@ const CONFIDENCE: Record<string, AllocationPlan['agent']['confidence']> = { HIGH
 /** The plan's origin: the allocation agent's run (or its F-22 fallback), or a split the owner pharmacist wrote by hand. */
 function agentView(p: ApiPlan): AllocationPlan['agent'] {
   const run = p.agentRunId ? p.agentRunId.slice(0, 8) : '—';
-  if (!p.agentRunId) return { run, confidence: '—', title: 'แผนที่เภสัชกรสร้างเอง', note: 'เภสัชกร รพ.เจ้าของยากำหนดผู้รับและจำนวนเอง · โค้ดตรวจ F-22 (ใช้ทันก่อนหมดอายุ) และ F-23 (ค่าขนส่งเทียบมูลค่า) ก่อนบันทึก' };
+  if (!p.agentRunId) return { run, confidence: '—', title: 'แผนที่เภสัชกรสร้างเอง', note: 'เภสัชกรเจ้าของยากำหนดผู้รับและจำนวนเอง · ระบบตรวจว่าใช้ทันก่อนหมดอายุและค่าขนส่งคุ้มค่าก่อนบันทึก' };
   if (!p.agent || p.agent.status === 'OK') {
-    return { run, confidence: CONFIDENCE[p.agent?.confidence ?? ''] ?? 'ปานกลาง', title: `Agent เสนอแผน (${p.agent?.model ?? run})`, note: p.agent?.summary ?? 'แผนจากการจับคู่ของ Agent · โค้ดคำนวณ F-22 และ F-23 ซ้ำและตรวจก่อนบันทึก' };
+    return { run, confidence: CONFIDENCE[p.agent?.confidence ?? ''] ?? 'ปานกลาง', title: 'ระบบเสนอแผนนี้', note: p.agent?.summary ?? 'แผนจากการจับคู่อัตโนมัติ · ระบบตรวจซ้ำก่อนบันทึก' };
   }
-  return { run, confidence: '—', title: `ใช้สูตร F-22 แทน Agent (${p.agent.status})`, note: `${p.agent.summary ?? 'Agent เสนอแผนที่ใช้ไม่ได้'} · แบ่งให้ รพ.ที่สต็อกเหลือน้อยวันที่สุดก่อน (F-22)` };
+  return { run, confidence: '—', title: 'แผนจากสูตรสำรอง', note: 'แบ่งให้ รพ.ที่สต็อกเหลือน้อยวันที่สุดก่อน' };
 }
 
 function statusOf(p: ApiPlan): PlanStatus {

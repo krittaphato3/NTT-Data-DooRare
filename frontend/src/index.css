@@ -1614,15 +1614,6 @@ a.sa-card:hover {
   color: var(--ink);
   font-weight: 600;
 }
-.sa-card-code {
-  font-weight: 400;
-  font-size: 11.5px;
-  line-height: 1.5;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--muted);
-  white-space: nowrap;
-}
 .sa-card-num {
   font-size: 28px;
   line-height: 34px;
@@ -1649,6 +1640,9 @@ a.sa-card:hover {
   height: 34px;
   padding: 0 12px;
 }
+.sa-tabs .cnt-zero {
+  opacity: 0.55;
+}
 .sa-tabs .tab:hover {
   background: transparent;
   color: var(--primary-dark);
@@ -1670,7 +1664,7 @@ a.sa-card:hover {
   flex: 1 1 220px;
   min-width: 0;
   max-width: 340px;
-  height: 40px;
+  height: 36px;
   border: 1px solid var(--border-strong);
   border-radius: 8px;
   display: flex;
@@ -1701,7 +1695,7 @@ a.sa-card:hover {
   gap: 6px;
 }
 .sa-chip {
-  height: 32px;
+  height: 36px;
   padding: 0 12px;
   border-radius: 9999px;
   border: 1px solid var(--border);
@@ -1729,7 +1723,7 @@ a.sa-card:hover {
   color: #ffffff;
 }
 .sa-ved-chip {
-  width: 34px;
+  width: 36px;
   padding: 0;
   justify-content: center;
   font-family: Inter, sans-serif;
@@ -1792,27 +1786,96 @@ a.sa-card:hover {
   background: #16a34a;
 }
 .sa-note {
-  font-size: 11.5px;
+  font-size: 12px;
   line-height: 16px;
 }
-.sa-alert-meta {
+.sa-table td {
+  vertical-align: middle;
+}
+/* `.qt th` is left-aligned and beats `.r`, so the number headers sat at the left of their column while the numbers sat at the right. */
+.sa-table th.r {
+  text-align: right;
+}
+.sa-table tbody tr:hover td {
+  background: #f8fafc;
+}
+/* A card with nothing in it steps back so the cards that need attention stand out. */
+.sa-card-zero .sa-card-num {
+  color: #64748b;
+}
+.sa-sub {
   display: block;
-  margin-top: 3px;
-  font-size: 12px;
-  line-height: 17px;
+  margin-top: 2px;
+  font-size: 12.5px;
+  line-height: 18px;
   color: var(--body);
 }
 .sa-actions {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 6px;
+  display: grid;
+  grid-template-columns: 72px 72px 100px;
+  align-items: center;
+  justify-content: end;
+  gap: 8px;
 }
-.sa-links {
+.sa-actions .btn {
+  width: 100%;
+  justify-content: center;
+  white-space: nowrap;
+}
+/* No main button on this row: the two quiet actions sit in the middle of the 3-slot width instead of leaving a hole on the right. */
+.sa-actions-2 {
+  grid-template-columns: 72px 72px;
+  padding-right: 50px;
+}
+.sa-actions-2 > :nth-child(3) {
+  display: none;
+}
+.sa-actions .link {
+  text-align: center;
+  justify-content: center;
+}
+/* Only the next step is a solid button; "ack" and "detail" stay quiet so 18 rows don't shout the same three controls. */
+.sa-actions .sa-ack {
+  color: var(--body);
+}
+.sa-actions .sa-ack:hover {
+  background: var(--primary-soft);
+  color: var(--primary-dark);
+}
+/* Drug cell: badge on the left, name and detail share one text column so both lines start at the same x. */
+.sa-drug-cell {
   display: flex;
-  justify-content: flex-end;
+  align-items: flex-start;
+  gap: 10px;
+}
+.sa-drug-cell .ved {
+  flex: none;
+  margin-top: 1px;
+}
+.sa-drug-text {
+  min-width: 0;
+}
+.sa-drug-line {
+  display: flex;
+  align-items: center;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 8px;
+}
+/* Number + unit sit in fixed slots, so the numbers of every row end at the same x. */
+.sa-n {
+  display: inline-block;
+  min-width: 54px;
+  text-align: right;
+}
+.sa-u {
+  display: inline-block;
+  min-width: 46px;
+  padding-left: 6px;
+  text-align: left;
+  font-size: 12px;
+}
+.sa-u-day {
+  min-width: 28px;
 }
 .sa-cell-num {
   font-weight: 600;
@@ -1878,9 +1941,6 @@ a.sa-card:hover {
     line-height: 32px;
   }
   .sa-actions {
-    align-items: stretch;
-  }
-  .sa-links {
-    justify-content: flex-start;
+    justify-content: start;
   }
 }
