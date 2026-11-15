@@ -1,19 +1,9 @@
-import type { NextFunction, Request, Response } from 'express';
 import { pool } from '../../db/client.js';
 import { systemAuditContext } from '../../core/audit.js';
 import { runExpiryJobs } from '../expiry/expiry.routes.js';
 import { loadForecastRuns } from '../forecasts/forecasts.runs.js';
 import { DemoService, type DemoOperationResult } from './demo.service.js';
 import { planDemo, runDemo, type SeedHost } from './demo.engine.js';
-
-const LOCAL_HOSTS = ['127.0.0.1', 'localhost', '::1', 'db'];
-
-/** The demo buttons write to whole tables: only on a local database, or when DEMO_TOOLS_ENABLED=1 says so on purpose. */
-export function demoToolsGuard(_req: Request, res: Response, next: NextFunction) {
-  const host = process.env.DB_HOST || '127.0.0.1';
-  if (process.env.DEMO_TOOLS_ENABLED === '1' || LOCAL_HOSTS.includes(host)) return next();
-  res.status(403).json({ success: false, message: `demo tools are off for database ${host} (set DEMO_TOOLS_ENABLED=1 to allow)` });
-}
 
 /** The engine calls the services directly: no login, no HTTP. */
 const inProcessHost: SeedHost = {

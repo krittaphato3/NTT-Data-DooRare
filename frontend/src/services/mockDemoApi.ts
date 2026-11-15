@@ -1,3 +1,5 @@
+import { apiFetch } from './apiFetch';
+
 /**
  * Service for interacting with backend Mock Demo Generator API (/api/v1/demo).
  */
@@ -24,10 +26,10 @@ export interface DemoOperationResponse {
   stats: DbStats;
 }
 
-const API_BASE = '/api/v1/demo';
+const API_BASE = '/demo'; // apiFetch adds /api/v1 and the session token (SYSTEM_ADMIN only on the backend)
 
 export async function getDemoStats(): Promise<DbStats> {
-  const res = await fetch(`${API_BASE}/stats`);
+  const res = await apiFetch(`${API_BASE}/stats`);
   if (!res.ok) {
     throw new Error(`Failed to fetch stats: HTTP ${res.status}`);
   }
@@ -46,18 +48,18 @@ export interface DemoPlan {
 
 /** What a fill would add (writes nothing). */
 export async function getDemoPlan(relaxed = true): Promise<DemoPlan> {
-  const res = await fetch(`${API_BASE}/plan?relaxed=${relaxed ? 1 : 0}`);
+  const res = await apiFetch(`${API_BASE}/plan?relaxed=${relaxed ? 1 : 0}`);
   if (!res.ok) {
     const errorJson = await res.json().catch(() => ({}));
-    throw new Error(errorJson.message || `Failed to read the plan: HTTP ${res.status}`);
+    throw new Error(errorJson.message || errorJson.title || `Failed to read the plan: HTTP ${res.status}`);
   }
   return (await res.json()).data;
 }
 
 /** Tops the demo data up to its targets (only adds; pressing again finds nothing missing). */
 export async function runFill(which: 'f1' | 'f2' | 'all', relaxed = true): Promise<DemoOperationResponse> {
-  const res = await fetch(`${API_BASE}/fill/${which}?relaxed=${relaxed ? 1 : 0}`, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+  const res = await apiFetch(`${API_BASE}/fill/${which}?relaxed=${relaxed ? 1 : 0}`, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
   const json = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(json.message || `Failed to fill: HTTP ${res.status}`);
+  if (!res.ok) throw new Error(json.message || json.title || `Failed to fill: HTTP ${res.status}`);
   return json;
 }

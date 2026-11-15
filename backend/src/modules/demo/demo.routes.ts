@@ -1,10 +1,12 @@
 import { Router } from 'express';
 import { asyncHandler } from '../../middleware/asyncHandler.js';
 import { DemoService } from './demo.service.js';
-import { demoToolsGuard, planFill, runFill } from './demo.runner.js';
+import { requireAuth, requireRole } from '../../middleware/auth.js';
+import { planFill, runFill } from './demo.runner.js';
 
 export const demoRouter = Router();
-demoRouter.use(demoToolsGuard);
+// the demo tools write to whole tables: signed-in SYSTEM_ADMIN only (login is checked against the same app_user table on every database)
+demoRouter.use(requireAuth, requireRole('SYSTEM_ADMIN'));
 
 // GET /api/v1/demo/stats - Live database statistics
 demoRouter.get(

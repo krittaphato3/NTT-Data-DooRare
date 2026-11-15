@@ -498,6 +498,14 @@ function AuthenticatedShell() {
     .join(' ');
 
   if (route.page === 'mock-demo') {
+    // the demo tools write to the database: system administrators only (the backend checks the same on every call)
+    if (!user?.allRoles.includes('SYSTEM_ADMIN')) {
+      return (
+        <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Noto Sans Thai', sans-serif", color: '#334155' }}>
+          หน้านี้สำหรับผู้ดูแลระบบ (SYSTEM_ADMIN) เท่านั้น กรุณาเข้าสู่ระบบด้วยบัญชีผู้ดูแลระบบ
+        </div>
+      );
+    }
     return (
       <div className="mock-demo-shell">
         <MockDemoPage />
