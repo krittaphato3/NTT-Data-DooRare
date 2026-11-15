@@ -24,6 +24,12 @@ export interface DemoOperationResponse {
   message: string;
   logs: string[];
   stats: DbStats;
+  /** what a fill added (fill buttons only) */
+  added?: {
+    f2: { kind: string; owner: string; receivers: string[]; name: string; qty: number; days: number }[];
+    f1: { code: string; sev: string; name: string }[];
+    snoozed: number;
+  };
 }
 
 const API_BASE = '/demo'; // apiFetch adds /api/v1 and the session token (SYSTEM_ADMIN only on the backend)
@@ -62,4 +68,48 @@ export async function runFill(which: 'f1' | 'f2' | 'all', relaxed = true): Promi
   const json = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(json.message || json.title || `Failed to fill: HTTP ${res.status}`);
   return json;
+}
+
+// ---- stock form (/mock-stock): receive / use stock of one drug at one hospital ----
+
+export interface StockHospital { code: string; name: string }
+export interface StockDrug {
+  id: string;
+  name: string;
+  local_name: string | null;
+  unit: string | null;
+  ved: string | null;
+  price: number;
+  free: number;
+  u_per_day: number | null;
+  target: number | null;
+  alert: { severity: string; status: string } | null;
+}
+export interface StockAdjustResult {
+  success: boolean;
+  hospital: string;
+  drug: string;
+  requested: number;
+  applied: number;
+  before: { free: number; alert: string | null };
+  after: { free: number; alert: string | null };
+  alertsChanged: { granularity: string; opened: number; closed: number }[];
+  nearExpiryDetected: number | null;
+}
+
+async function stockJson<T>(res: Response, what: string): Promise<T> {
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(json.message || json.title || `${what}: HTTP ${res.status}`);
+  return json as T;
+}
+
+export async function getStockHospitals(): Promise<StockHospital[]> {
+  return (await stockJson<{ data: StockHospital[] }>(await apiFetch(`${API_BASE}/stock/hospitals`), 'อ่านรายชื่อ รพ. ไม่สำเร็จ')).data;
+}
+export async function getStockDrugs(hospital: string, q: string): Promise<StockDrug[]> {
+  const qs = new URLSearchParams({ hospital, q });
+  return (await stockJson<{ data: StockDrug[] }>(await apiFetch(`${API_BASE}/stock/drugs?${qs}`), 'อ่านรายการยาไม่สำเร็จ')).data;
+}
+export async function adjustStock(body: { hospital: string; hospitalDrugId: string; delta: number; expiryDays?: number }): Promise<StockAdjustResult> {
+  return stockJson<StockAdjustResult>(await apiFetch(`${API_BASE}/stock/adjust`, { method: 'POST', body: JSON.stringify(body) }), 'ปรับสต็อกไม่สำเร็จ');
 }

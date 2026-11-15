@@ -1,7 +1,29 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { getDemoStats, getDemoPlan, runFill, type DbStats, type DemoPlan } from '../services/mockDemoApi';
+import { getDemoStats, getDemoPlan, runFill, type DbStats, type DemoPlan, type DemoOperationResponse } from '../services/mockDemoApi';
 
 const SEV_LABEL = { VERY_URGENT: 'ด่วนมาก', URGENT: 'ด่วน', NORMAL: 'ปกติ' } as const;
+
+const F2_HOW: Record<string, string> = { A: 'อนุมัติอัตโนมัติ', X: 'รอเห็นชอบ', U: 'ต้องเลือกวิธีขนส่งก่อน' };
+
+/** The readable "what was added" block for the log panel (one short line per item). */
+function summaryLines(added: NonNullable<DemoOperationResponse['added']>): string[] {
+  const out: string[] = ['', '== สรุปสิ่งที่เพิ่มเข้ามา =='];
+  if (added.f2.length === 0 && added.f1.length === 0) {
+    out.push('ไม่มีอะไรเพิ่ม (ครบเท่าที่หายาเข้าเงื่อนไขได้แล้ว)');
+  }
+  if (added.f2.length > 0) {
+    out.push(`F2 ล็อตใกล้หมดอายุ +${added.f2.length}`);
+    for (const x of added.f2) out.push(`  • ${x.owner} → ${x.receivers.join(', ')}: ${x.name} ${x.qty.toLocaleString()} หน่วย (อีก ${x.days} วัน) ${F2_HOW[x.kind] ?? ''}`.trimEnd());
+  }
+  if (added.f1.length > 0) {
+    out.push(`F1 แจ้งเตือนที่ยืมได้ +${added.f1.length}`);
+    for (const code of [...new Set(added.f1.map((x) => x.code))]) {
+      out.push(`  • ${code}: ${added.f1.filter((x) => x.code === code).map((x) => `${SEV_LABEL[x.sev as keyof typeof SEV_LABEL] ?? x.sev} ${x.name}`).join(' · ')}`);
+    }
+  }
+  if (added.snoozed > 0) out.push(`พัก alert F1 ของยาที่ใช้เป็นล็อต F2: ${added.snoozed} (7 วัน)`);
+  return out;
+}
 
 export const MockDemoPage: React.FC = () => {
   const [stats, setStats] = useState<DbStats | null>(null);
@@ -9,6 +31,7 @@ export const MockDemoPage: React.FC = () => {
   const [executingAction, setExecutingAction] = useState<string | null>(null);
   const [plan, setPlan] = useState<DemoPlan | null>(null);
   const [relaxed, setRelaxed] = useState(true);
+  const [verbose, setVerbose] = useState(false); // full technical log of a fill (default: only the readable summary)
   const [logs, setLogs] = useState<string[]>([]);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const terminalScrollContainerRef = useRef<HTMLDivElement | null>(null);
@@ -54,8 +77,11 @@ export const MockDemoPage: React.FC = () => {
 
     try {
       const res = await actionFn();
-      if (res.logs && Array.isArray(res.logs)) {
+      if (res.logs && Array.isArray(res.logs) && (verbose || !res.added || res.success === false)) {
         setLogs((prev) => [...prev, ...res.logs]);
+      }
+      if (res.added && res.success !== false) {
+        setLogs((prev) => [...prev, ...summaryLines(res.added!)]);
       }
       if (res.stats) {
         setStats(res.stats);
@@ -163,6 +189,13 @@ export const MockDemoPage: React.FC = () => {
             </svg>
             <span>รีเฟรชสถิติ</span>
           </button>
+
+          <a
+            href="/mock-stock"
+            style={{ padding: '9px 18px', background: '#ffffff', color: '#0369a1', border: '1px solid #0284c7', borderRadius: '8px', fontSize: '13px', fontWeight: 600, textDecoration: 'none' }}
+          >
+            ปรับสต็อกยา (เลือกยา/รพ.)
+          </a>
 
           <button
             type="button"
@@ -379,7 +412,11 @@ export const MockDemoPage: React.FC = () => {
               </span>
             </div>
 
-            <div style={{ display: 'flex', gap: '8px' }}>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <label style={{ fontSize: '11px', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                <input type="checkbox" checked={verbose} onChange={(e) => setVerbose(e.target.checked)} />
+                log เต็ม
+              </label>
               <button
                 type="button"
                 onClick={handleCopyLogs}

@@ -2,6 +2,7 @@ import { pool, query } from '../../db/client.js';
 import { runExpiryJobs } from '../expiry/expiry.routes.js';
 import { loadForecastRuns, reevaluateAlerts } from '../forecasts/forecasts.runs.js';
 import { systemAuditContext } from '../../core/audit.js';
+import type { DemoAdded } from './demo.engine.js';
 
 export interface DbStats {
   hospitals: number;
@@ -24,6 +25,8 @@ export interface DemoOperationResult {
   message: string;
   logs: string[];
   stats: DbStats;
+  /** what a fill added (fill buttons only) */
+  added?: DemoAdded;
 }
 
 export class DemoService {

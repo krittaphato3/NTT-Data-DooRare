@@ -3,7 +3,7 @@ import { systemAuditContext } from '../../core/audit.js';
 import { runExpiryJobs } from '../expiry/expiry.routes.js';
 import { loadForecastRuns } from '../forecasts/forecasts.runs.js';
 import { DemoService, type DemoOperationResult } from './demo.service.js';
-import { planDemo, runDemo, type SeedHost } from './demo.engine.js';
+import { planDemo, runDemo, type DemoAdded, type SeedHost } from './demo.engine.js';
 
 /** The engine calls the services directly: no login, no HTTP. */
 const inProcessHost: SeedHost = {
@@ -19,7 +19,7 @@ const inProcessHost: SeedHost = {
 const LOCK_KEY = 74_210_001; // pg advisory lock: one fill at a time on this database, also across backend processes
 let running: string | null = null;
 
-function conflict(message: string) {
+export function conflict(message: string) {
   return Object.assign(new Error(message), { status: 409 });
 }
 
@@ -34,30 +34,38 @@ export async function planFill(relaxed = true) {
   }
 }
 
-/** Tops the demo situation up (F1 alerts to borrow from, F2 near-expiry lots). Only adds; running it again finds nothing missing. */
-export async function runFill(parts: ('f1' | 'f2')[], label: string, relaxed = true): Promise<DemoOperationResult> {
+/** One demo write at a time on this database (in-process flag + pg advisory lock, also across backend processes). */
+export async function withDemoLock<T>(label: string, fn: () => Promise<T>): Promise<T> {
   if (running) throw conflict(`กำลังทำงานอยู่ (${running}) รอให้เสร็จก่อน`);
   running = label;
   const lock = await pool.connect();
-  const logs: string[] = [];
-  const stamp = () => new Date().toISOString().substring(11, 19);
-  const push = (l: string) => { if (l.trim()) logs.push(`[${stamp()}] ${l.trimEnd()}`); };
   try {
     const got = (await lock.query('SELECT pg_try_advisory_lock($1) AS ok', [LOCK_KEY])).rows[0].ok as boolean;
     if (!got) throw conflict('อีกโปรเซสกำลังเติมข้อมูลอยู่ รอให้เสร็จก่อน');
-    push(`INFO: ${label}${relaxed ? ' (ผ่อนเงื่อนไขเลือกยา)' : ''}`);
-    let success = true;
-    try {
-      await runDemo({ db: pool, host: inProcessHost, log: push, only: parts, relaxed });
-    } catch (e) {
-      success = false;
-      push(`ERROR: ${(e as Error).message}`);
-    }
-    const stats = await DemoService.getStats();
-    return { success, message: success ? label : `${label} ไม่สำเร็จ ดู log`, logs, stats };
+    return await fn();
   } finally {
     await lock.query('SELECT pg_advisory_unlock($1)', [LOCK_KEY]).catch(() => undefined);
     lock.release();
     running = null;
   }
+}
+
+/** Tops the demo situation up (F1 alerts to borrow from, F2 near-expiry lots). Only adds; running it again finds nothing missing. */
+export async function runFill(parts: ('f1' | 'f2')[], label: string, relaxed = true): Promise<DemoOperationResult> {
+  return withDemoLock(label, async () => {
+    const logs: string[] = [];
+    const stamp = () => new Date().toISOString().substring(11, 19);
+    const push = (l: string) => { if (l.trim()) logs.push(`[${stamp()}] ${l.trimEnd()}`); };
+    push(`INFO: ${label}${relaxed ? ' (ผ่อนเงื่อนไขเลือกยา)' : ''}`);
+    let success = true;
+    let added: DemoAdded | undefined;
+    try {
+      added = await runDemo({ db: pool, host: inProcessHost, log: push, only: parts, relaxed });
+    } catch (e) {
+      success = false;
+      push(`ERROR: ${(e as Error).message}`);
+    }
+    const stats = await DemoService.getStats();
+    return { success, message: success ? label : `${label} ไม่สำเร็จ ดู log`, logs, stats, added };
+  });
 }

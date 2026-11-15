@@ -42,6 +42,13 @@ let DRY = false;
 let RELAXED = false;
 /** drugs the dry F2 pass would turn into seeded lots: a real fill snoozes their F1 alerts and F1 may not use them */
 const dryF2Drugs = new Set<string>();
+/** what a real run added, for the readable summary on /mock-demo (filled only outside the dry run) */
+export type DemoAdded = {
+  f2: { kind: string; owner: string; receivers: string[]; name: string; qty: number; days: number }[];
+  f1: { code: string; sev: string; name: string }[];
+  snoozed: number;
+};
+let added: DemoAdded = { f2: [], f1: [], snoozed: 0 };
 const dryAdd = { f1: [] as { code: string; sev: string }[], f2: [] as { kind: string; owner: string; canAdd: number }[] };
 const DAYS = [35, 60, 45, 75];
 const MIN_VALUE_X = Number(process.env.MIN_VALUE_X ?? 8000); // far receivers cost more to reach: approving must not be blocked by the cost check
@@ -83,7 +90,7 @@ const drugsSql = () => `
                       WHERE br.borrower_hospital_id = hd.hospital_id AND i.drug_master_id = dm.id AND br.status::text NOT IN ('FULFILLED','CLOSED_UNFULFILLED','CANCELLED'))`;
 
 /** Takes `qty` from the free lots of a hospital drug, earliest expiry first (ledger ISSUE_USAGE, ref_type DEMO_F2_SHAPE). */
-async function drain(c: pg.PoolClient, hdId: string, hospitalId: string, qty: number, refType = 'DEMO_F2_SHAPE') {
+export async function drain(c: pg.PoolClient, hdId: string, hospitalId: string, qty: number, refType = 'DEMO_F2_SHAPE') {
   let left = Math.ceil(qty);
   const lots = (await c.query(`SELECT id, qty_on_hand - qty_held AS f FROM stock_lot WHERE hospital_drug_id = $1 AND expiry_date > current_date AND qty_on_hand - qty_held > 0 ORDER BY expiry_date, id`, [hdId])).rows;
   for (const l of lots) {
@@ -95,7 +102,7 @@ async function drain(c: pg.PoolClient, hdId: string, hospitalId: string, qty: nu
   }
 }
 /** Adds a plain stock lot (IMPORT) that lasts a year. */
-async function addStock(c: pg.PoolClient, hdId: string, hospitalId: string, lotNo: string, qty: number, expDays: number, pack: number | null) {
+export async function addStock(c: pg.PoolClient, hdId: string, hospitalId: string, lotNo: string, qty: number, expDays: number, pack: number | null) {
   const id = (await c.query(
     `INSERT INTO stock_lot(hospital_id, hospital_drug_id, lot_no, expiry_date, manufacturer, pack_size_base_units, qty_on_hand, updated_at)
      VALUES ($1, $2, $3, current_date + $4::int, 'องค์การเภสัชกรรม (ตัวอย่าง)', $5, $6, now()) RETURNING id`, [hospitalId, hdId, lotNo, expDays, pack, Math.ceil(qty)])).rows[0].id;
@@ -228,6 +235,7 @@ async function f2() {
         await c.query('COMMIT');
         created.push({ sc, lot, name: o.name });
         ok(`${lot}  ${o.name}  ${qty} units, ${days} days  [${sc.note}]`);
+        added.f2.push({ kind: sc.kind, owner: sc.owner, receivers: sc.receivers, name: o.name, qty, days });
       } catch (e) {
         await c.query('ROLLBACK');
         warn(`${lot}: ${(e as Error).message}`);
@@ -362,6 +370,7 @@ async function f1MoreAlerts() {
         }
         usedBy.set(pick.drug_id, (usedBy.get(pick.drug_id) ?? 0) + 1);
         cut.add(pick.hd_id);
+        added.f1.push({ code, sev, name: pick.name });
         ok(`${code} ${pick.name}: stock ${Math.round(pick.free)} -> ${Math.round(Math.min(pick.free, keep))} (${sev}, ${pick.lenders} lenders)`);
         need -= 1;
       }
@@ -394,6 +403,7 @@ async function f1() {
         AND hd.drug_master_id IN (SELECT x.drug_master_id FROM stock_lot l JOIN hospital_drug x ON x.id = l.hospital_drug_id WHERE l.lot_no LIKE 'DEMO-F2%')
       RETURNING a.id, a.hospital_id`,
   );
+  added.snoozed = hidden.length;
   ok(`${hidden.length} LOW_STOCK alert(s) on F2 drugs snoozed for 7 days (borrowing them would fill the F2 receivers)`);
 
   // the cuts above also shrink lenders: run the real lender filter (F-12: transit time, lendable stock, mapping ...) for every open alert.
@@ -448,13 +458,15 @@ function configure(o: SeedOptions) {
 }
 
 /** Runs the parts in `only` (default f2 then f1). Not safe to run twice at the same time: the callers hold a lock. */
-export async function runDemo(o: SeedOptions): Promise<void> {
+export async function runDemo(o: SeedOptions): Promise<DemoAdded> {
   configure(o);
+  added = { f2: [], f1: [], snoozed: 0 };
   const only = (o.only ?? ['f2', 'f1']).map((s) => s.trim().toLowerCase());
   say('Forecast');
   await ensureForecast();
   if (only.includes('f2')) await f2();
   if (only.includes('f1')) await f1();
+  return added;
 }
 
 /**
