@@ -5,6 +5,7 @@
 #   reset  drop the DB volume, recreate the schema, load mock data
 #   scenarios  leave pending work for pharmacist / ER / warehouse / driver through the API (backend must be running; once per fresh DB)
 #   scenarios-f2  add fresh near-expiry lots with real receivers and release some to the pool (backend must be running; can be repeated)
+#   demo-seed  the whole demo in one command (ONLY=f2,f1 default): shapes stock, adds lots, clean F1 alerts (backend must be running; local DB only, can be repeated). Loads the forecast itself if the DB has none
 #   networks  move HD + HE to a second network so near-expiry plans with them wait for approval (db/demo/03-networks.sql, can be repeated)
 #   psql   open psql   (host: 127.0.0.1:5442, user doorare, password doorare_dev, db doorare)
 set -euo pipefail
@@ -51,7 +52,10 @@ case "${1:-}" in
                curl -fs http://127.0.0.1:${PORT:-3001}/api/v1/health >/dev/null || { echo "start the backend first (cd backend && npx tsx src/index.ts)" >&2; exit 1; }
                (cd backend && DB_HOST=127.0.0.1 DB_PORT=5442 DB_NAME=doorare DB_USER=doorare DB_PASSWORD=doorare_dev API=http://127.0.0.1:${PORT:-3001}/api/v1 npx tsx scripts/demo-f2.ts)
              fi ;;
+  demo-seed) curl -fs http://127.0.0.1:${PORT:-3001}/api/v1/health >/dev/null || { echo "start the backend first (cd backend && npx tsx src/index.ts)" >&2; exit 1; }
+             $PSQL -q < db/demo/03-networks.sql >/dev/null
+             (cd backend && DB_HOST=127.0.0.1 DB_PORT=5442 DB_NAME=doorare DB_USER=doorare DB_PASSWORD=doorare_dev API=http://127.0.0.1:${PORT:-3001}/api/v1 npx tsx scripts/demo-seed.ts) ;;
   networks) $PSQL < db/demo/03-networks.sql ;;
   psql)  exec $DC exec db psql -U doorare -d doorare ;;
-  *)     echo "usage: $0 {up|load|reset|scenarios|scenarios-f2|networks|psql}" >&2; exit 1 ;;
+  *)     echo "usage: $0 {up|load|reset|scenarios|scenarios-f2|demo-seed|networks|psql}" >&2; exit 1 ;;
 esac
