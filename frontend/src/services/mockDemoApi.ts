@@ -13,6 +13,7 @@ export interface DbStats {
   nearExpiryPool: number;
   allocationPlans: number;
   isNetworkSplit: boolean;
+  database: { host: string; name: string; local: boolean };
   networks: { code: string; name: string; network: string }[];
 }
 
@@ -34,63 +35,27 @@ export async function getDemoStats(): Promise<DbStats> {
   return json.data;
 }
 
-export async function runFullDemoSeed(): Promise<DemoOperationResponse> {
-  const res = await fetch(`${API_BASE}/seed`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-  });
-  if (!res.ok) {
-    const errorJson = await res.json().catch(() => ({}));
-    throw new Error(errorJson.message || `Failed to seed demo: HTTP ${res.status}`);
-  }
-  return res.json();
+export interface DemoPlan {
+  forecastLoaded: boolean;
+  nothingToAdd: boolean;
+  f1: { hospital: string; severity: 'VERY_URGENT' | 'URGENT' | 'NORMAL'; have: number; want: number; missing: number }[];
+  f2: { kind: string; owner: string; note: string; have: number; want: number; missing: number }[];
 }
 
-export async function runF2NearExpirySeed(): Promise<DemoOperationResponse> {
-  const res = await fetch(`${API_BASE}/f2`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-  });
+/** What a fill would add (writes nothing). */
+export async function getDemoPlan(): Promise<DemoPlan> {
+  const res = await fetch(`${API_BASE}/plan`);
   if (!res.ok) {
     const errorJson = await res.json().catch(() => ({}));
-    throw new Error(errorJson.message || `Failed to seed F2: HTTP ${res.status}`);
+    throw new Error(errorJson.message || `Failed to read the plan: HTTP ${res.status}`);
   }
-  return res.json();
+  return (await res.json()).data;
 }
 
-export async function runRoleScenarios(): Promise<DemoOperationResponse> {
-  const res = await fetch(`${API_BASE}/scenarios`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-  });
-  if (!res.ok) {
-    const errorJson = await res.json().catch(() => ({}));
-    throw new Error(errorJson.message || `Failed to seed scenarios: HTTP ${res.status}`);
-  }
-  return res.json();
-}
-
-export async function toggleNetworkSplit(split: boolean): Promise<DemoOperationResponse> {
-  const res = await fetch(`${API_BASE}/networks`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ split }),
-  });
-  if (!res.ok) {
-    const errorJson = await res.json().catch(() => ({}));
-    throw new Error(errorJson.message || `Failed to toggle networks: HTTP ${res.status}`);
-  }
-  return res.json();
-}
-
-export async function cleanDemoRecords(): Promise<DemoOperationResponse> {
-  const res = await fetch(`${API_BASE}/clean`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-  });
-  if (!res.ok) {
-    const errorJson = await res.json().catch(() => ({}));
-    throw new Error(errorJson.message || `Failed to clean demo records: HTTP ${res.status}`);
-  }
-  return res.json();
+/** Tops the demo data up to its targets (only adds; pressing again finds nothing missing). */
+export async function runFill(which: 'f1' | 'f2' | 'all'): Promise<DemoOperationResponse> {
+  const res = await fetch(`${API_BASE}/fill/${which}`, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(json.message || `Failed to fill: HTTP ${res.status}`);
+  return json;
 }

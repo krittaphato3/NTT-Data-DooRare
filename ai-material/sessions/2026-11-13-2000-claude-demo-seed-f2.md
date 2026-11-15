@@ -112,3 +112,9 @@ summary: db:demo-seed ONLY=f2 shapes stock + lots so A-network plans auto-approv
 - Verified (reset + run): script and buttons give the same numbers as before the refactor (F2 waiting HA=9 HB=6 HC=4 HD=1 HE=2; F1 open HA 8, HB 8, HC 6, HD 5, HE 2). Second press adds only a few F1 alerts (HA urgent 3, HB very urgent 3, HC urgent 2) and no F2 lots: it tops up toward the targets, it does not stack.
 - Known: `plan` shows "missing 13" for F1 even when nothing more can be found (HD/HE have few drugs): it is an upper bound, the run logs what it could not add. Page, auth (SYSTEM_ADMIN) and RESTORE.md are not done yet.
 - Files touched: demo.engine.ts, demo.runner.ts, demo.routes.ts, scripts/demo-seed.ts, this note.
+
+## Update 9 (2026-11-15): /mock-demo page reworked to plan + fill buttons
+- Page now has: DB banner (host/name, LOCAL green / REMOTE red, from `stats.database`), "ดูก่อน (Plan)" with have/target tables (F1 per hospital and severity, F2 per scenario), fill buttons (all / F1 / F2). Removed the friend's cards: Full Seed script call, role scenarios, network split, Clean (their routes still exist, no button).
+- Checked in the browser (login as the test system admin): banner, plan tables, fill run with FINISH in the log. The page is already behind the app login (shows the login screen when signed out); role is not yet restricted to SYSTEM_ADMIN (step 4).
+- Note: F2 "missing" in plan can be unreachable (the script warns "only N suitable drugs" for some scenarios), so it is an upper bound.
+- Files touched: frontend/src/pages/MockDemoPage.tsx, frontend/src/services/mockDemoApi.ts, backend/src/modules/demo/demo.service.ts (database info in stats), this note.

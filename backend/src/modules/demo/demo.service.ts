@@ -14,6 +14,8 @@ export interface DbStats {
   nearExpiryPool: number;
   allocationPlans: number;
   isNetworkSplit: boolean;
+  /** which database this backend writes to (for the banner on the demo page) */
+  database: { host: string; name: string; local: boolean };
   networks: { code: string; name: string; network: string }[];
 }
 
@@ -74,6 +76,11 @@ export class DemoService {
       nearExpiryPool: nePoolRes.rows[0]?.count || 0,
       allocationPlans: plansRes.rows[0]?.count || 0,
       isNetworkSplit,
+      database: {
+        host: process.env.DB_HOST || '127.0.0.1',
+        name: process.env.DB_NAME || 'doorare',
+        local: ['127.0.0.1', 'localhost', '::1', 'db'].includes(process.env.DB_HOST || '127.0.0.1'),
+      },
       networks,
     };
   }
