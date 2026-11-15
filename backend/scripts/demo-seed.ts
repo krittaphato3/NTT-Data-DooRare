@@ -16,10 +16,14 @@
  * It then adds borrowable alerts (stock cut of drugs no waiting F2 lot carries, rows ref_type DEMO_F1_SHAPE, target per hospital: 3 very urgent / 3 urgent / 2 normal when drugs allow)
  * and runs the real lender filter on every open alert: one nobody can serve (transit / stock) is snoozed too.
  *
+ * Part 3 (ONLY=roles, last in the default): work in progress for the role screens (src/modules/demo/demo.roles.ts): 3 borrow requests at different stages
+ * (waiting for the borrower's approval / sent to a lender / accepted, waiting for the warehouse) and one running emergency incident with an approved plan.
+ * Made through the real API as pharmacist / ER staff, add-only and skipped when already there. Only this script has the API, the /mock-demo buttons do not run it.
+ *
  * The forecast (stock alerts, F2 receivers) is loaded by the script itself when the DB has none (same call as db:scenarios).
  * Safe to run again (tops up to the wanted number of unused lots per scenario). Local DB only unless CONFIRM_HOST=<DB_HOST>.
  * A third kind, U (transport cost >= 20 % of value: the owner must pick an option before approval), is off by default: WITH_U=1 to add it.
- * Env: API, DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD, ONLY (f2,f1 = default), WITH_U (1 = add scenario U), RELEASE (lots released per scenario, default 0 = every lot starts waiting for the pharmacist), SCALE (multiplies the lot counts, default 1).
+ * Env: API, DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD, ONLY (f2,f1,roles = default), WITH_U (1 = add scenario U), RELEASE (lots released per scenario, default 0 = every lot starts waiting for the pharmacist), SCALE (multiplies the lot counts, default 1).
 
  * The logic itself lives in src/modules/demo/demo.engine.ts (shared with the /demo buttons); this file only connects it to a running backend over HTTP.
  */
@@ -27,7 +31,7 @@ import pg from 'pg';
 import { runDemo, type SeedHost } from '../src/modules/demo/demo.engine.js';
 
 const API = process.env.API ?? 'http://127.0.0.1:3001/api/v1';
-const ONLY = (process.env.ONLY ?? 'f2,f1').split(',').map((s) => s.trim().toLowerCase());
+const ONLY = (process.env.ONLY ?? 'f2,f1,roles').split(',').map((s) => s.trim().toLowerCase());
 const RELEASE = Math.max(0, Number(process.env.RELEASE ?? 0));
 const SCALE = Math.max(1, Number(process.env.SCALE ?? 1));
 const WITH_U = process.env.WITH_U === '1'; // scenario U (transport cost too high, owner must pick an option): off by default, a side path for the main demo
@@ -57,6 +61,7 @@ async function call(token: string, method: string, path: string, body?: unknown)
 /** Same steps as the buttons, but as a user of the running backend (login + REST calls). */
 const tokens: Record<string, string> = {};
 const host: SeedHost = {
+  roles: { base: API, login },
   async scan() {
     const sa = await login('system_admin1.region@example.org');
     const scan = await call(sa, 'POST', '/jobs/near-expiry', {});

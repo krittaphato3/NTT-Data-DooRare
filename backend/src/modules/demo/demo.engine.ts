@@ -5,6 +5,7 @@
  * wanted number, so it can run again. See scripts/demo-seed.ts for the long description of what each part does.
  */
 import type pg from 'pg';
+import { seedRoleTasks, type RolesApi } from './demo.roles.js';
 import { reevaluateAlerts } from '../forecasts/forecasts.runs.js';
 import { loadBorrowConfig } from '../borrow/borrow.config.js';
 import { loadNeed } from '../borrow/borrow.inputs.js';
@@ -17,6 +18,8 @@ export interface SeedHost {
   /** load the forecast files into the database (only called when no forecast run exists) */
   loadForecast(): Promise<void>;
   /** owner pharmacist releases a detected lot to the pool (only used when RELEASE > 0) */
+  /** login + base URL of the running backend: only the script has it, the in-process buttons do not (the 'roles' part needs it) */
+  roles?: RolesApi;
   release?(ownerCode: string, nearExpiryItemId: string): Promise<{ ok: boolean; message?: string; usable?: string[] }>;
 }
 export interface SeedOptions {
@@ -47,6 +50,7 @@ export type DemoAdded = {
   f2: { kind: string; owner: string; receivers: string[]; name: string; qty: number; days: number }[];
   f1: { code: string; sev: string; name: string }[];
   snoozed: number;
+  roles?: string[];
 };
 let added: DemoAdded = { f2: [], f1: [], snoozed: 0 };
 const dryAdd = { f1: [] as { code: string; sev: string }[], f2: [] as { kind: string; owner: string; canAdd: number }[] };
@@ -466,6 +470,10 @@ export async function runDemo(o: SeedOptions): Promise<DemoAdded> {
   await ensureForecast();
   if (only.includes('f2')) await f2();
   if (only.includes('f1')) await f1();
+  if (only.includes('roles')) {
+    if (!host.roles) warn('roles: this host cannot call the API (run it with npm run db:demo-seed)');
+    else { say('Work in progress for the role screens'); added.roles = await seedRoleTasks({ db, api: host.roles, log: say }); }
+  }
   return added;
 }
 
