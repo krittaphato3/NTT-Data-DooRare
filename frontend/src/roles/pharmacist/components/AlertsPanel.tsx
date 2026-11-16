@@ -97,7 +97,6 @@ export function AlertsPanel({ query, hospital, role = 'PHARMACIST' }: AlertsPane
         <h2 style={{ margin: 0, fontSize: 20, lineHeight: '30px', fontWeight: 600, color: '#0F2A5C' }}>
           การแจ้งเตือน <span style={{ fontSize: 14, fontWeight: 400, color: '#94A3B8' }}>/ Alerts</span>
         </h2>
-        <span style={{ fontSize: 12, lineHeight: '16px' }}>เรียงตาม: ยา V ก่อน แล้วตามมูลค่าผลกระทบ</span>
       </div>
       <div role="tablist" aria-label="กรองการแจ้งเตือน" style={{ display: 'flex', flexWrap: 'wrap', gap: 4, margin: '12px 0 16px' }}>
         {tabs.map((t) => (
