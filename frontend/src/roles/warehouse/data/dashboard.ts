@@ -79,7 +79,7 @@ function transportTodo(): TodoItem[] {
     {
       id: preparing.id, group: 'transport', icon: 'box', sevCls: 'sev-urg',
       title: `ขึ้นรถ + ถ่ายรูป ${preparing.id}`,
-      detail: `${preparing.drug} · ${fmtQty(preparing.qty)} ${preparing.unit} → ${HOSPITALS[preparing.to]} · เตรียมของตามล็อต FEFO แล้วขึ้นรถ`,
+      detail: `${preparing.drug} · ${fmtQty(preparing.qty)} ${preparing.unit} → ${HOSPITALS[preparing.to]} · เตรียมของตามล็อตที่หมดอายุก่อน แล้วขึ้นรถ`,
       badge: { label: 'รอขึ้นรถ', tone: 'amber' },
       cta: { label: 'ขึ้นรถ', primary: true, page: 'transport' },
     },
@@ -137,7 +137,7 @@ export function liveTodos(shipments: Shipment[]): TodoItem[] {
       out.push({
         id: s.id, group: 'transport', icon: 'box', sevCls: 'sev-urg',
         title: `ขึ้นรถ + ถ่ายรูป ${s.id}`,
-        detail: `${s.drug} · ${fmtQty(s.qty)} ${s.unit} → ${name(s.to)} · เตรียมของตามล็อต FEFO แล้วขึ้นรถ`,
+        detail: `${s.drug} · ${fmtQty(s.qty)} ${s.unit} → ${name(s.to)} · เตรียมของตามล็อตที่หมดอายุก่อน แล้วขึ้นรถ`,
         badge: { label: 'รอขึ้นรถ', tone: 'amber' },
         cta: { label: 'ขึ้นรถ', primary: true, page: 'transport' },
       });
@@ -160,7 +160,7 @@ export const TODO_TABS: { key: 'all' | TodoGroup; label: string }[] = [
   { key: 'all', label: 'ทั้งหมด' },
   { key: 'inbox', label: 'กล่องงานเข้า' },
   { key: 'transport', label: 'ขนส่ง' },
-  { key: 'f3', label: 'F3 ฉุกเฉิน' },
+  { key: 'f3', label: 'ฉุกเฉิน' },
 ];
 
 /** Transport counts for the KPI cards and the status panel (own hospital only). */

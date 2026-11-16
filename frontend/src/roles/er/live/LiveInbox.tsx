@@ -53,7 +53,7 @@ function LegCard({ leg, canAct, actHint, reload }: { leg: ApiEmergencyLeg; canAc
             <span className={`badge ${cls.cls}`} style={{ height: 18, fontSize: 10.5 }}>{cls.label}</span>
             <span className={`badge ${st.cls}`}>{st.label}</span>
             {leg.round > 1 && <span className="badge t-grey">รอบที่ {leg.round}</span>}
-            {leg.lateForEta && <span className="badge st-rejected">ถึงหลัง ETA</span>}
+            {leg.lateForEta && <span className="badge st-rejected">ของถึงหลังผู้ป่วย</span>}
           </div>
           <div style={{ fontSize: 12.5, color: '#334155', marginTop: 4 }}>
             จาก <b>{leg.borrower.name}</b> · เหตุ {leg.incident.incidentNo}{leg.incident.type ? ` · ${leg.incident.type}` : ''}{leg.incident.location ? ` · ${leg.incident.location}` : ''}

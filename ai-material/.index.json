@@ -1,5 +1,19 @@
 [
   {
+    "path": "sessions/2026-11-16-claude-hide-dev-codes-pharmacist.md",
+    "title": "Hide dev/spec codes on pharmacist screens",
+    "summary": "Removed spec IDs, enum codes and model names from user-visible text on…",
+    "tags": "session, frontend, ui-cleanup, pharmacist, transport, incident",
+    "date": "2026-11-16"
+  },
+  {
+    "path": "sessions/2026-11-16-claude-warehouse-ui-jargon-and-clutter-list.md",
+    "title": "Warehouse role UI - jargon removal and clutter to-do list",
+    "summary": "Removed spec codes, feature codes and English tags from the 4 warehouse…",
+    "tags": "session, frontend, ui-cleanup, warehouse, f3, transport, backlog",
+    "date": "2026-11-16"
+  },
+  {
     "path": "context/current-task.md",
     "title": "Current Task",
     "summary": "Current Task",

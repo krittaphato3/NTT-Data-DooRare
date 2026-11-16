@@ -75,7 +75,7 @@ export function PackTab({ kits, done, onConfirm }: PackTabProps) {
                   <tr>
                     <td>
                       <span className="code" style={{ fontSize: 12.5, color: '#1D4ED8', fontWeight: 600 }}>{p.id}</span>
-                      <span style={{ display: 'block', marginTop: 2 }}><span className="badge t-red" style={{ height: 18, fontSize: 11 }}>F3 ฉุกเฉิน</span></span>
+                      <span style={{ display: 'block', marginTop: 2 }}><span className="badge t-red" style={{ height: 18, fontSize: 11 }}>ฉุกเฉิน</span></span>
                     </td>
                     <td>
                       <span style={{ fontWeight: 600, color: '#0F2A5C' }}>{k.th}</span> <span className="en">{k.en}</span>

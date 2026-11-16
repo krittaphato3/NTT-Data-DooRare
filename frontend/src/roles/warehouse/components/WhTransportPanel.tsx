@@ -10,10 +10,10 @@ export function WhTransportPanel({ shipments }: { shipments?: Shipment[] }) {
   return (
     <div className="card cardpad" data-part="transport-status" style={{ flex: '2 1 340px', minWidth: 0 }}>
       <h2 style={{ margin: 0, fontSize: 20, lineHeight: '30px', fontWeight: 600, color: '#0F2A5C' }}>
-        สถานะการขนส่ง <span style={{ fontSize: 14, fontWeight: 400, color: '#94A3B8' }}>/ Transport</span>
+        สถานะการขนส่ง
       </h2>
       <div style={{ fontSize: 12, lineHeight: '16px', margin: '2px 0 8px' }}>
-        SM-6 · 7 วันล่าสุด · ทั้งหมด <span className="num">{t.total}</span> งาน
+        7 วันล่าสุด · ทั้งหมด <span className="num">{t.total}</span> งาน
       </div>
       <div>
         {STATUS_ROWS.map((s) => {
@@ -26,7 +26,6 @@ export function WhTransportPanel({ shipments }: { shipments?: Shipment[] }) {
               </span>
               <span className="wh-stat-label">
                 {s.label}
-                <span className="code" style={{ display: 'block', fontSize: 10.5, lineHeight: '14px' }}>{s.code}</span>
               </span>
               <span className="num wh-stat-n">{n}</span>
             </div>

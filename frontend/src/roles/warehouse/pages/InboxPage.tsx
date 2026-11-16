@@ -84,12 +84,12 @@ export function InboxPage() {
         qty: l.qtyAsked,
         unit: l.item.unit,
         to: l.borrower.code as HospitalCode,
-        requestedBy: `${l.borrower.name} · รอบ ${l.round}${l.lateForEta ? ' · ถึงหลัง ETA' : ''}`,
+        requestedBy: `${l.borrower.name} · รอบ ${l.round}${l.lateForEta ? ' · ของถึงหลังผู้ป่วย' : ''}`,
         due: l.status === 'SENT' && l.remainingSec !== null ? `ยืนยันภายใน ${fmtTime(l.remainingSec)}` : 'หมดเวลา · ยังยืนยันช้าได้',
         urgent: true,
         status: 'NEW' as const,
         pick: [],
-        note: 'F3 ยืมฉุกเฉิน · ยืนยัน/ให้บางส่วน/ปฏิเสธที่หน้า Emergency',
+        note: 'ยืมฉุกเฉิน · ยืนยัน ให้บางส่วน หรือปฏิเสธที่หน้าเหตุฉุกเฉิน',
         href: whHref('kit'),
       }));
 
@@ -117,10 +117,10 @@ export function InboxPage() {
           status: isConfirmed ? 'CONFIRMED' : 'NEW',
           pick: s.pick ?? (s.lotCode ? [{ lot: s.lotCode, expiry: s.expiry || '–', daysLeft: 180, qty: s.qty }] : []),
           note: s.emergency
-            ? 'F3 ยืมฉุกเฉิน · ผู้ให้ยืมยืนยันแล้ว แพ็กและส่งออกก่อนงานอื่น'
+            ? 'ยืมฉุกเฉิน · ยืนยันแล้ว แพ็กและส่งออกก่อนงานอื่น'
             : s.kind === 'F1'
-              ? 'F1 ยืม · ล็อตที่ให้ยืมต้องอายุ > 180 วัน (FEFO)'
-              : 'F2 โอนยาใกล้หมดอายุ',
+              ? 'ยืมยา · ล็อตที่ให้ยืมต้องมีอายุเหลือเกิน 180 วัน'
+              : 'โอนยาใกล้หมดอายุ',
           transportId: s.id,
         };
       }),
@@ -207,7 +207,7 @@ export function InboxPage() {
             <span aria-hidden="true">›</span> <span aria-current="page">กล่องงานเข้า</span>
           </nav>
           <h1 className="tr-title">
-            กล่องงานเข้า <span>/ Work inbox · F1 · F2 · F3</span>
+            กล่องงานเข้า
           </h1>
           <div style={{ fontSize: 13 }}>
             {user?.hospitalName ?? 'รพ.สมุทรปราการ'} · งานของคลัง: ของที่เราต้องแพ็กส่งให้ รพ.อื่น และของที่ รพ.อื่นกำลังส่งมาให้เรา
@@ -216,7 +216,7 @@ export function InboxPage() {
         <div className="pagehead-actions">
           <a className="btn btn-s" href={whHref('kit')} style={{ textDecoration: 'none' }}>
             <Icon name="siren" />
-            Emergency (F3)
+            เหตุฉุกเฉิน
           </a>
           <a className="btn btn-s" href={whHref('transport')} style={{ textDecoration: 'none' }}>
             <Icon name="truck" />
@@ -227,17 +227,17 @@ export function InboxPage() {
 
       <section className="ib-kpis" aria-label="สรุปกล่องงานเข้า">
         <div className={`ib-kpi ${waiting.length ? 'ib-kpi-warn' : 'ib-kpi-ok'}`}>
-          <div className="ib-kpi-label">รอยืนยันจะแพ็ก <span className="en">TO PACK</span></div>
+          <div className="ib-kpi-label">รอยืนยันจะแพ็ก</div>
           <div className="ib-kpi-val num">{waiting.length} งาน</div>
-          <div className="ib-kpi-sub num">F1 {count('F1')} · F2 {count('F2')} · F3 {count('F3')}</div>
+          <div className="ib-kpi-sub num">ยืม {count('F1')} · โอน {count('F2')} · ฉุกเฉิน {count('F3')}</div>
         </div>
         <div className="ib-kpi ib-kpi-ok">
-          <div className="ib-kpi-label">ยืนยันแล้ว <span className="en">→ TRANSPORT</span></div>
+          <div className="ib-kpi-label">ยืนยันแล้ว</div>
           <div className="ib-kpi-val num">{items.filter((r) => r.status === 'CONFIRMED').length} งาน</div>
           <div className="ib-kpi-sub">ส่งต่อไปติดตามการขนส่งแล้ว</div>
         </div>
         <div className="ib-kpi">
-          <div className="ib-kpi-label">ของที่จะรับเข้า <span className="en">INCOMING</span></div>
+          <div className="ib-kpi-label">ของที่จะรับเข้า</div>
           <div className="ib-kpi-val num">{inRows.length} รายการ</div>
           <div className="ib-kpi-sub">รอรับทราบ {toAck} · ถึงแล้วรอยืนยันรับ {toReceive}</div>
         </div>
@@ -266,10 +266,10 @@ export function InboxPage() {
             <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="เลขงาน / เลขคำขอ / ชื่อยา" aria-label="ค้นหางานเข้า" />
           </label>
           <select className={`sel ${feature !== 'all' ? 'sel-on' : ''}`} aria-label="Feature" value={feature} onChange={(e) => setFeature(e.target.value as 'all' | InboxFeature)}>
-            <option value="all">Feature: ทั้งหมด</option>
-            <option value="F1">F1 ยืม</option>
-            <option value="F2">F2 โอนใกล้หมดอายุ</option>
-            <option value="F3">F3 ฉุกเฉิน</option>
+            <option value="all">ประเภท: ทั้งหมด</option>
+            <option value="F1">ยืมยา</option>
+            <option value="F2">โอนยาใกล้หมดอายุ</option>
+            <option value="F3">ฉุกเฉิน</option>
           </select>
           <span style={{ flex: '1 1 0' }} />
           <span style={{ fontSize: 12 }}>เรียง: รอยืนยันก่อน</span>
