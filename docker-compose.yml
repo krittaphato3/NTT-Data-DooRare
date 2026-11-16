@@ -30,10 +30,15 @@ services:
       COGNITO_USER_POOL_ID: "us-east-1_Yqc7bshFl"
       COGNITO_APP_CLIENT_ID: "4nee5d2ou8jp3pvrabg7qn52rq"
       COGNITO_REGION: "us-east-1"
+      # Bedrock via the EC2 SSO profile mounted below (no keys in env). When it expires: aws sso login --profile egqz --use-device-code
+      AWS_PROFILE: "${AWS_PROFILE:-egqz}"
+      AWS_REGION: "${AWS_REGION:-us-east-1}"
     ports:
       - "127.0.0.1:3001:3001"
     volumes:
       - doorare_uploads:/app/uploads
+      # Read-write: the SDK refreshes the SSO token cache here. Override AWS_CONFIG_DIR off EC2.
+      - ${AWS_CONFIG_DIR:-/home/ec2-user/.aws}:/root/.aws
     # Same path an ALB / ECS target group should probe (checks Postgres too).
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3001/api/v1/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]

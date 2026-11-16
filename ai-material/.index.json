@@ -1,58 +1,79 @@
 [
   {
-    "path": "sessions\\2026-11-14-2145-antigravity-webfetch-clarify-wizard-and-attachments.md",
-    "title": "AI Session: WebFetch Pre-fetch Script, Single-Round Clarification Wizard, Optional Web Search & File Attachment",
-    "summary": "AI Session",
-    "tags": "session",
-    "date": "2026-11-15"
-  },
-  {
-    "path": "sessions\\2026-11-15-0125-antigravity-clarify-choices-restoration.md",
-    "title": "AI Session: Clarify Question Clickable Choices Restoration and Auto-Fill Guardrails",
-    "summary": "AI Session",
-    "tags": "session",
-    "date": "2026-11-15"
-  },
-  {
-    "path": "sessions\\2026-11-15-0145-antigravity-gemini-white-theme-30d-retention.md",
-    "title": "Session Note: Gemini-Inspired White Theme & 30-Day Chat Retention",
-    "summary": "Session Note",
-    "tags": "session",
-    "date": "2026-11-15"
-  },
-  {
-    "path": "sessions\\2026-11-15-1425-antigravity-mock-demo-page-and-header-fix.md",
-    "title": "Session: In-App Mock Demo Control Center & Header Window Controls Fix",
-    "summary": "Session",
-    "tags": "session",
-    "date": "2026-11-15"
-  },
-  {
     "path": "sessions\\2026-11-12-buffy-copilot-abort-context-summary-diff.md",
     "title": "Copilot stop / screen context + plan summary change-diff",
     "summary": "Copilot stop / screen context + plan summary change-diff",
     "tags": "session",
-    "date": "2026-11-14"
-  },
-  {
-    "path": "sessions\\2026-11-14-1955-antigravity-byok-google-ai-studio-preset.md",
-    "title": "Central Admin BYOK - Google AI Studio API Key Preset",
-    "summary": "Added Google AI Studio (Gemini) 1-click Quick Preset into Central Admin BYOK…",
-    "tags": "session, byok, google-ai-studio, gemini, presets, admin, frontend, backend",
-    "date": "2026-11-14"
+    "date": "2026-11-16"
   },
   {
     "path": "sessions\\2026-11-14-2115-antigravity-ask-operator-clarify-fixes.md",
     "title": "Session Note: ask_operator Tooling, Language Adaptation, and Clarify Card Fixes",
     "summary": "Session Note",
     "tags": "session",
-    "date": "2026-11-14"
+    "date": "2026-11-16"
+  },
+  {
+    "path": "sessions\\2026-11-14-2145-antigravity-webfetch-clarify-wizard-and-attachments.md",
+    "title": "AI Session: WebFetch Pre-fetch Script, Single-Round Clarification Wizard, Optional Web Search & File Attachment",
+    "summary": "AI Session",
+    "tags": "session",
+    "date": "2026-11-16"
   },
   {
     "path": "sessions\\2026-11-14-graphify-full-knowledge-graph.md",
     "title": "Session: Full Codebase Knowledge Graph Extraction (/graphify)",
     "summary": "Session",
     "tags": "session",
+    "date": "2026-11-16"
+  },
+  {
+    "path": "sessions\\2026-11-15-0125-antigravity-clarify-choices-restoration.md",
+    "title": "AI Session: Clarify Question Clickable Choices Restoration and Auto-Fill Guardrails",
+    "summary": "AI Session",
+    "tags": "session",
+    "date": "2026-11-16"
+  },
+  {
+    "path": "sessions\\2026-11-15-0145-antigravity-gemini-white-theme-30d-retention.md",
+    "title": "Session Note: Gemini-Inspired White Theme & 30-Day Chat Retention",
+    "summary": "Session Note",
+    "tags": "session",
+    "date": "2026-11-16"
+  },
+  {
+    "path": "sessions\\2026-11-15-1425-antigravity-mock-demo-page-and-header-fix.md",
+    "title": "Session: In-App Mock Demo Control Center & Header Window Controls Fix",
+    "summary": "Session",
+    "tags": "session",
+    "date": "2026-11-16"
+  },
+  {
+    "path": "sessions\\2026-11-15-1530-antigravity-clarify-single-card-and-cdss-refinement.md",
+    "title": "Session: 2026-11-15 15:30 Clarify Single-Card Layout & CDSS Clinical Formality Refinement",
+    "summary": "Session",
+    "tags": "session",
+    "date": "2026-11-16"
+  },
+  {
+    "path": "sessions\\2026-11-16-1857-claude-bedrock-haiku-provider.md",
+    "title": "Bedrock Haiku Provider",
+    "summary": "Real AWS_BEDROCK provider for Claude Haiku 5.5 (was a stub); EC2 frontend…",
+    "tags": "session, byok, bedrock, haiku",
+    "date": "2026-11-16"
+  },
+  {
+    "path": "sessions\\2026-10-25-1430-antigravity-fix-er-action-proposal.md",
+    "title": "Session: Fix `submit_er_action_proposal` Hallucinated UUID and Emergency Borrow Payload",
+    "summary": "Session",
+    "tags": "session",
+    "date": "2026-11-15"
+  },
+  {
+    "path": "sessions\\2026-11-14-1955-antigravity-byok-google-ai-studio-preset.md",
+    "title": "Central Admin BYOK - Google AI Studio API Key Preset",
+    "summary": "Added Google AI Studio (Gemini) 1-click Quick Preset into Central Admin BYOK…",
+    "tags": "session, byok, google-ai-studio, gemini, presets, admin, frontend, backend",
     "date": "2026-11-14"
   },
   {
@@ -143,13 +164,6 @@
     "path": "sessions\\2026-10-25-1300-claude-f2-start-only-demo.md",
     "title": "F2 demo: start-only mode (flow by hand)",
     "summary": "F2 demo",
-    "tags": "session",
-    "date": "2026-10-25"
-  },
-  {
-    "path": "sessions\\2026-10-25-1430-antigravity-fix-er-action-proposal.md",
-    "title": "Session: Fix `submit_er_action_proposal` Hallucinated UUID and Emergency Borrow Payload",
-    "summary": "Session",
     "tags": "session",
     "date": "2026-10-25"
   },
@@ -294,6 +308,13 @@
     "date": "2026-10-24"
   },
   {
+    "path": "sessions\\2026-10-22-buffy-frontend-task4-accounts.md",
+    "title": "Frontend TASK 4 — SYSTEM_ADMIN AccountCrudTab wired to /users",
+    "summary": "Frontend TASK 4 — SYSTEM_ADMIN AccountCrudTab wired to /users",
+    "tags": "session",
+    "date": "2026-10-23"
+  },
+  {
     "path": "sessions\\2026-10-22-buffy-ha-qa-fixes.md",
     "title": "HA (Step 8) QA fixes — FIX mode",
     "summary": "HA (Step 8) QA fixes — FIX mode",
@@ -361,13 +382,6 @@
     "title": "Backend step 8 - Admin APIs (config, users, audit log, kill switch)",
     "summary": "Admin-role APIs only (matrix roles); config catalogue + read-only spec keys, user…",
     "tags": "session, backend, admin, config, users, audit, rbac, step8, detailed",
-    "date": "2026-10-22"
-  },
-  {
-    "path": "sessions\\2026-10-22-buffy-frontend-task4-accounts.md",
-    "title": "Frontend TASK 4 — SYSTEM_ADMIN AccountCrudTab wired to /users",
-    "summary": "Frontend TASK 4 — SYSTEM_ADMIN AccountCrudTab wired to /users",
-    "tags": "session",
     "date": "2026-10-22"
   },
   {
@@ -553,6 +567,27 @@
     "date": "2026-10-17"
   },
   {
+    "path": "README.md",
+    "title": "ai-material",
+    "summary": "ai-material",
+    "tags": "session",
+    "date": "2026-10-16"
+  },
+  {
+    "path": "context\\conventions.md",
+    "title": "Conventions",
+    "summary": "Conventions",
+    "tags": "session",
+    "date": "2026-10-16"
+  },
+  {
+    "path": "context\\runbook.md",
+    "title": "Runbook",
+    "summary": "Runbook",
+    "tags": "session",
+    "date": "2026-10-16"
+  },
+  {
     "path": "sessions\\2026-10-16-1628-buffy-phase2c-return-obligations-waive.md",
     "title": "Return obligations + Waive (Phase 2C)",
     "summary": "HOSPITAL_ADMIN gets a read-only ภาระการคืน sub-tab on Borrow requests plus the API-XC-005…",
@@ -574,30 +609,9 @@
     "date": "2026-10-16"
   },
   {
-    "path": "context\\runbook.md",
-    "title": "Runbook",
-    "summary": "Runbook",
-    "tags": "session",
-    "date": "2026-10-15"
-  },
-  {
     "path": "GUIDELINES.md",
     "title": "Guidelines",
     "summary": "Guidelines",
-    "tags": "session",
-    "date": "2026-10-14"
-  },
-  {
-    "path": "README.md",
-    "title": "ai-material",
-    "summary": "ai-material",
-    "tags": "session",
-    "date": "2026-10-14"
-  },
-  {
-    "path": "context\\conventions.md",
-    "title": "Conventions",
-    "summary": "Conventions",
     "tags": "session",
     "date": "2026-10-14"
   },
