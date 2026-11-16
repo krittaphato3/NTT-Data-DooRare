@@ -81,7 +81,7 @@ export const getStockAndAlertsTool: IAgentTool<{
         where.push(`(hd.local_code ILIKE $${pIdx} OR hd.local_name ILIKE $${pIdx} OR dm.generic_name ILIKE $${pIdx})`);
       }
 
-      const alertStatus = args.status || 'OPEN';
+      const alertStatus = args.status || (args.drugCode || args.hospitalDrugId ? 'ALL' : 'OPEN');
       if (alertStatus !== 'ALL') {
         params.push(alertStatus);
         where.push(`a.status = $${params.length}`);
@@ -91,6 +91,7 @@ export const getStockAndAlertsTool: IAgentTool<{
       const sql = `
         SELECT hd.id AS "hospitalDrugId",
                hd.hospital_id AS "hospitalId",
+               hd.drug_master_id AS "drugMasterId",
                hd.local_code AS "localCode",
                hd.local_name AS "localName",
                hd.ved::text AS "ved",
@@ -115,11 +116,45 @@ export const getStockAndAlertsTool: IAgentTool<{
       `;
 
       const res = await query(sql, params);
+
+      // Also check canonical regional drug_master catalog if searching by keyword
+      let catalogMatches: any[] = [];
+      if (args.drugCode && args.drugCode.trim()) {
+        const dmRes = await query<{
+          drugMasterId: string;
+          genericName: string;
+          strength: string;
+          dosageForm: string;
+          baseUnit: string;
+          fullName: string;
+        }>(
+          `SELECT dm.id AS "drugMasterId",
+                  dm.generic_name AS "genericName",
+                  dm.strength AS "strength",
+                  dm.dosage_form AS "dosageForm",
+                  dm.base_unit AS "baseUnit",
+                  concat_ws(' ', dm.generic_name, dm.strength, dm.dosage_form) AS "fullName"
+             FROM drug_master dm
+            WHERE dm.generic_name ILIKE $1
+            ORDER BY dm.strength ASC
+            LIMIT 10`,
+          [`%${args.drugCode.trim()}%`],
+        );
+        catalogMatches = dmRes.rows;
+      }
+
+      const distinctFormulations = Array.from(new Set([
+        ...res.rows.map((r: any) => r.genericName),
+        ...catalogMatches.map((m: any) => m.fullName),
+      ])).filter(Boolean);
+
       return {
         success: true,
         data: {
           count: res.rows.length,
           items: res.rows,
+          catalogMatches,
+          distinctFormulations,
         },
       };
     } catch (e: any) {
@@ -798,13 +833,22 @@ export const submitPharmacistProposalTool: IAgentTool<{
       .describe('Whitelisted pharmacist action type'),
     title: z.string().describe('Title of the proposed action'),
     description: z.string().describe('Detailed clinical explanation or rationale'),
-    summary: z.record(z.string(), z.unknown()).describe('Key-value summary of proposed metrics'),
+    summary: z
+      .record(z.string(), z.unknown())
+      .describe('Display-only key/value shown on the proposal card. Real values MUST go in payload.'),
     targetId: z
       .string()
       .uuid()
       .optional()
       .describe('Target ID: alertId (SNOOZE_ALERT), nearExpiryId (RELEASE_NEAR_EXPIRY_POOL), poolEntryId (SEND_POOL_TO_AGENT) or allocation plan id (OBJECT_ALLOCATION_PLAN)'),
-    payload: z.record(z.string(), z.unknown()).describe('Action-specific payload parameters'),
+    payload: z.record(z.string(), z.unknown()).describe(
+      'Action-specific payload, strictly validated per actionType. Required keys: ' +
+        'CREATE_BORROW_REQUEST {"items":[{"drugMasterId":"<drug uuid>","qtyRequested":<number>}],"reason":"<why>"}; ' +
+        'SNOOZE_ALERT {"hours":<1-168>,"reason":"<why>"}; ' +
+        'RELEASE_NEAR_EXPIRY_POOL {"qty":<number>}; ' +
+        'SEND_POOL_TO_AGENT {}; ' +
+        'OBJECT_ALLOCATION_PLAN {"reason":"<why>"}',
+    ),
   }),
   allowedRoles: ['PHARMACIST', 'SYSTEM_ADMIN'],
   execute: async (args, context: RequestContext): Promise<ToolResult> => {
@@ -903,7 +947,44 @@ export const submitPharmacistProposalTool: IAgentTool<{
 
       // BR-F1b-014: never propose an automated borrow of a controlled drug
       if (args.actionType === 'CREATE_BORROW_REQUEST') {
-        const dmId = (parseRes.data as { drugMasterId?: string }).drugMasterId;
+        // The validated shape carries the drug inside items[]; the top-level key is only a legacy convenience.
+        const borrowData = parseRes.data as { drugMasterId?: string; items?: { drugMasterId?: string; qtyRequested?: number }[] };
+        let dmId = borrowData.items?.[0]?.drugMasterId ?? borrowData.drugMasterId;
+
+        // Auto-heal hallucinated or hospital_drug UUID into the real mapped drug_master_id
+        if (dmId) {
+          const checkDm = await query<{ id: string }>('SELECT id FROM drug_master WHERE id = $1', [dmId]);
+          if (!checkDm.rows[0]) {
+            // Check if dmId is actually a hospital_drug_id
+            const checkHd = await query<{ drug_master_id: string }>(
+              'SELECT drug_master_id FROM hospital_drug WHERE id = $1 AND drug_master_id IS NOT NULL',
+              [dmId],
+            );
+            if (checkHd.rows[0]?.drug_master_id) {
+              dmId = checkHd.rows[0].drug_master_id;
+            } else {
+              // Search hospital drugs and drug_master matching title, description, or summary
+              const searchStr = `${args.title} ${args.description} ${JSON.stringify(args.summary)}`;
+              const matchRes = await query<{ drug_master_id: string }>(
+                `SELECT hd.drug_master_id
+                   FROM hospital_drug hd
+                   JOIN drug_master dm ON dm.id = hd.drug_master_id
+                  WHERE (hd.hospital_id = $1 OR $1 IS NULL)
+                    AND ($2 ILIKE ('%' || dm.generic_name || '%'))
+                  ORDER BY (CASE WHEN $2 ILIKE ('%' || dm.strength || '%') THEN 1 ELSE 2 END)
+                  LIMIT 1`,
+                [hospitalId, searchStr],
+              );
+              if (matchRes.rows[0]?.drug_master_id) {
+                dmId = matchRes.rows[0].drug_master_id;
+              }
+            }
+            if (borrowData.items?.[0] && dmId) {
+              borrowData.items[0].drugMasterId = dmId;
+            }
+          }
+        }
+
         if (dmId && (await isControlledDrugMaster(dmId))) {
           return { success: false, error: CONTROLLED_DRUG_BLOCKED_MESSAGE };
         }

@@ -5,6 +5,7 @@ import {
   clinicalTools,
   logisticsTools,
   governanceTools,
+  webTools,
   defaultToolRegistry,
 } from '../../src/modules/ai/tools/index.js';
 import { ALL_ROLES } from '../../src/modules/admin/users.rules.js';
@@ -42,7 +43,7 @@ test('rbac-matrix: 1. Inventory and tool registry completeness', () => {
 
   // 3. Registry total count and sample tools derivation
   const allRegistered = defaultToolRegistry.getAll();
-  assert.equal(allRegistered.length, 51, 'Registry must have 51 total tools (49 domain + 2 sample)');
+  assert.equal(allRegistered.length, 54, 'Registry must have 54 total tools (49 domain + 3 core + 2 web)');
 
   const domainNames = new Set([
     ...clinicalTools.map((t) => t.name),
@@ -51,19 +52,28 @@ test('rbac-matrix: 1. Inventory and tool registry completeness', () => {
   ]);
   assert.equal(domainNames.size, 49, 'Domain tool names must all be unique across domains');
 
+  const webNames = new Set(webTools.map((t) => t.name));
+  assert.equal(webTools.length, 2, 'webTools must have length 2 (web_fetch + web_search)');
+  assert.equal(webNames.size, 2, 'Web tool names must be unique');
+
   const sampleToolNames = allRegistered
     .map((t) => t.name)
-    .filter((name) => !domainNames.has(name))
+    .filter((name) => !domainNames.has(name) && !webNames.has(name))
     .sort();
   assert.deepEqual(
     sampleToolNames,
-    ['ping_system', 'submit_sample_action_proposal'],
-    'Sample tools must be exactly ping_system and submit_sample_action_proposal',
+    ['ask_operator', 'ping_system', 'submit_sample_action_proposal'],
+    'Core tools outside the domain folders must be exactly ask_operator, ping_system and submit_sample_action_proposal',
+  );
+  assert.deepEqual(
+    [...webNames].sort(),
+    ['web_fetch', 'web_search'],
+    'Web tools must be exactly web_fetch and web_search',
   );
 
   // 4. Registry tool name uniqueness and formatting regex
   const registeredNames = allRegistered.map((t) => t.name);
-  assert.equal(new Set(registeredNames).size, 51, 'All tool names in registry must be unique');
+  assert.equal(new Set(registeredNames).size, 54, 'All tool names in registry must be unique');
   for (const name of registeredNames) {
     assert.match(name, /^[a-z][a-z0-9_]*$/, `Tool name '${name}' must match /^[a-z][a-z0-9_]*$/`);
   }
@@ -117,8 +127,8 @@ test('rbac-matrix: 2. Static invariants for every registered tool', (t) => {
   // Report and assert tools listing all roles
   assert.deepEqual(
     wildcardOrAllRolesTools,
-    ['ping_system'],
-    'Only ping_system may specify wildcard or all 10 roles',
+    ['ping_system', 'ask_operator'],
+    'Only ping_system and ask_operator may specify wildcard or all 10 roles',
   );
   t.diagnostic(`Tools allowing all roles: ${wildcardOrAllRolesTools.join(', ')}`);
 });
@@ -127,7 +137,7 @@ test('rbac-matrix: 3. Registry behavior discovery for system admin and invalid/u
   const allTools = defaultToolRegistry.getAll();
 
   // (a) SYSTEM_ADMIN access semantics:
-  // getToolsForRole('SYSTEM_ADMIN') must return all 51 tools regardless of allowedRoles array
+  // getToolsForRole('SYSTEM_ADMIN') must return all 54 tools regardless of allowedRoles array
   const sysAdminTools = defaultToolRegistry.getToolsForRole('SYSTEM_ADMIN');
   assert.equal(sysAdminTools.length, allTools.length, 'SYSTEM_ADMIN must receive all tools');
 
@@ -166,7 +176,7 @@ test('rbac-matrix: 3. Registry behavior discovery for system admin and invalid/u
   // 3. lowercase 'pharmacist' (not in allowedRoles; only receives wildcard '*' tools)
   assert.deepEqual(
     defaultToolRegistry.getToolsForRole('pharmacist').map((t) => t.name),
-    ['ping_system'],
+    ['ping_system', 'ask_operator'],
   );
   const resLower = await defaultToolRegistry.executeTool(
     testTool,
@@ -179,7 +189,7 @@ test('rbac-matrix: 3. Registry behavior discovery for system admin and invalid/u
   // 4. unknown role 'HACKER' (not in allowedRoles; only receives wildcard '*' tools)
   assert.deepEqual(
     defaultToolRegistry.getToolsForRole('HACKER').map((t) => t.name),
-    ['ping_system'],
+    ['ping_system', 'ask_operator'],
   );
   const resUnknown = await defaultToolRegistry.executeTool(
     testTool,
@@ -190,7 +200,7 @@ test('rbac-matrix: 3. Registry behavior discovery for system admin and invalid/u
   assert.match(resUnknown.error!, /Permission denied: Role 'HACKER' is not authorized/i);
 });
 
-test('rbac-matrix: 4. Full matrix 10 roles x 51 registered tools (DB-free via spy mocking)', async (t) => {
+test('rbac-matrix: 4. Full matrix 10 roles x 54 registered tools (DB-free via spy mocking)', async (t) => {
   const allTools = defaultToolRegistry.getAll();
   const originalExecutes = new Map<string, Function>();
   const spies = new Map<string, any>();
@@ -217,7 +227,7 @@ test('rbac-matrix: 4. Full matrix 10 roles x 51 registered tools (DB-free via sp
     }
   });
 
-  // Evaluate matrix: 10 roles x 51 tools = 510 executions
+  // Evaluate matrix: 10 roles x 54 tools = 540 executions
   let totalEvaluated = 0;
   let totalUnauthorizedDenied = 0;
   let totalAuthorizedAllowed = 0;
@@ -280,7 +290,7 @@ test('rbac-matrix: 4. Full matrix 10 roles x 51 registered tools (DB-free via sp
     }
   }
 
-  assert.equal(totalEvaluated, 510, 'Must have evaluated 10 roles x 51 tools = 510 combinations');
+  assert.equal(totalEvaluated, 540, 'Must have evaluated 10 roles x 54 tools = 540 combinations');
   t.diagnostic(
     `Full RBAC Matrix execution: ${totalEvaluated} combinations evaluated (${totalAuthorizedAllowed} authorized, ${totalUnauthorizedDenied} unauthorized denied with zero tool invocations)`,
   );
@@ -289,11 +299,11 @@ test('rbac-matrix: 4. Full matrix 10 roles x 51 registered tools (DB-free via sp
 test('rbac-matrix: 5. Visibility and tenant role separation', () => {
   const allTools = defaultToolRegistry.getAll();
 
-  // SYSTEM_ADMIN sees all 51 tools
+  // SYSTEM_ADMIN sees all 54 tools
   const sysAdminTools = defaultToolRegistry.getToolsForRole('SYSTEM_ADMIN');
-  assert.equal(sysAdminTools.length, 51);
+  assert.equal(sysAdminTools.length, 54);
   const sysAdminDefs = defaultToolRegistry.getToolDefinitionsForRole('SYSTEM_ADMIN');
-  assert.equal(sysAdminDefs.length, 51);
+  assert.equal(sysAdminDefs.length, 54);
 
   // For each role, getToolsForRole and getToolDefinitionsForRole match exact expected set
   for (const role of ALL_ROLES) {
@@ -390,7 +400,7 @@ test('rbac-matrix: 7. Compact matrix summary diagnostic', (t) => {
 
   const lines = [
     '=== RBAC Matrix Summary (Tools Authorized per Role) ===',
-    `Total Registered Tools: ${allTools.length} (Domain: 49, Sample: 2)`,
+    `Total Registered Tools: ${allTools.length} (Domain: 49, Sample: 2, Web: 2)`,
     ...ALL_ROLES.map((r) => `  - ${r.padEnd(20)} : ${roleCounts[r]} tools`),
   ];
 

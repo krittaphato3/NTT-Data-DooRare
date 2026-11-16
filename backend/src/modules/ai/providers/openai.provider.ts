@@ -7,6 +7,7 @@ import type {
   ProviderConnectionResult,
   ToolDefinition,
 } from './types.js';
+import { readOpenAiCompatStream } from './streaming.js';
 
 export class OpenAIProvider implements ILLMProvider {
   readonly providerType = 'OPENAI' as const;
@@ -112,6 +113,12 @@ export class OpenAIProvider implements ILLMProvider {
       }));
     }
 
+    const wantsStream = typeof options?.onDelta === 'function';
+    if (wantsStream) {
+      body.stream = true;
+      body.stream_options = { include_usage: true };
+    }
+
     const res = await fetch(`${this.baseUrl}/chat/completions`, {
       method: 'POST',
       headers: {
@@ -125,6 +132,8 @@ export class OpenAIProvider implements ILLMProvider {
       const err = (await res.json().catch(() => ({}))) as { error?: { message?: string } };
       throw new Error(err.error?.message || `OpenAI request failed: HTTP ${res.status}`);
     }
+
+    if (wantsStream) return readOpenAiCompatStream(res, model, options!.onDelta!);
 
     const data = (await res.json()) as {
       choices: {
@@ -165,4 +174,5 @@ export class OpenAIProvider implements ILLMProvider {
         : undefined,
     };
   }
+
 }

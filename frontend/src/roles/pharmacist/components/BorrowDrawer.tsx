@@ -25,6 +25,8 @@ interface BorrowDrawerProps {
   onCancel?: (r: BorrowRequest) => void;
   /** Opens the record-return dialog for a request with return obligations (QA-PHARM-005). */
   onRecordReturn?: (r: BorrowRequest) => void;
+  /** Calculates the lender ladder and drafts messages for a DRAFT request (API-F1b-004). */
+  onPropose?: (r: BorrowRequest) => void;
   /** Role viewing the drawer; every action is gated through `lib/rbac.ts`. */
   role?: RoleCode;
 }
@@ -39,7 +41,7 @@ const BANNER: Record<StatusGroup, [string, string, string]> = {
 };
 
 /** UI-05 request detail (we are the borrower). Actions are local state only. */
-export function BorrowDrawer({ request: r, tick, decision, onDecide, onClose, onEscalate, onSkipLeg, onCancel, onRecordReturn, role = 'PHARMACIST' }: BorrowDrawerProps) {
+export function BorrowDrawer({ request: r, tick, decision, onDecide, onClose, onEscalate, onSkipLeg, onCancel, onRecordReturn, onPropose, role = 'PHARMACIST' }: BorrowDrawerProps) {
   const group = groupOf(r.status);
 
   /** Action each drawer button performs, so a role that may not act sees it disabled with a hint. */
@@ -198,6 +200,16 @@ export function BorrowDrawer({ request: r, tick, decision, onDecide, onClose, on
           </div>
         ) : (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {r.status === 'DRAFT' && (
+              <button
+                className="btn btn-p"
+                disabled={!approve.allowed}
+                title={approve.hint ?? 'คำนวณลำดับผู้ให้ยืม (Lender Ladder) และร่างข้อความถึงผู้ให้ยืม'}
+                onClick={() => onPropose?.(r)}
+              >
+                คำนวณและเสนอแผนผู้ให้ยืม
+              </button>
+            )}
             {r.action === 'approve' && (
               <>
                 <button

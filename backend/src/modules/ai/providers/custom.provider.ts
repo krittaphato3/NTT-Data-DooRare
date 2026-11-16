@@ -7,6 +7,7 @@ import type {
   ProviderConnectionResult,
   ToolDefinition,
 } from './types.js';
+import { readOpenAiCompatStream } from './streaming.js';
 
 export class CustomProvider implements ILLMProvider {
   readonly providerType = 'CUSTOM' as const;
@@ -47,6 +48,7 @@ export class CustomProvider implements ILLMProvider {
     };
     if (this.apiKey) {
       headers.Authorization = `Bearer ${this.apiKey}`;
+      headers['x-goog-api-key'] = this.apiKey;
     }
     return headers;
   }
@@ -109,15 +111,17 @@ export class CustomProvider implements ILLMProvider {
         method: 'POST',
         headers: this.getRequestHeaders(),
         body: JSON.stringify(body),
+        signal: AbortSignal.timeout(30000), // 30s timeout guard for test connection
       });
 
       const latencyMs = Date.now() - start;
 
       if (!res.ok) {
         const errJson = (await res.json().catch(() => ({}))) as any;
+        const errObj = Array.isArray(errJson) ? errJson[0] : errJson;
         const msg =
-          errJson.error?.message ||
-          errJson.message ||
+          errObj?.error?.message ||
+          errObj?.message ||
           `Custom API returned HTTP ${res.status} ${res.statusText}`;
         return {
           success: false,
@@ -178,7 +182,12 @@ export class CustomProvider implements ILLMProvider {
           content: m.content,
           name: m.name,
           tool_call_id: m.tool_call_id,
-          tool_calls: m.tool_calls,
+          tool_calls: m.tool_calls?.map((tc) => ({
+            id: tc.id,
+            type: tc.type,
+            function: tc.function,
+            ...(tc.extra_content ? { extra_content: tc.extra_content } : {}),
+          })),
         })),
         temperature: options?.temperature ?? 0.2,
       };
@@ -199,6 +208,9 @@ export class CustomProvider implements ILLMProvider {
       }
     }
 
+    const wantsStream = typeof options?.onDelta === 'function' && !isResponseEndpoint;
+    if (wantsStream) body.stream = true;
+
     const res = await this.fetchWithDockerFallback(fullUrl, {
       method: 'POST',
       headers: this.getRequestHeaders(),
@@ -207,8 +219,11 @@ export class CustomProvider implements ILLMProvider {
 
     if (!res.ok) {
       const err = (await res.json().catch(() => ({}))) as any;
-      throw new Error(err.error?.message || err.message || `Custom API request failed: HTTP ${res.status}`);
+      const errObj = Array.isArray(err) ? err[0] : err;
+      throw new Error(errObj?.error?.message || errObj?.message || `Custom API request failed: HTTP ${res.status}`);
     }
+
+    if (wantsStream) return readOpenAiCompatStream(res, model, options!.onDelta!);
 
     const data = (await res.json()) as any;
 
@@ -252,6 +267,7 @@ export class CustomProvider implements ILLMProvider {
             ? tc.function.arguments
             : JSON.stringify(tc.function.arguments),
         },
+        ...(tc.extra_content ? { extra_content: tc.extra_content } : {}),
       })),
       usage: data.usage
         ? {

@@ -41,12 +41,24 @@ export interface Need {
 const DRUG_NAME = `concat_ws(' ', dm.generic_name, dm.strength, dm.dosage_form)`;
 
 export async function loadDrugFacts(db: Db, drugMasterId: string): Promise<DrugFacts> {
-  const r = (
+  let r = (
     await db.query(
       `SELECT dm.id, ${DRUG_NAME} AS name, dm.base_unit, dm.is_cold_chain, dm.is_controlled, dm.is_blood_product FROM drug_master dm WHERE dm.id = $1`,
       [drugMasterId],
     )
   ).rows[0];
+  if (!r) {
+    // Fallback: If drugMasterId is actually a hospital_drug_id, resolve to its mapped drug_master
+    r = (
+      await db.query(
+        `SELECT dm.id, ${DRUG_NAME} AS name, dm.base_unit, dm.is_cold_chain, dm.is_controlled, dm.is_blood_product
+           FROM drug_master dm
+           JOIN hospital_drug hd ON hd.drug_master_id = dm.id
+          WHERE hd.id = $1`,
+        [drugMasterId],
+      )
+    ).rows[0];
+  }
   if (!r) throw new HttpError(404, 'NOT_FOUND', 'ไม่พบรายการยา');
   return { drugMasterId: r.id, name: r.name, baseUnit: r.base_unit, coldChain: r.is_cold_chain, controlled: r.is_controlled, blood: r.is_blood_product };
 }

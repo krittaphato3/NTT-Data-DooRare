@@ -27,3 +27,7 @@ __pycache__/
 
 # F1 modelling data pack (not committed)
 /data/
+
+# Local analysis & tooling artifacts
+.video_agent/
+graphify-out/

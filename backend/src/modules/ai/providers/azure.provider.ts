@@ -7,6 +7,7 @@ import type {
   ProviderConnectionResult,
   ToolDefinition,
 } from './types.js';
+import { consumeSse } from './streaming.js';
 
 export class AzureOpenAIProvider implements ILLMProvider {
   readonly providerType = 'AZURE_OPENAI' as const;
@@ -86,6 +87,7 @@ export class AzureOpenAIProvider implements ILLMProvider {
   ): Promise<LLMResponse> {
     const deployment = options?.model || this.deploymentName;
     const url = `${this.endpoint.replace(/\/+$/, '')}/openai/deployments/${deployment}/chat/completions?api-version=2024-02-15-preview`;
+    const wantsStream = typeof options?.onDelta === 'function';
 
     const res = await fetch(url, {
       method: 'POST',
@@ -96,11 +98,28 @@ export class AzureOpenAIProvider implements ILLMProvider {
       body: JSON.stringify({
         messages,
         temperature: options?.temperature ?? 0.2,
+        ...(wantsStream ? { stream: true } : {}),
       }),
     });
 
     if (!res.ok) {
       throw new Error(`Azure OpenAI failed with HTTP ${res.status}`);
+    }
+
+    if (wantsStream) {
+      let content: string | null = null;
+      await consumeSse(res, (_event, raw) => {
+        try {
+          const delta = JSON.parse(raw).choices?.[0]?.delta?.content;
+          if (typeof delta === 'string' && delta) {
+            content = (content ?? '') + delta;
+            options!.onDelta!(delta);
+          }
+        } catch {
+          // ignore keepalive / malformed chunks
+        }
+      });
+      return { model: deployment, content };
     }
 
     const data = (await res.json()) as any;

@@ -55,6 +55,16 @@
 .doorare-chat-overlay.open {
   opacity: 1;
   pointer-events: auto;
+  animation: doorareOverlayFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes doorareOverlayFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 /* Floating Messenger-Style Popup Window (Default Mode) */
@@ -62,8 +72,8 @@
   position: fixed;
   bottom: 20px;
   right: 24px;
-  width: 380px;
-  height: 580px;
+  width: 440px;
+  height: 640px;
   max-width: calc(100vw - 32px);
   max-height: calc(100vh - 40px);
   background: #ffffff;
@@ -75,16 +85,21 @@
   flex-direction: row;
   overflow: hidden;
   transform: translateY(20px) scale(0.96);
+  transform-origin: bottom right;
   opacity: 0;
   pointer-events: none;
-  transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1),
-              height 0.3s cubic-bezier(0.16, 1, 0.3, 1),
-              bottom 0.3s cubic-bezier(0.16, 1, 0.3, 1),
-              right 0.3s cubic-bezier(0.16, 1, 0.3, 1),
-              border-radius 0.2s ease,
-              box-shadow 0.2s ease,
-              opacity 0.2s ease,
-              transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: width 0.38s cubic-bezier(0.16, 1, 0.3, 1),
+              height 0.38s cubic-bezier(0.16, 1, 0.3, 1),
+              max-width 0.38s cubic-bezier(0.16, 1, 0.3, 1),
+              max-height 0.38s cubic-bezier(0.16, 1, 0.3, 1),
+              bottom 0.38s cubic-bezier(0.16, 1, 0.3, 1),
+              right 0.38s cubic-bezier(0.16, 1, 0.3, 1),
+              border-radius 0.32s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.25s ease,
+              box-shadow 0.32s ease,
+              opacity 0.22s ease,
+              transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: width, height, bottom, right;
 }
 
 .doorare-chat-drawer.open {
@@ -97,19 +112,115 @@
 .doorare-chat-drawer.fullscreen {
   bottom: 0 !important;
   right: 0 !important;
-  left: 0 !important;
-  top: 0 !important;
+  top: auto !important;
+  left: auto !important;
   width: 100vw !important;
   height: 100vh !important;
   max-width: 100vw !important;
   max-height: 100vh !important;
   border-radius: 0 !important;
-  border: none !important;
+  border-color: transparent !important;
   box-shadow: none !important;
-  transform: none !important;
+  transform: translateY(0) scale(1) !important;
 }
 
-/* Sidebar for 24h Chat Sessions (Gemini-Inspired White Theme) */
+/* Gemini-Inspired Collapsed Mini Icon Rail (Leftmost rail in Fullscreen) */
+.doorare-chat-mini-rail {
+  width: 58px;
+  background: #ffffff;
+  border-right: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 0 10px 0;
+  flex-shrink: 0;
+  z-index: 10;
+  animation: doorareRailSlideIn 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.doorare-chat-sidebar:not(.drawer-overlay) {
+  animation: doorareRailSlideIn 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes doorareRailSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.doorare-mini-rail-top {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.doorare-mini-rail-brand {
+  margin-bottom: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.15s ease;
+}
+
+.doorare-mini-rail-brand:hover {
+  transform: scale(1.05);
+}
+
+.doorare-mini-rail-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: #475569;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.doorare-mini-rail-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.doorare-mini-rail-bottom {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.doorare-mini-rail-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #e0f2fe;
+  color: #0284c7;
+  font-weight: 700;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.doorare-mini-rail-avatar:hover {
+  transform: scale(1.05);
+}
+
+/* Sidebar for 30-Day Chat Sessions (Gemini-Inspired White Theme) */
 .doorare-chat-sidebar {
   width: 260px;
   background: #ffffff;
@@ -184,7 +295,7 @@
 
 .doorare-chat-new-chat-pill {
   width: 100%;
-  padding: 8px 14px;
+  padding: 9px 14px;
   background: #f1f5f9;
   border: 1px solid transparent;
   border-radius: 9999px;
@@ -205,7 +316,7 @@
 }
 
 .doorare-chat-sidebar-section-header {
-  padding: 12px 14px 6px 14px;
+  padding: 10px 14px 4px 14px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -251,24 +362,38 @@
   line-height: 1.5;
 }
 
+/* Categorized Group Headings (Today, Yesterday, 7 Days, 30 Days) */
+.doorare-chat-session-group {
+  margin-bottom: 6px;
+}
+
+.doorare-chat-session-group-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+  padding: 8px 12px 4px 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+/* Session Items (Gemini-Inspired Pill Style) */
 .doorare-chat-session-item {
   padding: 7px 12px;
-  border-radius: 8px;
+  border-radius: 20px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   cursor: pointer;
   transition: all 0.15s ease;
-  border-left: 3px solid transparent;
+  margin-bottom: 2px;
 }
 
 .doorare-chat-session-item:hover {
-  background: #f8fafc;
+  background: #f1f5f9;
 }
 
 .doorare-chat-session-item.active {
-  background: #eff6ff;
-  border-left-color: #1d4ed8;
+  background: #e8f0fe;
 }
 
 .doorare-chat-session-name {
@@ -282,7 +407,7 @@
 }
 
 .doorare-chat-session-item.active .doorare-chat-session-name {
-  color: #1d4ed8;
+  color: #1a73e8;
   font-weight: 600;
 }
 
@@ -291,7 +416,7 @@
   border: none;
   color: #94a3b8;
   padding: 4px;
-  border-radius: 4px;
+  border-radius: 50%;
   cursor: pointer;
   opacity: 0;
   transition: opacity 0.15s ease;
@@ -358,12 +483,14 @@
 .doorare-user-footer-retention {
   font-size: 10px;
   font-weight: 600;
-  color: #94a3b8;
+  color: #64748b;
   background: #f1f5f9;
-  padding: 2px 6px;
-  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  padding: 2px 7px;
+  border-radius: 9999px;
   flex-shrink: 0;
 }
+
 
 /* Main chat column */
 .doorare-chat-main-col {
@@ -413,13 +540,12 @@
 .doorare-chat-avatar {
   width: 28px;
   height: 28px;
-  border-radius: 8px;
-  background: #f0f9ff;
-  border: 1px solid #bae6fd;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  background: transparent;
+  border: none;
 }
 
 .doorare-chat-title-text-wrap {
@@ -431,28 +557,13 @@
 }
 
 .doorare-chat-title {
-  font-size: 13px;
-  font-weight: 700;
-  color: #0f2a5c;
+  font-size: 14px;
+  font-weight: 600;
+  color: #0f172a;
   line-height: 1.2;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.doorare-chat-context-badge {
-  font-size: 9.5px;
-  font-weight: 500;
-  color: #0284c7;
-  background: #e0f2fe;
-  padding: 1px 6px;
-  border-radius: 9999px;
-  display: inline-block;
-  margin-top: 1px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 120px;
 }
 
 .doorare-chat-header-actions {
@@ -565,11 +676,6 @@
   font-size: 14.5px;
 }
 
-.doorare-chat-drawer.fullscreen .doorare-chat-context-badge {
-  font-size: 10.5px;
-  max-width: none;
-}
-
 .doorare-chat-drawer.fullscreen .doorare-chat-header-action-btn {
   height: 32px;
   padding: 0 12px;
@@ -592,11 +698,15 @@
 .doorare-chat-messages {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 16px 14px;
   display: flex;
   flex-direction: column;
   gap: 14px;
   background: #f8fafc;
+  box-sizing: border-box;
+  width: 100%;
+  transition: max-width 0.38s cubic-bezier(0.16, 1, 0.3, 1), padding 0.3s ease;
 }
 
 /* Sleek WebKit scrollbar */
@@ -830,6 +940,7 @@
   padding: 14px 18px 12px 18px;
   background: #ffffff;
   border-top: 1px solid #e2e8f0;
+  transition: max-width 0.38s cubic-bezier(0.16, 1, 0.3, 1), padding 0.3s ease;
 }
 
 .doorare-input-capsule {
@@ -1154,10 +1265,13 @@
 }
 
 .doorare-tool-name {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-family: inherit;
+  font-size: 12.5px;
   font-weight: 600;
   color: #0f172a;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .doorare-tool-args-preview {
@@ -1534,6 +1648,138 @@
    Message Action Buttons & Copy Feedback
    ======================================================== */
 
+/* ========================================================
+   Message Action Toolbars & Inline Editing
+   ======================================================== */
+
+.doorare-msg-action-bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  opacity: 0;
+  transition: opacity 0.15s ease-in-out;
+}
+
+.doorare-chat-msg-row:hover .doorare-msg-action-bar,
+.doorare-msg-action-bar:focus-within {
+  opacity: 1;
+}
+
+.doorare-msg-action-bar.user {
+  justify-content: flex-end;
+}
+
+.doorare-msg-action-bar.assistant {
+  justify-content: flex-start;
+  margin-left: 2px;
+}
+
+.doorare-msg-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 3px 6px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.doorare-msg-action-btn:hover:not(:disabled) {
+  background: #f1f5f9;
+  color: #0f172a;
+  border-color: #e2e8f0;
+}
+
+.doorare-msg-action-btn.delete:hover:not(:disabled) {
+  background: #fef2f2;
+  color: #dc2626;
+  border-color: #fecaca;
+}
+
+.doorare-msg-action-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Inline Editing Box */
+.doorare-chat-edit-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  min-width: 260px;
+  background: #ffffff;
+  border: 1.5px solid #2563eb;
+  border-radius: 12px;
+  padding: 10px 12px;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.08);
+}
+
+.doorare-chat-edit-textarea {
+  width: 100%;
+  border: none;
+  outline: none;
+  resize: vertical;
+  font-family: inherit;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: #0f172a;
+  background: transparent;
+  min-height: 48px;
+  max-height: 220px;
+}
+
+.doorare-chat-edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 8px;
+}
+
+.doorare-chat-edit-btn {
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.doorare-chat-edit-btn.cancel {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+}
+
+.doorare-chat-edit-btn.cancel:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.doorare-chat-edit-btn.submit {
+  background: #2563eb;
+  color: #ffffff;
+  border: 1px solid #2563eb;
+}
+
+.doorare-chat-edit-btn.submit:hover:not(:disabled) {
+  background: #1d4ed8;
+}
+
+.doorare-chat-edit-btn.submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .doorare-bubble-actions {
   display: flex;
   justify-content: flex-end;
@@ -1828,3 +2074,1067 @@
 
 
 
+
+/* --- Answer insights: citations + follow-up questions --- */
+.doorare-answer-insights {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+  padding-left: 2px;
+}
+
+.doorare-insight-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.doorare-insight-label {
+  font-size: 10.5px;
+  letter-spacing: 0.02em;
+  color: #94a3b8;
+  text-transform: none;
+  flex: none;
+}
+
+.doorare-citation-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 220px;
+  padding: 2px 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 11px;
+  line-height: 17px;
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.doorare-citation-chip:hover {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.doorare-citation-icon {
+  font-size: 10px;
+  color: #94a3b8;
+}
+
+.doorare-followup-chip {
+  padding: 3px 10px;
+  border: 1px solid #bfdbfe;
+  border-radius: 999px;
+  background: #fff;
+  color: #1d4ed8;
+  font-size: 11.5px;
+  line-height: 18px;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.doorare-followup-chip:hover {
+  background: #eff6ff;
+  border-color: #93c5fd;
+}
+
+/* ---- Clarify panel (ask_operator): choices + custom answer ---- */
+.doorare-clarify-card {
+  margin-top: 8px;
+  border: 1px solid #dbe3ef;
+  border-left: 3px solid #2563eb;
+  border-radius: 10px;
+  background: #f8fafc;
+  padding: 12px 14px;
+  max-width: 640px;
+}
+
+.doorare-clarify-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #1e3a8a;
+  margin-bottom: 10px;
+}
+
+.doorare-clarify-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #2563eb;
+}
+
+.doorare-clarify-question + .doorare-clarify-question {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed #dbe3ef;
+}
+
+.doorare-clarify-header {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.doorare-clarify-text {
+  font-size: 13px;
+  color: #0f172a;
+  margin: 2px 0 8px;
+}
+
+.doorare-clarify-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.doorare-clarify-option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 7px 11px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.doorare-clarify-option:hover:not(:disabled) {
+  border-color: #2563eb;
+}
+
+.doorare-clarify-option.selected {
+  border-color: #2563eb;
+  background: #eff6ff;
+}
+
+.doorare-clarify-option.selected:disabled {
+  opacity: 1;
+  border-color: #2563eb;
+  background: #e0edff;
+}
+
+.doorare-clarify-option:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.doorare-clarify-option-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.doorare-clarify-option-desc {
+  font-size: 11px;
+  color: #64748b;
+}
+
+.doorare-clarify-input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 13px;
+  background: #fff;
+}
+
+.doorare-clarify-input:focus {
+  outline: none;
+  border-color: #2563eb;
+}
+
+.doorare-clarify-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.doorare-clarify-submit {
+  padding: 7px 16px;
+  border: none;
+  border-radius: 8px;
+  background: #2563eb;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.doorare-clarify-submit:disabled {
+  background: #cbd5e1;
+  color: #64748b;
+  cursor: not-allowed;
+  opacity: 0.8;
+}
+
+.doorare-clarify-hint {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+/* Tool that stopped because the copilot needs more information: no red error state */
+.doorare-tool-badge.needs-input {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.doorare-tool-log-card.needs_input {
+  border-color: #fcd34d;
+  background: #fffbeb;
+}
+
+/* Neutral state for a tool that could not run: no red error surface */
+.doorare-tool-log-card.failed {
+  border-color: #e2e8f0;
+  background-color: #f8fafc;
+}
+
+.doorare-tool-badge.neutral {
+  background: #e2e8f0;
+  color: #475569;
+}
+
+.doorare-tool-error-details {
+  margin-top: 6px;
+  font-size: 11px;
+  color: #64748b;
+}
+
+.doorare-tool-error-details summary {
+  cursor: pointer;
+}
+
+.doorare-tool-error-details .doorare-tool-code-preview {
+  margin-top: 4px;
+  max-height: 160px;
+  overflow: auto;
+}
+
+/* Unified Clarify Card (Zero Horizontal Scrollbar, Scannable & Effortless) */
+.doorare-clarify-top-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.doorare-clarify-step-badge {
+  font-size: 11px;
+  font-weight: 600;
+  color: #1d4ed8;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+
+.doorare-clarify-step-badge.answered {
+  color: #166534;
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+
+.doorare-clarify-dot.answered {
+  background: #16a34a;
+}
+
+.doorare-clarify-card.decided {
+  background: #f8fafc;
+  border-left-color: #16a34a;
+}
+
+.doorare-clarify-questions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.doorare-clarify-question-block {
+  padding: 10px 12px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+
+.doorare-clarify-question-header-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.doorare-clarify-q-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #2563eb;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.doorare-clarify-header-col {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.doorare-clarify-summary-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.doorare-clarify-summary-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  padding: 6px 10px;
+  background: #ffffff;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+}
+
+.doorare-clarify-summary-num {
+  font-size: 11px;
+  font-weight: 700;
+  color: #2563eb;
+  background: #eff6ff;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.doorare-clarify-summary-label {
+  color: #64748b;
+  font-weight: 500;
+}
+
+.doorare-clarify-summary-value {
+  color: #0f172a;
+  font-weight: 600;
+}
+
+
+/* File Attachment & Web Search Toolbar */
+.doorare-attached-file-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: #e0f2fe;
+  border: 1px solid #bae6fd;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #0369a1;
+  margin-bottom: 6px;
+  max-width: 100%;
+}
+
+.doorare-file-name {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 240px;
+}
+
+.doorare-file-size {
+  font-size: 11px;
+  color: #0284c7;
+}
+
+.doorare-file-remove-btn {
+  border: none;
+  background: transparent;
+  font-size: 16px;
+  line-height: 1;
+  color: #0284c7;
+  cursor: pointer;
+  padding: 0 2px;
+}
+
+.doorare-file-remove-btn:hover {
+  color: #b91c1c;
+}
+
+.doorare-input-actions-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.doorare-chat-tool-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.doorare-chat-tool-btn:hover {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+  color: #334155;
+}
+
+.doorare-chat-tool-btn.active {
+  border-color: #3b82f6;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+
+/* ========================================================
+   Formal Clinical Proposal Card
+   ======================================================== */
+.doorare-chat-proposal-card.formal {
+  margin-top: 10px;
+  background: #ffffff;
+  border: 1px solid #bfdbfe;
+  border-radius: 14px;
+  padding: 12px 14px;
+  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.doorare-proposal-header-formal {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #f1f5f9;
+  width: 100%;
+}
+
+.doorare-proposal-header-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+}
+
+.doorare-proposal-meta-tag {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.doorare-proposal-icon-box {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: #eff6ff;
+  border: 1px solid #dbeafe;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.doorare-proposal-meta-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: #2563eb;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+
+.doorare-proposal-main-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.45;
+  word-break: break-word;
+  width: 100%;
+}
+
+.doorare-proposal-status-chip {
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.doorare-proposal-status-chip.pending {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
+}
+
+/* Specification Grid */
+.doorare-proposal-spec-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 10px 12px;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.doorare-spec-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.doorare-spec-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: #64748b;
+}
+
+.doorare-spec-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f172a;
+  word-break: break-word;
+}
+
+.doorare-spec-value.drug-name {
+  color: #1e40af;
+  font-weight: 700;
+}
+
+.doorare-spec-value.qty-val {
+  font-size: 15px;
+  color: #0284c7;
+  font-weight: 700;
+}
+
+.doorare-unit-sub {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: #64748b;
+}
+
+.doorare-urgency-pill {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 6px;
+}
+
+.doorare-urgency-pill.very-urgent {
+  background: #ffe4e6;
+  color: #be123c;
+  border: 1px solid #fecdd3;
+}
+
+.doorare-urgency-pill.urgent {
+  background: #fef3c7;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+
+.doorare-urgency-pill.routine {
+  background: #f0fdf4;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+
+/* Clinical Rationale Box */
+.doorare-proposal-rationale-box {
+  background: #f0fdf4;
+  border-left: 3.5px solid #16a34a;
+  border-radius: 4px 8px 8px 4px;
+  padding: 10px 12px;
+}
+
+.doorare-rationale-title {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #166534;
+  margin-bottom: 3px;
+}
+
+.doorare-rationale-text {
+  font-size: 12.5px;
+  color: #14532d;
+  line-height: 1.45;
+}
+
+/* Audit Strip */
+.doorare-proposal-audit-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  padding: 2px 2px 0 2px;
+}
+
+.doorare-audit-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10.5px;
+  color: #475569;
+  font-weight: 500;
+}
+
+/* Formal Action Buttons */
+.doorare-proposal-formal-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 2px;
+  width: 100%;
+}
+
+.doorare-formal-btn-approve {
+  flex: 2;
+  background: #16a34a;
+  color: #ffffff;
+  border: 1px solid #15803d;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-shadow: 0 2px 6px rgba(22, 163, 74, 0.25);
+  transition: all 0.15s ease;
+}
+
+.doorare-formal-btn-approve:hover:not(:disabled) {
+  background: #15803d;
+  box-shadow: 0 4px 10px rgba(22, 163, 74, 0.35);
+  transform: translateY(-1px);
+}
+
+.doorare-formal-btn-approve:disabled {
+  background: #86efac;
+  border-color: #86efac;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.doorare-formal-btn-decline {
+  flex: 1;
+  background: #ffffff;
+  color: #64748b;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.doorare-formal-btn-decline:hover:not(:disabled) {
+  background: #f8fafc;
+  color: #0f172a;
+  border-color: #94a3b8;
+}
+
+.doorare-formal-btn-decline:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Decided State Banners */
+.doorare-chat-proposal-card.formal.decided-approved {
+  background: #f0fdf4;
+  border: 1.5px solid #86efac;
+  box-shadow: 0 2px 8px rgba(22, 163, 74, 0.08);
+}
+
+.doorare-chat-proposal-card.formal.decided-declined {
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  opacity: 0.85;
+}
+
+.doorare-decided-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.doorare-decided-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.doorare-decided-icon.approved {
+  background: #16a34a;
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(22, 163, 74, 0.3);
+}
+
+.doorare-decided-icon.declined {
+  background: #64748b;
+  color: #ffffff;
+}
+
+.doorare-decided-text-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.doorare-decided-title {
+  font-size: 13.5px;
+  font-weight: 700;
+}
+
+.doorare-decided-title.approved {
+  color: #15803d;
+}
+
+.doorare-decided-title.declined {
+  color: #475569;
+}
+
+.doorare-decided-subtitle {
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+.doorare-decided-summary-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.doorare-decided-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #ffffff;
+  border: 1px solid #dcfce7;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 11.5px;
+}
+
+.doorare-decided-chip-k {
+  color: #64748b;
+}
+
+.doorare-decided-chip-v {
+  color: #0f172a;
+  font-weight: 600;
+}
+
+.doorare-decided-chip-v.highlight {
+  color: #15803d;
+  font-weight: 700;
+}
+
+.doorare-decided-actions-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-top: 8px;
+  border-top: 1px solid rgba(22, 163, 74, 0.15);
+  margin-top: 4px;
+}
+
+.doorare-proposal-open-page-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #15803d;
+  background: #ffffff;
+  border: 1.5px solid #86efac;
+  box-shadow: 0 1px 3px rgba(22, 163, 74, 0.12);
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.doorare-proposal-open-page-btn:hover {
+  background: #f0fdf4;
+  border-color: #16a34a;
+  color: #166534;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(22, 163, 74, 0.18);
+}
+
+.doorare-proposal-open-page-btn:active {
+  transform: translateY(0);
+}
+
+.doorare-proposal-error-banner {
+  padding: 8px 12px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  color: #b91c1c;
+  font-size: 12px;
+}
+
+/* ========================================================
+   DeepSeek Light-Mode Input Capsule
+   ======================================================== */
+.doorare-input-capsule.deepseek-style {
+  border: 1.5px solid #e2e8f0;
+  border-radius: 22px;
+  background: #ffffff;
+  padding: 12px 14px 10px 16px;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.doorare-input-capsule.deepseek-style:focus-within {
+  border-color: #2563eb;
+  box-shadow: 0 4px 18px rgba(37, 99, 235, 0.12);
+}
+
+.doorare-input-bottom-bar.deepseek-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4px;
+}
+
+.doorare-deepseek-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.doorare-deepseek-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 9999px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.doorare-deepseek-pill:hover:not(:disabled) {
+  background: #f8fafc;
+  border-color: #94a3b8;
+  color: #0f172a;
+}
+
+.doorare-deepseek-pill.active {
+  background: #eff6ff;
+  border-color: #3b82f6;
+  color: #1d4ed8;
+  font-weight: 600;
+}
+
+.doorare-deepseek-pill:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.doorare-deepseek-scope {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: #94a3b8;
+  padding: 2px 6px;
+}
+
+.doorare-deepseek-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.doorare-deepseek-clip-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: transparent;
+  border: none;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.doorare-deepseek-clip-btn:hover:not(:disabled) {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.doorare-deepseek-clip-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.doorare-deepseek-send-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #2563eb;
+  color: #ffffff;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
+}
+
+.doorare-deepseek-send-btn:hover:not(:disabled) {
+  background: #1d4ed8;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.4);
+}
+
+.doorare-deepseek-send-btn:disabled {
+  background: #e2e8f0;
+  color: #94a3b8;
+  box-shadow: none;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.doorare-deepseek-send-btn.streaming {
+  background: #ef4444;
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.3);
+}
+
+.doorare-deepseek-send-btn.streaming:hover {
+  background: #dc2626;
+}
+
+.doorare-deepseek-stop-square {
+  width: 10px;
+  height: 10px;
+  background: #ffffff;
+  border-radius: 2px;
+}
+
+
+/* ========================================================
+   Proposal Duplicate Conflict & Force Confirm UI
+   ======================================================== */
+.doorare-proposal-conflict-banner {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-left: 4px solid #d97706;
+  border-radius: 8px;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.doorare-conflict-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.doorare-conflict-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #b45309;
+}
+
+.doorare-conflict-desc {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #92400e;
+}
+
+.doorare-conflict-hint {
+  font-size: 11.5px;
+  color: #78350f;
+  line-height: 1.45;
+  margin-top: 2px;
+}
+
+.doorare-formal-btn-approve.force-confirm {
+  background: #d97706;
+  border-color: #b45309;
+  box-shadow: 0 2px 6px rgba(217, 119, 6, 0.3);
+}
+
+.doorare-formal-btn-approve.force-confirm:hover:not(:disabled) {
+  background: #b45309;
+  box-shadow: 0 4px 10px rgba(180, 83, 9, 0.4);
+}

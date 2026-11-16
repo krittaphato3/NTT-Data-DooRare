@@ -6,6 +6,18 @@ import type { ToolDefinition } from '../providers/types.js';
  * Converts a Zod Schema object into an OpenAI/JSON-Schema compatible parameter definition.
  */
 export function zodToJsonSchema(schema: z.ZodObject<any>): ToolJsonSchema['parameters'] {
+  // Zod 4 can describe nested arrays/objects (items[].drugMasterId …). The hand-rolled walker below only saw top-level
+  // keys, so the model kept inventing payload shapes and the tools rejected them.
+  try {
+    const generated = z.toJSONSchema(schema, { io: 'input', unrepresentable: 'any' }) as Record<string, unknown>;
+    delete generated.$schema;
+    if (generated.type === 'object' && generated.properties) {
+      return generated as unknown as ToolJsonSchema['parameters'];
+    }
+  } catch {
+    // fall through to the legacy walker below
+  }
+
   const shape = schema.shape;
   const properties: Record<string, unknown> = {};
   const required: string[] = [];
@@ -73,6 +85,52 @@ export function zodToJsonSchema(schema: z.ZodObject<any>): ToolJsonSchema['param
     properties,
     ...(required.length > 0 ? { required } : {}),
   };
+}
+
+/** JSON schema per tool, computed once (the coercion below only needs types, not validation). */
+const jsonSchemaCache = new WeakMap<object, any>();
+
+function jsonSchemaFor(tool: IAgentTool<any>): any {
+  let cached = jsonSchemaCache.get(tool);
+  if (!cached) {
+    cached = zodToJsonSchema(tool.parameters);
+    jsonSchemaCache.set(tool, cached);
+  }
+  return cached;
+}
+
+/**
+ * Repairs the shapes models actually send ("20" for a number, null for an optional field) before strict validation.
+ * The schema stays the single source of truth: unknown keys are still rejected, nothing is invented, and a value that
+ * cannot be read as the declared type is left untouched so validation reports it (and the operator is asked).
+ */
+function coerceArgsToSchema(value: unknown, schema: any): unknown {
+  if (!schema || typeof schema !== 'object') return value;
+
+  if (Array.isArray(value) && schema.items) {
+    return value.map((entry) => coerceArgsToSchema(entry, schema.items));
+  }
+
+  if (value && typeof value === 'object' && schema.properties) {
+    const record = { ...(value as Record<string, unknown>) };
+    for (const [key, propSchema] of Object.entries(schema.properties as Record<string, any>)) {
+      if (!(key in record)) continue;
+      record[key] = coerceArgsToSchema(record[key], propSchema);
+    }
+    return record;
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if ((schema.type === 'number' || schema.type === 'integer') && trimmed !== '' && !Number.isNaN(Number(trimmed))) {
+      return Number(trimmed);
+    }
+    if (schema.type === 'boolean' && (trimmed === 'true' || trimmed === 'false')) {
+      return trimmed === 'true';
+    }
+  }
+
+  return value;
 }
 
 /**
@@ -188,11 +246,20 @@ export class ToolRegistry {
           }
         }
       }
+      argsToParse = coerceArgsToSchema(argsToParse, jsonSchemaFor(tool));
       const parsed = tool.parameters.safeParse(argsToParse);
       if (!parsed.success) {
+        // Name the offending fields so the model can ask for exactly those instead of guessing again.
+        const issues = parsed.error.issues
+          .map((issue) => `${issue.path.join('.') || '(root)'}: ${issue.message}`)
+          .join('; ');
         return {
           success: false,
-          error: `Invalid tool arguments for '${toolName}': ${parsed.error.message}`,
+          error: `Invalid tool arguments for '${toolName}': ${issues}. Ask the operator for these values with ask_operator instead of retrying.`,
+          validationErrors: parsed.error.issues.map((issue) => ({
+            path: issue.path.join('.') || '(root)',
+            message: issue.message,
+          })),
         };
       }
       parsedArgs = parsed.data;

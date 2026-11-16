@@ -21,7 +21,7 @@ import { ObligationTable, ObligationTiles } from '../components/ObligationTable'
 import { BORROW_REQUESTS, groupOf, isOpenRequest, LENDER_QUEUE, needsLender, TILES, tileOf } from '../data/borrow';
 import { isOpenLeg } from '../data/lender';
 import { useBorrowRequests } from '../data/useBorrowRequests';
-import { approveBorrowRequest, cancelBorrowRequest, skipBorrowLeg, escalateManual as escalateManualApi, rejectBorrowRequest } from '../../../services/borrowApi';
+import { approveBorrowRequest, cancelBorrowRequest, skipBorrowLeg, escalateManual as escalateManualApi, rejectBorrowRequest, proposeBorrowRequest } from '../../../services/borrowApi';
 import { mockFallbackEnabled } from '../../../services/dataSource';
 import { getHospitals } from '../../../services/catalogApi';
 import type { ApiHospital } from '../../../services/catalogApi';
@@ -180,21 +180,48 @@ export function BorrowRequestsPage({
     [live.source, live.requests, decision, escalations],
   );
 
-  // `?request=BR-…` (from the stock-alert screen): open that request once the list has loaded.
+  // `?request=BR-…` (from the stock-alert screen or AI Copilot): open that request once the list has loaded.
   const [linkedRequest, setLinkedRequest] = useState(() => new URLSearchParams(window.location.search).get('request'));
   useEffect(() => {
     if (!linkedRequest || live.source === 'loading') return;
-    const linked = all.find((r) => r.id === linkedRequest);
+    const linked = all.find((r) => r.id === linkedRequest || r.uuid === linkedRequest);
     if (linked) {
       // also when it is already finished (the default list shows only requests still in progress)
       setGroup(tileOf(linked));
       setOnlyNeedLender(false);
-      setQ(linkedRequest);
-      setSelId(linkedRequest);
+      setQ(linked.id);
+      setSelId(linked.id);
       setDrawerOpen(true);
     }
     setLinkedRequest(null);
   }, [linkedRequest, live.source, all]);
+
+  // Listen for direct open requests from AI Copilot drawer
+  useEffect(() => {
+    const handleOpenReq = async (ev: any) => {
+      const targetId = ev.detail?.id || ev.detail?.requestNo;
+      if (!targetId) return;
+      let items = all;
+      let found = items.find((r) => r.id === targetId || r.uuid === targetId);
+      if (!found) {
+        // Try reloading live list to pick up newly created request
+        const fresh = await live.reload().catch(() => null);
+        if (fresh && Array.isArray(fresh)) {
+          items = fresh;
+          found = items.find((r) => r.id === targetId || r.uuid === targetId);
+        }
+      }
+      if (found) {
+        setGroup(tileOf(found));
+        setOnlyNeedLender(false);
+        setQ(found.id);
+        setSelId(found.id);
+        setDrawerOpen(true);
+      }
+    };
+    window.addEventListener('doorare:open-borrow-request', handleOpenReq);
+    return () => window.removeEventListener('doorare:open-borrow-request', handleOpenReq);
+  }, [all, live]);
   // Emergency (F3) requests are worked in the incident console: they never show on this page.
   const inPeriod = all.filter((r) => r.daysAgo <= days).filter((r) => r.context !== 'EMERGENCY');
   const counts = Object.fromEntries(TILES.map((g) => [g.id, inPeriod.filter((r) => tileOf(r) === g.id).length])) as Record<TileGroup, number>;
@@ -221,7 +248,7 @@ export function BorrowRequestsPage({
     setSelId(id);
     setDrawerOpen(true);
   };
-  const sel = all.find((r) => r.id === selId) ?? all[0];
+  const sel = all.find((r) => r.id === selId || r.uuid === selId) ?? all[0];
 
   /** Live: approve (API-F1b-005) sends the first round; reject asks for a reason first (API-F1b-006). */
   const decide = (d: 'approve' | 'reject') => {
@@ -229,6 +256,18 @@ export function BorrowRequestsPage({
     setActionError(null);
     if (d === 'reject') return setRejectTarget(sel);
     approveBorrowRequest(sel.uuid, sel.version).then(() => live.reload()).catch((e: Error) => setActionError(e.message));
+  };
+
+  /** Propose lender ladder for a DRAFT borrow request (API-F1b-004). */
+  const handlePropose = (r: BorrowRequest) => {
+    if (!r.uuid) return;
+    setActionError(null);
+    proposeBorrowRequest(r.uuid)
+      .then((res) => {
+        setCreatedNotice(`เสนอแผนผู้ให้ยืมสำหรับ ${r.id} เรียบร้อยแล้ว (${res.data.status === 'ESCALATED' ? 'ไม่พบผู้ให้ยืมที่มีสต็อกเกินเกณฑ์' : 'รออนุมัติก่อนส่ง'})`);
+        return live.reload();
+      })
+      .catch((e: Error) => setActionError(e.message));
   };
   const confirmReject = (reason: string) => {
     if (!rejectTarget?.uuid) return;
@@ -672,6 +711,7 @@ export function BorrowRequestsPage({
           onSkipLeg={(r, leg) => setSkipTarget({ r, leg })}
           onCancel={setCancelTarget}
           onRecordReturn={handleOpenRecordReturn}
+          onPropose={handlePropose}
           onClose={() => setDrawerOpen(false)}
           role={role}
         />

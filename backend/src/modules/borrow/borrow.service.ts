@@ -125,7 +125,7 @@ export async function requestView(db: Db, row: Record<string, any>, viewer: Auth
             excluded: stored.excluded,
             parallel: stored.parallel,
             builtAt: stored.builtAt,
-            agent: stored.agent ? { status: stored.agent.runStatus, model: stored.agent.model, summary: stored.agent.summary, confidence: stored.agent.confidence, flags: stored.agent.flags, priorityAfter: stored.agent.priorityAfter } : null,
+            agent: stored.agent ? { status: stored.agent.runStatus, model: stored.agent.model, summary: stored.agent.summary, whatChanged: stored.agent.whatChanged ?? null, confidence: stored.agent.confidence, flags: stored.agent.flags, priorityAfter: stored.agent.priorityAfter } : null,
           },
         }
       : {}),
@@ -167,7 +167,7 @@ export class BorrowService {
     const item = items[0] && typeof items[0] === 'object' ? (items[0] as Record<string, unknown>) : {};
     const reason = typeof body.reason === 'string' ? body.reason.trim() : '';
 
-    return withTransaction(async (client) => {
+    const created = await withTransaction(async (client) => {
       let alert: { id: string; drug_master_id: string; status: string } | null = null;
       let drugMasterId = isUuid(item.drugMasterId) ? item.drugMasterId : null;
       if (body.stockAlertId !== undefined) {
@@ -183,24 +183,55 @@ export class BorrowService {
         alert = { id: a.id, drug_master_id: a.drug_master_id, status: a.status };
         drugMasterId = a.drug_master_id;
       }
+      if (drugMasterId) {
+        const dmRow = (await client.query('SELECT id FROM drug_master WHERE id = $1', [drugMasterId])).rows[0];
+        if (!dmRow) {
+          const hdRow = (await client.query('SELECT drug_master_id FROM hospital_drug WHERE id = $1', [drugMasterId])).rows[0];
+          if (hdRow?.drug_master_id) {
+            drugMasterId = hdRow.drug_master_id;
+            item.drugMasterId = drugMasterId;
+          } else {
+            const searchCandidate = `${reason} ${(body as any).title ?? ''} ${(item as any).name ?? ''}`;
+            const matchedDm = (
+              await client.query(
+                `SELECT hd.drug_master_id
+                   FROM hospital_drug hd
+                   JOIN drug_master dm ON dm.id = hd.drug_master_id
+                  WHERE hd.hospital_id = $1
+                    AND ($2 ILIKE ('%' || dm.generic_name || '%'))
+                  ORDER BY (CASE WHEN $2 ILIKE ('%' || dm.strength || '%') THEN 1 ELSE 2 END)
+                  LIMIT 1`,
+                [hospitalId, searchCandidate],
+              )
+            ).rows[0];
+            if (matchedDm?.drug_master_id) {
+              drugMasterId = matchedDm.drug_master_id;
+              item.drugMasterId = drugMasterId;
+            }
+          }
+        }
+      }
       if (!drugMasterId) throw new HttpError(400, 'VALIDATION', 'ต้องระบุ stockAlertId หรือ items[0].drugMasterId');
       const manualQty = optionalNumber(item.qtyRequested, 'qtyRequested', { min: 0.001 });
       if (context === 'MANUAL') {
         if (manualQty === undefined) throw new HttpError(400, 'VALIDATION', 'คำขอแบบกรอกเองต้องระบุ qtyRequested');
         if (reason.length < 3) throw new HttpError(400, 'VALIDATION', 'คำขอแบบกรอกเองต้องระบุเหตุผล');
       }
-      const dup = await client.query(
-        `SELECT br.request_no FROM borrow_request br JOIN borrow_request_item i ON i.request_id = br.id
-          WHERE br.borrower_hospital_id = $1 AND i.drug_master_id = $2 AND br.status::text = ANY($3::text[]) LIMIT 1`,
-        [hospitalId, drugMasterId, ACTIVE_REQUEST],
-      );
-      if (dup.rows[0]) throw new HttpError(409, 'CONFLICT', `มีคำขอยืมยานี้ที่ยังไม่ปิดแล้ว (${dup.rows[0].request_no})`, { requestNo: dup.rows[0].request_no });
+      const force = Boolean(body.force || body.confirmDuplicate || body.allowDuplicate);
+      if (!force) {
+        const dup = await client.query(
+          `SELECT br.request_no FROM borrow_request br JOIN borrow_request_item i ON i.request_id = br.id
+            WHERE br.borrower_hospital_id = $1 AND i.drug_master_id = $2 AND br.status::text = ANY($3::text[]) LIMIT 1`,
+          [hospitalId, drugMasterId, ACTIVE_REQUEST],
+        );
+        if (dup.rows[0]) throw new HttpError(409, 'CONFLICT', `มีคำขอยืมยานี้ที่ยังไม่ปิดแล้ว (${dup.rows[0].request_no})`, { requestNo: dup.rows[0].request_no });
+      }
 
       const cfg = await loadBorrowConfig(client, hospitalId);
       const need = await loadNeed(client, cfg, hospitalId, drugMasterId, context === 'MANUAL' ? manualQty : undefined);
-      if (need.borrow <= 0) throw new HttpError(409, 'NO_NEED', 'สต็อกและของที่กำลังมาเพียงพอแล้ว ไม่ต้องยืม (BR-F1b-004)', { required: need.required, stock: need.stock, incoming: need.incoming });
+      if (!force && need.borrow <= 0) throw new HttpError(409, 'NO_NEED', 'สต็อกและของที่กำลังมาเพียงพอแล้ว ไม่ต้องยืม (BR-F1b-004)', { required: need.required, stock: need.stock, incoming: need.incoming });
       const urgency: Urgency = need.urgency;
-      const qty = manualQty ?? need.borrow;
+      const qty = manualQty ?? (need.borrow > 0 ? need.borrow : 1);
       const requestNo = await nextRequestNo(client);
       const normalUse = normalUseQty(need.u, need.leadDays, need.stock, need.incoming);
       const inserted = await client.query(
@@ -215,6 +246,16 @@ export class BorrowService {
       const view = await requestView(client, await loadDetail(client, id), user);
       return { ok: true, id, version: view.version, data: { ...view, need } };
     });
+
+    if ((body as any).autoPropose !== false) {
+      try {
+        const proposed = await this.propose(req, created.id);
+        return { ok: true, id: created.id, version: proposed.version, data: proposed.data };
+      } catch {
+        return created;
+      }
+    }
+    return created;
   }
 
   async list(user: AuthSessionUser, raw: Record<string, unknown>) {
@@ -280,10 +321,20 @@ export class BorrowService {
       // AGT-F1: the agent chooses the first round among the lenders the code accepted (falls back to the Si ladder unchanged)
       let agent: Awaited<ReturnType<typeof selectLenders>> | null = null;
       if (plan.ladder.length > 0 && cfg.agentEnabled) {
+        // a re-propose compares against the ladder the previous run stored on this request
+        const prevStored = asStoredLadder((r as any).ladder);
         agent = await selectLenders({
           requestNo: r.request_no, ladder: plan.ladder, borrowQty: need.borrow, parallel: plan.parallel, maxParallel: cfg.maxParallel,
           allowedNumbers: [Math.round(timeout.effectiveMin), Math.round(timeout.effectiveMin / 60)], drug: r.drug_name, unit: r.base_unit, requester: r.borrower_name,
           urgency: need.urgency, deadlineMin: timeout.effectiveMin, need: { stock: need.stock, u: need.u, required: need.required, ved: need.ved },
+          previous: prevStored?.agent
+            ? {
+                summary: prevStored.agent.summary,
+                confidence: prevStored.agent.confidence,
+                picks: prevStored.ladder.filter((e) => e.qtyPlanned > 0).map((e) => ({ code: e.code, qty: e.qtyPlanned })),
+                priorityAfter: prevStored.agent.priorityAfter,
+              }
+            : null,
         });
         plan.ladder = agent.ladder;
       }

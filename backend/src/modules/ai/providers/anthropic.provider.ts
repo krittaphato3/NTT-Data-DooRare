@@ -4,9 +4,12 @@ import type {
   ChatOptions,
   ILLMProvider,
   LLMResponse,
+  LLMUsage,
   ProviderConnectionResult,
+  ToolCall,
   ToolDefinition,
 } from './types.js';
+import { consumeSse } from './streaming.js';
 
 export class AnthropicProvider implements ILLMProvider {
   readonly providerType = 'ANTHROPIC' as const;
@@ -130,6 +133,9 @@ export class AnthropicProvider implements ILLMProvider {
       }));
     }
 
+    const wantsStream = typeof options?.onDelta === 'function';
+    if (wantsStream) body.stream = true;
+
     const res = await fetch(`${this.baseUrl}/messages`, {
       method: 'POST',
       headers: {
@@ -144,6 +150,8 @@ export class AnthropicProvider implements ILLMProvider {
       const err = (await res.json().catch(() => ({}))) as { error?: { message?: string } };
       throw new Error(err.error?.message || `Anthropic request failed: HTTP ${res.status}`);
     }
+
+    if (wantsStream) return this.readStream(res, model, options!.onDelta!);
 
     const data = (await res.json()) as {
       content: Array<
@@ -185,6 +193,70 @@ export class AnthropicProvider implements ILLMProvider {
             totalTokens: data.usage.input_tokens + data.usage.output_tokens,
           }
         : undefined,
+    };
+  }
+
+  /** Reads the message stream: `text_delta` goes to `onDelta`, `input_json_delta` rebuilds each tool_use input. */
+  private async readStream(res: Response, model: string, onDelta: (text: string) => void): Promise<LLMResponse> {
+    let content = '';
+    let usage: LLMUsage | undefined;
+    const tools: { id: string; name: string; json: string }[] = [];
+
+    await consumeSse(res, (event, data) => {
+      let json: any;
+      try {
+        json = JSON.parse(data);
+      } catch {
+        return;
+      }
+      switch (event) {
+        case 'message_start': {
+          const u = json.message?.usage;
+          if (u) {
+            usage = {
+              promptTokens: u.input_tokens ?? 0,
+              completionTokens: u.output_tokens ?? 0,
+              totalTokens: (u.input_tokens ?? 0) + (u.output_tokens ?? 0),
+            };
+          }
+          break;
+        }
+        case 'content_block_start': {
+          const block = json.content_block;
+          if (block?.type === 'tool_use') tools.push({ id: block.id, name: block.name, json: '' });
+          break;
+        }
+        case 'content_block_delta': {
+          const d = json.delta;
+          if (d?.type === 'text_delta' && typeof d.text === 'string' && d.text) {
+            content += d.text;
+            onDelta(d.text);
+          } else if (d?.type === 'input_json_delta' && tools.length > 0) {
+            tools[tools.length - 1].json += d.partial_json ?? '';
+          }
+          break;
+        }
+        case 'message_delta': {
+          const out = json.usage?.output_tokens;
+          if (usage && typeof out === 'number') {
+            usage = { ...usage, completionTokens: out, totalTokens: usage.promptTokens + out };
+          }
+          break;
+        }
+      }
+    });
+
+    const toolCalls: ToolCall[] = tools.map((t) => ({
+      id: t.id,
+      type: 'function' as const,
+      function: { name: t.name, arguments: t.json || '{}' },
+    }));
+
+    return {
+      model,
+      content: content || null,
+      toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
+      usage,
     };
   }
 }

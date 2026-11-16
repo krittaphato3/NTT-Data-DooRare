@@ -317,6 +317,8 @@ export interface ApiPlanAgent {
   status: 'OK' | 'FALLBACK' | 'SKIPPED';
   model: string | null;
   summary: string | null;
+  /** What changed since the previous assessment of this incident (null on a first run). */
+  whatChanged: string | null;
   confidence: string | null;
   highlights: string[];
   flags: string[];
