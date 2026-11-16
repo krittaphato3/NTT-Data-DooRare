@@ -60,7 +60,7 @@ const emptyEdits = (): PlanEdits => ({ packOverrides: {}, removeKits: [], remove
  */
 export function LiveIncidentFlow({ role = 'ER_STAFF' }: { role?: RoleCode }) {
   const access = getIncidentAccess(role);
-  const [incidentId, setIncidentId] = useState<string | undefined>(() => readParam('incident'));
+  const [incidentId, setIncidentId] = useState<string | undefined>(() => readParam('incident') || readParam('id'));
   const forceNew = readParam('new') === '1';
   const open = useIncidentList('active', 0);
   const { incident, reload } = useIncident(incidentId, 0);

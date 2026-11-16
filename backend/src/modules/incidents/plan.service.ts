@@ -39,6 +39,36 @@ export interface PlanEdits {
   setExtras: Record<string, number>;
 }
 
+export function resolveKitCode(input: string): string | null {
+  if (!input || typeof input !== 'string') return null;
+  const s = input.trim();
+  const upper = s.toUpperCase();
+
+  const validCodes = ['TRAUMA_RESUS', 'INTUBATION', 'IV_SET', 'BURN', 'CHEST_TUBE', 'SPLINT', 'MINOR_WOUND'];
+  if (validCodes.includes(upper)) return upper;
+
+  const uuidMap: Record<string, string> = {
+    'c7b52461-2e70-4d74-b034-0f51f44c0e5f': 'TRAUMA_RESUS',
+    '119a3a17-b9f4-45cf-bd12-dbcc15a78be6': 'INTUBATION',
+    '139681ae-a612-4167-a6df-606f41614d1b': 'IV_SET',
+    '7c9475c8-0477-4633-8db8-fa847213081c': 'BURN',
+    '1ffcc116-050f-475b-bf06-047453608c94': 'CHEST_TUBE',
+    '3bb9a13c-9757-480e-bcfb-8908861fc634': 'SPLINT',
+    'e1d23693-104d-4f63-8e17-ad3f1b89f997': 'MINOR_WOUND',
+  };
+  if (uuidMap[s.toLowerCase()]) return uuidMap[s.toLowerCase()];
+
+  if (s.includes('ชุดช่วยชีวิต') || upper.includes('TRAUMA') || upper.includes('RESUS')) return 'TRAUMA_RESUS';
+  if (s.includes('ท่อช่วยหายใจ') || upper.includes('INTUBAT')) return 'INTUBATION';
+  if (s.includes('สารน้ำ') || upper.includes('IV')) return 'IV_SET';
+  if (s.includes('ไฟไหม้') || upper.includes('BURN')) return 'BURN';
+  if (s.includes('ระบายทรวงอก') || upper.includes('CHEST') || upper.includes('TUBE') || upper.includes('ICD')) return 'CHEST_TUBE';
+  if (s.includes('ดามกระดูก') || s.includes('พันแผล') || upper.includes('SPLINT')) return 'SPLINT';
+  if (s.includes('แผลเล็ก') || upper.includes('MINOR')) return 'MINOR_WOUND';
+
+  return null;
+}
+
 export const noEdits = (): PlanEdits => ({ packOverrides: {}, removeKits: [], removeExtras: [], setKits: {}, setExtras: {} });
 
 function intMap(raw: unknown, name: string, keyIsUuid: boolean): Record<string, number> {
@@ -64,11 +94,29 @@ function stringList(raw: unknown, name: string, uuid: boolean): string[] {
 
 export function parseEdits(raw: unknown): PlanEdits {
   const o = bodyObject(raw);
+  const rawPackOverrides = intMap(o.packOverrides, 'packOverrides', false);
+  const rawRemoveKits = stringList(o.removeKits, 'removeKits', false);
+  const rawSetKits = intMap(o.setKits, 'setKits', false);
+
+  const packOverrides: Record<string, number> = {};
+  for (const [k, v] of Object.entries(rawPackOverrides)) {
+    const code = resolveKitCode(k) || k;
+    packOverrides[code] = v;
+  }
+
+  const setKits: Record<string, number> = {};
+  for (const [k, v] of Object.entries(rawSetKits)) {
+    const code = resolveKitCode(k) || k;
+    setKits[code] = v;
+  }
+
+  const removeKits = rawRemoveKits.map((k) => resolveKitCode(k) || k);
+
   return {
-    packOverrides: intMap(o.packOverrides, 'packOverrides', false),
-    removeKits: stringList(o.removeKits, 'removeKits', false),
+    packOverrides,
+    removeKits,
     removeExtras: stringList(o.removeExtras, 'removeExtras', true),
-    setKits: intMap(o.setKits, 'setKits', false),
+    setKits,
     setExtras: intMap(o.setExtras, 'setExtras', true),
   };
 }
@@ -208,7 +256,26 @@ async function generate(db: Db, incident: IncidentRow, counts: Counts, edits: Pl
     return [{ key: line.key, est: Math.min(line.est, cfg.blood.prcOMaxUnits), crit: Math.min(line.crit, cfg.blood.prcOMaxUnits) }];
   });
 
-  // staff edits: remove, then add / replace
+  // staff edits: normalize and resolve kit codes, remove, then add / replace
+  const normalizedSetKits: Record<string, number> = {};
+  for (const [k, v] of Object.entries(edits.setKits)) {
+    const c = resolveKitCode(k) || k;
+    normalizedSetKits[c] = v;
+  }
+  const normalizedPackOverrides: Record<string, number> = {};
+  for (const [k, v] of Object.entries(edits.packOverrides)) {
+    const c = resolveKitCode(k) || k;
+    normalizedPackOverrides[c] = v;
+  }
+  const normalizedRemoveKits = edits.removeKits.map((k) => resolveKitCode(k) || k);
+
+  edits = {
+    ...edits,
+    setKits: normalizedSetKits,
+    packOverrides: normalizedPackOverrides,
+    removeKits: normalizedRemoveKits,
+  };
+
   const knownKits = new Set(catalog.kits.keys());
   for (const code of [...edits.removeKits, ...Object.keys(edits.setKits), ...Object.keys(edits.packOverrides)]) {
     if (!knownKits.has(code)) throw new HttpError(422, 'VALIDATION', `ไม่พบชุดยา ${code}`);

@@ -96,10 +96,16 @@ export function parseCounts(raw: unknown, base: Counts = emptyCounts()): Counts 
   if (typeof raw !== 'object' || Array.isArray(raw)) throw new HttpError(400, 'VALIDATION', 'counts ต้องเป็น object ของระดับคัดแยก');
   const out = { ...base };
   for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
-    if (!(TRIAGE_LEVELS as readonly string[]).includes(key)) throw new HttpError(400, 'VALIDATION', `ระดับคัดแยก ${key} ไม่ถูกต้อง (${TRIAGE_LEVELS.join(', ')})`);
+    const upperKey = key.trim().toUpperCase();
+    if (['TOTAL', 'CASUALTIES', 'PATIENTS', 'TOTALPATIENTS', 'TOTAL_CASUALTIES'].includes(upperKey)) {
+      continue;
+    }
+    if (!(TRIAGE_LEVELS as readonly string[]).includes(upperKey)) {
+      throw new HttpError(400, 'VALIDATION', `ระดับคัดแยก ${key} ไม่ถูกต้อง (${TRIAGE_LEVELS.join(', ')})`);
+    }
     const n = Number(value);
     if (!Number.isInteger(n) || n < 0 || n > 100_000) throw new HttpError(400, 'VALIDATION', `จำนวน ${key} ต้องเป็นจำนวนเต็ม 0-100000`);
-    out[key as Triage] = n;
+    out[upperKey as Triage] = n;
   }
   return out;
 }

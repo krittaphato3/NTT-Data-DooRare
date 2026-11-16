@@ -759,6 +759,19 @@ export const PHARMACIST_PROPOSAL_WHITELIST = {
         .min(1, 'At least one item is required'),
     }),
   },
+  UPDATE_BORROW_REQUEST: {
+    buildEndpoint: (requestId?: string) => {
+      if (!requestId) throw new Error('requestId (targetId) is required for UPDATE_BORROW_REQUEST');
+      return `/api/v1/borrow-requests/${requestId}`;
+    },
+    method: 'PATCH' as const,
+    routeSource: 'backend/src/modules/borrow/borrow.routes.ts:24 (PATCH /borrow-requests/:id)',
+    payloadSchema: z.object({
+      qtyRequested: z.number().positive().optional(),
+      urgency: z.enum(['NORMAL', 'URGENT', 'VERY_URGENT']).optional(),
+      reason: z.string().optional(),
+    }),
+  },
   SNOOZE_ALERT: {
     buildEndpoint: (alertId?: string) => {
       if (!alertId) throw new Error('alertId (targetId) is required for SNOOZE_ALERT');
@@ -829,7 +842,7 @@ export const submitPharmacistProposalTool: IAgentTool<{
     'Terminal proposal tool submitting human-in-the-loop action proposals for borrow requests, alert snoozing, near-expiry pool releases, sending an own pool lot to the allocation agent, or objecting to another hospital\'s allocation plan in the region.',
   parameters: z.object({
     actionType: z
-      .enum(['CREATE_BORROW_REQUEST', 'SNOOZE_ALERT', 'RELEASE_NEAR_EXPIRY_POOL', 'SEND_POOL_TO_AGENT', 'OBJECT_ALLOCATION_PLAN'])
+      .enum(['CREATE_BORROW_REQUEST', 'UPDATE_BORROW_REQUEST', 'SNOOZE_ALERT', 'RELEASE_NEAR_EXPIRY_POOL', 'SEND_POOL_TO_AGENT', 'OBJECT_ALLOCATION_PLAN'])
       .describe('Whitelisted pharmacist action type'),
     title: z.string().describe('Title of the proposed action'),
     description: z.string().describe('Detailed clinical explanation or rationale'),
@@ -840,10 +853,11 @@ export const submitPharmacistProposalTool: IAgentTool<{
       .string()
       .uuid()
       .optional()
-      .describe('Target ID: alertId (SNOOZE_ALERT), nearExpiryId (RELEASE_NEAR_EXPIRY_POOL), poolEntryId (SEND_POOL_TO_AGENT) or allocation plan id (OBJECT_ALLOCATION_PLAN)'),
+      .describe('Target ID: requestId (UPDATE_BORROW_REQUEST), alertId (SNOOZE_ALERT), nearExpiryId (RELEASE_NEAR_EXPIRY_POOL), poolEntryId (SEND_POOL_TO_AGENT) or allocation plan id (OBJECT_ALLOCATION_PLAN)'),
     payload: z.record(z.string(), z.unknown()).describe(
       'Action-specific payload, strictly validated per actionType. Required keys: ' +
         'CREATE_BORROW_REQUEST {"items":[{"drugMasterId":"<drug uuid>","qtyRequested":<number>}],"reason":"<why>"}; ' +
+        'UPDATE_BORROW_REQUEST {"qtyRequested":<number>,"urgency":"URGENT","reason":"<why>"}; ' +
         'SNOOZE_ALERT {"hours":<1-168>,"reason":"<why>"}; ' +
         'RELEASE_NEAR_EXPIRY_POOL {"qty":<number>}; ' +
         'SEND_POOL_TO_AGENT {}; ' +

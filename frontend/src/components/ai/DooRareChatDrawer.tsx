@@ -44,6 +44,22 @@ interface ProposalCardProps {
   onNavigateProposal?: (targetUrl: string, targetId?: string) => void;
 }
 
+const resolveKitCode = (input: string): string | null => {
+  if (!input || typeof input !== 'string') return null;
+  const s = input.trim();
+  const upper = s.toUpperCase();
+  const validCodes = ['TRAUMA_RESUS', 'INTUBATION', 'IV_SET', 'BURN', 'CHEST_TUBE', 'SPLINT', 'MINOR_WOUND'];
+  if (validCodes.includes(upper)) return upper;
+  if (s.includes('ชุดช่วยชีวิต') || upper.includes('TRAUMA') || upper.includes('RESUS')) return 'TRAUMA_RESUS';
+  if (s.includes('ท่อช่วยหายใจ') || upper.includes('INTUBAT')) return 'INTUBATION';
+  if (s.includes('สารน้ำ') || upper.includes('IV')) return 'IV_SET';
+  if (s.includes('ไฟไหม้') || upper.includes('BURN')) return 'BURN';
+  if (s.includes('ระบายทรวงอก') || upper.includes('CHEST') || upper.includes('TUBE') || upper.includes('ICD')) return 'CHEST_TUBE';
+  if (s.includes('ดามกระดูก') || s.includes('พันแผล') || upper.includes('SPLINT')) return 'SPLINT';
+  if (s.includes('แผลเล็ก') || upper.includes('MINOR')) return 'MINOR_WOUND';
+  return null;
+};
+
 const ProposalCard: React.FC<ProposalCardProps> = ({
   proposal,
   initialStatus,
@@ -149,8 +165,41 @@ const ProposalCard: React.FC<ProposalCardProps> = ({
         setIdempotencyKey(currentKey);
       }
 
+      let countsToSend = proposal.actionApi?.payload?.counts || proposal.actionApi?.payload?.patientCounts;
+      if (!countsToSend || (typeof countsToSend === 'object' && Object.values(countsToSend).every((v: any) => Number(v) === 0))) {
+        if (hasCasualties || redCount > 0 || yellowCount > 0 || greenCount > 0 || blackCount > 0) {
+          countsToSend = {
+            RED: redCount || (yellowCount === 0 && greenCount === 0 && blackCount === 0 ? totalCasualties : 0),
+            YELLOW: yellowCount,
+            GREEN: greenCount,
+            BLACK: blackCount,
+          };
+        }
+      }
+
+      const setKits: Record<string, number> = {};
+      for (const k of recommendedKits) {
+        const rawCode = String(k.kitCode || k.code || k.kitName || k.name || '').trim();
+        const code = resolveKitCode(rawCode);
+        const q = Number(k.estimatedQuantity ?? k.qty ?? 1);
+        if (code && q > 0) setKits[code] = q;
+      }
+      const setExtras: Record<string, number> = {};
+      for (const a of recommendedAntidotes) {
+        const id = a.drugMasterId || a.id;
+        const isUuid = typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+        const q = Number(a.qty ?? a.availableQuantity ?? 1);
+        if (id && isUuid && q > 0) setExtras[id] = q;
+      }
+      const editsToSend =
+        Object.keys(setKits).length > 0 || Object.keys(setExtras).length > 0
+          ? { packOverrides: {}, removeKits: [], removeExtras: [], setKits, setExtras }
+          : proposal.actionApi?.payload?.edits;
+
       const payload = {
         ...proposal.actionApi.payload,
+        ...(countsToSend ? { counts: countsToSend, patientCounts: countsToSend } : {}),
+        ...(editsToSend ? { edits: editsToSend } : {}),
         ...(force ? { force: true, confirmDuplicate: true, allowDuplicate: true } : {}),
       };
 
@@ -189,6 +238,30 @@ const ProposalCard: React.FC<ProposalCardProps> = ({
             },
           }).catch((err) => console.warn('Auto-propose failed:', err));
         }
+
+        if (typeof proposal.actionApi?.endpoint === 'string' && proposal.actionApi.endpoint.includes('/incidents')) {
+          // Auto-calculate plan for incident if not already generated, and kick off narrative agent
+          const planBody = editsToSend ? { edits: editsToSend } : {};
+          await fetch(`/api/v1/incidents/${createdId}/plan`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Idempotency-Key': crypto.randomUUID(),
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+            body: JSON.stringify(planBody),
+          }).catch((err) => console.warn('Auto-plan calculation failed:', err));
+
+          fetch(`/api/v1/incidents/${createdId}/plan/agent`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Idempotency-Key': crypto.randomUUID(),
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+          }).catch(() => {});
+        }
+
         window.dispatchEvent(new CustomEvent('doorare:incident-created', { detail: { id: createdId } }));
       }
       setIsDuplicateConflict(false);
@@ -217,6 +290,7 @@ const ProposalCard: React.FC<ProposalCardProps> = ({
     const targetIdentifier = createdEntity?.requestNo || createdEntity?.id;
     const isBorrow =
       proposal.type === 'CREATE_BORROW_REQUEST' ||
+      proposal.type === 'UPDATE_BORROW_REQUEST' ||
       proposal.actionApi?.endpoint?.includes('/borrow-requests');
 
     if (isBorrow) {
@@ -241,11 +315,20 @@ const ProposalCard: React.FC<ProposalCardProps> = ({
       return;
     }
 
-    if (proposal.actionApi?.endpoint?.includes('/incidents')) {
+    if (proposal.actionApi?.endpoint?.includes('/incidents') || proposal.type?.includes('INCIDENT')) {
       const incId = createdEntity?.id || proposal.targetId;
       const targetUrl = incId ? `?page=incident&id=${encodeURIComponent(incId)}` : '?page=incident';
       if (onNavigateProposal) {
         onNavigateProposal(targetUrl, incId);
+      } else if (window.location.search.includes('page=incident')) {
+        if (incId) {
+          window.history.pushState(null, '', targetUrl);
+          window.dispatchEvent(
+            new CustomEvent('doorare:open-incident', {
+              detail: { id: incId },
+            }),
+          );
+        }
       } else {
         window.location.href = targetUrl;
       }
@@ -265,19 +348,47 @@ const ProposalCard: React.FC<ProposalCardProps> = ({
   const s = proposal.summary || {};
   const payload = proposal.actionApi?.payload || {};
 
+  const isEmergency =
+    proposal.type === 'DECLARE_INCIDENT' ||
+    proposal.type === 'UPDATE_INCIDENT' ||
+    proposal.type === 'DISPATCH_EMERGENCY_KITS' ||
+    proposal.type === 'REQUEST_URGENT_ANTIDOTE' ||
+    Boolean(proposal.actionApi?.endpoint?.includes('/incidents'));
+
+  const isUpdate =
+    proposal.type === 'UPDATE_BORROW_REQUEST' ||
+    proposal.type === 'UPDATE_INCIDENT';
+
+  const rawCounts = (s.triageCounts || s.counts || s.patientCounts || payload.counts || payload.patientCounts || {}) as Record<string, any>;
+  const redCount = Number(s.triage_red ?? s.redCasualties ?? s.red ?? rawCounts.RED ?? rawCounts.red ?? 0);
+  const yellowCount = Number(s.triage_yellow ?? s.yellowCasualties ?? s.yellow ?? rawCounts.YELLOW ?? rawCounts.yellow ?? 0);
+  const greenCount = Number(s.triage_green ?? s.greenCasualties ?? s.green ?? rawCounts.GREEN ?? rawCounts.green ?? 0);
+  const blackCount = Number(s.triage_black ?? s.blackCasualties ?? s.black ?? rawCounts.BLACK ?? rawCounts.black ?? 0);
+  const totalCasualties = Number(s.total_casualties ?? s.totalCasualties ?? (redCount + yellowCount + greenCount + blackCount));
+  const hasCasualties = totalCasualties > 0 || redCount > 0 || yellowCount > 0 || greenCount > 0;
+
+  const incidentType = (s.incident_type || s.incidentType || s.eventType || payload.incidentType || payload.eventType || 'อุบัติเหตุหมู่ (MASS CASUALTY)') as string;
+  const location = (s.location || s.locationText || payload.locationText || payload.location || 'ห้องฉุกเฉิน (ER Triage)') as string;
+
+  const rawKits = (s.recommended_kits || s.recommendedKits || s.kits || []) as any[];
+  const recommendedKits = Array.isArray(rawKits) ? rawKits : [];
+  const rawAntidotes = (s.recommended_antidotes || s.recommendedAntidotes || s.antidotes || []) as any[];
+  const recommendedAntidotes = Array.isArray(rawAntidotes) ? rawAntidotes : [];
+  const actionPlan = (s.action_plan || s.actionPlan || s.plan || '') as string;
+
   const drug = (s.drug_name || s.drug || s.item_code || s.itemCode || s.name || payload.drugMasterId || proposal.title) as string | undefined;
-  const qty = (s.quantity ?? s.qty ?? s.required_qty ?? s.lendable_qty ?? payload.quantity) as number | string | undefined;
+  const qty = (s.quantity ?? s.qty ?? s.qtyRequested ?? s.required_qty ?? s.lendable_qty ?? payload.qtyRequested ?? payload.quantity) as number | string | undefined;
   const unit = (s.unit || 'ชุด') as string;
   const lender = (s.lender_hospital_name || s.candidate_lender || s.lender || s.hospital_name || s.hospital || 'คลังยาเครือข่ายที่จัดสรรอัตโนมัติ') as string;
-  const urgencyRaw = (s.urgency || payload.urgency || 'URGENT') as string;
+  const urgencyRaw = (s.urgency || payload.urgency || (isEmergency ? 'VERY_URGENT' : 'URGENT')) as string;
   const eta = (s.transit_minutes || s.eta_minutes || s.eta || 30) as number | string;
   const deliveryMethod = (s.delivery_method || (urgencyRaw === 'VERY_URGENT' ? 'รถพยาบาลฉุกเฉิน (EMS Dispatch)' : 'หน่วยขนส่งเวชภัณฑ์เครือข่าย')) as string;
-  const reason = (s.reason || proposal.description || 'เพื่อสำรองยาเร่งด่วนสำหรับผู้ป่วยและรักษาระดับสต็อกปลอดภัยของโรงพยาบาล') as string;
+  const reason = (s.reason || proposal.description || (isEmergency ? 'เพื่อรองรับผู้ป่วยอุบัติเหตุฉุกเฉินและจัดสรรเวชภัณฑ์ช่วยชีวิต' : 'เพื่อสำรองยาเร่งด่วนสำหรับผู้ป่วยและรักษาระดับสต็อกปลอดภัยของโรงพยาบาล')) as string;
 
   let urgencyLabel = 'ด่วน (URGENT)';
   let urgencyClass = 'urgent';
-  if (urgencyRaw === 'VERY_URGENT' || urgencyRaw === 'ด่วนมาก' || urgencyRaw === 'ด่วนที่สุด') {
-    urgencyLabel = 'ด่วนมาก (VERY_URGENT)';
+  if (urgencyRaw === 'VERY_URGENT' || urgencyRaw === 'ด่วนมาก' || urgencyRaw === 'ด่วนที่สุด' || urgencyRaw === 'EMERGENCY') {
+    urgencyLabel = isEmergency ? 'ระดับวิกฤตฉุกเฉิน (CRITICAL EMERGENCY)' : 'ด่วนมาก (VERY_URGENT)';
     urgencyClass = 'very-urgent';
   } else if (urgencyRaw === 'ROUTINE' || urgencyRaw === 'ปกติ') {
     urgencyLabel = 'ปกติ (ROUTINE)';
@@ -286,9 +397,9 @@ const ProposalCard: React.FC<ProposalCardProps> = ({
 
   if (decided) {
     return (
-      <div className={`doorare-chat-proposal-card formal decided-${decided}`}>
+      <div className={`doorare-chat-proposal-card formal decided-${decided} ${isEmergency ? 'emergency' : ''}`}>
         <div className="doorare-decided-header">
-          <div className={`doorare-decided-icon ${decided}`}>
+          <div className={`doorare-decided-icon ${decided} ${isEmergency ? 'emergency' : ''}`}>
             {decided === 'approved' ? (
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="20 6 9 17 4 12" />
@@ -302,47 +413,82 @@ const ProposalCard: React.FC<ProposalCardProps> = ({
           </div>
           <div className="doorare-decided-text-wrap">
             <div className={`doorare-decided-title ${decided}`}>
-              {decided === 'approved' ? 'อนุมัติคำขอยืมยาเรียบร้อยแล้ว (Order Approved)' : 'ปฏิเสธคำขอยืมยานี้แล้ว (Order Declined)'}
+              {decided === 'approved'
+                ? isEmergency
+                  ? (proposal.type === 'UPDATE_INCIDENT' ? 'อัปเดตข้อมูลเหตุฉุกเฉินเรียบร้อยแล้ว (Incident Updated)' : 'อนุมัติเปิดเหตุฉุกเฉินและเริ่มแผนเวชภัณฑ์แล้ว (Incident Declared)')
+                  : (isUpdate ? 'แก้ไขคำขอยืมยาเรียบร้อยแล้ว (Request Updated)' : 'อนุมัติคำขอยืมยาเรียบร้อยแล้ว (Order Approved)')
+                : isEmergency
+                  ? 'ยกเลิกคำสั่งเหตุฉุกเฉินนี้แล้ว (Incident Cancelled)'
+                  : 'ปฏิเสธคำขอยืมยานี้แล้ว (Order Declined)'}
             </div>
             <div className="doorare-decided-subtitle">
               {decided === 'approved'
-                ? 'ระบบได้ส่งคำสั่งขอยืมยาเข้าระบบเครือข่าย MedSupply Link และบันทึก Audit Trail เรียบร้อยแล้ว'
-                : 'คำขอนี้ถูกยกเลิกโดยเภสัชกรผู้ควบคุม จะไม่มีการสร้างเอกสารเบิกยืมข้ามโรงพยาบาล'}
+                ? isEmergency
+                  ? 'ระบบได้ส่งต่อคำสั่งเตรียมชุดยาฉุกเฉิน บันทึกข้อมูลคัดแยก Triage และบันทึก Audit Trail เรียบร้อยแล้ว'
+                  : 'ระบบได้ส่งคำสั่งขอยืมยาเข้าระบบเครือข่าย MedSupply Link และบันทึก Audit Trail เรียบร้อยแล้ว'
+                : 'คำขอนี้ถูกยกเลิก จะไม่มีการดำเนินคำสั่งในระบบเครือข่าย'}
             </div>
           </div>
         </div>
-        <div className="doorare-decided-summary-row">
-          <div className="doorare-decided-chip">
-            <span className="doorare-decided-chip-k">รายการยา:</span>
-            <span className="doorare-decided-chip-v">{drug || proposal.title}</span>
+
+        {isEmergency ? (
+          <div className="doorare-decided-summary-row">
+            {hasCasualties && (
+              <div className="doorare-decided-chip">
+                <span className="doorare-decided-chip-k">ผู้ป่วย:</span>
+                <span className="doorare-decided-chip-v highlight">
+                  🔴 {redCount} · 🟡 {yellowCount} · 🟢 {greenCount} {blackCount > 0 ? `· ⚫ ${blackCount}` : ''} (รวม {totalCasualties} คน)
+                </span>
+              </div>
+            )}
+            <div className="doorare-decided-chip">
+              <span className="doorare-decided-chip-k">ประเภท:</span>
+              <span className="doorare-decided-chip-v">{incidentType}</span>
+            </div>
+            <div className="doorare-decided-chip">
+              <span className="doorare-decided-chip-k">สถานที่:</span>
+              <span className="doorare-decided-chip-v">{location}</span>
+            </div>
           </div>
-          {qty !== undefined && (
+        ) : (
+          <div className="doorare-decided-summary-row">
             <div className="doorare-decided-chip">
-              <span className="doorare-decided-chip-k">จำนวน:</span>
-              <span className="doorare-decided-chip-v highlight">{String(qty)} {unit}</span>
+              <span className="doorare-decided-chip-k">รายการยา:</span>
+              <span className="doorare-decided-chip-v">{drug || proposal.title}</span>
             </div>
-          )}
-          {lender && (
-            <div className="doorare-decided-chip">
-              <span className="doorare-decided-chip-k">ผู้ให้ยืม:</span>
-              <span className="doorare-decided-chip-v">{lender}</span>
-            </div>
-          )}
-        </div>
+            {qty !== undefined && (
+              <div className="doorare-decided-chip">
+                <span className="doorare-decided-chip-k">จำนวน:</span>
+                <span className="doorare-decided-chip-v highlight">{String(qty)} {unit}</span>
+              </div>
+            )}
+            {lender && (
+              <div className="doorare-decided-chip">
+                <span className="doorare-decided-chip-k">ผู้ให้ยืม:</span>
+                <span className="doorare-decided-chip-v">{lender}</span>
+              </div>
+            )}
+          </div>
+        )}
+
         {decided === 'approved' && (
           <div className="doorare-decided-actions-row">
             <button
               type="button"
               className="doorare-proposal-open-page-btn"
               onClick={handleOpenProposal}
-              title="เปิดไปยังหน้ายืมยาและเปิดเอกสารคำขอนี้ทันที"
+              title={isEmergency ? 'เปิดดูเหตุฉุกเฉินนี้ในหน้า Incident Console' : 'เปิดไปยังหน้ายืมยาและเปิดเอกสารคำขอนี้ทันที'}
             >
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
                 <polyline points="15 3 21 3 21 9" />
                 <line x1="10" y1="14" x2="21" y2="3" />
               </svg>
-              <span>เปิดดูคำขอยืมนี้ในหน้ารายการ {createdEntity?.requestNo ? `(${createdEntity.requestNo})` : ''}</span>
+              <span>
+                {isEmergency
+                  ? `เปิดดูเหตุฉุกเฉินนี้ใน Incident Console ${createdEntity?.id ? `(${String(createdEntity.id).slice(0, 8)})` : ''}`
+                  : `เปิดดูคำขอยืมนี้ในหน้ารายการ ${createdEntity?.requestNo ? `(${createdEntity.requestNo})` : ''}`}
+              </span>
             </button>
           </div>
         )}
@@ -351,65 +497,181 @@ const ProposalCard: React.FC<ProposalCardProps> = ({
   }
 
   return (
-    <div className="doorare-chat-proposal-card formal">
+    <div className={`doorare-chat-proposal-card formal ${isEmergency ? 'emergency' : ''}`}>
       {/* Top Banner */}
       <div className="doorare-proposal-header-formal">
         <div className="doorare-proposal-header-top-row">
-          <div className="doorare-proposal-meta-tag">
+          <div className={`doorare-proposal-meta-tag ${isEmergency ? 'emergency' : ''}`}>
             <div className="doorare-proposal-icon-box">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                <polyline points="14 2 14 8 20 8" />
-                <line x1="16" y1="13" x2="8" y2="13" />
-                <line x1="16" y1="17" x2="8" y2="17" />
-              </svg>
+              {isEmergency ? (
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                </svg>
+              ) : (
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                  <line x1="16" y1="13" x2="8" y2="13" />
+                  <line x1="16" y1="17" x2="8" y2="17" />
+                </svg>
+              )}
             </div>
-            <span className="doorare-proposal-meta-title">ใบเสนอคำขอยืมยาทางการแพทย์</span>
+            <span className={`doorare-proposal-meta-title ${isEmergency ? 'emergency' : ''}`}>
+              {isEmergency
+                ? (proposal.type === 'UPDATE_INCIDENT' ? 'ใบสั่งการแก้ไขข้อมูลเหตุฉุกเฉิน' : 'ใบสั่งการเหตุฉุกเฉินและแผนเวชภัณฑ์')
+                : (isUpdate ? 'ใบเสนอขอแก้ไขคำขอยืมยา' : 'ใบเสนอคำขอยืมยาทางการแพทย์')}
+            </span>
           </div>
-          <span className="doorare-proposal-status-chip pending">
-            รออนุมัติ (Pending)
+          <span className={`doorare-proposal-status-chip ${isEmergency ? 'emergency' : 'pending'}`}>
+            {isEmergency ? 'รออนุมัติสั่งการ (Emergency)' : (isUpdate ? 'รออนุมัติแก้ไข (Pending)' : 'รออนุมัติ (Pending)')}
           </span>
         </div>
         <div className="doorare-proposal-main-title">{proposal.title}</div>
       </div>
 
+      {/* Emergency Triage Casualty Bar */}
+      {isEmergency && hasCasualties && (
+        <div className="doorare-emergency-triage-bar">
+          <div className="doorare-triage-badge red">
+            <span className="label">🔴 สีแดง:</span>
+            <span className="count">{redCount} ราย</span>
+          </div>
+          <div className="doorare-triage-badge yellow">
+            <span className="label">🟡 สีเหลือง:</span>
+            <span className="count">{yellowCount} ราย</span>
+          </div>
+          <div className="doorare-triage-badge green">
+            <span className="label">🟢 สีเขียว:</span>
+            <span className="count">{greenCount} ราย</span>
+          </div>
+          {blackCount > 0 && (
+            <div className="doorare-triage-badge black">
+              <span className="label">⚫ สีดำ:</span>
+              <span className="count">{blackCount} ราย</span>
+            </div>
+          )}
+          <div className="doorare-triage-badge total">
+            <span className="label">รวมผู้ป่วย:</span>
+            <span className="count">{totalCasualties} คน</span>
+          </div>
+        </div>
+      )}
+
       {/* Structured Clinical Specification Grid */}
       <div className="doorare-proposal-spec-grid">
-        <div className="doorare-spec-item">
-          <div className="doorare-spec-label">รายการยา & รูปแบบ</div>
-          <div className="doorare-spec-value drug-name" title={drug || proposal.title}>
-            {drug || proposal.title}
-          </div>
-        </div>
-        <div className="doorare-spec-item">
-          <div className="doorare-spec-label">จำนวนที่ขอยืม</div>
-          <div className="doorare-spec-value qty-val">
-            {qty !== undefined ? String(qty) : '-'} <span className="doorare-unit-sub">{unit}</span>
-          </div>
-        </div>
-        <div className="doorare-spec-item">
-          <div className="doorare-spec-label">โรงพยาบาลผู้ให้ยืม</div>
-          <div className="doorare-spec-value lender-name">{lender}</div>
-        </div>
-        <div className="doorare-spec-item">
-          <div className="doorare-spec-label">ระดับความเร่งด่วน</div>
-          <div className="doorare-spec-value">
-            <span className={`doorare-urgency-pill ${urgencyClass}`}>
-              {urgencyLabel}
-            </span>
-          </div>
-        </div>
-        <div className="doorare-spec-item">
-          <div className="doorare-spec-label">เวลาขนส่งโดยประมาณ</div>
-          <div className="doorare-spec-value">
-            ~{String(eta)} นาที
-          </div>
-        </div>
-        <div className="doorare-spec-item">
-          <div className="doorare-spec-label">ช่องทางขนส่งเวชภัณฑ์</div>
-          <div className="doorare-spec-value">{deliveryMethod}</div>
-        </div>
+        {isEmergency ? (
+          <>
+            <div className="doorare-spec-item">
+              <div className="doorare-spec-label">ประเภทเหตุการณ์</div>
+              <div className="doorare-spec-value drug-name">{incidentType}</div>
+            </div>
+            <div className="doorare-spec-item">
+              <div className="doorare-spec-label">จุดเกิดเหตุ / นำส่ง</div>
+              <div className="doorare-spec-value">{location}</div>
+            </div>
+            <div className="doorare-spec-item">
+              <div className="doorare-spec-label">ประมาณการเวลาถึง รพ. (ETA)</div>
+              <div className="doorare-spec-value">~{String(eta)} นาที</div>
+            </div>
+            <div className="doorare-spec-item">
+              <div className="doorare-spec-label">ระดับความเร่งด่วน</div>
+              <div className="doorare-spec-value">
+                <span className={`doorare-urgency-pill ${urgencyClass}`}>
+                  {urgencyLabel}
+                </span>
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="doorare-spec-item">
+              <div className="doorare-spec-label">รายการยา & รูปแบบ</div>
+              <div className="doorare-spec-value drug-name" title={drug || proposal.title}>
+                {drug || proposal.title}
+              </div>
+            </div>
+            <div className="doorare-spec-item">
+              <div className="doorare-spec-label">{isUpdate ? 'จำนวนใหม่ที่แก้ไข' : 'จำนวนที่ขอยืม'}</div>
+              <div className="doorare-spec-value qty-val">
+                {qty !== undefined ? String(qty) : '-'} <span className="doorare-unit-sub">{unit}</span>
+              </div>
+            </div>
+            <div className="doorare-spec-item">
+              <div className="doorare-spec-label">โรงพยาบาลผู้ให้ยืม</div>
+              <div className="doorare-spec-value lender-name">{lender}</div>
+            </div>
+            <div className="doorare-spec-item">
+              <div className="doorare-spec-label">ระดับความเร่งด่วน</div>
+              <div className="doorare-spec-value">
+                <span className={`doorare-urgency-pill ${urgencyClass}`}>
+                  {urgencyLabel}
+                </span>
+              </div>
+            </div>
+            <div className="doorare-spec-item">
+              <div className="doorare-spec-label">เวลาขนส่งโดยประมาณ</div>
+              <div className="doorare-spec-value">
+                ~{String(eta)} นาที
+              </div>
+            </div>
+            <div className="doorare-spec-item">
+              <div className="doorare-spec-label">ช่องทางขนส่งเวชภัณฑ์</div>
+              <div className="doorare-spec-value">{deliveryMethod}</div>
+            </div>
+          </>
+        )}
       </div>
+
+      {/* Planned Stocks & Kits Supply Plan (for Emergency) */}
+      {isEmergency && (recommendedKits.length > 0 || recommendedAntidotes.length > 0) && (
+        <div className="doorare-emergency-supplies-box">
+          <div className="doorare-supplies-title">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+              <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+              <line x1="12" y1="22.08" x2="12" y2="12" />
+            </svg>
+            <span>แผนจัดสรรชุดยาและเวชภัณฑ์ฉุกเฉิน (Emergency Stock & Kit Plan)</span>
+          </div>
+          {recommendedKits.length > 0 && (
+            <div className="doorare-supplies-group">
+              <div className="doorare-supplies-group-header">ชุดเวชภัณฑ์และชุดช่วยชีวิต (Kits):</div>
+              <div className="doorare-supplies-chips">
+                {recommendedKits.map((k: any, idx: number) => (
+                  <div key={idx} className="doorare-supply-chip kit">
+                    <span className="name">{k.kitName || k.name || k.kitCode || k.code}</span>
+                    <span className="qty">× {k.estimatedQuantity ?? k.qty ?? 1} ชุด</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {recommendedAntidotes.length > 0 && (
+            <div className="doorare-supplies-group">
+              <div className="doorare-supplies-group-header">เซรุ่มและยาแก้พิษเฉพาะทาง (Critical Antidotes / Medications):</div>
+              <div className="doorare-supplies-chips">
+                {recommendedAntidotes.map((a: any, idx: number) => (
+                  <div key={idx} className="doorare-supply-chip antidote">
+                    <span className="name">{a.antidoteName || a.name}</span>
+                    <span className="qty">× {a.qty ?? a.availableQuantity ?? 1} {a.unit || 'vials'}</span>
+                    {(a.hospitalName || a.hospital) && (
+                      <span className="source">({a.hospitalName || a.hospital})</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Action Plan / Next Steps */}
+      {isEmergency && actionPlan && (
+        <div className="doorare-emergency-action-plan">
+          <div className="doorare-action-plan-title">แผนการดำเนินงานทันที (Immediate Action Plan)</div>
+          <div className="doorare-action-plan-text">{actionPlan}</div>
+        </div>
+      )}
 
       {/* Clinical Rationale Box */}
       <div className="doorare-proposal-rationale-box">

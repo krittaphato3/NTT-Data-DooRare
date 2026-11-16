@@ -21,7 +21,7 @@ import { cancelOpenLegs, kitClassesOf } from './emergency.borrow.js';
 import { loadEmergencyConfig } from './incidents.config.js';
 import { assertOpen, assertVersion, etaView, hospitalOf, iso, loadIncident, nextIncidentNo, ownIncident, parseCounts, readCounts, RUNNING_STATUSES, statusGroup, totalPatients, writeCounts } from './incidents.shared.js';
 import type { IncidentRow } from './incidents.shared.js';
-import { buildPlanView, createRevision, incidentHolds, latestEdits, loadCatalog } from './plan.service.js';
+import { buildPlanView, createRevision, incidentHolds, latestEdits, loadCatalog, noEdits, parseEdits } from './plan.service.js';
 import { kitsService } from './kits.service.js';
 
 const DRUG_NAME = `concat_ws(' ', dm.generic_name, dm.strength, dm.dosage_form)`;
@@ -135,7 +135,21 @@ class IncidentsService {
     const lat = optionalNumber(body.locationLat, 'locationLat', { min: -90, max: 90 });
     const lon = optionalNumber(body.locationLon, 'locationLon', { min: -180, max: 180 });
     if ((lat === undefined) !== (lon === undefined)) throw new HttpError(400, 'VALIDATION', 'ต้องระบุ locationLat และ locationLon คู่กัน');
-    const counts = parseCounts(body.counts ?? body.patientCounts);
+    let rawCounts = body.counts ?? body.patientCounts;
+    if (!rawCounts || (typeof rawCounts === 'object' && Object.values(rawCounts as Record<string, unknown>).every((v) => Number(v) === 0))) {
+      if (body.red !== undefined || body.yellow !== undefined || body.green !== undefined || body.black !== undefined) {
+        rawCounts = {
+          RED: Number(body.red ?? 0),
+          YELLOW: Number(body.yellow ?? 0),
+          GREEN: Number(body.green ?? 0),
+          BLACK: Number(body.black ?? 0),
+        };
+      } else if (body.casualties !== undefined || body.totalPatients !== undefined) {
+        const total = Number(body.casualties ?? body.totalPatients ?? 0);
+        if (total > 0) rawCounts = { RED: total, YELLOW: 0, GREEN: 0, BLACK: 0 };
+      }
+    }
+    const counts = parseCounts(rawCounts);
     const reported = optionalNumber(body.reportedEtaMin, 'reportedEtaMin', { min: 1, max: 1440 });
     const unsure = body.etaUnsure === true;
     if (unsure && reported === undefined) throw new HttpError(400, 'VALIDATION', 'etaUnsure ใช้ได้เมื่อระบุ reportedEtaMin');
@@ -174,6 +188,36 @@ class IncidentsService {
         )
       ).rows[0];
       await writeCounts(client, row.id, counts);
+
+      // BR-F3: If patient counts or edits are present, automatically calculate initial emergency plan
+      const edits = body.edits ? parseEdits(body.edits) : noEdits();
+      if (totalPatients(counts) > 0 || Object.keys(edits.setKits).length > 0 || Object.keys(edits.setExtras).length > 0) {
+        const incRow = {
+          id: row.id,
+          incident_no: incidentNo,
+          hospital_id: hospitalId,
+          status: 'OPEN',
+          version: 1,
+          created_at: new Date(),
+          reported_eta_min: reported ?? null,
+          eta_minutes: eta.minutes,
+          eta_source: eta.source,
+          eta_unsure: unsure,
+          incident_type: incidentType,
+          description,
+          location_text: locationText,
+          location_lat: lat ?? null,
+          location_lon: lon ?? null,
+          created_by: user.id,
+          duplicate_of: duplicateOf,
+          closed_at: null,
+          closed_by: null,
+          cancel_reason: null,
+          updated_at: new Date(),
+        } as unknown as IncidentRow;
+        await createRevision(client, auditContext(req), incRow, counts, edits, 'initial incident plan');
+        await client.query(`UPDATE incident SET status = 'PLAN_REVIEW', updated_at = now() WHERE id = $1`, [row.id]);
+      }
       await writeAudit(client, auditContext(req), {
         action: 'INCIDENT_CREATED', entityType: 'incident', entityId: row.id,
         after: { incidentNo, type: incidentType, counts, eta: { minutes: eta.minutes, source: eta.source, flags: eta.flags }, duplicateOf },
@@ -388,9 +432,13 @@ class IncidentsService {
       });
       let plan = null as null | { id: string; revision: number };
       const hasPlan = (await client.query(`SELECT 1 FROM emergency_plan WHERE incident_id = $1 AND status <> 'CANCELLED' LIMIT 1`, [incident.id])).rowCount;
-      if (hasPlan && (changes.length > 0 || etaChanged)) {
+      if (changes.length > 0 || etaChanged || !hasPlan) {
         const fresh = (await loadIncident(client, incident.id)) as IncidentRow;
-        plan = await createRevision(client, auditContext(req), fresh, after, await latestEdits(client, incident.id), 'counts or ETA changed');
+        const carriedEdits = body.edits ? parseEdits(body.edits) : await latestEdits(client, incident.id);
+        plan = await createRevision(client, auditContext(req), fresh, after, carriedEdits, 'counts or ETA changed');
+        if (fresh.status === 'OPEN') {
+          await client.query(`UPDATE incident SET status = 'PLAN_REVIEW', updated_at = now() WHERE id = $1`, [incident.id]);
+        }
         await notifyRoles(client, incident.hospital_id, ['PHARMACIST', 'HOSPITAL_ADMIN'], {
           kind: 'INCIDENT_PLAN_CHANGED', title: `ผู้ป่วยเปลี่ยน ${incident.incident_no}: แผนฉบับที่ ${plan.revision} รออนุมัติ`, body: changes.map((c) => `${c.label} ${c.from} → ${c.to}`).join(' · ') || undefined, refType: 'incident', refId: incident.id,
         });

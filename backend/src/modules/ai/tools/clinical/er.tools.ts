@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { query } from '../../../../db/client.js';
 import { needs } from '../../../../core/formulas/emergency.js';
 import type { Counts, Rule, Triage } from '../../../../core/formulas/emergency.js';
+import { resolveKitCode } from '../../../incidents/plan.service.js';
 import type { IAgentTool, RequestContext, ToolResult } from '../tool.types.js';
 
 /**
@@ -499,16 +500,40 @@ export const ER_PROPOSAL_WHITELIST = {
     buildEndpoint: () => '/api/v1/incidents',
     method: 'POST' as const,
     routeSource: 'backend/src/modules/incidents/incidents.routes.ts:25',
-    payloadSchema: z.object({
-      title: z.string().optional(),
-      incidentType: z.string().optional(),
-      eventType: z.string().optional(),
-      location: z.string().optional(),
-      locationText: z.string().optional(),
-      patientCounts: z.record(z.string(), z.number().int().min(0)).optional(),
-      counts: z.record(z.string(), z.number().int().min(0)).optional(),
-      description: z.string().optional(),
-    }),
+    payloadSchema: z
+      .object({
+        title: z.string().optional(),
+        incidentType: z.string().optional(),
+        eventType: z.string().optional(),
+        location: z.string().optional(),
+        locationText: z.string().optional(),
+        patientCounts: z.record(z.string(), z.number().int().min(0)).optional(),
+        counts: z.record(z.string(), z.number().int().min(0)).optional(),
+        description: z.string().optional(),
+        reportedEtaMin: z.number().int().positive().optional(),
+        edits: z.record(z.string(), z.unknown()).optional(),
+      })
+      .passthrough(),
+  },
+  UPDATE_INCIDENT: {
+    buildEndpoint: (incidentId?: string) => {
+      if (!incidentId) throw new Error('incidentId (targetId) is required for UPDATE_INCIDENT');
+      return `/api/v1/incidents/${incidentId}/counts`;
+    },
+    method: 'PATCH' as const,
+    routeSource: 'backend/src/modules/incidents/incidents.routes.ts:30 (PATCH /incidents/:id/counts)',
+    payloadSchema: z
+      .object({
+        counts: z.record(z.string(), z.number().int().min(0)).optional(),
+        patientCounts: z.record(z.string(), z.number().int().min(0)).optional(),
+        incidentType: z.string().optional(),
+        description: z.string().optional(),
+        locationText: z.string().optional(),
+        note: z.string().optional(),
+        reportedEtaMin: z.number().int().positive().optional(),
+        edits: z.record(z.string(), z.unknown()).optional(),
+      })
+      .passthrough(),
   },
   DISPATCH_EMERGENCY_KITS: {
     buildEndpoint: (incidentId?: string) => {
@@ -555,6 +580,140 @@ export const ER_PROPOSAL_WHITELIST = {
   },
 } as const;
 
+function extractIncidentDetails(args: {
+  actionType: string;
+  title: string;
+  description: string;
+  summary: Record<string, unknown>;
+  payload: Record<string, unknown>;
+}) {
+  const p = args.payload || {};
+  const s = args.summary || {};
+  const textContent = `${args.title || ''} ${args.description || ''} ${p.description || ''} ${p.title || ''}`;
+
+  // 1. Triage Counts
+  const standardizedCounts: { RED: number; YELLOW: number; GREEN: number; BLACK: number } = {
+    RED: 0,
+    YELLOW: 0,
+    GREEN: 0,
+    BLACK: 0,
+  };
+
+  // Try structured counts objects
+  const countSources = [
+    p.counts,
+    p.patientCounts,
+    p.triageCounts,
+    s.counts,
+    s.patientCounts,
+    s.triageCounts,
+  ];
+  for (const src of countSources) {
+    if (src && typeof src === 'object' && !Array.isArray(src)) {
+      for (const [k, v] of Object.entries(src as Record<string, unknown>)) {
+        const key = k.trim().toUpperCase() as 'RED' | 'YELLOW' | 'GREEN' | 'BLACK';
+        const num = Number(v);
+        if ((key === 'RED' || key === 'YELLOW' || key === 'GREEN' || key === 'BLACK') && !isNaN(num) && num > 0) {
+          standardizedCounts[key] = Math.max(standardizedCounts[key], Math.round(num));
+        }
+      }
+    }
+  }
+
+  // Try flat properties on payload and summary
+  const flatRed = Number(p.red ?? p.RED ?? s.red ?? s.RED ?? s.triage_red ?? s.redCasualties);
+  if (!isNaN(flatRed) && flatRed > 0) standardizedCounts.RED = Math.max(standardizedCounts.RED, Math.round(flatRed));
+
+  const flatYellow = Number(p.yellow ?? p.YELLOW ?? s.yellow ?? s.YELLOW ?? s.triage_yellow ?? s.yellowCasualties);
+  if (!isNaN(flatYellow) && flatYellow > 0) standardizedCounts.YELLOW = Math.max(standardizedCounts.YELLOW, Math.round(flatYellow));
+
+  const flatGreen = Number(p.green ?? p.GREEN ?? s.green ?? s.GREEN ?? s.triage_green ?? s.greenCasualties);
+  if (!isNaN(flatGreen) && flatGreen > 0) standardizedCounts.GREEN = Math.max(standardizedCounts.GREEN, Math.round(flatGreen));
+
+  const flatBlack = Number(p.black ?? p.BLACK ?? s.black ?? s.BLACK ?? s.triage_black ?? s.blackCasualties);
+  if (!isNaN(flatBlack) && flatBlack > 0) standardizedCounts.BLACK = Math.max(standardizedCounts.BLACK, Math.round(flatBlack));
+
+  // Regex scans on text if count is still 0
+  if (standardizedCounts.RED === 0) {
+    const m = textContent.match(/(?:ผู้ป่วยวิกฤต|วิกฤต|สีแดง|แดง|red|triage red)\D*?(\d+)/i);
+    if (m && m[1]) standardizedCounts.RED = Number(m[1]);
+  }
+  if (standardizedCounts.YELLOW === 0) {
+    const m = textContent.match(/(?:ผู้ป่วยกึ่งวิกฤต|เร่งด่วน|สีเหลือง|เหลือง|yellow|triage yellow)\D*?(\d+)/i);
+    if (m && m[1]) standardizedCounts.YELLOW = Number(m[1]);
+  }
+  if (standardizedCounts.GREEN === 0) {
+    const m = textContent.match(/(?:ผู้ป่วยไม่วิกฤต|สีเขียว|เขียว|green|triage green)\D*?(\d+)/i);
+    if (m && m[1]) standardizedCounts.GREEN = Number(m[1]);
+  }
+  if (standardizedCounts.BLACK === 0) {
+    const m = textContent.match(/(?:ผู้เสียชีวิต|สีดำ|ดำ|black|triage black)\D*?(\d+)/i);
+    if (m && m[1]) standardizedCounts.BLACK = Number(m[1]);
+  }
+
+  // Check general total casualties
+  const totalExplicit = Number(p.casualties ?? p.patients ?? p.totalPatients ?? s.casualties ?? s.patients ?? s.total_casualties ?? s.totalCasualties ?? s.total);
+  let totalPatientsFound = !isNaN(totalExplicit) && totalExplicit > 0 ? Math.round(totalExplicit) : 0;
+  if (totalPatientsFound === 0) {
+    const m = textContent.match(/(?:ผู้บาดเจ็บ|ผู้ป่วย|casualties|patients|จำนวน)\D*?(\d+)\s*(?:ราย|คน)/i);
+    if (m && m[1]) totalPatientsFound = Number(m[1]);
+  }
+
+  // If total patients found but triage breakdown has 0 across all levels, default to RED (urgent mass casualty protocol)
+  const currentSum = standardizedCounts.RED + standardizedCounts.YELLOW + standardizedCounts.GREEN + standardizedCounts.BLACK;
+  if (currentSum === 0 && totalPatientsFound > 0) {
+    standardizedCounts.RED = totalPatientsFound;
+  }
+
+  // 2. ETA Extraction
+  let etaMin: number | undefined = undefined;
+  const rawEta = p.reportedEtaMin ?? p.etaMinutes ?? p.eta ?? s.reportedEtaMin ?? s.eta_minutes ?? s.eta;
+  if (rawEta !== undefined && rawEta !== null && !isNaN(Number(rawEta))) {
+    const n = Math.round(Number(rawEta));
+    if (n > 0 && n <= 1440) etaMin = n;
+  }
+  if (etaMin === undefined) {
+    const m = textContent.match(/(?:ภายใน|ถึงใน|อีก|ระยะเวลา|eta)\D*?(\d+)\s*(?:นาที|min)/i);
+    if (m && m[1]) {
+      const n = Number(m[1]);
+      if (n > 0 && n <= 1440) etaMin = n;
+    }
+  }
+
+  // 3. Edits (Kits & Extra Medicines/Antidotes)
+  const setKits: Record<string, number> = {};
+  const rawKits = (p.kits || p.recommendedKits || s.kits || s.recommendedKits || s.recommended_kits || []) as any[];
+  if (Array.isArray(rawKits)) {
+    for (const k of rawKits) {
+      if (typeof k === 'object' && k) {
+        const rawCode = String(k.kitCode || k.code || k.kitName || k.name || '').trim();
+        const code = resolveKitCode(rawCode);
+        const q = Number(k.estimatedQuantity ?? k.qty ?? k.quantity ?? 1);
+        if (code && q > 0) setKits[code] = q;
+      }
+    }
+  }
+
+  const setExtras: Record<string, number> = {};
+  const rawAntidotes = (p.antidotes || p.recommendedAntidotes || p.items || s.antidotes || s.recommendedAntidotes || s.recommended_antidotes || []) as any[];
+  if (Array.isArray(rawAntidotes)) {
+    for (const a of rawAntidotes) {
+      if (typeof a === 'object' && a) {
+        const id = String(a.drugMasterId || a.id || '').trim();
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+        const q = Number(a.qty ?? a.availableQuantity ?? a.quantity ?? 1);
+        if (id && isUuid && q > 0) setExtras[id] = q;
+      }
+    }
+  }
+
+  const edits = (Object.keys(setKits).length > 0 || Object.keys(setExtras).length > 0)
+    ? { packOverrides: {}, removeKits: [], removeExtras: [], setKits, setExtras }
+    : undefined;
+
+  return { standardizedCounts, etaMin, edits };
+}
+
 /**
  * Tool: submit_er_action_proposal (Terminal Tool)
  * Generates an interactive Human-In-The-Loop (HITL) proposal card for ER authorization.
@@ -562,7 +721,7 @@ export const ER_PROPOSAL_WHITELIST = {
  * Allowed Roles: ER_STAFF, SYSTEM_ADMIN
  */
 export const submitErActionProposalTool: IAgentTool<{
-  actionType: 'DECLARE_INCIDENT' | 'DISPATCH_EMERGENCY_KITS' | 'REQUEST_URGENT_ANTIDOTE';
+  actionType: 'DECLARE_INCIDENT' | 'UPDATE_INCIDENT' | 'DISPATCH_EMERGENCY_KITS' | 'REQUEST_URGENT_ANTIDOTE';
   title: string;
   description: string;
   summary: Record<string, unknown>;
@@ -571,10 +730,10 @@ export const submitErActionProposalTool: IAgentTool<{
 }> = {
   name: 'submit_er_action_proposal',
   description:
-    'Terminal proposal tool creating human-in-the-loop action cards for declaring incidents, approving kit dispatches, or requesting urgent antidotes.',
+    'Terminal proposal tool creating human-in-the-loop action cards for declaring incidents, updating incidents, approving kit dispatches, or requesting urgent antidotes.',
   parameters: z.object({
     actionType: z
-      .enum(['DECLARE_INCIDENT', 'DISPATCH_EMERGENCY_KITS', 'REQUEST_URGENT_ANTIDOTE'])
+      .enum(['DECLARE_INCIDENT', 'UPDATE_INCIDENT', 'DISPATCH_EMERGENCY_KITS', 'REQUEST_URGENT_ANTIDOTE'])
       .describe('Whitelisted emergency action type'),
     title: z.string().describe('Short title for the emergency proposal'),
     description: z.string().describe('Detailed emergency justification'),
@@ -712,20 +871,30 @@ export const submitErActionProposalTool: IAgentTool<{
       const rawPayload = (args.payload || {}) as Record<string, unknown>;
       const payloadToValidate: Record<string, unknown> = { ...rawPayload };
 
+      let extractedDetails = {
+        standardizedCounts: { RED: 0, YELLOW: 0, GREEN: 0, BLACK: 0 },
+        etaMin: undefined as number | undefined,
+        edits: undefined as any,
+      };
+
+      if (args.actionType === 'DECLARE_INCIDENT' || args.actionType === 'UPDATE_INCIDENT') {
+        extractedDetails = extractIncidentDetails(args);
+        payloadToValidate.counts = extractedDetails.standardizedCounts;
+        payloadToValidate.patientCounts = extractedDetails.standardizedCounts;
+        if (extractedDetails.etaMin !== undefined && payloadToValidate.reportedEtaMin === undefined) {
+          payloadToValidate.reportedEtaMin = extractedDetails.etaMin;
+        }
+        if (extractedDetails.edits && payloadToValidate.edits === undefined) {
+          payloadToValidate.edits = extractedDetails.edits;
+        }
+      }
+
       if (args.actionType === 'DECLARE_INCIDENT') {
         if (!payloadToValidate.title && args.title) {
           payloadToValidate.title = args.title;
         }
         if (!payloadToValidate.description && args.description) {
           payloadToValidate.description = args.description;
-        }
-        if (payloadToValidate.patientCounts && typeof payloadToValidate.patientCounts === 'object') {
-          const counts: Record<string, number> = {};
-          for (const [k, v] of Object.entries(payloadToValidate.patientCounts as Record<string, unknown>)) {
-            const num = Number(v);
-            if (!isNaN(num)) counts[k.toUpperCase()] = Math.max(0, Math.round(num));
-          }
-          payloadToValidate.patientCounts = counts;
         }
       }
 
@@ -749,47 +918,71 @@ export const submitErActionProposalTool: IAgentTool<{
 
       let actionApiPayload = parseRes.data as Record<string, unknown>;
 
-      if (args.actionType === 'DECLARE_INCIDENT') {
-        const validated = parseRes.data as Record<string, unknown>;
-        const incType =
-          (validated.incidentType as string) ||
-          (validated.eventType as string) ||
-          'MASS_CASUALTY';
-        const incTitle =
-          (validated.title as string) ||
-          args.title ||
-          'Emergency Incident';
-        const incDesc =
-          (validated.description as string) ||
-          args.description ||
-          incTitle;
-        const incLoc =
-          (validated.locationText as string) ||
-          (validated.location as string) ||
-          '';
+      if (args.actionType === 'DECLARE_INCIDENT' || args.actionType === 'UPDATE_INCIDENT') {
+        const { standardizedCounts, etaMin, edits } = extractedDetails;
+        const totalPatients =
+          standardizedCounts.RED +
+          standardizedCounts.YELLOW +
+          standardizedCounts.GREEN +
+          standardizedCounts.BLACK;
 
-        const rawCountsObj =
-          (validated.counts as Record<string, unknown>) ||
-          (validated.patientCounts as Record<string, unknown>) ||
-          {};
-        const standardizedCounts: Record<string, number> = { RED: 0, YELLOW: 0, GREEN: 0, BLACK: 0 };
-        for (const [k, v] of Object.entries(rawCountsObj)) {
-          const num = Number(v);
-          if (!isNaN(num)) {
-            standardizedCounts[k.toUpperCase()] = Math.max(0, Math.round(num));
-          }
-        }
-
-        actionApiPayload = {
-          title: incTitle,
-          incidentType: incType,
-          eventType: incType,
-          description: incDesc,
-          locationText: incLoc,
+        // Enrich summary so the card displays all triage numbers, total casualties, and ETA
+        args.summary = {
+          ...args.summary,
           counts: standardizedCounts,
           patientCounts: standardizedCounts,
-          acknowledgeDuplicate: true,
+          triageCounts: standardizedCounts,
+          triage_red: standardizedCounts.RED,
+          triage_yellow: standardizedCounts.YELLOW,
+          triage_green: standardizedCounts.GREEN,
+          triage_black: standardizedCounts.BLACK,
+          total_casualties: totalPatients,
+          totalCasualties: totalPatients,
+          casualties: totalPatients,
+          ...(etaMin !== undefined ? { eta_minutes: etaMin, eta: etaMin, reportedEtaMin: etaMin } : {}),
         };
+
+        if (args.actionType === 'DECLARE_INCIDENT') {
+          const validated = parseRes.data as Record<string, unknown>;
+          const incType =
+            (validated.incidentType as string) ||
+            (validated.eventType as string) ||
+            'MASS_CASUALTY';
+          const incTitle =
+            (validated.title as string) ||
+            args.title ||
+            'Emergency Incident';
+          const incDesc =
+            (validated.description as string) ||
+            args.description ||
+            incTitle;
+          const incLoc =
+            (validated.locationText as string) ||
+            (validated.location as string) ||
+            '';
+
+          actionApiPayload = {
+            ...actionApiPayload,
+            title: incTitle,
+            incidentType: incType,
+            eventType: incType,
+            description: incDesc,
+            locationText: incLoc,
+            counts: standardizedCounts,
+            patientCounts: standardizedCounts,
+            ...(etaMin !== undefined ? { reportedEtaMin: etaMin } : {}),
+            ...(edits ? { edits } : {}),
+            acknowledgeDuplicate: true,
+          };
+        } else if (args.actionType === 'UPDATE_INCIDENT') {
+          actionApiPayload = {
+            ...actionApiPayload,
+            counts: standardizedCounts,
+            patientCounts: standardizedCounts,
+            ...(etaMin !== undefined ? { reportedEtaMin: etaMin } : {}),
+            ...(edits ? { edits } : {}),
+          };
+        }
       }
 
       return {

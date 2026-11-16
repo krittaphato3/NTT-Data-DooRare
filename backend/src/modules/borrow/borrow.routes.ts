@@ -21,6 +21,7 @@ borrowRequestsRouter.get('/', requireAuth, readers, asyncHandler(async (req, res
 borrowRequestsRouter.get('/:id', requireAuth, readers, asyncHandler(async (req, res) => res.json(await borrowService.detail(req.user!, req.params.id))));
 borrowRequestsRouter.get('/:id/agent-runs', requireAuth, readers, asyncHandler(async (req, res) => res.json(await borrowService.agentRuns(req.user!, req.params.id))));
 borrowRequestsRouter.post('/:id/propose', requireAuth, pharmacist, idempotent(), asyncHandler(async (req, res) => res.json(await borrowService.propose(req, req.params.id))));
+borrowRequestsRouter.patch('/:id', requireAuth, pharmacist, asyncHandler(async (req, res) => res.json(await borrowService.update(req, req.params.id))));
 borrowRequestsRouter.patch('/:id/ladder', requireAuth, pharmacist, asyncHandler(async (req, res) => res.json(await borrowService.editLadder(req, req.params.id))));
 borrowRequestsRouter.post('/:id/approve', requireAuth, pharmacist, idempotent(), asyncHandler(async (req, res) => res.json(await borrowService.approve(req, req.params.id))));
 borrowRequestsRouter.post('/:id/reject', requireAuth, pharmacist, idempotent(), asyncHandler(async (req, res) => res.json(await borrowService.reject(req, req.params.id))));
