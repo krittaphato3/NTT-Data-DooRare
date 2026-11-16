@@ -63,3 +63,4 @@ summary: Removed spec IDs, enum codes and model names from user-visible text on 
 - Backend: `core/realtime.ts` (LISTEN, auto-reconnect) + `GET /api/v1/events` SSE (requireAuth, 25 s ping).
 - Frontend: `lib/liveEvents.ts` shared fetch-based SSE stream (Bearer header), `useLiveRefresh(tables, reload)`; wired into useBorrowRequests, useLenderQueue, useStockAlerts, useDashboardTiles, useNotifications, useTransport (poll 10 s → 60 s fallback), ER `useLoaded`.
 - Verified: no-op UPDATE on borrow_request → borrow + lender lists refetch within ~2 s.
+- PR #19 review fixes: untracked `.agents/`, `skills-lock.json`, empty `rds-backup-before.sql` (came from commit 7392aaa) + .gitignore; SSE client stops on 401/403 and waits for a token instead of giving up; dashboard also listens to plan_approval/transport_event; near-expiry card link `#UI-07` → `?page=expiry`; nginx `proxy_read_timeout` 300s.

@@ -14,6 +14,8 @@ let controller: AbortController | null = null;
 let retryMs = 1000;
 let retryTimer: ReturnType<typeof setTimeout> | null = null;
 let connectedOnce = false;
+/** Set after a 401/403; cleared when a new subscriber arrives (e.g. screens mounting after sign-in). */
+let stopped = false;
 
 function emit(table: string | null): void {
   listeners.forEach((l) => {
@@ -26,7 +28,7 @@ function emit(table: string | null): void {
 }
 
 function scheduleReconnect(): void {
-  if (retryTimer || listeners.size === 0) return;
+  if (stopped || retryTimer || listeners.size === 0) return;
   retryTimer = setTimeout(() => {
     retryTimer = null;
     void connect();
@@ -35,12 +37,23 @@ function scheduleReconnect(): void {
 }
 
 async function connect(): Promise<void> {
+  if (listeners.size === 0) return;
   const token = getStoredToken();
-  if (!token || listeners.size === 0) return;
+  // Not signed in yet: check again later (no request is sent until a token exists).
+  if (!token) {
+    scheduleReconnect();
+    return;
+  }
   const ctrl = new AbortController();
   controller = ctrl;
   try {
     const res = await fetch('/api/v1/events', { headers: { Authorization: `Bearer ${token}`, Accept: 'text/event-stream' }, signal: ctrl.signal });
+    // Rejected token (expired / signed out): stop. The stream starts again when a screen subscribes after the next sign-in.
+    if (res.status === 401 || res.status === 403) {
+      if (controller === ctrl) controller = null;
+      stopped = true;
+      return;
+    }
     if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
     retryMs = 1000;
     if (connectedOnce) emit(null); // catch up on anything missed while disconnected
@@ -76,6 +89,10 @@ async function connect(): Promise<void> {
 
 function subscribe(l: Listener): () => void {
   listeners.add(l);
+  if (stopped) {
+    stopped = false;
+    retryMs = 1000;
+  }
   if (!controller && !retryTimer) void connect();
   return () => {
     listeners.delete(l);
@@ -124,5 +141,5 @@ export const LIVE = {
   kit: ['kit_pack_task', 'kit_stock', 'incident', 'emergency_plan'],
   alerts: ['stock_alert', 'borrow_request'],
   notification: ['notification'],
-  dashboard: ['borrow_request', 'borrow_leg', 'stock_alert', 'transport_task', 'near_expiry_item', 'allocation_plan', 'incident'],
+  dashboard: ['borrow_request', 'borrow_leg', 'stock_alert', 'transport_task', 'transport_event', 'near_expiry_item', 'allocation_plan', 'plan_approval', 'incident'],
 } as const;

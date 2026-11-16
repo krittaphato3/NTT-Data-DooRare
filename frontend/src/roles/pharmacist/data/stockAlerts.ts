@@ -137,7 +137,7 @@ export const ALERT_SUMMARY: SummaryCard[] = [
   },
   {
     key: 'NEAR_EXPIRY', labelTh: 'ใกล้หมดอายุ', count: 3,
-    subTh: 'ภายใน 180 วัน', tone: 'teal', href: '#UI-07',
+    subTh: 'ภายใน 180 วัน', tone: 'teal', href: '?page=expiry',
   },
 ];
 

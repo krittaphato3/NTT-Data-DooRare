@@ -25,7 +25,7 @@ export function StockAlertSummary({ cards = ALERT_SUMMARY }: { cards?: SummaryCa
         const accent = { borderLeft: `4px solid ${SUMMARY_ACCENT[c.tone]}` };
         const cls = `card sa-card${Number(c.count) === 0 ? ' sa-card-zero' : ''}`;
         return c.href ? (
-          <a key={c.key} className={cls} href={c.href} style={accent} onClick={(e) => e.preventDefault()}>
+          <a key={c.key} className={cls} href={c.href} style={accent}>
             {body}
           </a>
         ) : (

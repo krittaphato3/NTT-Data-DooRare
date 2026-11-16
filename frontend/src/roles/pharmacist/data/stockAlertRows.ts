@@ -117,6 +117,6 @@ export function buildSummaryCards(alerts: ApiAlert[], nearExpiry: number | null)
     { key: 'ORDER_AHEAD', labelTh: 'เตรียมสั่งซื้อ', count: of('ORDER_AHEAD', 'ORDER_EARLIER').length, subTh: 'ต่ำกว่าเป้า · เตรียมสั่งซื้อล่วงหน้า', tone: 'warn' },
     { key: 'MIN_MAX', labelTh: 'ต่ำกว่าระดับขั้นต่ำ', count: of('MIN_MAX').length, subTh: 'ยากลุ่ม D ที่ตั้งขั้นต่ำ–สูงสุด', tone: 'blue' },
     { key: 'LOW_CONFIDENCE', labelTh: 'พยากรณ์ไม่มั่นใจ', count: of('LOW_CONFIDENCE').length, subTh: 'ประวัติการใช้ยาไม่ถึง 90 วัน', tone: 'warn' },
-    { key: 'NEAR_EXPIRY', labelTh: 'ใกล้หมดอายุ', count: nearExpiry ?? 0, subTh: 'ภายใน 180 วัน', tone: 'teal', href: '#UI-07' },
+    { key: 'NEAR_EXPIRY', labelTh: 'ใกล้หมดอายุ', count: nearExpiry ?? 0, subTh: 'ภายใน 180 วัน', tone: 'teal', href: '?page=expiry' },
   ];
 }
