@@ -7,6 +7,8 @@
  * is data, never instructions (G-09). Nothing is written and nothing is sent to a vendor (G-02): the only egress is the GET itself.
  * `assertPublicUrl` refuses loopback / private / link-local targets so a pasted or hallucinated URL cannot probe the network.
  */
+import net from 'node:net';
+import dns from 'node:dns/promises';
 import { z } from 'zod';
 import type { IAgentTool, ToolResult } from '../tool.types.js';
 
@@ -48,20 +50,56 @@ function htmlToText(html: string): string {
 
 const MAX_REDIRECTS = 5;
 
-/** Private & reserved IPv4 ranges check. */
-function isPrivateIPv4(a: number, b: number): boolean {
-  return (
-    a === 0 || // Current network (0.0.0.0/8)
-    a === 10 || // Private RFC 1918 (10.0.0.0/8)
-    a === 127 || // Loopback (127.0.0.0/8)
-    (a === 169 && b === 254) || // Link-local / Cloud metadata (169.254.0.0/16)
-    (a === 172 && b >= 16 && b <= 31) || // Private RFC 1918 (172.16.0.0/12)
-    (a === 192 && b === 168) || // Private RFC 1918 (192.168.0.0/16)
-    (a === 100 && b >= 64 && b <= 127) // Carrier-grade NAT (100.64.0.0/10)
-  );
+/**
+ * Comprehensive IP classification checking whether an IP belongs to private, loopback,
+ * link-local, carrier-grade NAT, multicast, or reserved ranges.
+ */
+export function isPrivateOrReservedIp(ip: string): boolean {
+  const family = net.isIP(ip);
+  if (family === 4) {
+    const parts = ip.split('.').map(Number);
+    if (parts.length !== 4 || parts.some((p) => isNaN(p) || p < 0 || p > 255)) {
+      return true; // malformed IPv4
+    }
+    const [a, b, c] = parts;
+    return (
+      a === 0 || // Current network (0.0.0.0/8)
+      a === 10 || // Private RFC 1918 (10.0.0.0/8)
+      a === 127 || // Loopback (127.0.0.0/8)
+      (a === 169 && b === 254) || // Link-local / Cloud metadata (169.254.0.0/16)
+      (a === 172 && b >= 16 && b <= 31) || // Private RFC 1918 (172.16.0.0/12)
+      (a === 192 && b === 168) || // Private RFC 1918 (192.168.0.0/16)
+      (a === 100 && b >= 64 && b <= 127) || // Carrier-grade NAT (100.64.0.0/10)
+      (a === 192 && b === 0 && c === 2) || // TEST-NET-1 (192.0.2.0/24)
+      (a === 198 && b === 51 && c === 100) || // TEST-NET-2 (198.51.100.0/24)
+      (a === 203 && b === 0 && c === 113) || // TEST-NET-3 (203.0.113.0/24)
+      a >= 224 // Multicast & Reserved (224.0.0.0/4, 240.0.0.0/4)
+    );
+  }
+
+  if (family === 6) {
+    const lower = ip.toLowerCase();
+    if (lower === '::1' || lower === '::') return true;
+    if (/^(fe80|fc|fd|2002|64:ff9b)/i.test(lower)) return true;
+    if (lower.startsWith('::ffff:')) {
+      const v4 = lower.slice(7);
+      if (net.isIPv4(v4)) return isPrivateOrReservedIp(v4);
+    }
+    return false;
+  }
+
+  return true;
 }
 
-/** No localhost, no *.local / *.internal, no private, loopback, link-local, or cloud metadata address. */
+/** Private & reserved IPv4 ranges check (backwards compatibility). */
+function isPrivateIPv4(a: number, b: number): boolean {
+  return isPrivateOrReservedIp(`${a}.${b}.0.1`);
+}
+
+/**
+ * No localhost, no *.local / *.internal, no private, loopback, link-local, or cloud metadata address.
+ * Enforces port allowlist (80, 443) for public web resources.
+ */
 export function assertPublicUrl(raw: string): URL {
   let url: URL;
   try {
@@ -78,15 +116,12 @@ export function assertPublicUrl(raw: string): URL {
     throw new Error('ไม่อนุญาตให้ระบุ username หรือ password ใน URL');
   }
 
-  // Block sensitive internal service and database ports
+  // Port allowlist: web fetch should only target standard HTTP/HTTPS ports (80, 443)
   if (url.port) {
     const portNum = Number(url.port);
-    const blockedPorts = new Set([
-      21, 22, 23, 25, 110, 143, 445, 1433, 1521, 2181, 2375, 2376, 3306,
-      5432, 5442, 5672, 5984, 6379, 6443, 8082, 8500, 9000, 9200, 10250, 11211, 15672, 27017,
-    ]);
-    if (blockedPorts.has(portNum)) {
-      throw new Error(`ไม่อนุญาตให้เชื่อมต่อ port ${portNum}`);
+    const allowedPorts = new Set([80, 443]);
+    if (!allowedPorts.has(portNum)) {
+      throw new Error(`ไม่อนุญาตให้เชื่อมต่อ port ${portNum} (อนุญาตเฉพาะ port 80 และ 443 สำหรับเว็บสาธารณะ)`);
     }
   }
 
@@ -139,17 +174,68 @@ export function assertPublicUrl(raw: string): URL {
   return url;
 }
 
-/** Fetches a public page, asserting SSRF safety at every redirect hop up to MAX_REDIRECTS. */
+export type DnsLookupFunction = (
+  hostname: string,
+) => Promise<Array<{ address: string; family: number }>>;
+
+/**
+ * Resolves all DNS A and AAAA records for a host and asserts that NO resolved IP belongs to
+ * a private, loopback, link-local, cloud metadata, or reserved subnet.
+ * Defends against dynamic DNS wildcards (e.g. nip.io, sslip.io) and DNS rebinding / TOCTOU attacks.
+ */
+export async function assertPublicHostDns(
+  host: string,
+  dnsLookupFn: DnsLookupFunction = async (h) => {
+    const res = await dns.lookup(h, { all: true });
+    return Array.isArray(res) ? res : [res];
+  },
+): Promise<void> {
+  const bare = host.replace(/^\[|\]$/g, '').replace(/\.+$/, '');
+
+  // If host is an IP literal, validate directly
+  if (net.isIP(bare)) {
+    if (isPrivateOrReservedIp(bare)) {
+      throw new Error(`ไม่อนุญาตให้เรียก IP ภายในเครือข่าย (${bare})`);
+    }
+    return;
+  }
+
+  // Resolve all A / AAAA addresses
+  let records: Array<{ address: string; family: number }>;
+  try {
+    records = await dnsLookupFn(bare);
+  } catch (err: any) {
+    throw new Error(`ไม่สามารถค้นหา DNS สำหรับ host '${bare}': ${err.code || err.message}`);
+  }
+
+  if (!records || records.length === 0) {
+    throw new Error(`ไม่พบที่อยู่ IP สำหรับ host '${bare}'`);
+  }
+
+  for (const record of records) {
+    if (isPrivateOrReservedIp(record.address)) {
+      throw new Error(
+        `ไม่อนุญาตให้เรียก host '${bare}' เนื่องจาก DNS ชี้ไปยัง IP ภายในเครือข่าย (${record.address})`,
+      );
+    }
+  }
+}
+
+/** Fetches a public page, asserting SSRF safety and DNS resolution at every redirect hop up to MAX_REDIRECTS. */
 export async function fetchPage(
   initialUrl: string,
   fetchFn: typeof fetch = fetch,
+  dnsLookupFn?: DnsLookupFunction,
 ): Promise<{ status: number; contentType: string; finalUrl: string; body: string; truncated: boolean }> {
   let currentUrl = initialUrl;
   let hops = 0;
 
   while (hops <= MAX_REDIRECTS) {
-    // Re-assert public safety at every hop to prevent SSRF via 3xx redirects
+    // 1. Syntactic safety check
     const validated = assertPublicUrl(currentUrl);
+
+    // 2. DNS resolution check (resolves all A/AAAA records and blocks private IPs like nip.io, sslip.io, or rebinding)
+    await assertPublicHostDns(validated.hostname, dnsLookupFn);
 
     const res = await fetchFn(validated.href, {
       redirect: 'manual',
@@ -187,7 +273,7 @@ export async function fetchPage(
     };
   }
 
-  throw new Error('ตรวจพบ Redirect วนลูปหรือเกินจำนวนที่กำหนด');
+  throw new Error('ตรวจพบ Redirect เกินจำนวนที่กำหนด (สูงสุด 5 ครั้ง)');
 }
 
 /** Result links out of a SERP page (Google `/url?q=`, DuckDuckGo `uddg=`, or plain hrefs). */
