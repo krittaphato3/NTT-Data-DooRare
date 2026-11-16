@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { listBorrowRequests } from '../../../services/borrowApi';
 import { onLoadFailure, onLoadSuccess } from '../../../services/dataSource';
+import { LIVE, useLiveRefresh } from '../../../lib/liveEvents';
 import { BORROW_REQUESTS } from './borrow';
 import type { BorrowRequest } from './borrow';
 import { borrowRequestToView, returnStateOf } from './borrowLive';
@@ -25,5 +26,6 @@ export function useBorrowRequests() {
   useEffect(() => {
     void load();
   }, [load]);
+  useLiveRefresh(LIVE.borrow, load);
   return { ...state, reload: load };
 }

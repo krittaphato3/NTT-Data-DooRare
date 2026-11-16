@@ -56,3 +56,10 @@ summary: Removed spec IDs, enum codes and model names from user-visible text on 
 - Drugs page (shared WhDrugsPage): "WH ดูอย่างเดียว" → "ดูอย่างเดียว"; removed hard-coded "ข้อมูลตัวอย่าง จาก mock" label (mock banner already exists).
 - Env: `doorare-db` container was created from another checkout (.gemini/antigravity-ide/scratch) whose schema.sql became a directory; recreated from this repo (named volume `doorare_pgdata`, data kept).
 - Open: ER documents page lists mock DOCUMENTS (INC-2026-0014) even in live mode.
+
+## Realtime updates (branch edit-real-time)
+
+- DB: `db/realtime.sql` statement-level triggers on 15 tables → `pg_notify('doorare_change', table)`; mounted as 02-realtime.sql for fresh DBs. Existing DBs (RDS) must run it once.
+- Backend: `core/realtime.ts` (LISTEN, auto-reconnect) + `GET /api/v1/events` SSE (requireAuth, 25 s ping).
+- Frontend: `lib/liveEvents.ts` shared fetch-based SSE stream (Bearer header), `useLiveRefresh(tables, reload)`; wired into useBorrowRequests, useLenderQueue, useStockAlerts, useDashboardTiles, useNotifications, useTransport (poll 10 s → 60 s fallback), ER `useLoaded`.
+- Verified: no-op UPDATE on borrow_request → borrow + lender lists refetch within ~2 s.

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { LIVE, useLiveRefresh } from '../../../lib/liveEvents';
 import { ackAlert, getAlerts, getInventorySummary, snoozeAlert } from '../../../services/alertsApi';
 import type { ApiAlert } from '../../../services/alertsApi';
 import { getDashboard } from '../../../services/catalogApi';
@@ -50,6 +51,7 @@ export function useStockAlerts() {
   useEffect(() => {
     void load();
   }, [load]);
+  useLiveRefresh(LIVE.alerts, load);
 
   const ack = useCallback(
     async (alertId: string) => {

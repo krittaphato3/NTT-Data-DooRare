@@ -47,6 +47,7 @@ services:
     volumes:
       - doorare_pgdata:/var/lib/postgresql/data
       - ./db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./db/realtime.sql:/docker-entrypoint-initdb.d/02-realtime.sql:ro
       - ./db/mock:/mock:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U doorare -d doorare"]
