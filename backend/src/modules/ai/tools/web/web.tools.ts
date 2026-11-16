@@ -81,14 +81,18 @@ export function assertPublicUrl(raw: string): URL {
   // Block sensitive internal service and database ports
   if (url.port) {
     const portNum = Number(url.port);
-    const blockedPorts = new Set([21, 22, 23, 25, 110, 143, 445, 1433, 1521, 2375, 2376, 3306, 5432, 5442, 6379, 8082, 9000, 11211, 27017]);
+    const blockedPorts = new Set([
+      21, 22, 23, 25, 110, 143, 445, 1433, 1521, 2181, 2375, 2376, 3306,
+      5432, 5442, 5672, 5984, 6379, 6443, 8082, 8500, 9000, 9200, 10250, 11211, 15672, 27017,
+    ]);
     if (blockedPorts.has(portNum)) {
       throw new Error(`ไม่อนุญาตให้เชื่อมต่อ port ${portNum}`);
     }
   }
 
   const host = url.hostname.toLowerCase();
-  const bare = host.replace(/^\[|\]$/g, '');
+  // Strip IPv6 enclosing brackets and trailing FQDN root dots
+  const bare = host.replace(/^\[|\]$/g, '').replace(/\.+$/, '');
 
   // Check prohibited domain names and metadata endpoints
   if (
@@ -100,12 +104,12 @@ export function assertPublicUrl(raw: string): URL {
     throw new Error('ไม่อนุญาตให้เรียกที่อยู่ภายในเครือข่าย');
   }
 
-  // Check IPv6 loopback, link-local, unique-local, or IPv4-mapped IPv6
+  // Check IPv6 loopback, link-local, unique-local, Teredo (2002::/16), NAT64 (64:ff9b::/96), or IPv4-mapped IPv6
   if (bare.includes(':')) {
     if (
       bare === '::1' ||
       bare === '::' ||
-      /^(fe80|fc|fd)/i.test(bare) ||
+      /^(fe80|fc|fd|2002|64:ff9b)/i.test(bare) ||
       bare.startsWith('::ffff:')
     ) {
       throw new Error('ไม่อนุญาตให้เรียกที่อยู่ภายในเครือข่าย');
@@ -138,6 +142,7 @@ export function assertPublicUrl(raw: string): URL {
 /** Fetches a public page, asserting SSRF safety at every redirect hop up to MAX_REDIRECTS. */
 export async function fetchPage(
   initialUrl: string,
+  fetchFn: typeof fetch = fetch,
 ): Promise<{ status: number; contentType: string; finalUrl: string; body: string; truncated: boolean }> {
   let currentUrl = initialUrl;
   let hops = 0;
@@ -146,7 +151,7 @@ export async function fetchPage(
     // Re-assert public safety at every hop to prevent SSRF via 3xx redirects
     const validated = assertPublicUrl(currentUrl);
 
-    const res = await fetch(validated.href, {
+    const res = await fetchFn(validated.href, {
       redirect: 'manual',
       signal: AbortSignal.timeout(TIMEOUT_MS),
       headers: {

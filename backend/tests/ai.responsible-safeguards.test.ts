@@ -63,38 +63,83 @@ test('assertPublicUrl blocks cloud metadata endpoints and hex/numeric encoded IP
   }
 });
 
-test('assertPublicUrl blocks IPv6 loopback, link-local, and dangerous ports', () => {
+test('assertPublicUrl blocks trailing-dot FQDN bypasses', () => {
+  const trailingDotHosts = [
+    'http://localhost./admin',
+    'http://metadata.google.internal./computeMetadata/v1/',
+    'http://instance-data./latest/meta-data/',
+    'http://doorare.local./api',
+    'http://127.0.0.1./',
+  ];
+
+  for (const raw of trailingDotHosts) {
+    assert.throws(
+      () => assertPublicUrl(raw),
+      /(ไม่อนุญาตให้เรียกที่อยู่ภายในเครือข่าย|ไม่อนุญาตให้เรียก IP ภายในเครือข่าย)/,
+      `Should block ${raw}`,
+    );
+  }
+});
+
+test('assertPublicUrl blocks IPv6 loopback, link-local, Teredo, NAT64, and dangerous ports', () => {
   assert.throws(() => assertPublicUrl('http://[::1]/'), /ไม่อนุญาตให้เรียกที่อยู่ภายในเครือข่าย/);
   assert.throws(() => assertPublicUrl('http://[fe80::1]/'), /ไม่อนุญาตให้เรียกที่อยู่ภายในเครือข่าย/);
+  assert.throws(() => assertPublicUrl('http://[2002::1]/'), /ไม่อนุญาตให้เรียกที่อยู่ภายในเครือข่าย/);
+  assert.throws(() => assertPublicUrl('http://[64:ff9b::1]/'), /ไม่อนุญาตให้เรียกที่อยู่ภายในเครือข่าย/);
   assert.throws(() => assertPublicUrl('http://admin:secret@example.com/'), /ไม่อนุญาตให้ระบุ username หรือ password/);
   assert.throws(() => assertPublicUrl('http://example.com:5432/'), /ไม่อนุญาตให้เชื่อมต่อ port 5432/);
   assert.throws(() => assertPublicUrl('http://example.com:6379/'), /ไม่อนุญาตให้เชื่อมต่อ port 6379/);
+  assert.throws(() => assertPublicUrl('http://example.com:9200/'), /ไม่อนุญาตให้เชื่อมต่อ port 9200/);
+  assert.throws(() => assertPublicUrl('http://example.com:5672/'), /ไม่อนุญาตให้เชื่อมต่อ port 5672/);
+  assert.throws(() => assertPublicUrl('http://example.com:6443/'), /ไม่อนุญาตให้เชื่อมต่อ port 6443/);
 });
 
-test('fetchPage prevents SSRF via HTTP 302 redirect to private internal host', async () => {
-  // Setup a test HTTP server that issues a 302 redirect to 127.0.0.1
-  const server = http.createServer((req, res) => {
-    if (req.url === '/redirect-to-private') {
-      res.writeHead(302, { Location: 'http://127.0.0.1:5432/internal-db' });
-      res.end();
-    } else {
-      res.writeHead(200, { 'Content-Type': 'text/plain' });
-      res.end('OK');
+test('fetchPage prevents SSRF via HTTP 302 redirect during hop traversal', async () => {
+  const fetchCalls: string[] = [];
+  const mockFetch = (async (url: string | URL | Request) => {
+    const urlStr = url.toString();
+    fetchCalls.push(urlStr);
+
+    if (urlStr === 'https://example.com/safe-start') {
+      return new Response(null, {
+        status: 302,
+        headers: { Location: 'http://127.0.0.1:5432/internal-db' },
+      });
     }
-  });
 
-  await new Promise<void>((resolve) => server.listen(0, resolve));
-  const port = (server.address() as any).port;
+    if (urlStr === 'https://example.com/redirect-to-metadata') {
+      return new Response(null, {
+        status: 302,
+        headers: { Location: 'http://metadata.google.internal./computeMetadata/v1/' },
+      });
+    }
 
-  try {
-    // Note: connecting to 127.0.0.1 itself is blocked by assertPublicUrl, which already prevents initial SSRF
-    assert.throws(
-      () => assertPublicUrl(`http://127.0.0.1:${port}/redirect-to-private`),
-      /ไม่อนุญาตให้เรียก IP ภายในเครือข่าย/,
-    );
-  } finally {
-    server.close();
-  }
+    return new Response('OK', { status: 200, headers: { 'content-type': 'text/plain' } });
+  }) as typeof fetch;
+
+  // Hop 1: https://example.com/safe-start passes assertPublicUrl
+  // Hop 2: Location header http://127.0.0.1:5432/internal-db is evaluated by assertPublicUrl and throws!
+  await assert.rejects(
+    async () => {
+      await fetchPage('https://example.com/safe-start', mockFetch);
+    },
+    /ไม่อนุญาตให้เชื่อมต่อ port 5432/,
+  );
+
+  // Assert that mockFetch was called for initial URL, but NEVER called for the malicious target!
+  assert.equal(fetchCalls.length, 1);
+  assert.equal(fetchCalls[0], 'https://example.com/safe-start');
+
+  // Verify redirect to metadata.google.internal. with trailing dot is also blocked on hop 2
+  fetchCalls.length = 0;
+  await assert.rejects(
+    async () => {
+      await fetchPage('https://example.com/redirect-to-metadata', mockFetch);
+    },
+    /ไม่อนุญาตให้เรียกที่อยู่ภายในเครือข่าย/,
+  );
+  assert.equal(fetchCalls.length, 1);
+  assert.equal(fetchCalls[0], 'https://example.com/redirect-to-metadata');
 });
 
 // --- SUITE 2: FIX 5 - PROMPT INJECTION SANDBOXING ---

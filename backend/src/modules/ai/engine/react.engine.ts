@@ -200,7 +200,7 @@ export class ReActEngine {
             const safeText = String(pageData.text || '').replace(/<\/?untrusted_external_content\b[^>]*>/gi, '[tag]');
             const safeTitle = String(pageData.title || 'Untitled').replace(/[<>]/g, '');
             preFetchedContexts.push({
-              role: 'system',
+              role: 'user',
               content: `<untrusted_external_content source="${targetUrl}" status="${pageData.status}">\n` +
                 `[Metadata: Title="${safeTitle}" Status=${pageData.status} Trust="UNTRUSTED_WEB_DATA"]\n\n` +
                 `${safeText}\n` +

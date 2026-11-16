@@ -22,7 +22,7 @@ class ChatRateLimiter {
   private readonly maxConcurrentStreams: number;
   private readonly keyGenerator: (req: Request) => string;
 
-  private requestBuckets = new Map<string, WindowBucket>();
+  private requestBuckets = new Map<string, number[]>();
   private activeStreams = new Map<string, number>();
 
   constructor(options: ChatRateLimiterOptions = {}) {
@@ -65,24 +65,19 @@ class ChatRateLimiter {
       return;
     }
 
-    // 2. Sliding window request limit check
-    let bucket = this.requestBuckets.get(key);
-    if (!bucket || now >= bucket.resetAt) {
-      bucket = {
-        count: 0,
-        resetAt: now + this.windowMs,
-      };
-      this.requestBuckets.set(key, bucket);
-    }
+    // 2. True sliding window log limit check
+    const windowStart = now - this.windowMs;
+    const timestamps = (this.requestBuckets.get(key) ?? []).filter((t) => t > windowStart);
 
-    const resetSeconds = Math.max(1, Math.ceil((bucket.resetAt - now) / 1000));
+    if (timestamps.length >= this.maxRequests) {
+      const oldestInWindow = timestamps[0];
+      const resetSeconds = Math.max(1, Math.ceil((oldestInWindow + this.windowMs - now) / 1000));
+      const resetAtTimestamp = Math.ceil((oldestInWindow + this.windowMs) / 1000);
 
-    // Exceeded requests in window
-    if (bucket.count >= this.maxRequests) {
       res.setHeader('Retry-After', resetSeconds);
       res.setHeader('X-RateLimit-Limit', this.maxRequests);
       res.setHeader('X-RateLimit-Remaining', 0);
-      res.setHeader('X-RateLimit-Reset', Math.ceil(bucket.resetAt / 1000));
+      res.setHeader('X-RateLimit-Reset', resetAtTimestamp);
       res.status(429).json({
         error: 'RATE_LIMIT_EXCEEDED',
         message: 'Too many requests to AI Copilot. Please wait before sending another prompt.',
@@ -91,13 +86,17 @@ class ChatRateLimiter {
       return;
     }
 
-    // Increment request count
-    bucket.count += 1;
-    const remaining = Math.max(0, this.maxRequests - bucket.count);
+    // Record request timestamp
+    timestamps.push(now);
+    this.requestBuckets.set(key, timestamps);
+
+    const remaining = Math.max(0, this.maxRequests - timestamps.length);
+    const oldestTimestamp = timestamps[0];
+    const resetAt = Math.ceil((oldestTimestamp + this.windowMs) / 1000);
 
     res.setHeader('X-RateLimit-Limit', this.maxRequests);
     res.setHeader('X-RateLimit-Remaining', remaining);
-    res.setHeader('X-RateLimit-Reset', Math.ceil(bucket.resetAt / 1000));
+    res.setHeader('X-RateLimit-Reset', resetAt);
 
     // 3. Track active streaming connection
     this.activeStreams.set(key, currentActive + 1);
@@ -120,9 +119,12 @@ class ChatRateLimiter {
 
     // Garbage collect expired buckets periodically
     if (this.requestBuckets.size > 500) {
-      for (const [k, b] of this.requestBuckets.entries()) {
-        if (now >= b.resetAt) {
+      for (const [k, tsList] of this.requestBuckets.entries()) {
+        const valid = tsList.filter((t) => t > windowStart);
+        if (valid.length === 0) {
           this.requestBuckets.delete(k);
+        } else {
+          this.requestBuckets.set(k, valid);
         }
       }
     }

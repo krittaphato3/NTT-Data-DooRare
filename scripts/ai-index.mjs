@@ -114,7 +114,7 @@ function acceptEntry(relPath) {
 
 const allMdFiles = scanDir(aiMaterialRoot);
 const relPaths = allMdFiles
-  .map((fullPath) => relative(aiMaterialRoot, fullPath))
+  .map((fullPath) => relative(aiMaterialRoot, fullPath).replace(/\\/g, '/'))
   .filter(acceptEntry);
 
 function loadEntry(relPath) {
