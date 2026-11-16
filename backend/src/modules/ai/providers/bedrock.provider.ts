@@ -63,7 +63,20 @@ export function toBedrockRequest(messages: ChatMessage[]): { system?: string; me
   return { system: system.length ? system.join('\n\n') : undefined, messages: out };
 }
 
-type ConverseMessages = NonNullable<ConverseCommandInput['messages']>;
+/** Separates `<thinking>…</thinking>` blocks from the visible answer (empty visible text becomes null). */
+export function splitThinking(text: string | null): { visible: string | null; thought: string | null } {
+  if (!text) return { visible: null, thought: null };
+  const thoughts: string[] = [];
+  const visible = text
+    .replace(/<thinking>([\s\S]*?)(<\/thinking>|$)/gi, (_m, inner: string) => {
+      thoughts.push(inner.trim());
+      return '';
+    })
+    .trim();
+  return { visible: visible || null, thought: thoughts.filter(Boolean).join('\n') || null };
+}
+
+type ConverseMessages =NonNullable<ConverseCommandInput['messages']>;
 type ConverseContent = NonNullable<ConverseMessages[number]['content']>;
 
 /** Maps the neutral chat history to Converse (system split out; same-role turns merged, since Converse needs alternation). */
@@ -190,7 +203,24 @@ export class BedrockProvider implements ILLMProvider {
     return usesMantle(model) ? this.chatMantle(model, messages, tools, options) : this.chatConverse(model, messages, tools, options);
   }
 
+  /** Nova writes `<thinking>…</thinking>` before answering; keep it as `thought`, and retry once if no real answer follows. */
   private async chatConverse(model: string, messages: ChatMessage[], tools?: ToolDefinition[], options?: ChatOptions): Promise<LLMResponse> {
+    const first = await this.converseOnce(model, messages, tools, options);
+    if (first.content || first.toolCalls) return first;
+    const nudge: ChatMessage = { role: 'user', content: 'Answer my last message directly in my language. Do not output only your reasoning.' };
+    const second = await this.converseOnce(model, [...messages, nudge], tools, options);
+    return {
+      ...second,
+      thought: [first.thought, second.thought].filter(Boolean).join('\n') || null,
+      usage: {
+        promptTokens: (first.usage?.promptTokens ?? 0) + (second.usage?.promptTokens ?? 0),
+        completionTokens: (first.usage?.completionTokens ?? 0) + (second.usage?.completionTokens ?? 0),
+        totalTokens: (first.usage?.totalTokens ?? 0) + (second.usage?.totalTokens ?? 0),
+      },
+    };
+  }
+
+  private async converseOnce(model: string, messages: ChatMessage[], tools?: ToolDefinition[], options?: ChatOptions): Promise<LLMResponse> {
     const request = toConverseRequest(messages);
     const command = new ConverseCommand({
       modelId: model,
@@ -225,9 +255,11 @@ export class BedrockProvider implements ILLMProvider {
     }
     const input = res.usage?.inputTokens ?? 0;
     const output = res.usage?.outputTokens ?? 0;
+    const { visible, thought } = splitThinking(text);
     return {
       model,
-      content: text,
+      content: visible,
+      thought,
       toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
       usage: { promptTokens: input, completionTokens: output, totalTokens: input + output },
     };

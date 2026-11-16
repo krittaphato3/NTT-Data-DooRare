@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { AnthropicBedrockMantle } from '@anthropic-ai/bedrock-sdk';
 import type { AIConfig } from '../src/modules/ai/byok/byok.types.js';
-import { BedrockProvider, toBedrockRequest, toConverseRequest, usesMantle, type ConverseSender } from '../src/modules/ai/providers/bedrock.provider.js';
+import { BedrockProvider, toBedrockRequest, toConverseRequest, splitThinking, usesMantle, type ConverseSender } from '../src/modules/ai/providers/bedrock.provider.js';
 
 const config = {
   provider: 'AWS_BEDROCK',
@@ -151,4 +151,29 @@ test('Nova testConnection reports a Converse failure', async () => {
   const r = await new BedrockProvider(novaConfig, undefined, sender).testConnection();
   assert.equal(r.success, false);
   assert.match(r.message, /AccessDenied/);
+});
+
+test('splitThinking: thinking moves to thought; thinking-only text has no visible answer', () => {
+  assert.deepEqual(splitThinking('<thinking>why</thinking>\nAnswer'), { visible: 'Answer', thought: 'why' });
+  assert.deepEqual(splitThinking('<thinking>only this</thinking>'), { visible: null, thought: 'only this' });
+  assert.deepEqual(splitThinking('plain'), { visible: 'plain', thought: null });
+});
+
+test('Nova thinking-only reply is retried once and the real answer returned', async () => {
+  const replies = [
+    { output: { message: { content: [{ text: '<thinking>no request</thinking>' }] } }, usage: { inputTokens: 10, outputTokens: 5 } },
+    { output: { message: { content: [{ text: 'สวัสดี คำตอบจริง' }] } }, usage: { inputTokens: 12, outputTokens: 6 } },
+  ];
+  const inputs: Record<string, unknown>[] = [];
+  const sender: ConverseSender = {
+    send: async (command) => {
+      inputs.push((command as unknown as { input: Record<string, unknown> }).input);
+      return replies.shift() as Awaited<ReturnType<ConverseSender['send']>>;
+    },
+  };
+  const res = await new BedrockProvider(novaConfig, undefined, sender).chat([{ role: 'user', content: 'ทำไรได้บ้าง' }]);
+  assert.equal(res.content, 'สวัสดี คำตอบจริง');
+  assert.equal(res.thought, 'no request');
+  assert.equal(inputs.length, 2);
+  assert.deepEqual(res.usage, { promptTokens: 22, completionTokens: 11, totalTokens: 33 });
 });
