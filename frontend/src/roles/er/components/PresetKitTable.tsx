@@ -24,8 +24,7 @@ export function PresetKitTable({ kits, access, onAssembleChange }: PresetKitTabl
         }}
       >
         <div style={{ fontSize: 13.5, fontWeight: 700, color: '#0f2a5c' }}>
-          ชุดสำเร็จรูป (Preset Kit ต่อผู้ป่วย){' '}
-          <span style={{ fontSize: 12, fontWeight: 400, color: '#94a3b8' }}>F-27</span>
+          ชุดสำเร็จรูป (Preset Kit ต่อผู้ป่วย)
         </div>
         <button
           className="link"

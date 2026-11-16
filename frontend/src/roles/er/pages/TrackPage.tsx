@@ -37,7 +37,7 @@ export function TrackPage({ role = 'ER_STAFF' }: { role?: RoleCode }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       <ErBreadcrumb role={role} label="ติดตามคำขอและจัดชุด" />
       {!access.mayWrite && <ViewOnlyBanner />}
-      <ErPageHeading title="ติดตามคำขอและจัดชุด" titleEn="/ Track & pack" subtitle="UI-11 · UI-13 · คำขอยืมแยกตามเหตุการณ์และโรงพยาบาล · จัดชุดจากของแยก" />
+      <ErPageHeading title="ติดตามคำขอและจัดชุด" titleEn="/ Track & pack" subtitle="คำขอยืมแยกตามเหตุการณ์และโรงพยาบาล · จัดชุดจากของแยก" />
       <IncidentTabs tabs={TRACK_TABS} active={tab} onChange={setTab} />
 
       {tab === 'borrow' ? (

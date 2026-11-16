@@ -78,7 +78,7 @@ export function AgentExtrasPanel({ incidentId, extrasInPlan, onAdd, mayAsk, disa
       {!loading && data?.status === 'OK' && (
         <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 10 }}>
           <div style={{ fontSize: 12.5, color: '#0f2a5c', lineHeight: '19px' }}>
-            {data.summary} <span style={{ color: '#94a3b8' }}>· {data.model}{data.confidence ? ` · ความมั่นใจ ${data.confidence}` : ''}</span>
+            {data.summary}{data.confidence ? <span style={{ color: '#94a3b8' }}> · ความมั่นใจ {data.confidence}</span> : null}
           </div>
           {data.suggestions.length === 0 ? (
             <div style={{ fontSize: 12.5, color: '#475569' }}>Agent เห็นว่าไม่ต้องเพิ่มรายการนอกชุด</div>

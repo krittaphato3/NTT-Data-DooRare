@@ -60,14 +60,14 @@ function LegCard({ leg, canAct, actHint, reload }: { leg: ApiEmergencyLeg; canAc
           </div>
           <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
             คำขอ {leg.request.requestNo} · ต้องการรวม {num(leg.qtyRequested)} {leg.item.unit} · ผู้ป่วยถึงประมาณ {clock(leg.incident.eta.arrivalAt)}
-            {etaLeft !== null && leg.incident.status === 'ACTIVE' ? ` (อีก ${mmss(etaLeft)})` : ''}{leg.transitMin !== null ? ` · เดินทางมาหาเขา ${num(leg.transitMin)} นาที` : ''}
+            {etaLeft !== null && leg.incident.status === 'ACTIVE' ? ` (อีก ${mmss(etaLeft)})` : ''}{leg.transitMin !== null ? ` · เดินทางมาหาเขา ${num(Math.round(leg.transitMin))} นาที` : ''}
           </div>
           {late && (
             <div style={{ fontSize: 12, color: '#92400e', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 6, padding: '4px 8px', marginTop: 4 }}>
               หมดเวลาตอบแล้ว ระบบขอโรงพยาบาลอื่นต่อ แต่คำขอนี้ยังได้ของไม่ครบ · ยังยืนยันช้าได้ (ใครยืนยันก่อนได้ก่อน)
             </div>
           )}
-          {leg.item.blood && <div style={{ fontSize: 11.5, color: '#b91c1c', marginTop: 2 }}>เลือด PRC กรุ๊ป O: ธนาคารเลือดต้องยืนยัน ABO/Rh และ cross-match · คืนเป็น BLOOD_REPLACEMENT</div>}
+          {leg.item.blood && <div style={{ fontSize: 11.5, color: '#b91c1c', marginTop: 2 }}>เลือด PRC กรุ๊ป O: ธนาคารเลือดต้องยืนยัน ABO/Rh และ cross-match · คืนเป็นเลือดทดแทน</div>}
           {pending && <div style={{ fontSize: 12, color: enough ? '#166534' : '#92400e', marginTop: 2 }}>สต็อกของเราที่ใช้ได้ {num(leg.available)} {leg.item.unit}{enough ? '' : ' · ไม่พอสำหรับที่ขอ ยืนยันได้บางส่วน'}</div>}
           {!pending && leg.qtyAccepted !== null && <div style={{ fontSize: 12, color: '#166534', marginTop: 2 }}>ยืนยัน {num(leg.qtyAccepted)} {leg.item.unit}{leg.respondedAt ? ` เวลา ${clock(leg.respondedAt)}` : ''}{leg.task ? ` · งานขนส่ง ${leg.task.taskNo}` : ''}</div>}
           {leg.rejectReason && <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>{REJECT_TEXT[leg.rejectReason] ?? `เหตุผล: ${leg.rejectReason}`}</div>}

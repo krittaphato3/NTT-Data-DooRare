@@ -46,3 +46,13 @@ summary: Removed spec IDs, enum codes and model names from user-visible text on 
 
 - Backend kit-name fix is NOT in the feat/ui-ux-polish commit (user asked to keep backend out); it stays uncommitted for a backend branch.
 - Other roles' pages (warehouse inbox F3 labels, login page UI-xx) still show codes.
+
+## ER screens (same session, branch feat/ui-ux-polish)
+
+- Removed UI-11/12/13/15, "F3 §11", BR-F3-008/032, F-27, ASM-13, F-26 from ER subtitles, plan cards, mock data.
+- Agent cards: dropped "F3_T1 · model · status" line (keeps latency) and model name in extras summary.
+- Track: "(LATE_FOR_ETA)" removed; travel minutes rounded; inbox "คืนเป็น BLOOD_REPLACEMENT" → "คืนเป็นเลือดทดแทน".
+- Documents: status ISSUED/VOID → badge "ออกแล้ว"/"ยกเลิก". Kit picker shows name only (no KIT code).
+- Drugs page (shared WhDrugsPage): "WH ดูอย่างเดียว" → "ดูอย่างเดียว"; removed hard-coded "ข้อมูลตัวอย่าง จาก mock" label (mock banner already exists).
+- Env: `doorare-db` container was created from another checkout (.gemini/antigravity-ide/scratch) whose schema.sql became a directory; recreated from this repo (named volume `doorare_pgdata`, data kept).
+- Open: ER documents page lists mock DOCUMENTS (INC-2026-0014) even in live mode.
