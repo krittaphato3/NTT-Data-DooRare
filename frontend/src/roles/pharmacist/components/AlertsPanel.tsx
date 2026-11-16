@@ -42,9 +42,8 @@ const STATUS_META: Record<AlertStatus, { label: string; cls: string; icon: IconN
   snoozed: { label: 'เลื่อนเตือน', cls: 't-grey', icon: 'moon' },
 };
 
-function statusOf(a: Alert, acked: boolean, snoozed: boolean): AlertStatus {
+function statusOf(a: Alert, acked: boolean): AlertStatus {
   if (a.status) return a.status === 'acknowledged' ? 'acked' : a.status;
-  if (snoozed) return 'snoozed';
   if (acked) return 'acked';
   if (a.req) return 'linked';
   return 'open';
@@ -62,7 +61,6 @@ export function AlertsPanel({ query, hospital, role = 'PHARMACIST' }: AlertsPane
     setExpanded(next);
   };
   const [acked, setAcked] = useState<ReadonlySet<string>>(new Set());
-  const [snoozed, setSnoozed] = useState<ReadonlySet<string>>(new Set());
   const tick = useTick();
   const sa = useStockAlerts();
   const live = sa.source === 'live';
@@ -125,7 +123,7 @@ export function AlertsPanel({ query, hospital, role = 'PHARMACIST' }: AlertsPane
         className="scroll-x equal-scroll"
         style={{ maxHeight: 'none', height: expanded ? frozenBody : undefined }}
       >
-        <table className="qt">
+        <table className="qt sa-table">
           <thead>
             <tr>
               <th scope="col">ยา</th>
@@ -137,14 +135,16 @@ export function AlertsPanel({ query, hospital, role = 'PHARMACIST' }: AlertsPane
           </thead>
           <tbody>
             {visible.map((a) => {
-              const st = statusOf(a, acked.has(a.drug), snoozed.has(a.drug));
+              const st = statusOf(a, acked.has(a.drug));
               const meta = STATUS_META[st];
               const showAck = st === 'open' && mayAcknowledge;
-              const showSnooze = (st === 'open' || st === 'acked') && mayAcknowledge;
               /* Row decisions stay visible: a role that may not act sees them disabled with a hint. */
               const pa = a.primary ? primaryAction(a.action) : null;
               const mayAct = pa === null || mayActFor(role, 'PHARMACIST', pa);
               const hint = pa === null ? undefined : requiredRoleHint(pa);
+              const go = (search: string) => {
+                if (a.alertId) window.location.search = withRole(search, role);
+              };
               return (
                 <tr key={a.alertId ?? a.drug}>
                   <td style={{ minWidth: 200 }}>
@@ -183,49 +183,30 @@ export function AlertsPanel({ query, hospital, role = 'PHARMACIST' }: AlertsPane
                     )}
                   </td>
                   <td className="r" style={{ whiteSpace: 'nowrap' }}>
-                    <button
-                      className={`btn btn-sm ${a.primary ? 'btn-p' : 'btn-s'}`}
-                      disabled={!mayAct}
-                      title={mayAct ? undefined : hint}
-                      onClick={() => {
-                        if (a.alertId) window.location.search = withRole(a.req ? `?page=requests&request=${encodeURIComponent(a.req)}` : '?page=alerts', role);
-                      }}
-                    >
-                      {a.action}
-                    </button>
-                    {(showAck || showSnooze) && (
-                      <span className="alert-actions">
-                        {showAck && (
-                          <button
-                            className="link"
-                            style={{ fontSize: 12.5 }}
-                            disabled={busyId === a.alertId}
-                            onClick={() => {
-                              if (!a.alertId) return setAcked((prev) => new Set(prev).add(a.drug));
-                              setBusyId(a.alertId);
-                              sa.ack(a.alertId).finally(() => setBusyId(null));
-                            }}
-                          >
-                            รับทราบ
-                          </button>
-                        )}
-                        {showSnooze && (
-                          <button
-                            className="link"
-                            style={{ fontSize: 12.5 }}
-                            title="เลื่อนการแจ้งเตือน 4 ชั่วโมง"
-                            disabled={busyId === a.alertId}
-                            onClick={() => {
-                              if (!a.alertId) return setSnoozed((prev) => new Set(prev).add(a.drug));
-                              setBusyId(a.alertId);
-                              sa.snooze(a.alertId, 'เลื่อนจากหน้าภาพรวม', 4).finally(() => setBusyId(null));
-                            }}
-                          >
-                            เลื่อน 4 ชม.
-                          </button>
-                        )}
-                      </span>
-                    )}
+                    <div className="sa-actions-dash">
+                      <button
+                        className={`btn btn-sm ${a.primary ? 'btn-p' : 'btn-s'}`}
+                        disabled={!mayAct}
+                        title={mayAct ? undefined : hint}
+                        onClick={() => go(a.req ? `?page=requests&request=${encodeURIComponent(a.req)}` : '?page=alerts')}
+                      >
+                        {a.req ? 'ดูคำขอ' : 'ดูรายละเอียด'}
+                      </button>
+                      {showAck && (
+                        <button
+                          className="link"
+                          style={{ fontSize: 12.5 }}
+                          disabled={busyId === a.alertId}
+                          onClick={() => {
+                            if (!a.alertId) return setAcked((prev) => new Set(prev).add(a.drug));
+                            setBusyId(a.alertId);
+                            sa.ack(a.alertId).finally(() => setBusyId(null));
+                          }}
+                        >
+                          รับทราบ
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               );

@@ -1830,6 +1830,22 @@ a.sa-card:hover {
 .sa-actions-2 > :nth-child(3) {
   display: none;
 }
+/* Dashboard alert rows live in a narrower card than the alerts page, so the three controls stack: one button, quiet links under it. */
+.sa-actions-dash {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+.sa-actions-dash .btn {
+  min-width: 108px;
+  justify-content: center;
+  white-space: nowrap;
+}
+.sa-actions-sub {
+  display: flex;
+  gap: 14px;
+}
 .sa-actions .link {
   text-align: center;
   justify-content: center;
@@ -1944,3 +1960,4 @@ a.sa-card:hover {
     justify-content: start;
   }
 }
+
