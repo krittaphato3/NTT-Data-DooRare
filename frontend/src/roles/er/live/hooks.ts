@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { onLoadFailure, onLoadSuccess } from '../../../services/dataSource';
+import { LIVE, useLiveRefresh } from '../../../lib/liveEvents';
 import {
   getIncident, getKitStock, listEmergencyLegs, listIncidents, listKitTasks,
 } from '../../../services/incidentApi';
@@ -30,6 +31,7 @@ function useLoaded<T>(key: string, load: () => Promise<T>, empty: T, pollMs: num
     const t = setInterval(() => { if (document.visibilityState === 'visible') void run(); }, pollMs);
     return () => clearInterval(t);
   }, [run, pollMs]);
+  useLiveRefresh(LIVE.incident, run);
   return { ...state, reload: run };
 }
 

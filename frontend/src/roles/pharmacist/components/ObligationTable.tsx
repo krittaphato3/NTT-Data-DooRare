@@ -69,7 +69,7 @@ interface WaiveGate {
  */
 export function waiveGate(o: ReturnObligation, mayWaive: boolean): WaiveGate {
   if (!WAIVABLE_STATES.includes(o.state)) {
-    return { allowed: false, hint: `ยกเว้นได้เฉพาะภาระสถานะ ${WAIVABLE_STATES.join(' หรือ ')} ตาม SM-7 (สถานะปัจจุบัน ${o.state})` };
+    return { allowed: false, hint: 'ยกเว้นได้เฉพาะภาระที่ยังค้างคืนอยู่' };
   }
   if (!mayWaive) return { allowed: false, hint: requiredRoleHint('waiveReturn') };
   return { allowed: true, hint: undefined };
@@ -188,7 +188,7 @@ export function ObligationTable({ rows, mayWaive, onWaive }: ObligationTableProp
                     )}
                     {o.state === 'RETURNED' && (
                       <span className="sub" style={{ display: 'block', marginTop: 4 }}>
-                        ปิดภาระแล้ว (F-30)
+                        ปิดภาระแล้ว
                       </span>
                     )}
                   </td>
@@ -216,7 +216,7 @@ export function ObligationTable({ rows, mayWaive, onWaive }: ObligationTableProp
         <span>
           แสดง <span className="num">{rows.length}</span> รายการ · ภาระการคืนของคำขอเรา (เราเป็นผู้ยืม) เท่านั้น
         </span>
-        <span>คืนเป็นยาตัวเดิมจำนวนเท่าเดิม (F-30) · เลือดทดแทนผ่านธนาคารเลือด (BR-XC-013)</span>
+        <span>คืนเป็นยาตัวเดิมจำนวนเท่าเดิม · เลือดทดแทนผ่านธนาคารเลือด</span>
       </div>
     </>
   );

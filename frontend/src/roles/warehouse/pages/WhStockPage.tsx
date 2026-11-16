@@ -76,7 +76,7 @@ export function WhStockPage() {
       <section className="ib-kpis" aria-label="สรุปแจ้งเตือน">
         {CARDS.slice(0, 4).map((c) => (
           <div key={c.key} className={`ib-kpi ${KPI_CLS[c.tone]}`}>
-            <div className="ib-kpi-label">{c.labelTh} {c.code && <span className="en">{c.code}</span>}</div>
+            <div className="ib-kpi-label">{c.labelTh}</div>
             <div className="ib-kpi-val num">{c.count} รายการ</div>
             <div className="ib-kpi-sub">{c.subTh}</div>
           </div>

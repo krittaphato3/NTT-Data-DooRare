@@ -62,7 +62,7 @@ export function LiveTrackPage({ role = 'ER_STAFF' }: { role?: RoleCode }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       <ErBreadcrumb role={role} label="ติดตามคำขอและจัดชุด" />
       {!access.mayWrite && <ViewOnlyBanner />}
-      <ErPageHeading title="ติดตามคำขอและจัดชุด" titleEn="/ Track & pack" subtitle="UI-11 · UI-13 · คำขอยืมแยกตามเหตุการณ์และโรงพยาบาล · จัดชุดจากของแยก · ตอบคำขอเร่งด่วนจากโรงพยาบาลอื่น" />
+      <ErPageHeading title="ติดตามคำขอและจัดชุด" titleEn="/ Track & pack" subtitle="คำขอยืมแยกตามเหตุการณ์และโรงพยาบาล · จัดชุดจากของแยก · ตอบคำขอเร่งด่วนจากโรงพยาบาลอื่น" />
       <div style={{ display: 'flex', gap: 6, borderBottom: '1px solid #e2e8f0', paddingBottom: 2 }}>
         {tabs.map((t) => (
           <button key={t.id} type="button" className="tab" onClick={() => setTab(t.id)} style={{ height: 38, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none', borderBottom: tab === t.id ? '2.5px solid #2563eb' : '2.5px solid transparent', background: 'none', color: tab === t.id ? '#2563eb' : '#64748b', display: 'flex', alignItems: 'center', gap: 6 }}>

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Icon } from '../../../components/common/icons';
 import { mayActFor, requiredRoleHint } from '../../../lib/rbac';
 import type { RoleCode } from '../../../lib/rbac';
-import { fefoUsable, lotValue, releasable } from '../data/nearExpiry';
+import { REPEAT_LABEL, cleanNote, fefoUsable, lotValue, releasable } from '../data/nearExpiry';
 import type { NearExpiryItem, NearExpiryStatus } from '../data/nearExpiry';
 import '../pipeline.css';
 
@@ -35,7 +35,7 @@ export function NearExpiryDrawer({ item: i, onDecide, onClose, live = false, bus
     <aside className="tr-drawer" aria-label="รายละเอียดยาใกล้หมดอายุ">
       <div className="tr-drawer-head">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-          <span className="sub">หน้าใกล้หมดอายุ · UI-07 · รายละเอียด</span>
+          <span className="sub">ยาใกล้หมดอายุ · รายละเอียดล็อต</span>
           <button className="icbtn" aria-label="ปิด / Close" onClick={onClose}>
             <Icon name="x" />
           </button>
@@ -44,17 +44,17 @@ export function NearExpiryDrawer({ item: i, onDecide, onClose, live = false, bus
           {i.drug}
         </h2>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-          <span className="badge t-grey code">รหัส {i.code}</span>
+          <span className="badge t-grey code">{i.code}</span>
           <span className="ved ved-E ved-sm">{i.ved}</span>
           {i.repeatFlag && (
             <span className="badge t-red" style={{ fontWeight: 700 }}>
-              ประวัติหมดอายุซ้ำ · {i.repeatFlag}
+              {REPEAT_LABEL[i.repeatFlag]}
             </span>
           )}
           {i.status === 'KEPT' && <span className="badge t-blue">เก็บไว้ใช้เอง</span>}
           {i.status === 'RELEASED' && <span className="badge t-green">ปล่อยเข้าคลังกลางแล้ว</span>}
-          {i.status === 'ALLOCATED' && <span className="badge t-teal">อยู่ในแผน {i.planId}</span>}
-          {i.status === 'EXPIRED' && <span className="badge t-grey">หมดอายุแล้ว · รอตัดบัญชี</span>}
+          {i.status === 'ALLOCATED' && <span className="badge t-teal">อยู่ในแผนจัดสรร</span>}
+          {i.status === 'EXPIRED' && <span className="badge t-grey">หมดอายุแล้ว · รอตัดออกจากบัญชี</span>}
           {i.status === 'TRANSFERRED' && <span className="badge t-green">โอนให้ รพ.อื่นแล้ว</span>}
           {i.status === 'DISMISSED' && <span className="badge t-grey">ปิดรายการ</span>}
         </div>
@@ -77,7 +77,7 @@ export function NearExpiryDrawer({ item: i, onDecide, onClose, live = false, bus
           </dd>
           <dt>เกณฑ์ใกล้หมดอายุ</dt>
           <dd>
-            <span className="num">{i.thresholdDays} วัน</span> (ตั้งค่าต่อรายการ · ASM-14)
+            <span className="num">{i.thresholdDays} วัน</span> (ตั้งค่าแยกตามยา)
           </dd>
           <dt>ใช้ต่อวัน</dt>
           <dd>
@@ -88,9 +88,9 @@ export function NearExpiryDrawer({ item: i, onDecide, onClose, live = false, bus
         {/* Split of the lot; the spec formula stays one click away */}
         <div className="tr-box" style={{ background: '#F8FAFC' }}>
           <h3 className="tr-h3">
-            แบ่งยาล็อตนี้ <span className="en">FEFO · F-22</span>
+            แบ่งยาล็อตนี้
           </h3>
-          <div className="ne-split" title={`เก็บใช้เอง ${Math.min(i.qty, Math.max(0, usable))} · ปล่อยเข้าพูล ${canRelease}`}>
+          <div className="ne-split" title={`เก็บใช้เอง ${Math.min(i.qty, Math.max(0, usable))} · ปล่อยเข้าคลังกลาง ${canRelease}`}>
             <span className="ne-split-keep" style={{ flex: Math.min(i.qty, Math.max(0, usable)) }} />
             <span className="ne-split-rel" style={{ flex: canRelease }} />
           </div>
@@ -117,15 +117,15 @@ export function NearExpiryDrawer({ item: i, onDecide, onClose, live = false, bus
             <span>
               {i.status === 'RELEASED' && (
                 <>
-                  ปล่อยเข้าคลังกลางแล้ว <b className="num">{i.releasedQty} {i.unit}</b> · ถูกกันไว้ (held)
-                  รอ Agent วางแผนจัดสรรรอบถัดไป (JOB-06)
+                  ปล่อยเข้าคลังกลางแล้ว <b className="num">{i.releasedQty} {i.unit}</b> · ถูกกันไว้แล้ว
+                  รอระบบวางแผนจัดสรรรอบถัดไป
                 </>
               )}
               {i.status === 'KEPT' && <>เก็บไว้ใช้เอง · {i.keptReason}</>}
-              {i.status === 'ALLOCATED' && <>อยู่ในแผน {i.planId} · รอเอกสารและขนส่ง (UI-14)</>}
-              {i.status === 'EXPIRED' && <>หมดอายุจริง · ระบบบันทึกตัดบัญชีและนับเป็นเหตุการณ์ F2b</>}
-              {i.status === 'TRANSFERRED' && <>โอนให้ รพ.อื่นแล้ว{i.planId ? ` · แผน ${i.planId}` : ''} · นับเป็นมูลค่าที่เลี่ยงการหมดอายุ</>}
-              {i.status === 'DISMISSED' && <>ปิดรายการ · {i.note ?? ''}</>}
+              {i.status === 'ALLOCATED' && <>อยู่ในแผนจัดสรร · รอเอกสารและขนส่ง</>}
+              {i.status === 'EXPIRED' && <>หมดอายุจริง · ระบบตัดออกจากบัญชีและบันทึกไว้เป็นประวัติหมดอายุ</>}
+              {i.status === 'TRANSFERRED' && <>โอนให้ รพ.อื่นแล้ว · นับเป็นมูลค่ายาที่ไม่ต้องทิ้ง</>}
+              {i.status === 'DISMISSED' && <>ปิดรายการ · {cleanNote(i.note)}</>}
             </span>
           </div>
           {live && (i.status === 'RELEASED' || i.status === 'KEPT') && (
@@ -153,7 +153,7 @@ export function NearExpiryDrawer({ item: i, onDecide, onClose, live = false, bus
         ) : (
           <div className="ne-decide">
             <h3 className="tr-h3">
-              ตัดสินใจ <span className="en">FR-F2a-002</span>
+              ตัดสินใจ
             </h3>
             {error && <div role="alert" style={{ color: '#B91C1C', fontSize: 12.5 }}>{error}</div>}
             <label className="ne-qtyrow">
@@ -202,16 +202,16 @@ export function NearExpiryDrawer({ item: i, onDecide, onClose, live = false, bus
               )}
             </div>
             <div className="sub" style={{ marginTop: 2 }}>
-              ปล่อยแล้วเป็นการจองข้อมูล (held) · สินค้าจริงยังอยู่ที่ รพ.สมุทรปราการ จนกว่าแผนจัดสรรจะอนุมัติ
+              ปล่อยแล้วเป็นการกันไว้ในระบบ · ยาจริงยังอยู่ที่ รพ.สมุทรปราการ จนกว่าแผนจัดสรรจะอนุมัติ
               และมีการขนส่งจริง · ถอนได้ก่อนแผนอนุมัติ
             </div>
           </div>
         )}
 
-        {/* Repeat-expiry history (F2b) */}
+        {/* Repeat-expiry history */}
         <div>
           <h3 className="tr-h3">
-            ประวัติล็อตของยารายนี้ <span className="en">12 เดือน · F2b</span>
+            ประวัติล็อตของยานี้ใน 12 เดือน
           </h3>
           {i.history.length === 0 ? (
             <div className="sub">ไม่มีประวัติหมดอายุหรือปล่อยเข้าคลังใน 12 เดือน</div>

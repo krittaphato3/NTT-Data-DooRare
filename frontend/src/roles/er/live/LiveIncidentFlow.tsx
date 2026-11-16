@@ -297,7 +297,7 @@ export function LiveIncidentFlow({ role = 'ER_STAFF' }: { role?: RoleCode }) {
       <ErPageHeading
         title={incident ? `รับเหตุและวางแผน · ${incident.incidentNo}` : 'รับเหตุและวางแผน'}
         titleEn="/ Incident → plan → borrow"
-        subtitle="UI-11 · UI-12 · กู้ภัยแจ้ง ER กรอกข้อมูล → ระบบคำนวณแผนตามกฎ → Agent ตัดรายการที่ไม่เกี่ยวกับเหตุและถามเจ้าหน้าที่ → ตรวจ/แก้ → ตรวจสต็อก → ส่งคำขอยืม"
+        subtitle="กู้ภัยแจ้ง ER กรอกข้อมูล → ระบบคำนวณแผนตามกฎ → Agent ตัดรายการที่ไม่เกี่ยวกับเหตุและถามเจ้าหน้าที่ → ตรวจ/แก้ → ตรวจสต็อก → ส่งคำขอยืม"
       />
       <FlowStepper steps={STEPS} current={step} reached={reached} onGo={go} />
       <ErrorNote message={error} />

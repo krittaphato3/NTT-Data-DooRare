@@ -6,6 +6,7 @@ import { onLoadFailure, onLoadSuccess } from '../../../services/dataSource';
 import { AUDIT_HISTORY, SHIPMENTS } from './transport';
 import type { Shipment } from './transport';
 import { buildHistory, taskToShipment } from './transportLive';
+import { LIVE, useLiveRefresh } from '../../../lib/liveEvents';
 
 export interface HistoryRow {
   t: string;
@@ -55,12 +56,14 @@ export function useTransport() {
       if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
         void load();
       }
-    }, 10000);
+    }, 60000); // fallback only; changes arrive through useLiveRefresh
     return () => {
       window.removeEventListener('focus', onFocus);
       clearInterval(interval);
     };
   }, [load]);
+
+  useLiveRefresh(LIVE.transport, load);
 
   const advance = useCallback(
     async (s: Shipment, toStatus: 'LOADED' | 'IN_TRANSIT' | 'ARRIVED' | 'RECEIVED', extra: { photoKeys?: string[]; qtyReceived?: number; reason?: string } = {}) => {

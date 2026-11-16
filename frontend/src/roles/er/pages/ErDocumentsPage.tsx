@@ -16,7 +16,7 @@ export function ErDocumentsPage({ role = 'ER_STAFF' }: { role?: RoleCode }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       <ErBreadcrumb role={role} label="เอกสาร" />
-      <ErPageHeading title="เอกสาร" titleEn="/ Documents" subtitle="UI-15 · เอกสารสรุปยอดยืม-คืนและการใช้เวชภัณฑ์ในเหตุการณ์ (ดู/พิมพ์)" />
+      <ErPageHeading title="เอกสาร" titleEn="/ Documents" subtitle="เอกสารสรุปยอดยืม-คืนและการใช้เวชภัณฑ์ในเหตุการณ์ (ดู/พิมพ์)" />
       <div className="card" style={{ padding: '14px 18px' }}>
         <div style={{ overflowX: 'auto' }}>
           <table className="qt" style={{ minWidth: 640 }}>
@@ -41,7 +41,7 @@ export function ErDocumentsPage({ role = 'ER_STAFF' }: { role?: RoleCode }) {
                   </td>
                   <td style={{ fontSize: 12, color: '#334155' }}>{d.ref}</td>
                   <td style={{ fontSize: 12, color: '#64748b' }}>{d.at}</td>
-                  <td>{d.status}</td>
+                  <td>{d.status === 'VOID' ? <span className="badge t-grey">ยกเลิก</span> : <span className="badge t-green">ออกแล้ว</span>}</td>
                   <td className="r">
                     <button
                       type="button"

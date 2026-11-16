@@ -115,9 +115,9 @@ export function AgentPlanCard({ agent, plan, removed, mayWrite, busy, onRemove, 
         ) : null}
       </div>
 
-      {a && !agent.running && (
+      {a && !agent.running && a.latencyMs !== null && (
         <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 8 }}>
-          F3_T1 · {a.model ?? '—'}{a.latencyMs !== null ? ` · ใช้เวลา ${(a.latencyMs / 1000).toFixed(1)} วินาที` : ''} · สถานะ {a.status}
+          Agent ใช้เวลา {(a.latencyMs / 1000).toFixed(1)} วินาที
         </div>
       )}
 
@@ -215,7 +215,7 @@ export function AgentPlanCard({ agent, plan, removed, mayWrite, busy, onRemove, 
       )}
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginTop: 10 }}>
-        <div style={{ fontSize: 11, color: '#94a3b8', lineHeight: '16px' }}>Agent เลือกจากรายการที่โค้ดคำนวณ ไม่เปลี่ยนจำนวน · เจ้าหน้าที่ตรวจและยืนยันแผน (BR-F3-008)</div>
+        <div style={{ fontSize: 11, color: '#94a3b8', lineHeight: '16px' }}>Agent เลือกจากรายการที่ระบบคำนวณ ไม่เปลี่ยนจำนวน · เจ้าหน้าที่ตรวจและยืนยันแผน</div>
         {mayWrite && !agent.running && (
           <button type="button" className="btn btn-s btn-sm" style={{ height: 26, fontSize: 11, flex: 'none' }} disabled={busy} onClick={agent.ask}>{a ? 'ประเมินใหม่' : 'ให้ Agent ประเมิน'}</button>
         )}

@@ -74,7 +74,7 @@ export function WhDrugsPage({ homeHref = whHref('dashboard') }: { homeHref?: str
       </section>
 
       <section className="card" style={{ padding: 0 }}>
-        <ViewOnlyNote>WH ดูอย่างเดียว · แก้ข้อมูลยา ราคา หน่วย flag และนำเข้าบัญชียาจาก HIS เป็นของเภสัชกร</ViewOnlyNote>
+        <ViewOnlyNote>ดูอย่างเดียว · แก้ข้อมูลยา ราคา หน่วย flag และนำเข้าบัญชียาจาก HIS เป็นของเภสัชกร</ViewOnlyNote>
         <div className="tr-filters">
           <label className="tr-search">
             <Icon name="search" />
@@ -93,7 +93,6 @@ export function WhDrugsPage({ homeHref = whHref('dashboard') }: { homeHref?: str
             <option value="high">High alert</option>
           </select>
           <span style={{ flex: '1 1 0' }} />
-          <span style={{ fontSize: 12 }}>ข้อมูลตัวอย่าง จาก mock ของโปรเจกต์</span>
         </div>
 
         <div className="scroll-x">

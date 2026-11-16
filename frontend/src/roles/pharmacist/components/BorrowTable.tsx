@@ -48,7 +48,7 @@ export function BorrowTable({ rows, activeId, tick, onOpen }: BorrowTableProps) 
                     {r.id}
                   </button>
                   <span className="code" style={{ display: 'block', fontSize: 11 }}>
-                    {r.context} · {r.createdAt}
+                    {r.createdAt}
                   </span>
                 </td>
                 <td>

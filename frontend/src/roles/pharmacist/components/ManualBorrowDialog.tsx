@@ -42,7 +42,7 @@ export function ManualBorrowDialog({ onClose, onCreated }: { onClose: () => void
 
   return (
     <Modal label="สร้างคำขอยืมเอง / Manual borrow request" onClose={onClose}>
-      <h2 className="sec-h">สร้างคำขอยืมเอง <span className="en">UI-10 · API-F1b-001</span></h2>
+      <h2 className="sec-h">สร้างคำขอยืมเอง</h2>
       <div style={{ marginTop: 10, fontSize: 13, lineHeight: '20px', color: '#475569' }}>
         เลือกยา (เฉพาะยา V/E ที่จับคู่รหัสกลางแล้ว ไม่ใช่ยาควบคุม/เลือด) ระบบจัดลำดับผู้ให้ยืมให้แล้วรอเภสัชกรอนุมัติก่อนส่ง
       </div>

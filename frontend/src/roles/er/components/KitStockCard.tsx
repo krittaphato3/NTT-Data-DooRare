@@ -30,7 +30,7 @@ export function KitStockCard() {
         </tbody>
       </table>
       <div style={{ borderTop: '1px solid #e2e8f0', marginTop: 12, paddingTop: 8, fontSize: 10.5, color: '#94a3b8', lineHeight: '15px' }}>
-        สต็อกเปลี่ยนเมื่อยืนยันจัดชุดเท่านั้น (ASM-13) · ถ้าของแยกมีไม่ครบ ระบบไม่ให้ยืนยัน
+        สต็อกเปลี่ยนเมื่อยืนยันจัดชุดเท่านั้น · ถ้าของแยกมีไม่ครบ ระบบไม่ให้ยืนยัน
       </div>
     </div>
   );

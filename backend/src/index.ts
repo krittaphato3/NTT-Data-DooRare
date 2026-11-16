@@ -7,6 +7,9 @@ import { processLegTimers } from './modules/borrow/borrow.flow.js';
 import { processEmergencyTimers } from './modules/incidents/emergency.borrow.js';
 import { reopenSnoozedAlerts } from './modules/alerts/alerts.evaluate.js';
 import { runDueForecastJob } from './modules/forecasts/forecasts.job.js';
+import { startRealtime } from './core/realtime.js';
+
+startRealtime();
 
 const server = app.listen(config.port, () => {
   console.log(`[DooRare Backend] Server running on http://0.0.0.0:${config.port}`);

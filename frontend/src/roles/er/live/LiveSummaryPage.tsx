@@ -19,7 +19,7 @@ export function LiveSummaryPage({ role = 'ER_STAFF' }: { role?: RoleCode }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       <ErBreadcrumb role={role} label="สรุปและปิดเหตุการณ์" />
       {!access.mayWrite && <ViewOnlyBanner />}
-      <ErPageHeading title="สรุปและปิดเหตุการณ์" titleEn="/ Summary & close" subtitle="F3 §11 · บันทึกจำนวนที่ใช้จริง ดูยืม-คืนต่อโรงพยาบาล และขอปิดเหตุการณ์ (ER + เภสัชกรลงนามร่วม)" />
+      <ErPageHeading title="สรุปและปิดเหตุการณ์" titleEn="/ Summary & close" subtitle="บันทึกจำนวนที่ใช้จริง ดูยืม-คืนต่อโรงพยาบาล และขอปิดเหตุการณ์ (ER + เภสัชกรลงนามร่วม)" />
       <IncidentPicker items={items} value={picked} onChange={setPicked} />
       {picked && <LiveSummaryPanel incidentId={picked} role={role} mayWrite={access.mayWrite} onChanged={list.reload} />}
     </div>

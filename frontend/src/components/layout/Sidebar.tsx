@@ -47,7 +47,6 @@ function SidebarNavItem({ item, onNavigate }: { item: ShellNavItem; onNavigate: 
       href={item.href}
       className={`navlink ${item.active ? 'nav-on' : ''}`}
       aria-current={item.active ? 'page' : 'false'}
-      title={item.ui}
       onClick={(e) => {
         if (item.href === '#') e.preventDefault();
         onNavigate();

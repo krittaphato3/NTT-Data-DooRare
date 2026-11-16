@@ -12,6 +12,7 @@ import {
   ALERT_ROWS,
   ALERT_STATUS_META,
   ALERT_TYPE_META,
+  drugShort,
   isAlertHandled,
   PHARMACY_CONTEXT,
   QUEUE_ROWS,
@@ -77,6 +78,8 @@ export function StockAlertsPage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
   const [acked, setAcked] = useState<ReadonlySet<string>>(new Set());
   const [snoozed] = useState<ReadonlySet<string>>(new Set());
   const [created, setCreated] = useState<ReadonlySet<string>>(new Set());
+  /** Rows whose borrow request is being created (the lender-selection Agent can take up to a minute): block a second click. */
+  const [busy, setBusy] = useState<ReadonlySet<string>>(new Set());
   const [selected, setSelected] = useState<string | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
 
@@ -144,22 +147,37 @@ export function StockAlertsPage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
       if (live && row.alert) {
         void runAction(async () => {
           await sa.ack(row.alert!.alertId);
-          setNotice(`✅ รับทราบการแจ้งเตือน ${row.drug} เรียบร้อยแล้ว (ย้ายไปหมวด "จัดการแล้ว")`);
+          setNotice(`รับทราบ ${drugShort(row.drug).name} แล้ว`);
         });
       } else {
         setAcked((prev) => new Set(prev).add(row.id));
-        setNotice(`✅ รับทราบการแจ้งเตือน ${row.drug} เรียบร้อยแล้ว (ย้ายไปหมวด "จัดการแล้ว")`);
+        setNotice(`รับทราบ ${drugShort(row.drug).name} แล้ว`);
       }
       return;
     }
     if (cond === 'create' && row.alert) {
       if (live) {
+        if (busy.has(row.id)) return; // already being created
         // API-F1b-001 then -004: the request is created and its lender ladder proposed; approval happens on the requests page.
+        setBusy((prev) => new Set(prev).add(row.id));
+        setNotice(`กำลังสร้างคำขอยืม ${drugShort(row.drug).name} และให้ระบบเลือกผู้ให้ยืม อาจใช้เวลาประมาณ 1 นาที ห้ามกดซ้ำ`);
         void runAction(async () => {
-          const created = await createBorrowRequest({ stockAlertId: row.alert!.alertId });
-          const proposed = await proposeBorrowRequest(created.id);
-          await sa.reload();
-          setNotice(`สร้างคำขอ ${proposed.data.requestNo} แล้ว (${proposed.data.status === 'ESCALATED' ? 'ไม่พบผู้ให้ยืมที่เหมาะสม' : 'รออนุมัติที่หน้า “คำขอยืม”'})`);
+          try {
+            const created = await createBorrowRequest({ stockAlertId: row.alert!.alertId });
+            const proposed = await proposeBorrowRequest(created.id);
+            await sa.reload();
+            setNotice(`สร้างคำขอ ${proposed.data.requestNo} แล้ว (${proposed.data.status === 'ESCALATED' ? 'ไม่พบผู้ให้ยืมที่เหมาะสม' : 'รออนุมัติที่หน้า “คำขอยืม”'})`);
+          } catch (e) {
+            setNotice(null);
+            await sa.reload().catch(() => undefined); // the request may exist already (create ok, propose failed): show the real state
+            throw e;
+          } finally {
+            setBusy((prev) => {
+              const next = new Set(prev);
+              next.delete(row.id);
+              return next;
+            });
+          }
         });
       } else {
         setCreated((prev) => new Set(prev).add(row.id));
@@ -176,10 +194,10 @@ export function StockAlertsPage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
 
   /** Client-side CSV of the currently filtered rows (mock "ส่งออก"). */
   const exportCsv = () => {
-    const header = ['ยา', 'รหัส HIS', 'ABC', 'VED', 'คงเหลือ', 'หน่วย', 'ใช้ได้อีก(วัน)', 'ใช้/วัน', 'Predict', 'Total Target', 'วิธีพยากรณ์', 'แจ้งเตือน', 'สถานะ', 'เวลา', 'เลขคำขอ'];
+    const header = ['ยา', 'รหัส HIS', 'ABC', 'VED', 'คงเหลือ', 'หน่วย', 'ใช้ได้อีก(วัน)', 'ใช้/วัน', 'ที่ควรมี', 'เป้าสต็อก', 'แจ้งเตือน', 'สถานะ', 'เวลา', 'เลขคำขอ'];
     const lines = rows.map((r) => [
       r.drug, r.code, r.abc, r.ved, r.onHand, r.unit, r.daysLeft, r.dailyUse,
-      r.predict ?? '', r.totalTarget ?? (r.max ?? ''), r.method ?? '',
+      r.predict ?? '', r.totalTarget ?? (r.max ?? ''),
       r.alert ? ALERT_TYPE_META[r.alert.type].th : '',
       r.alert ? ALERT_STATUS_META[effectiveStatus(r)].labelTh : '',
       r.alert?.time ?? '', r.alert?.brNo ?? (created.has(r.id) ? 'BR-2026-000126' : ''),
@@ -204,7 +222,7 @@ export function StockAlertsPage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
             <span aria-hidden="true">›</span> <span aria-current="page">แจ้งเตือนสต็อก</span>
           </nav>
           <h1 style={{ margin: '2px 0 0', fontSize: 28, lineHeight: '38px', fontWeight: 600, color: '#0F2A5C' }}>
-            แจ้งเตือนสต็อกและการพยากรณ์
+            แจ้งเตือนสต็อก
           </h1>
           <div style={{ fontSize: 13, lineHeight: '20px', marginTop: 2 }}>{PHARMACY_CONTEXT.subtitle}</div>
         </div>
@@ -229,8 +247,8 @@ export function StockAlertsPage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
       )}
       {live && (
         <div className="card" role="status" style={{ padding: '10px 16px', fontSize: 13, color: '#0F2A5C' }}>
-          แจ้งเตือนมาจากระบบจริง (ประเมินจากสต็อกที่ใช้ได้เทียบผลพยากรณ์)
-          {sa.forecastMeta ? ` · โมเดล ${sa.forecastMeta.modelVersion ?? '—'}${sa.forecastMeta.originUsed ? ` รอบ ${sa.forecastMeta.originUsed}` : ''}${sa.forecastMeta.mockData ? ' · ข้อมูลสมมติ' : ''}` : ' · ยังไม่มีผลพยากรณ์ (ผู้ดูแลระบบต้องสั่งรัน)'}
+          แจ้งเตือนจากระบบจริง
+          {sa.forecastMeta ? (sa.forecastMeta.mockData ? ' · ข้อมูลสมมติ' : '') : ' · ยังไม่มีผลพยากรณ์'}
         </div>
       )}
       {(notice || actionError) && (
@@ -258,7 +276,7 @@ export function StockAlertsPage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
               setNotice(null);
             }}
           >
-            ✕ ปิด
+            ปิด
           </button>
         </div>
       )}
@@ -278,7 +296,7 @@ export function StockAlertsPage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
           sort={sort}
           onSort={setSort}
         />
-        <StockAlertTable rows={rows} acked={acked} snoozed={snoozed} created={created} onAction={handleAction} role={role} />
+        <StockAlertTable rows={rows} acked={acked} snoozed={snoozed} created={created} busy={busy} onAction={handleAction} role={role} />
         <div className="num" style={{ textAlign: 'right', fontSize: 12, color: '#475569', marginTop: 10 }}>
           แสดง {rows.length} จาก {base.length} รายการ
         </div>
@@ -326,20 +344,18 @@ export function StockAlertsPage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
           <Field label="ใช้ได้อีก">
             <span className="num">{fmt(selectedRow.daysLeft)}</span> วัน · ใช้ {fmt(selectedRow.dailyUse)}/วัน
           </Field>
-          <Field label="Predict · Total Target">
+          <Field label="ที่ควรมี · เป้าสต็อก">
             {selectedRow.totalTarget ? (
               <>
-                <span className="num">{fmt(selectedRow.predict ?? 0)} · {fmt(selectedRow.totalTarget)}</span>
+                <span className="num">อย่างน้อย {fmt(selectedRow.predict ?? 0)} · เป้า {fmt(selectedRow.totalTarget)}</span>
               </>
             ) : selectedRow.max ? (
-              <span className="num">Min {fmt(selectedRow.min ?? 0)} · Max {fmt(selectedRow.max)}</span>
+              <span className="num">ขั้นต่ำ {fmt(selectedRow.min ?? 0)} · สูงสุด {fmt(selectedRow.max)}</span>
             ) : (
               <span style={{ color: '#94A3B8' }}>—</span>
             )}
           </Field>
-          <Field label="วิธีพยากรณ์">
-            <span className="code">{selectedRow.method ?? '—'}</span> · {selectedRow.methodNote}
-          </Field>
+          {selectedRow.lowConfidence && <Field label="ข้อควรระวัง">ข้อมูลพยากรณ์น้อย — ใช้ประกอบการตัดสินใจ</Field>}
           <Field label="เทียบกับเป้า">
             <span style={{ color: '#0F2A5C' }}>{selectedRow.note}</span>
           </Field>

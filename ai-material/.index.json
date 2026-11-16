@@ -1,38 +1,73 @@
 [
   {
+    "path": "sessions\\2026-11-12-buffy-copilot-abort-context-summary-diff.md",
+    "title": "Copilot stop / screen context + plan summary change-diff",
+    "summary": "Copilot stop / screen context + plan summary change-diff",
+    "tags": "session",
+    "date": "2026-11-16"
+  },
+  {
+    "path": "sessions\\2026-11-14-2115-antigravity-ask-operator-clarify-fixes.md",
+    "title": "Session Note: ask_operator Tooling, Language Adaptation, and Clarify Card Fixes",
+    "summary": "Session Note",
+    "tags": "session",
+    "date": "2026-11-16"
+  },
+  {
     "path": "sessions\\2026-11-14-2145-antigravity-webfetch-clarify-wizard-and-attachments.md",
     "title": "AI Session: WebFetch Pre-fetch Script, Single-Round Clarification Wizard, Optional Web Search & File Attachment",
     "summary": "AI Session",
     "tags": "session",
-    "date": "2026-11-15"
+    "date": "2026-11-16"
+  },
+  {
+    "path": "sessions\\2026-11-14-graphify-full-knowledge-graph.md",
+    "title": "Session: Full Codebase Knowledge Graph Extraction (/graphify)",
+    "summary": "Session",
+    "tags": "session",
+    "date": "2026-11-16"
   },
   {
     "path": "sessions\\2026-11-15-0125-antigravity-clarify-choices-restoration.md",
     "title": "AI Session: Clarify Question Clickable Choices Restoration and Auto-Fill Guardrails",
     "summary": "AI Session",
     "tags": "session",
-    "date": "2026-11-15"
+    "date": "2026-11-16"
   },
   {
     "path": "sessions\\2026-11-15-0145-antigravity-gemini-white-theme-30d-retention.md",
     "title": "Session Note: Gemini-Inspired White Theme & 30-Day Chat Retention",
     "summary": "Session Note",
     "tags": "session",
-    "date": "2026-11-15"
+    "date": "2026-11-16"
   },
   {
     "path": "sessions\\2026-11-15-1425-antigravity-mock-demo-page-and-header-fix.md",
     "title": "Session: In-App Mock Demo Control Center & Header Window Controls Fix",
     "summary": "Session",
     "tags": "session",
-    "date": "2026-11-15"
+    "date": "2026-11-16"
   },
   {
-    "path": "sessions\\2026-11-12-buffy-copilot-abort-context-summary-diff.md",
-    "title": "Copilot stop / screen context + plan summary change-diff",
-    "summary": "Copilot stop / screen context + plan summary change-diff",
+    "path": "sessions\\2026-11-15-1530-antigravity-clarify-single-card-and-cdss-refinement.md",
+    "title": "Session: 2026-11-15 15:30 Clarify Single-Card Layout & CDSS Clinical Formality Refinement",
+    "summary": "Session",
     "tags": "session",
-    "date": "2026-11-14"
+    "date": "2026-11-16"
+  },
+  {
+    "path": "sessions\\2026-11-16-claude-hide-dev-codes-pharmacist.md",
+    "title": "Hide dev/spec codes on pharmacist screens",
+    "summary": "Removed spec IDs, enum codes and model names from user-visible text on…",
+    "tags": "session, frontend, ui-cleanup, pharmacist, transport, incident",
+    "date": "2026-11-16"
+  },
+  {
+    "path": "sessions\\2026-10-25-1430-antigravity-fix-er-action-proposal.md",
+    "title": "Session: Fix `submit_er_action_proposal` Hallucinated UUID and Emergency Borrow Payload",
+    "summary": "Session",
+    "tags": "session",
+    "date": "2026-11-15"
   },
   {
     "path": "sessions\\2026-11-14-1955-antigravity-byok-google-ai-studio-preset.md",
@@ -42,17 +77,10 @@
     "date": "2026-11-14"
   },
   {
-    "path": "sessions\\2026-11-14-2115-antigravity-ask-operator-clarify-fixes.md",
-    "title": "Session Note: ask_operator Tooling, Language Adaptation, and Clarify Card Fixes",
-    "summary": "Session Note",
-    "tags": "session",
-    "date": "2026-11-14"
-  },
-  {
-    "path": "sessions\\2026-11-14-graphify-full-knowledge-graph.md",
-    "title": "Session: Full Codebase Knowledge Graph Extraction (/graphify)",
-    "summary": "Session",
-    "tags": "session",
+    "path": "sessions\\2026-11-14-2237-claude-pharmacist-stock-alerts-ux-declutter.md",
+    "title": "Pharmacist stock alerts page - UX declutter (big rework reverted, jargon-only pass kept)",
+    "summary": "Big rework reverted; second pass only removes technical terms and the forecast-method…",
+    "tags": "session, frontend, pharmacist, alerts, stock-alerts, ui-ux, dashboard",
     "date": "2026-11-14"
   },
   {
@@ -147,11 +175,11 @@
     "date": "2026-10-25"
   },
   {
-    "path": "sessions\\2026-10-25-1430-antigravity-fix-er-action-proposal.md",
-    "title": "Session: Fix `submit_er_action_proposal` Hallucinated UUID and Emergency Borrow Payload",
-    "summary": "Session",
+    "path": "context\\runbook.md",
+    "title": "Runbook",
+    "summary": "Runbook",
     "tags": "session",
-    "date": "2026-10-25"
+    "date": "2026-10-24"
   },
   {
     "path": "decisions\\0005-f2-f3-feedback-rules.md",
@@ -294,13 +322,6 @@
     "date": "2026-10-24"
   },
   {
-    "path": "sessions\\2026-10-22-buffy-ha-qa-fixes.md",
-    "title": "HA (Step 8) QA fixes — FIX mode",
-    "summary": "HA (Step 8) QA fixes — FIX mode",
-    "tags": "session",
-    "date": "2026-10-23"
-  },
-  {
     "path": "sessions\\2026-10-23-0825-claude-forecast-scheduled-predict-job.md",
     "title": "Forecast scheduled predict job (Option A + Option B dynamic DB export)",
     "summary": "Option B completed: Postgres usage & snapshot streaming export -> predict up…",
@@ -367,6 +388,13 @@
     "path": "sessions\\2026-10-22-buffy-frontend-task4-accounts.md",
     "title": "Frontend TASK 4 — SYSTEM_ADMIN AccountCrudTab wired to /users",
     "summary": "Frontend TASK 4 — SYSTEM_ADMIN AccountCrudTab wired to /users",
+    "tags": "session",
+    "date": "2026-10-22"
+  },
+  {
+    "path": "sessions\\2026-10-22-buffy-ha-qa-fixes.md",
+    "title": "HA (Step 8) QA fixes — FIX mode",
+    "summary": "HA (Step 8) QA fixes — FIX mode",
     "tags": "session",
     "date": "2026-10-22"
   },
@@ -574,20 +602,6 @@
     "date": "2026-10-16"
   },
   {
-    "path": "context\\runbook.md",
-    "title": "Runbook",
-    "summary": "Runbook",
-    "tags": "session",
-    "date": "2026-10-15"
-  },
-  {
-    "path": "GUIDELINES.md",
-    "title": "Guidelines",
-    "summary": "Guidelines",
-    "tags": "session",
-    "date": "2026-10-14"
-  },
-  {
     "path": "README.md",
     "title": "ai-material",
     "summary": "ai-material",
@@ -598,20 +612,6 @@
     "path": "context\\conventions.md",
     "title": "Conventions",
     "summary": "Conventions",
-    "tags": "session",
-    "date": "2026-10-14"
-  },
-  {
-    "path": "context\\current-status.md",
-    "title": "Current Status",
-    "summary": "Current Status",
-    "tags": "session",
-    "date": "2026-10-14"
-  },
-  {
-    "path": "context\\quality-checklist.md",
-    "title": "Quality Checklist",
-    "summary": "Quality Checklist",
     "tags": "session",
     "date": "2026-10-14"
   },
@@ -677,6 +677,27 @@
     "summary": "Which agent skills this repo keeps, why, and how to add more.",
     "tags": "skill, workflow, context",
     "date": "2026-10-14"
+  },
+  {
+    "path": "GUIDELINES.md",
+    "title": "Guidelines",
+    "summary": "Guidelines",
+    "tags": "session",
+    "date": "2026-10-13"
+  },
+  {
+    "path": "context\\current-status.md",
+    "title": "Current Status",
+    "summary": "Current Status",
+    "tags": "session",
+    "date": "2026-10-13"
+  },
+  {
+    "path": "context\\quality-checklist.md",
+    "title": "Quality Checklist",
+    "summary": "Quality Checklist",
+    "tags": "session",
+    "date": "2026-10-13"
   },
   {
     "path": "decisions\\0001-shared-ai-context.md",
