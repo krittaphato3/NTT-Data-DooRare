@@ -29,7 +29,7 @@ function BorrowSection({ summary }: { summary: ApiIncidentSummary }) {
           <span style={{ fontSize: 13, fontWeight: 600, color: '#0f2a5c' }}>{summary.type ?? 'เหตุฉุกเฉิน'}{summary.location.text ? ` · ${summary.location.text}` : ''}</span>
         </button>
         <span style={{ fontSize: 11.5, color: '#64748b', marginLeft: 'auto' }}>
-          {collapsed ? `ย่ออยู่ · ${summary.borrow.requests} รายการ` : ''}
+          {collapsed ? `ย่ออยู่ · ${summary.borrow.requests} รายการ` : 'ผู้ให้ยืมยืนยันเอง · ระบบไม่ยืนยันแทน'}
         </span>
         <a className="link" href={erHref('incidents', { incident: summary.id })} style={{ fontSize: 12 }}>รายละเอียด</a>
       </div>

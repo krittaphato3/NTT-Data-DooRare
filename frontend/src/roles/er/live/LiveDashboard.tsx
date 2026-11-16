@@ -36,6 +36,8 @@ export function LiveErDashboard({ role = 'ER_STAFF' }: { role?: RoleCode }) {
   const access = getIncidentAccess(role);
   const list = useIncidentList('active');
   const inbox = useEmergencyInbox('pending');
+  // a timed-out request we have no stock for can no longer be answered usefully: it is not counted as waiting
+  const waitingLegs = inbox.legs.filter((l) => l.status === 'SENT' || (l.canAnswerLate && l.available > 0));
   const open = list.items;
   const patients = open.reduce((n, i) => n + i.counts.total, 0);
   const waiting = open.reduce((n, i) => n + i.borrow.waiting, 0);
@@ -62,12 +64,12 @@ export function LiveErDashboard({ role = 'ER_STAFF' }: { role?: RoleCode }) {
         <Kpi label="ผู้ป่วยรวมทุกเหตุ" value={patients} sub="ทุกระดับคัดแยก" />
         <Kpi label="คำขอยืมที่รอผู้ให้ตอบ" value={waiting} sub="คำขอที่ส่งแล้ว" tone="#b45309" />
         <Kpi label="แผนรออนุมัติ" value={awaitingPlan} sub="ฉบับแรกหรือหลังจำนวนผู้ป่วยเปลี่ยน" tone={awaitingPlan ? '#dc2626' : '#15803d'} />
-        <Kpi label="คำขอเร่งด่วนจาก รพ.อื่น" value={inbox.legs.length} sub="รอเราตอบ" tone={inbox.legs.length ? '#b91c1c' : '#15803d'} />
+        <Kpi label="คำขอเร่งด่วนจาก รพ.อื่น" value={waitingLegs.length} sub="รอเราตอบ" tone={waitingLegs.length ? '#b91c1c' : '#15803d'} />
       </div>
 
-      {inbox.legs.length > 0 && (
+      {waitingLegs.length > 0 && (
         <div role="status" style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '8px 14px', fontSize: 12.5, color: '#991b1b', display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-          <span>มี {inbox.legs.length} คำขอเร่งด่วนจากโรงพยาบาลอื่นรอตอบ (ผู้ให้ต้องตอบภายใน 3-5 นาที)</span>
+          <span>มี {waitingLegs.length} คำขอเร่งด่วนจากโรงพยาบาลอื่นรอตอบ (ผู้ให้ต้องตอบภายใน 3-5 นาที)</span>
           <a className="btn btn-p btn-sm" href={erHref('track')}>ไปตอบคำขอ →</a>
         </div>
       )}

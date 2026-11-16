@@ -160,9 +160,10 @@ function LegTable({ legs, canAct, actHint, reload }: { legs: ApiEmergencyLeg[]; 
  */
 export function LiveInbox({ legs, canAct, actHint, reload, empty = 'ไม่มีคำขอเร่งด่วนจากโรงพยาบาลอื่น' }: Props) {
   const [showHistory, setShowHistory] = useState(false);
-  const pending = legs.filter((l) => l.status === 'SENT' || l.canAnswerLate);
+  const answerable = (l: ApiEmergencyLeg) => l.status === 'SENT' || (l.canAnswerLate && l.available > 0);
+  const pending = legs.filter(answerable);
   const active = legs.filter((l) => ['ACCEPTED', 'PARTIAL', 'LOADED', 'IN_TRANSIT'].includes(l.status));
-  const history = legs.filter((l) => !l.canAnswerLate && !['SENT', 'ACCEPTED', 'PARTIAL', 'LOADED', 'IN_TRANSIT'].includes(l.status));
+  const history = legs.filter((l) => !answerable(l) && !['ACCEPTED', 'PARTIAL', 'LOADED', 'IN_TRANSIT'].includes(l.status));
   if (pending.length + active.length === 0 && history.length === 0) return <div className="card" style={{ padding: '14px 18px', fontSize: 12.5, color: '#64748b' }}>{empty}</div>;
   const head = (text: string, n: number) => <div style={{ fontSize: 13, fontWeight: 700, color: '#0f2a5c' }}>{text} <span style={{ fontWeight: 500, color: '#64748b' }}>({n})</span></div>;
   return (

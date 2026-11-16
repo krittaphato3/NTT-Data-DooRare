@@ -78,3 +78,5 @@ Still jargon, not touched (outside the 4 pages or not checked with data)
 ## Next steps
 
 - User picks one page from the backlog; redesign one page at a time (start with whichever the user names).
+
+- Later: user asked to bring back the ORIGINAL 'ยืมฉุกเฉิน' tab (`LiveBorrowStatus` restored from before commit 60001f9); the underline tab bar, pack tab and other-hospitals table stay. Dashboard banner / 'รอเราตอบ' now ignore timed-out legs we have no stock for (`LiveDashboard`, `LiveInbox`).
