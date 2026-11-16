@@ -18,6 +18,7 @@ summary: Removed spec codes, feature codes and English tags from the 4 warehouse
 - Transport tracking: dropped "/ Transport tracking"; drawer: no BLOOD_REPLACEMENT, (F1)/(F2), FEFO, "audit log", BORROW_SLIP/TRANSFER_SLIP.
 - Emergency: dropped "/ Emergency (F3)", KPI tags (LENDER, PACK TASKS, KITS, INCIDENTS), "WH ... (F1/F2 ...)" hint text, "เวลา/ETA", "F3" in badges and aria-labels; ETA badge on lender card -> "ของถึงหลังผู้ป่วย" (`roles/er/live/LiveInbox.tsx`, shared with ER).
 - Work inbox table: urgent row showed "เหลือ —" (live data passes a blank timer); now shows the real due text. Button "ไปยืนยันที่ Emergency" -> "ไปยืนยันที่หน้าเหตุฉุกเฉิน" (`RequestsTable`).
+- Login page (`pages/LoginPage.tsx`): dropped PostgreSQL/port, table names (app_user, login_event), SEC-001/ADM-01/UI-xx, MFA/OTP/Authenticator, Cognito OIDC, English labels in parentheses, raw role enums on cards; removed hospital-code pills and the repeated demo password line (kept once next to the field, OTP hint in the OTP step); security footer cut to 2 short lines.
 - Sidebar subtitles: removed "(F1 · F2 · F3)", "(F3)", "(F2)".
 - `npm run build` passes; re-checked all 4 pages in the browser (page text scan).
 
@@ -66,6 +67,7 @@ Still jargon, not touched (outside the 4 pages or not checked with data)
 
 ## Errors encountered
 
+- Login page: "ลืมรหัสผ่าน?" is a dead link (not touched).
 - Browser session was logged out after the dev server restarted; logged in again with the demo account.
 
 ## Next steps
