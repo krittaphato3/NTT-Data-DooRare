@@ -38,6 +38,7 @@ const DEMO_CAST: { email: string; role: RoleCode; hospital_code: string; hospita
   { email: 'driver1.hd@example.org', role: 'DRIVER', hospital_code: 'HD', hospital_name: 'โรงพยาบาลบางบ่อ', title: 'คนขับ (รพ.บางบ่อ)', does: 'ออกเดินทาง ยืนยันถึงปลายทาง' },
   { email: 'driver1.he@example.org', role: 'DRIVER', hospital_code: 'HE', hospital_name: 'โรงพยาบาลบางเสาธง', title: 'คนขับ (รพ.บางเสาธง)', does: 'ออกเดินทาง ยืนยันถึงปลายทาง' },
 ];
+const ROLE_SHORT: Partial<Record<RoleCode, string>> = { ER_STAFF: 'ฉุกเฉิน', PHARMACIST: 'เภสัชกร', WAREHOUSE_OFFICER: 'คลังยา', DRIVER: 'คนขับ' };
 const HOSPITAL_ORDER = ['HA', 'HB', 'HC', 'HD', 'HE'];
 const ROLE_ORDER: RoleCode[] = ['ER_STAFF', 'PHARMACIST', 'WAREHOUSE_OFFICER', 'DRIVER'];
 const DEMO_ROLES: RoleCode[] = ['PHARMACIST', 'WAREHOUSE_OFFICER', 'ER_STAFF', 'DRIVER'];
@@ -282,6 +283,7 @@ export function LoginPage() {
                           onClick={() => !loading && quick(c)}
                           style={{ background: '#FFFFFF', border: `2px solid ${selected ? info.color : '#E2E8F0'}`, borderRadius: 8, padding: '7px 9px', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: 4 }}
                         >
+                          <span style={{ alignSelf: 'flex-start', fontSize: 10.5, fontWeight: 700, padding: '1px 7px', borderRadius: 10, whiteSpace: 'nowrap', background: info.bg, color: info.color }}>{ROLE_SHORT[c.role]}</span>
                           <div style={{ fontSize: 12.5, fontWeight: 700, color: '#0F2A5C', lineHeight: '16px' }}>{c.title}</div>
                           <div style={{ fontSize: 10, color: '#64748B', borderTop: '1px solid #F1F5F9', paddingTop: 3, lineHeight: '13px', flex: 1 }}>{c.does}</div>
                           <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
