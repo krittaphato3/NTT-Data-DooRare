@@ -138,7 +138,10 @@ async function shortageForOtherLots() {
         WHERE hd.drug_master_id = $1 AND hd.active AND h.code <> $2
           -- a drug that carries a seeded F2 lot anywhere keeps its planned receivers: shaping it again would add takers (e.g. across networks)
           AND NOT EXISTS (SELECT 1 FROM stock_lot l JOIN hospital_drug x ON x.id = l.hospital_drug_id
-                           WHERE x.drug_master_id = hd.drug_master_id AND l.lot_no LIKE 'DEMO-F2%' AND l.qty_on_hand > 0 AND l.expiry_date > current_date)`,
+                           WHERE x.drug_master_id = hd.drug_master_id AND l.lot_no LIKE 'DEMO-F2%' AND l.qty_on_hand > 0 AND l.expiry_date > current_date)
+          -- a hospital that has its own waiting near-expiry lot of this drug is not drained: the drain would eat that lot and the lot could no longer be released (free stock < item qty)
+          AND NOT EXISTS (SELECT 1 FROM near_expiry_item ne2 JOIN stock_lot l2 ON l2.id = ne2.lot_id
+                           WHERE l2.hospital_drug_id = hd.id AND ne2.status IN ('DETECTED', 'RELEASED_TO_POOL'))`,
       [lot.drug_id, lot.owner]);
     const pick = cand
       .sort((a, b) => Number(b.network_id === lot.network_id) - Number(a.network_id === lot.network_id) || b.u - a.u)
