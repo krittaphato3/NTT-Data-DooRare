@@ -106,20 +106,16 @@ export async function buildLadder(db: Db, cfg: BorrowConfig, need: Need, request
     ]);
     // F-13 edge case: a lender whose class has no Total Target (D) uses P50 as its keep-level.
     const totalTarget = week?.total_target ?? week?.p50 ?? null;
-    let lendable = lendableStock(usableLend, totalTarget ?? 0);
+    // Lendable = usable stock above the lender's own keep-level, the same rule approve() and the lender's confirm re-check,
+    // so every lender in the ladder can still be approved and can still confirm. (An "emergency" rule that planned below the
+    // keep-level was removed: the plan was proposed but approve() rejected it with LADDER_STALE.)
+    const lendable = lendableStock(usableLend, totalTarget ?? 0);
     const uLender = dailyUsage(week?.p50 ?? null, month?.p50 ?? null, need.leadDays) ?? 0;
 
     // In Region 6 logistics, ground transport typically takes 20-180 minutes.
     // If requester stock is depleted, do not clamp window to 20-30 minutes and falsely disqualify neighbors.
     const windowMaxMin = Math.max(180, need.windowDays * 1440);
 
-    // Clinical emergency fallback:
-    // If strict surplus beyond full monthly target is 0, but the hospital has usable stock on hand,
-    // allow clinical emergency sharing reserving 1 day of lender's own daily usage (or 50% of stock).
-    if (lendable <= 0 && usableLend > 0) {
-      const lenderReserve = Math.min(Math.floor(usableLend * 0.7), uLender > 0 ? Math.floor(uLender) : Math.floor(usableLend * 0.5));
-      lendable = Math.max(0, Math.floor(usableLend - lenderReserve));
-    }
     const failure = hardFilterFailure({
       transitMin,
       windowMaxMin,

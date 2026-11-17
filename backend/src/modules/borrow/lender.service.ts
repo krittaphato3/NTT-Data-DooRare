@@ -200,6 +200,8 @@ export class LenderService {
         for (const raw of body.lots) {
           const lot = bodyObject(raw);
           const lotId = uuidParam(lot.lotId, 'lots[].lotId');
+          // the same lot twice would pass the free-stock check once per line and only fail later at the hold
+          if (picks.some((p) => p.lotId === lotId)) throw new HttpError(422, 'VALIDATION', 'เลือกล็อตเดียวกันซ้ำ');
           const lotQty = optionalNumber(lot.qty, 'lots[].qty', { min: 0.001 });
           if (lotQty === undefined) throw new HttpError(400, 'VALIDATION', 'lots[].qty ต้องระบุ');
           const row = (

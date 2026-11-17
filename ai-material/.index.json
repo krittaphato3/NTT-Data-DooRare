@@ -56,6 +56,13 @@
     "date": "2026-11-17"
   },
   {
+    "path": "sessions/2026-11-17-2046-claude-borrow-approve-ladder-stale-fix.md",
+    "title": "Borrow approve fails with LADDER_STALE - removed the emergency-fallback lendable rule",
+    "summary": "Plan proposed lenders below their keep-level; approve rejected it. Fallback block removed.",
+    "tags": "session, backend, borrow, f1b, bug, ladder, approve",
+    "date": "2026-11-17"
+  },
+  {
     "path": "sessions/2026-11-16-claude-hide-dev-codes-pharmacist.md",
     "title": "Hide dev/spec codes on pharmacist screens",
     "summary": "Removed spec IDs, enum codes and model names from user-visible text on…",

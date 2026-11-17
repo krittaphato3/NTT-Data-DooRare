@@ -247,7 +247,9 @@ export class BorrowService {
       return { ok: true, id, version: view.version, data: { ...view, need } };
     });
 
-    if ((body as any).autoPropose !== false) {
+    // Opt-in only: the web pages, the copilot and the demo scripts all call POST /:id/propose themselves, so proposing here by
+    // default ran the lender agent twice per request (and a request could no longer stay DRAFT). Send autoPropose: true to propose here.
+    if ((body as any).autoPropose === true) {
       try {
         const proposed = await this.propose(req, created.id);
         return { ok: true, id: created.id, version: proposed.version, data: proposed.data };
