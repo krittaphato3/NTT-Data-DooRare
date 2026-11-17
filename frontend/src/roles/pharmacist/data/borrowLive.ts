@@ -31,7 +31,7 @@ function banner(r: ApiBorrowRequest, waiting: ApiBorrowLeg | undefined): { title
   const unit = r.drug.baseUnit;
   switch (r.status) {
     case 'DRAFT': return { title: 'ร่างคำขอ', text: 'ยังไม่ได้เสนอแผนผู้ให้ยืม' };
-    case 'PENDING_APPROVAL': return { title: 'รอเภสัชกรอนุมัติก่อนส่ง', text: `ร่างข้อความถึงผู้ให้ยืมแล้ว · ${r.proposal?.parallel ? 'เร่งด่วนมาก ส่งพร้อมกันได้ ≤ 3 แห่ง' : 'ส่งทีละแห่ง'}` };
+    case 'PENDING_APPROVAL': return { title: 'รอเภสัชกรอนุมัติก่อนส่ง', text: `ร่างข้อความถึงผู้ให้ยืมแล้ว` };
     case 'APPROVED': case 'IN_PROGRESS': case 'PARTIALLY_FULFILLED':
       return waiting
         ? { title: `รอ ${waiting.lender.name} ตอบ (รอบ ${waiting.round})`, text: `หมดเวลา ${hh(waiting.deadlineAt)} → ระบบส่งต่อลำดับถัดไปอัตโนมัติ${waiting.remindedAt ? ` · เตือน 50% แล้ว ${hh(waiting.remindedAt)}` : ''}` }
@@ -77,7 +77,7 @@ export function borrowRequestToView(r: ApiBorrowRequest, now = Date.now(), retur
     const needed = covered < r.qtyRequested;
     covered += e.lendable;
     const first = r.status === 'PENDING_APPROVAL' && e.qtyPlanned > 0;
-    const tail = first ? `ลำดับ ${e.rank} · รอบแรก ขอ ${n(e.qtyPlanned)} ${unit}` : `ลำดับ ${e.rank} · ${needed ? 'ส่งต่อถ้าแห่งก่อนหน้าไม่ได้/ได้ไม่ครบ' : 'สำรอง · ใช้เมื่อแห่งก่อนหน้าไม่พอ'} · ให้ยืมได้ ≤ ${n(e.lendable)} ${unit}`;
+    const tail = first ? `ลำดับ ${e.rank} · รอบแรก ขอ ${n(e.qtyPlanned)} ${unit}` : `ลำดับ ${e.rank} · ${needed ? 'ส่งต่อถ้าแห่งก่อนหน้าไม่ได้/ได้ไม่ครบ' : 'สำรอง · ใช้เมื่อแห่งก่อนหน้าไม่พอ'} · ให้ยืมได้ ไม่เกิน ${n(e.lendable)} ${unit}`;
     return { hospital: e.name, si: e.si, state: 'NOT_SENT', detail: `${tail}${e.rationale ? ` · Agent: ${e.rationale}` : ''}` };
   });
   const ladderNote = ladder.length && (r.status === 'PENDING_APPROVAL' || open)
@@ -102,7 +102,7 @@ export function borrowRequestToView(r: ApiBorrowRequest, now = Date.now(), retur
       }
     : undefined;
   const firstSent = r.legs.filter((l) => l.round === 1);
-  const sendMode = r.proposal ? (r.proposal.parallel ? 'ส่งพร้อมกัน ≤ 3 แห่ง' : 'ส่งทีละแห่ง') : firstSent.length > 1 ? `ส่งพร้อมกัน ${firstSent.length} แห่ง` : 'ส่งทีละแห่ง';
+  const sendMode = r.proposal ? (r.proposal.parallel ? 'ส่งพร้อมกันได้สูงสุด 3 แห่ง' : 'ส่งทีละแห่ง') : firstSent.length > 1 ? `ส่งพร้อมกัน ${firstSent.length} แห่ง` : 'ส่งทีละแห่ง';
   const lender =
     activeLegs.length > 0
       ? [...new Set(activeLegs.map((l) => l.lender.name))].slice(0, 2)

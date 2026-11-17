@@ -101,13 +101,6 @@ export function NearExpiryDrawer({ item: i, onDecide, onClose, live = false, bus
           <div className="sub" style={{ marginTop: 6 }}>
             ส่วนที่ใช้ทันก่อนหมดอายุเก็บไว้ที่ รพ.เรา ส่วนที่เหลือปล่อยเข้าคลังกลางได้โดยไม่เสียเปล่า
           </div>
-          <details className="ne-calc">
-            <summary>ดูวิธีคำนวณ</summary>
-            <div className="ne-formula num">
-              ใช้ได้ = floor(({i.daysLeft} − 1) × {i.usagePerDay}) = {usable} · ปล่อยได้ = {i.qty} − {usable} ={' '}
-              <b>{canRelease} {i.unit}</b>
-            </div>
-          </details>
         </div>
 
         {decided ? (
@@ -157,7 +150,7 @@ export function NearExpiryDrawer({ item: i, onDecide, onClose, live = false, bus
             </h3>
             {error && <div role="alert" style={{ color: '#B91C1C', fontSize: 12.5 }}>{error}</div>}
             <label className="ne-qtyrow">
-              <span>จำนวนที่จะปล่อย (≤ {canRelease} {i.unit})</span>
+              <span>จำนวนที่จะปล่อย (ไม่เกิน {canRelease} {i.unit})</span>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                 <input
                   className="ne-qtyinput num"
