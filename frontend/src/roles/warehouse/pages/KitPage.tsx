@@ -76,10 +76,10 @@ function MockKitPage() {
   };
 
   const tabs: { id: Tab; label: string; n: number; hint: string }[] = [
-    { id: 'urgent', label: 'คำขอเร่งด่วนจาก รพ.อื่น', n: openReqs.length, hint: 'รพ.อื่นเกิดเหตุและขอยืมของเรา · WH ยืนยัน/ปฏิเสธ (F1/F2 เภสัชกรเป็นผู้ตัดสิน)' },
+    { id: 'urgent', label: 'คำขอเร่งด่วนจาก รพ.อื่น', n: openReqs.length, hint: 'รพ.อื่นเกิดเหตุและขอยืมของเรา · คลังยืนยันหรือปฏิเสธ' },
     { id: 'pack', label: 'แพ็กชุดยา', n: packWaiting, hint: 'เหตุของ รพ.เรา · แพ็กตามแผนที่ ER อนุมัติ' },
     { id: 'incidents', label: 'เหตุการณ์', n: INCIDENTS.length, hint: 'ดูอย่างเดียว · เหตุของเราและเหตุที่ รพ.อื่นขอยืมเรา' },
-    { id: 'returns', label: 'รับคืนหลังเหตุ', n: pendingReturns, hint: 'ยืนยันส่งคืน/รับคืน/รับเข้าคลัง (ข้อเสนอ · ผู้ยืนยันคือ WH)' },
+    { id: 'returns', label: 'รับคืนหลังเหตุ', n: pendingReturns, hint: 'ยืนยันส่งคืน · รับคืน · รับเข้าคลัง' },
   ];
   const active = tabs.find((t) => t.id === tab)!;
 
@@ -92,7 +92,7 @@ function MockKitPage() {
             <span aria-hidden="true">›</span> <span aria-current="page">เตรียมชุดยา · เหตุฉุกเฉิน</span>
           </nav>
           <h1 className="tr-title">
-            เตรียมชุดยา · เหตุฉุกเฉิน <span>/ Emergency (F3)</span>
+            เตรียมชุดยา · เหตุฉุกเฉิน
           </h1>
           <div style={{ fontSize: 13 }}>
             รพ.สมุทรปราการ · ตอบคำขอเร่งด่วนจาก รพ.อื่น (เราเป็นผู้ให้) · แพ็กชุดยาและดูแลเหตุของ รพ.เรา · เมื่อยืนยันแล้วงานส่งไปต่อที่ติดตามการขนส่ง
@@ -106,9 +106,9 @@ function MockKitPage() {
         </div>
       </section>
 
-      <section className="ib-kpis" aria-label="สรุป F3">
+      <section className="ib-kpis" aria-label="สรุปเหตุฉุกเฉิน">
         <div className={`ib-kpi ${openReqs.length ? 'ib-kpi-crit' : 'ib-kpi-ok'}`}>
-          <div className="ib-kpi-label">คำขอเร่งด่วนรอยืนยัน <span className="en">LENDER</span></div>
+          <div className="ib-kpi-label">คำขอเร่งด่วนรอยืนยัน</div>
           <div className="ib-kpi-val num" style={{ color: openReqs.length ? '#B91C1C' : undefined }}>{openReqs.length} คำขอ</div>
           <div className="ib-kpi-sub">
             {openReqs.length ? (
@@ -119,12 +119,12 @@ function MockKitPage() {
           </div>
         </div>
         <div className={`ib-kpi ${packWaiting ? 'ib-kpi-warn' : 'ib-kpi-ok'}`}>
-          <div className="ib-kpi-label">งานแพ็กรอทำ <span className="en">PACK TASKS</span></div>
+          <div className="ib-kpi-label">งานแพ็กรอทำ</div>
           <div className="ib-kpi-val num">{packWaiting} งาน</div>
           <div className="ib-kpi-sub">เซ็ตที่ควรเติม {lowKits} ชนิด</div>
         </div>
         <div className="ib-kpi">
-          <div className="ib-kpi-label">เหตุที่เปิดอยู่ <span className="en">OPEN INCIDENTS</span></div>
+          <div className="ib-kpi-label">เหตุที่เปิดอยู่</div>
           <div className="ib-kpi-val num">{openIncidents.length} เหตุ</div>
           <div className="ib-kpi-sub">เหตุของเรา {openIncidents.filter((i) => i.own).length} · รพ.อื่น {openIncidents.filter((i) => !i.own).length}</div>
         </div>
@@ -137,7 +137,7 @@ function MockKitPage() {
 
       <section className="card" style={{ padding: 0 }}>
         <div className="tr-card-head">
-          <div role="tablist" aria-label="F3" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
+          <div role="tablist" aria-label="หมวดเหตุฉุกเฉิน" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
             {tabs.map((t) => (
               <button key={t.id} type="button" role="tab" aria-selected={tab === t.id ? 'true' : 'false'} className={`tab ${tab === t.id ? 'tab-on' : ''}`} onClick={() => { setTab(t.id); setIncId(null); setReqId(null); }}>
                 {t.label} <span className="cnt">{t.n}</span>

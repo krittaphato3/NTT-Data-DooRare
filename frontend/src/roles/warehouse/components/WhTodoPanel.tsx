@@ -17,7 +17,7 @@ export function WhTodoPanel({ urgentLeft, shipments }: { urgentLeft: string; shi
     <div className="card cardpad" data-part="todo" style={{ flex: '3 1 560px', minWidth: 0 }}>
       <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
         <h2 style={{ margin: 0, fontSize: 20, lineHeight: '30px', fontWeight: 600, color: '#0F2A5C' }}>
-          งานที่ต้องทำ <span style={{ fontSize: 14, fontWeight: 400, color: '#94A3B8' }}>/ To-do</span>
+          งานที่ต้องทำ
         </h2>
         <span style={{ fontSize: 12, lineHeight: '16px' }}>เรียงตาม: เร่งด่วนก่อน แล้วตามขั้นตอนขนส่ง</span>
       </div>

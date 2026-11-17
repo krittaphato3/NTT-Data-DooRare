@@ -14,7 +14,7 @@ interface Props {
 }
 
 const STATUS_HINT: Record<string, string> = {
-  FALLBACK: 'Agent ตอบไม่ได้หรือไม่ผ่านการตรวจ (หรือยังไม่ได้ตั้งค่า LLM) — ใช้แผนตามกฎต่อไป',
+  FALLBACK: 'Agent ตอบไม่ได้หรือไม่ผ่านการตรวจ (หรือยังไม่ได้ตั้งค่า AI) — ใช้แผนตามกฎต่อไป',
   SKIPPED: 'ปิด Agent อยู่ — ใช้แผนตามกฎ',
 };
 

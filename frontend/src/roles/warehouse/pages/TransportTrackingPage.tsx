@@ -284,7 +284,7 @@ export function TransportTrackingPage({ role = 'WAREHOUSE_OFFICER' }: { role?: T
             <a href={homeHrefFor(role)} className="link" style={{ fontSize: 12, fontWeight: 400 }}>หน้าหลัก</a> <span aria-hidden="true">›</span> <span aria-current="page">ติดตามการขนส่ง</span>
           </nav>
           <h1 className="tr-title">
-            ติดตามการขนส่ง <span>/ Transport tracking</span>
+            ติดตามการขนส่ง
           </h1>
           <div style={{ fontSize: 13 }}>รพ.สมุทรปราการ · สต็อกต้นทางตัดเมื่อขึ้นรถ ปลายทางรับเข้าเมื่อยืนยันรับ</div>
           {canOperate && (

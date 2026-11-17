@@ -90,7 +90,7 @@ export function IncidentDrawer({ incident: i, onClose }: IncidentDrawerProps) {
     <aside className="tr-drawer" aria-label="รายละเอียดเหตุ">
       <div className="tr-drawer-head">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-          <span className="sub">เหตุฉุกเฉิน · F3 · ดูอย่างเดียว</span>
+          <span className="sub">เหตุฉุกเฉิน · ดูอย่างเดียว</span>
           <button className="icbtn" aria-label="ปิด / Close" onClick={onClose}>
             <Icon name="x" />
           </button>
@@ -110,7 +110,7 @@ export function IncidentDrawer({ incident: i, onClose }: IncidentDrawerProps) {
             <dd><TriageChips t={i.triage} /></dd>
             <dt>รายงานเมื่อ</dt>
             <dd className="num">{i.reportedAt}</dd>
-            <dt>เวลา/ETA</dt>
+            <dt>เวลา / ผู้ป่วยถึง</dt>
             <dd>{i.eta}</dd>
           </dl>
           <div className="return-note">เก็บเฉพาะจำนวนผู้บาดเจ็บแยกระดับ ไม่มีข้อมูลที่ระบุตัวผู้ป่วยได้ · บันทึกเหตุและอนุมัติแผนเป็นของ ER</div>

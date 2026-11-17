@@ -63,7 +63,7 @@ export function AddPlanItem({ kitsInPlan, extrasInPlan, disabled, onAddKit, onAd
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
         <select aria-label="ประเภทรายการ" value={kind} disabled={disabled} onChange={(e) => { setKind(e.target.value as 'drug' | 'kit'); setPicked(''); }} style={field}>
           <option value="drug">ยา / เวชภัณฑ์</option>
-          <option value="kit">ชุดยา (Preset Kit)</option>
+          <option value="kit">ชุดยา</option>
         </select>
         {kind === 'drug' && (
           <input aria-label="ค้นหายา" placeholder="ค้นหาชื่อยา / รหัส (อย่างน้อย 2 ตัวอักษร)" value={q} disabled={disabled} onChange={(e) => setQ(e.target.value)} style={{ ...field, flex: '1 1 200px' }} />

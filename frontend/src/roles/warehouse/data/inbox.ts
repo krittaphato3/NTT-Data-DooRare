@@ -11,9 +11,9 @@ export type InboxFeature = 'F1' | 'F2' | 'F3';
 export type InboxStatus = 'NEW' | 'CONFIRMED' | 'DECLINED';
 
 export const FEATURE_META: Record<InboxFeature, { label: string; tone: Tone }> = {
-  F1: { label: 'F1 ยืม', tone: 'blue' },
-  F2: { label: 'F2 โอนใกล้หมดอายุ', tone: 'teal' },
-  F3: { label: 'F3 ฉุกเฉิน', tone: 'red' },
+  F1: { label: 'ยืมยา', tone: 'blue' },
+  F2: { label: 'โอนยาใกล้หมดอายุ', tone: 'teal' },
+  F3: { label: 'ฉุกเฉิน', tone: 'red' },
 };
 
 export const INBOX_STATUS_META: Record<InboxStatus, { label: string; tone: Tone; icon: IconName }> = {
@@ -94,13 +94,13 @@ export const OUTBOUND_TASKS: RequestItem[] = [
     id: 'IB-F1-0128', feature: 'F1', ref: 'BR-2026-000128 · รอบ 1', drug: 'NORepinephrine 4 mg/4 mL', qty: 15, unit: 'AMP',
     to: 'HB', requestedBy: 'ภก. รพ.บางพลี · เภสัชกรเราตอบรับแล้ว', due: 'ส่งภายใน 2 ชม.', status: 'NEW',
     pick: [{ lot: 'NE25D04', expiry: '31 ก.ค. 2027', daysLeft: 290, qty: 15 }],
-    note: 'F1 ยืม · ล็อตที่ให้ยืมต้องอายุ > 180 วัน (FEFO)',
+    note: 'ยืมยา · ล็อตที่ให้ยืมต้องมีอายุเหลือเกิน 180 วัน',
   },
   {
     id: 'IB-F2-0046', feature: 'F2', ref: 'AP-2026-000046 · บรรทัด 1', drug: 'Omeprazole 40 mg inj', qty: 120, unit: 'VIAL',
     to: 'HC', requestedBy: 'แผนจัดสรร (เภสัชกรอนุมัติ 17:40)', due: 'ส่งภายในพรุ่งนี้', status: 'NEW',
     pick: [{ lot: 'OMP-2403', expiry: '20 ธ.ค. 2026', daysLeft: 68, qty: 120 }],
-    note: 'F2 โอนยาใกล้หมดอายุเข้าคลังกลาง · ล็อตถูกกันไว้จนขึ้นรถ',
+    note: 'โอนยาใกล้หมดอายุเข้าคลังกลาง · ล็อตถูกกันไว้จนขึ้นรถ',
   },
   {
     id: 'IB-F1-0129', feature: 'F1', ref: 'BR-2026-000129 · รอบ 1', drug: 'CefTRIAXone 1 g inj', qty: 30, unit: 'VIAL',

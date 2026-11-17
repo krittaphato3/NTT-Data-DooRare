@@ -7,23 +7,23 @@ import type { RoleAccountDemo } from '../types/auth';
 import type { RoleCode } from '../lib/rbac';
 
 const ROLE_INFO: Record<RoleCode, { label: string; icon: string; desc: string; color: string; bg: string }> = {
-  PHARMACIST: { label: 'เภสัชกร (Pharmacist)', icon: 'pill', desc: 'คลังยา เบิกยืม-จัดสรรยาใกล้หมดอายุ', color: '#1D4ED8', bg: '#EFF6FF' },
-  HOSPITAL_ADMIN: { label: 'ผู้ดูแลโรงพยาบาล (Hospital Admin)', icon: 'hosp', desc: 'จัดการผู้ใช้และตั้งค่า รพ. (ADM-02)', color: '#0F766E', bg: '#F0FDFA' },
-  SYSTEM_ADMIN: { label: 'ผู้ดูแลระบบกลาง (System Admin)', icon: 'shield', desc: 'ภาพรวมเขตและควบคุมระบบ (ADM-01)', color: '#7C3AED', bg: '#F5F3FF' },
-  WAREHOUSE_OFFICER: { label: 'เจ้าหน้าที่คลังยา (Warehouse)', icon: 'box', desc: 'รับเข้า-จ่ายยา แพ็กชุดฉุกเฉิน (UI-13)', color: '#B45309', bg: '#FFFBEB' },
-  ER_STAFF: { label: 'พยาบาลฉุกเฉิน (ER Staff)', icon: 'siren', desc: 'คัดกรองผู้ป่วย ประสานยาเหตุหมู่ (UI-11)', color: '#DC2626', bg: '#FEF2F2' },
-  DRIVER: { label: 'พนักงานขับรถ (Driver)', icon: 'truck', desc: 'ติดตามงานขนส่ง บันทึกอุณหภูมิ (UI-14)', color: '#0369A1', bg: '#F0F9FF' },
-  AUDITOR: { label: 'ผู้ตรวจสอบภายใน (Auditor)', icon: 'check', desc: 'ตรวจสอบ Hash Chain และ Audit Trail (UI-18)', color: '#4338CA', bg: '#EEF2FF' },
-  REGION_ADMIN: { label: 'ผู้บริหารเขตสุขภาพ (Region Admin)', icon: 'network', desc: 'คลังกลางเขต จัดสรรยากลาง (UI-08)', color: '#047857', bg: '#ECFDF5' },
-  DATA_ADMIN: { label: 'ผู้ดูแลข้อมูลยา (Data Admin)', icon: 'spark', desc: 'จับคู่รหัสยา TMT และบัญชีกลาง (UI-16)', color: '#9333EA', bg: '#FAF5FF' },
-  PROCUREMENT_OFFICER: { label: 'เจ้าหน้าที่จัดซื้อ (Procurement)', icon: 'chart', desc: 'ดูการพยากรณ์และร่างใบสั่งซื้อ (UI-02)', color: '#C2410C', bg: '#FFF7ED' },
+  PHARMACIST: { label: 'เภสัชกร', icon: 'pill', desc: 'คลังยา เบิกยืม-จัดสรรยาใกล้หมดอายุ', color: '#1D4ED8', bg: '#EFF6FF' },
+  HOSPITAL_ADMIN: { label: 'ผู้ดูแลโรงพยาบาล', icon: 'hosp', desc: 'จัดการผู้ใช้และตั้งค่า รพ.', color: '#0F766E', bg: '#F0FDFA' },
+  SYSTEM_ADMIN: { label: 'ผู้ดูแลระบบกลาง', icon: 'shield', desc: 'ภาพรวมเขตและควบคุมระบบ', color: '#7C3AED', bg: '#F5F3FF' },
+  WAREHOUSE_OFFICER: { label: 'เจ้าหน้าที่คลังยา', icon: 'box', desc: 'รับเข้า-จ่ายยา แพ็กชุดฉุกเฉิน', color: '#B45309', bg: '#FFFBEB' },
+  ER_STAFF: { label: 'พยาบาลฉุกเฉิน', icon: 'siren', desc: 'คัดกรองผู้ป่วย ประสานยาเหตุหมู่', color: '#DC2626', bg: '#FEF2F2' },
+  DRIVER: { label: 'พนักงานขับรถ', icon: 'truck', desc: 'ติดตามงานขนส่ง บันทึกอุณหภูมิ', color: '#0369A1', bg: '#F0F9FF' },
+  AUDITOR: { label: 'ผู้ตรวจสอบภายใน', icon: 'check', desc: 'ตรวจสอบประวัติการใช้งานระบบ', color: '#4338CA', bg: '#EEF2FF' },
+  REGION_ADMIN: { label: 'ผู้บริหารเขตสุขภาพ', icon: 'network', desc: 'คลังกลางเขต จัดสรรยากลาง', color: '#047857', bg: '#ECFDF5' },
+  DATA_ADMIN: { label: 'ผู้ดูแลข้อมูลยา', icon: 'spark', desc: 'จับคู่รหัสยากับบัญชียากลาง', color: '#9333EA', bg: '#FAF5FF' },
+  PROCUREMENT_OFFICER: { label: 'เจ้าหน้าที่จัดซื้อ', icon: 'chart', desc: 'ดูการพยากรณ์และร่างใบสั่งซื้อ', color: '#C2410C', bg: '#FFF7ED' },
 };
 
 /** The accounts used to demo how the roles work together (db/demo/README.md). */
 const DEMO_CAST: { email: string; role: RoleCode; hospital_code: string; hospital_name: string; title: string; does: string }[] = [
   { email: 'er_staff1.ha@example.org', role: 'ER_STAFF', hospital_code: 'HA', hospital_name: 'โรงพยาบาลสมุทรปราการ', title: 'ER (ผู้แจ้งเหตุ)', does: 'แจ้งเหตุ อนุมัติแผน ส่งคำขอยืมฉุกเฉิน' },
   { email: 'pharmacist1.ha@example.org', role: 'PHARMACIST', hospital_code: 'HA', hospital_name: 'โรงพยาบาลสมุทรปราการ', title: 'เภสัช (ผู้ขอยืม)', does: 'สร้าง/อนุมัติคำขอยืม จัดการยาใกล้หมดอายุ' },
-  { email: 'pharmacist1.hc@example.org', role: 'PHARMACIST', hospital_code: 'HC', hospital_name: 'โรงพยาบาลพระสมุทรเจดีย์ฯ', title: 'เภสัช (ผู้ให้ยืม)', does: 'ตอบรับ/ปฏิเสธคำขอที่ HA ส่งมา' },
+  { email: 'pharmacist1.hc@example.org', role: 'PHARMACIST', hospital_code: 'HC', hospital_name: 'โรงพยาบาลพระสมุทรเจดีย์ฯ', title: 'เภสัช (ผู้ให้ยืม)', does: 'ตอบรับหรือปฏิเสธคำขอยืมที่ส่งมา' },
   { email: 'warehouse_officer1.ha@example.org', role: 'WAREHOUSE_OFFICER', hospital_code: 'HA', hospital_name: 'โรงพยาบาลสมุทรปราการ', title: 'คลัง (ผู้รับ / แพ็กชุด)', does: 'โหลดของ รับของเข้า แพ็กชุดฉุกเฉิน' },
   { email: 'warehouse_officer1.hc@example.org', role: 'WAREHOUSE_OFFICER', hospital_code: 'HC', hospital_name: 'โรงพยาบาลพระสมุทรเจดีย์ฯ', title: 'คลัง (ผู้ให้ยืม)', does: 'โหลดของขึ้นรถ ถ่ายรูป' },
   { email: 'driver1.ha@example.org', role: 'DRIVER', hospital_code: 'HA', hospital_name: 'โรงพยาบาลสมุทรปราการ', title: 'คนขับ (รพ.สมุทรปราการ)', does: 'ออกเดินทาง ยืนยันถึงปลายทาง' },
@@ -38,6 +38,7 @@ const DEMO_CAST: { email: string; role: RoleCode; hospital_code: string; hospita
   { email: 'driver1.hd@example.org', role: 'DRIVER', hospital_code: 'HD', hospital_name: 'โรงพยาบาลบางบ่อ', title: 'คนขับ (รพ.บางบ่อ)', does: 'ออกเดินทาง ยืนยันถึงปลายทาง' },
   { email: 'driver1.he@example.org', role: 'DRIVER', hospital_code: 'HE', hospital_name: 'โรงพยาบาลบางเสาธง', title: 'คนขับ (รพ.บางเสาธง)', does: 'ออกเดินทาง ยืนยันถึงปลายทาง' },
 ];
+const ROLE_SHORT: Partial<Record<RoleCode, string>> = { ER_STAFF: 'ฉุกเฉิน', PHARMACIST: 'เภสัชกร', WAREHOUSE_OFFICER: 'คลังยา', DRIVER: 'คนขับ' };
 const HOSPITAL_ORDER = ['HA', 'HB', 'HC', 'HD', 'HE'];
 const ROLE_ORDER: RoleCode[] = ['ER_STAFF', 'PHARMACIST', 'WAREHOUSE_OFFICER', 'DRIVER'];
 const DEMO_ROLES: RoleCode[] = ['PHARMACIST', 'WAREHOUSE_OFFICER', 'ER_STAFF', 'DRIVER'];
@@ -111,7 +112,7 @@ export function LoginPage() {
 
       if (res.requireMfa && !skipMfaCheck) {
         setMfaRequired(true);
-        setMfaNotice(res.message || 'บัญชีนี้เปิดใช้งาน MFA กรุณากรอกรหัส Authenticator 6 หลัก');
+        setMfaNotice('กรุณากรอกรหัส 6 หลักจากแอปยืนยันตัวตน');
         setLoading(false);
         return;
       }
@@ -138,7 +139,7 @@ export function LoginPage() {
         setError(res.error || 'เข้าสู่ระบบไม่สำเร็จ');
       } else if (res.requireMfa) {
         setMfaRequired(true);
-        setMfaNotice('บัญชีนี้เปิดใช้งาน MFA กรุณากรอกรหัส Authenticator (สำหรับทดสอบใช้ 123456)');
+        setMfaNotice('กรุณากรอกรหัส 6 หลักจากแอปยืนยันตัวตน');
       }
     } catch (err: any) {
       setError(err.message || 'เข้าสู่ระบบไม่สำเร็จ');
@@ -213,7 +214,7 @@ export function LoginPage() {
                 boxShadow: dbConnected ? '0 0 6px rgba(16, 185, 129, 0.4)' : 'none',
               }}
             />
-            {dbConnected ? 'PostgreSQL (Port 5442) ออนไลน์' : 'PostgreSQL ออฟไลน์'}
+            {dbConnected ? 'ระบบพร้อมใช้งาน' : 'เชื่อมต่อระบบไม่ได้'}
           </div>
           <button
             type="button"
@@ -252,18 +253,16 @@ export function LoginPage() {
         <div>
           <div style={{ marginBottom: 16 }}>
             <h1 style={{ fontSize: 22, fontWeight: 700, color: '#0F2A5C', margin: 0 }}>
-              เลือกเข้าสู่ระบบตามบทบาทผู้ใช้งาน
+              เลือกบทบาทเพื่อเข้าสู่ระบบ
             </h1>
             <p style={{ fontSize: 13, color: '#64748B', marginTop: 4, margin: 0 }}>
-              ดึงบัญชีจริงจากตาราง <code>app_user</code> และ <code>app_user_role</code> ใน PostgreSQL
-              เพื่อทดสอบการทำงานของแต่ละ Role Shell
+              กดการ์ดบัญชีเดโมเพื่อเข้าสู่ระบบทันที
             </p>
           </div>
 
           <div style={{ marginBottom: 18 }}>
             <div style={{ fontSize: 13, fontWeight: 700, color: '#0F2A5C', marginBottom: 8 }}>
-              ชุดบัญชีสำหรับเดโม · ดูการทำงานร่วมกันของแต่ละบทบาท
-              <span style={{ fontWeight: 400, color: '#64748B' }}> (รหัสผ่าน doorare123 · OTP 123456)</span>
+              บัญชีเดโมของแต่ละโรงพยาบาล
             </div>
             {HOSPITAL_ORDER.map((code) => {
               const cast = DEMO_CAST.filter((c) => c.hospital_code === code).sort((a, b) => ROLE_ORDER.indexOf(a.role) - ROLE_ORDER.indexOf(b.role));
@@ -271,7 +270,6 @@ export function LoginPage() {
               return (
                 <div key={code} style={{ marginBottom: 8 }}>
                   <div style={{ fontSize: 12.5, fontWeight: 700, color: '#0F2A5C', margin: '2px 0 4px', display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ padding: '1px 8px', borderRadius: 12, background: '#EFF6FF', color: '#1D4ED8', fontSize: 11 }}>{code}</span>
                     {cast[0].hospital_name}
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
@@ -285,7 +283,7 @@ export function LoginPage() {
                           onClick={() => !loading && quick(c)}
                           style={{ background: '#FFFFFF', border: `2px solid ${selected ? info.color : '#E2E8F0'}`, borderRadius: 8, padding: '7px 9px', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: 4 }}
                         >
-                          <span style={{ alignSelf: 'flex-start', fontSize: 9.5, fontWeight: 700, padding: '1px 6px', borderRadius: 10, background: info.bg, color: info.color }}>{c.role}</span>
+                          <span style={{ alignSelf: 'flex-start', fontSize: 10.5, fontWeight: 700, padding: '1px 7px', borderRadius: 10, whiteSpace: 'nowrap', background: info.bg, color: info.color }}>{ROLE_SHORT[c.role]}</span>
                           <div style={{ fontSize: 12.5, fontWeight: 700, color: '#0F2A5C', lineHeight: '16px' }}>{c.title}</div>
                           <div style={{ fontSize: 10, color: '#64748B', borderTop: '1px solid #F1F5F9', paddingTop: 3, lineHeight: '13px', flex: 1 }}>{c.does}</div>
                           <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
@@ -355,14 +353,14 @@ export function LoginPage() {
                         letterSpacing: '0.4px',
                       }}
                     >
-                      {acc.role}
+                      {info.label}
                     </span>
                     {acc.mfa_enabled && (
                       <span
-                        title="บัญชีนี้บังคับใช้ MFA (SEC-001)"
+                        title="บัญชีนี้ต้องยืนยันตัวตน 2 ขั้นตอน"
                         style={{ fontSize: 10, color: '#D97706', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 3 }}
                       >
-                        🔒 MFA
+                        🔒 ยืนยัน 2 ขั้นตอน
                       </span>
                     )}
                   </div>
@@ -429,10 +427,10 @@ export function LoginPage() {
         >
           <div style={{ textAlign: 'center', marginBottom: 20 }}>
             <h2 style={{ fontSize: 20, fontWeight: 700, color: '#0F2A5C', margin: 0 }}>
-              ลงชื่อเข้าสู่ระบบ (Sign In)
+              เข้าสู่ระบบ
             </h2>
             <div style={{ fontSize: 12.5, color: '#64748B', marginTop: 4 }}>
-              ระบุบัญชีผู้ใช้ หรือเลือกบทบาทด้านซ้ายเพื่อทดสอบ
+              กรอกอีเมลและรหัสผ่าน หรือเลือกบัญชีเดโมทางซ้าย
             </div>
           </div>
 
@@ -470,11 +468,11 @@ export function LoginPage() {
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
                 <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z" fill="#FF9900"/>
               </svg>
-              <span>{cognitoAuth?.isLoading ? 'กำลังเชื่อมต่อ AWS Cognito...' : 'เข้าสู่ระบบด้วย AWS Cognito (SSO)'}</span>
+              <span>{cognitoAuth?.isLoading ? 'กำลังเชื่อมต่อ...' : 'เข้าสู่ระบบด้วยบัญชีองค์กร (SSO)'}</span>
             </button>
             <div style={{ display: 'flex', alignItems: 'center', margin: '18px 0 14px', color: '#94A3B8', fontSize: 12 }}>
               <div style={{ flex: 1, height: '1px', background: '#E2E8F0' }} />
-              <span style={{ padding: '0 10px' }}>หรือเข้าใช้งานด้วยบัญชีภายใน (Internal Demo)</span>
+              <span style={{ padding: '0 10px' }}>หรือใช้อีเมลและรหัสผ่าน</span>
               <div style={{ flex: 1, height: '1px', background: '#E2E8F0' }} />
             </div>
           </div>
@@ -491,7 +489,7 @@ export function LoginPage() {
                 marginBottom: 16,
               }}
             >
-              <b>Cognito OIDC Error:</b> {cognitoAuth.error.message}
+              <b>เข้าสู่ระบบองค์กรไม่สำเร็จ:</b> {cognitoAuth.error.message}
             </div>
           )}
 
@@ -529,7 +527,7 @@ export function LoginPage() {
                   fontSize: 12.5,
                 }}
               >
-                <div style={{ fontWeight: 700, marginBottom: 4 }}>🔐 ตรวจสอบยืนยันตัวตน 2 ขั้นตอน (MFA)</div>
+                <div style={{ fontWeight: 700, marginBottom: 4 }}>ยืนยันตัวตน 2 ขั้นตอน</div>
                 <div>{mfaNotice}</div>
               </div>
 
@@ -543,7 +541,7 @@ export function LoginPage() {
                     marginBottom: 6,
                   }}
                 >
-                  รหัส Authenticator 6 หลัก
+                  รหัส 6 หลัก
                 </label>
                 <input
                   type="text"
@@ -567,7 +565,7 @@ export function LoginPage() {
                   }}
                 />
                 <div style={{ fontSize: 11, color: '#64748B', marginTop: 4 }}>
-                  * บัญชี Admin/Pharmacist/Auditor บังคับใช้ MFA (SEC-001) · รหัสทดสอบ Dev: <code>123456</code>
+                  เดโมใช้รหัส <code>123456</code>
                 </div>
               </div>
 
@@ -606,7 +604,7 @@ export function LoginPage() {
                     opacity: otpCode.length < 6 ? 0.6 : 1,
                   }}
                 >
-                  {loading ? 'กำลังตรวจสอบ...' : 'ยืนยันรหัส OTP'}
+                  {loading ? 'กำลังตรวจสอบ...' : 'ยืนยันรหัส'}
                 </button>
               </div>
             </div>
@@ -623,7 +621,7 @@ export function LoginPage() {
                     marginBottom: 5,
                   }}
                 >
-                  อีเมลผู้ใช้งาน (Email)
+                  อีเมล
                 </label>
                 <input
                   type="email"
@@ -656,9 +654,9 @@ export function LoginPage() {
                     marginBottom: 5,
                   }}
                 >
-                  <span>รหัสผ่าน (Password)</span>
+                  <span>รหัสผ่าน</span>
                   <span style={{ fontSize: 11, color: '#64748B', fontWeight: 400 }}>
-                    ค่าเริ่มต้น: <code>doorare123</code>
+                    เดโมใช้ <code>doorare123</code>
                   </span>
                 </label>
                 <div style={{ position: 'relative' }}>
@@ -741,7 +739,7 @@ export function LoginPage() {
                   boxShadow: '0 2px 6px rgba(29, 78, 216, 0.25)',
                 }}
               >
-                {loading ? 'กำลังตรวจสอบสิทธิ์...' : 'เข้าสู่ระบบ (Sign In)'}
+                {loading ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ'}
               </button>
             </form>
           )}
@@ -758,11 +756,10 @@ export function LoginPage() {
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, color: '#334155' }}>
-              <span>🛡️</span> ความปลอดภัยและธรรมาภิบาลข้อมูล (SEC-001 / PDPA):
+              <span>🛡️</span> ทุกการเข้าสู่ระบบถูกบันทึกไว้เพื่อความปลอดภัย
             </div>
             <div style={{ marginTop: 4 }}>
-              ทุกการลงชื่อเข้าใช้ (สำเร็จหรือล้มเหลว) จะถูกบันทึกที่อยู่ IP, ประเภทอุปกรณ์, และเวลา ลงในตาราง{' '}
-              <code>login_event</code> แบบไม่สามารถแก้ไขได้ และอัปเดตสถิติสดไปยังหน้า System Admin (ADM-01) และ Hospital Admin Audit Log
+              เก็บที่อยู่ IP อุปกรณ์ และเวลา โดยแก้ไขย้อนหลังไม่ได้
             </div>
           </div>
         </div>
