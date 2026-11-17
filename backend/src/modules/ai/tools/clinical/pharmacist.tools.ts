@@ -239,7 +239,7 @@ export const getRankedLenderLadderTool: IAgentTool<{
     requestId: z.string().uuid().optional().describe('UUID of an existing borrow request to fetch its calculated ladder'),
     drugMasterId: z.string().uuid().optional().describe('UUID of canonical drug if calculating ladder on demand'),
     quantityNeeded: z.number().positive().optional().describe('Quantity needed if calculating ladder on demand'),
-    urgency: z.enum(['NORMAL', 'URGENT', 'VERY_URGENT']).optional().default('URGENT').describe('Borrow urgency level (default URGENT)'),
+    urgency: z.enum(['NORMAL', 'URGENT', 'VERY_URGENT']).optional().default('URGENT').describe('Borrow urgency level (NORMAL, URGENT, or VERY_URGENT). Do NOT assume; confirm with operator if not provided.'),
   }),
   allowedRoles: ['PHARMACIST', 'SYSTEM_ADMIN'],
   execute: async (args, context: RequestContext): Promise<ToolResult> => {
@@ -564,7 +564,7 @@ export const draftLenderCommunicationTool: IAgentTool<{
     drugName: z.string().describe('Generic drug name, dosage, and strength'),
     quantity: z.number().positive().describe('Quantity to request'),
     unit: z.string().describe('Unit of measurement (e.g. vials, boxes, kits)'),
-    urgency: z.enum(['NORMAL', 'URGENT', 'VERY_URGENT']).optional().default('URGENT').describe('Urgency level'),
+    urgency: z.enum(['NORMAL', 'URGENT', 'VERY_URGENT']).optional().default('URGENT').describe('Urgency level (NORMAL, URGENT, or VERY_URGENT)'),
     deadlineMinutes: z.number().positive().optional().default(120).describe('Confirmation deadline in minutes'),
     round: z.number().int().positive().optional().default(1).describe('Borrow round number'),
     language: z.enum(['TH', 'EN']).optional().default('TH').describe('Communication language (TH or EN)'),

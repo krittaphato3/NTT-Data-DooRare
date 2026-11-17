@@ -50,6 +50,7 @@ export const resolveKitCode = (input: string): string | null => {
 export const cleanText = (str?: unknown): string => {
   if (!str || typeof str !== 'string') return '';
   return str
+    .replace(/[\p{Extended_Pictographic}\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\uFE0E\uFE0F]/gu, '')
     .replace(/<\/?[a-z][a-z0-9]*[^<>]*>/gi, '')
     .replace(/\*\*/g, '')
     .replace(/__([^_]+)__/g, '$1')
@@ -491,7 +492,7 @@ export const ProposalCard: React.FC<ProposalCardProps> = ({
               <div className="doorare-decided-chip">
                 <span className="doorare-decided-chip-k">ผู้ป่วย:</span>
                 <span className="doorare-decided-chip-v highlight">
-                  🔴 {redCount} · 🟡 {yellowCount} · 🟢 {greenCount} {blackCount > 0 ? `· ⚫ ${blackCount}` : ''} (รวม {totalCasualties} คน)
+                  สีแดง {redCount} · สีเหลือง {yellowCount} · สีเขียว {greenCount} {blackCount > 0 ? `· สีดำ ${blackCount}` : ''} (รวม {totalCasualties} คน)
                 </span>
               </div>
             )}
@@ -595,20 +596,20 @@ export const ProposalCard: React.FC<ProposalCardProps> = ({
       {isEmergency && hasCasualties && (
         <div className="doorare-emergency-triage-bar">
           <div className="doorare-triage-badge red">
-            <span className="label">🔴 สีแดง:</span>
+            <span className="label">สีแดง:</span>
             <span className="count">{redCount} ราย</span>
           </div>
           <div className="doorare-triage-badge yellow">
-            <span className="label">🟡 สีเหลือง:</span>
+            <span className="label">สีเหลือง:</span>
             <span className="count">{yellowCount} ราย</span>
           </div>
           <div className="doorare-triage-badge green">
-            <span className="label">🟢 สีเขียว:</span>
+            <span className="label">สีเขียว:</span>
             <span className="count">{greenCount} ราย</span>
           </div>
           {blackCount > 0 && (
             <div className="doorare-triage-badge black">
-              <span className="label">⚫ สีดำ:</span>
+              <span className="label">สีดำ:</span>
               <span className="count">{blackCount} ราย</span>
             </div>
           )}

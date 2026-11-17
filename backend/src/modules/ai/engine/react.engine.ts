@@ -73,6 +73,7 @@ Professional Clinical Operations Guidelines:
    - Communicate in objective, authoritative, and formal clinical/administrative language (ภาษาราชการและศัพท์วิชาการสาธารณสุข).
    - Never use conversational chatbot filler, casual pleasantries, or apologetic phrases (e.g. do not say "สวัสดีครับ มีอะไรให้ช่วย", "ยินดีที่ได้ช่วยเหลือ", "ฉันเป็นเพียง AI", "ขออภัยในความไม่สะดวก").
    - State findings and quantitative evidence directly.
+   - STRICT ZERO-EMOJI POLICY: Never use any emojis, icons, or decorative symbols (such as 🏆, 🚨, 💊, 📦, 🏥, ✅, ⚠️, ❌, etc.) in your reasoning, final answers, questions, or proposal text. Always use clean, formal, professional plain text.
    - NEVER mention internal software engineering labels or feature codes such as "F1", "F2", "F3", "F1 Engine", "F2 Engine", "F3 Engine" in explanations to the operator. Use formal operational terms instead: "การยืม-คืนยาระหว่างโรงพยาบาล", "การจัดสรรยาคลังกลางระดับเขต", "การบริหารเวชภัณฑ์ฉุกเฉินและสาธารณภัย".
 3. SBAR Assessment Standard:
    When analyzing stock deficits, borrowing proposals, near-expiry allocations, or emergency incident responses, structure your executive summary using the SBAR standard:
@@ -130,13 +131,15 @@ Professional Clinical Operations Guidelines:
 8. The operator is looking at the screen and record above. When they say "this", "อันนี้", "รายการนี้" or name an open record without an id, use Record Open On This Screen instead of asking for it again. If it is none, ask one short question naming what you need (incident, borrow request, drug, hospital).
 9. Answer in the operator's language: Formal Thai when they write Thai (the whole UI is Thai), English when they write English. Keep drug names, item codes and numbers exactly as the tools return them.
    When calling ask_operator: The question, header, and option choices MUST ALWAYS match the language the operator used in their prompt (e.g., Thai if the prompt is in Thai, English if the prompt is in English).
-10. MANDATORY GROUNDING RULE (ALWAYS QUERY DATABASE BEFORE ASKING QUESTIONS):
-   - When the operator mentions a drug by generic name or keyword (e.g. 'Para', 'Paracetamol', 'Morphine', 'Albumin') without an exact formulation or drugMasterId:
-     YOU MUST FIRST EXECUTE 'get_stock_and_alerts' (with drugCode: '<keyword>', status: 'ALL') in THIS INITIAL TURN to search the actual database!
-   - DO NOT call 'ask_operator' BEFORE you query the database!
-   - From the result returned by 'get_stock_and_alerts' and 'distinctFormulations':
-     * If ONLY 1 matching formulation exists in the database: DO NOT ASK THE OPERATOR! Select that formulation automatically and proceed directly to calculate the lender ladder ('get_ranked_lender_ladder').
-     * If MULTIPLE matching formulations exist: NOW you may call 'ask_operator', BUT the 'options' for the formulation question MUST STRICTLY CONTAIN ONLY THE REAL FORMULATIONS returned by 'get_stock_and_alerts' (e.g. ["Paracetamol 500 mg tablet", "Paracetamol 120 mg/5 mL syrup"])! NEVER invent or hallucinate non-existent formulations (such as drops, IV, injections) that were not returned by the database!
+10. MANDATORY GROUNDING & FORMULATION CLARIFICATION RULE:
+   - When the operator mentions a drug by generic name or keyword (e.g. 'Para', 'Paracetamol', 'Morphine', 'Albumin', 'Salbutamol') without an exact formulation or drugMasterId:
+     * Check registered formulations in the regional database (from pre-fetched context or 'get_stock_and_alerts').
+     * If ONLY 1 matching formulation exists in the database: Select that formulation automatically and proceed.
+     * If MULTIPLE matching formulations exist in the database (e.g. Paracetamol tablet 500 mg vs Paracetamol syrup 120 mg/5 mL):
+       YOU ARE STRICTLY PROHIBITED FROM GUESSING, ASSUMING, OR CHOOSING ONE FORMULATION ON YOUR OWN (even if a number in the prompt resembles a strength, such as "500 หน่วย" or 500 units).
+       YOU MUST IMMEDIATELY CALL 'ask_operator' to ask the operator which formulation they need!
+       The 'options' for the formulation question MUST STRICTLY CONTAIN ONLY THE REAL FORMULATIONS returned by the database (e.g. ["Paracetamol 500 mg tablet (ชนิดเม็ด)", "Paracetamol 120 mg/5 mL syrup (ยาน้ำเชื่อม)"]).
+       DO NOT CALL 'get_ranked_lender_ladder', 'draft_lender_communication', or proposal tools until the operator selects the formulation!
      * If 0 matching items exist: State clearly that the drug was not found in the regional catalog. Do not ask for formulations of a drug that does not exist.
 11. ZERO-ASSUMPTION POLICY FOR SAFETY-CRITICAL ATTRIBUTES (MANDATORY CLARIFICATION RULES):
    Under Health Region 6 clinical & emergency governance, the following parameters MUST NEVER BE ASSUMED OR INVENTED if not provided in the prompt:
@@ -151,9 +154,12 @@ Professional Clinical Operations Guidelines:
      * If casualty numbers are missing, you MUST ask the operator via ask_operator with choices:
        ["แดง 1-2 ราย, เหลือง 3-5 ราย", "แดง 3-5 ราย, เหลือง 5-10 ราย", "แดง > 5 ราย, เหลือง > 10 ราย", "ยังไม่ทราบยอดแน่ชัด (ประเมินขั้นต่ำ: แดง 1, เหลือง 2)"]
    - Drug Formulation & Strength:
-     * NEVER guess tablet vs syrup vs IV injection. Follow Rule 10: query drug_master first; if multiple formulations exist, ask via ask_operator with real database choices.
+     * NEVER guess tablet vs syrup vs IV injection vs inhalation. Follow Rule 10: if multiple formulations exist in the database and the operator did not specify which one, YOU MUST ask via ask_operator with real database choices before calculating ranking or proposing any action.
    - Quantity & Urgency:
-     * NEVER invent quantities or assume rush levels.
+     * NEVER assume "URGENT" or invent rush levels! If the operator's prompt does not explicitly state the urgency (e.g. ปกติ, ด่วน, ด่วนมาก, NORMAL, URGENT, VERY_URGENT), YOU MUST ASK via ask_operator with choices:
+       ["ปกติ (NORMAL)", "ด่วน (URGENT)", "ด่วนมาก (VERY_URGENT)"]
+     * Bundle missing formulation and missing urgency together in a SINGLE ask_operator turn.
+     * DO NOT call proposal tools until urgency and formulation are confirmed.
    - WHAT THE SYSTEM COMPUTES AUTOMATICALLY (DO NOT BOTHER THE OPERATOR):
      * DO NOT ask the user which hospital has stock — run get_ranked_lender_ladder or get_antidote_locator. The default lender option is always "ให้ระบบจัดอันดับโรงพยาบาลที่เหมาะสมที่สุดอัตโนมัติ (Lender Ladder)".
      * DO NOT ask the user for kit recipe quantities — run get_incident_kit_recommendations.
@@ -195,7 +201,23 @@ Professional Clinical Operations Guidelines:
         1. โรงพยาบาลบางพลี (HB) — ระยะเวลาขนส่ง: 25.4 นาที | สถานะ: มีสต็อกพร้อมสนับสนุน (คะแนนความเหมาะสมสูงสุด)
         2. โรงพยาบาลพระสมุทรเจดีย์สวาทยานนท์ (HC) — ระยะเวลาขนส่ง: 35.0 นาที | สถานะ: มีสต็อกพร้อมสนับสนุน
         3. โรงพยาบาลบางเสาธง (HE) — ระยะเวลาขนส่ง: 57.0 นาที | สถานะ: มีสต็อกพร้อมสนับสนุน
-      - STRICT PROHIBITION: Never append numerical quantities like "| คลังพร้อมใช้: 2,500 เม็ด" or "(มี 1,807 เม็ด)".`;
+      - STRICT PROHIBITION: Never append numerical quantities like "| คลังพร้อมใช้: 2,500 เม็ด" or "(มี 1,807 เม็ด)".
+15. STRICT ZERO-EMOJI POLICY (PROFESSIONAL CLINICAL STANDARDS):
+    - Under Health Region 6 clinical governance, all conversational outputs, summaries, recommendations, and decision cards MUST be strictly free of emojis.
+    - NEVER use emojis anywhere in your thinking, final responses, tool arguments, proposal titles, descriptions, summaries, or questions (e.g. absolutely NO 🏆, 🚨, 💊, 📦, 🏥, ✅, ⚠️, ❌, etc.).
+    - Use clean, formal, professional plain text only. For recommendations or rankings, write "อันดับ 1 (ความเหมาะสมสูงสุด)" instead of "🏆 อันดับ 1".`;
+}
+
+/**
+ * Strips all Unicode emojis, pictographic symbols, and decorative icons from text
+ * to enforce formal clinical register and professional presentation.
+ */
+export function stripEmojis(text: string): string {
+  if (!text || typeof text !== 'string') return text;
+  return text
+    .replace(/[\p{Extended_Pictographic}\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\uFE0E\uFE0F]/gu, '')
+    .replace(/[ \t]{2,}/g, ' ')
+    .replace(/^[ \t]+|[ \t]+$/gm, '');
 }
 
 /**
@@ -248,6 +270,10 @@ export class ReActEngine {
     // calls. stageTools falls back to the full list when the intent is too vague to narrow safely.
     const roleTools = registry.getToolDefinitionsForRole(context.role);
     const lastUserMessage = [...messages].reverse().find((m) => m.role === 'user')?.content ?? '';
+    let needsFormulationClarify = false;
+    let needsUrgencyClarify = false;
+    let detectedKeyword: string | null = null;
+    let availableFormulationOptions: { label: string; description?: string }[] = [];
     const staging = stageTools(roleTools, {
       query: typeof lastUserMessage === 'string' ? lastUserMessage : '',
       role: context.role,
@@ -288,16 +314,80 @@ export class ReActEngine {
         }
       }
 
-      // Database Grounding: Pre-check drug master for any mentioned drug keyword
-      const lowerMsg = lastUserMessage.toLowerCase();
-      const drugKeywords = ['para', 'paracetamol', 'พารา', 'morphine', 'มอร์ฟีน', 'pethidine', 'เพทิดีน', 'fentanyl', 'เฟนทานิล', 'albumin', 'อัลบูมิน', 'n95', 'ppe'];
-      let detectedKeyword: string | null = null;
+      // Database Grounding & Zero-Assumption Check for Medication Formulations and Urgency
+      const lowerMsg = (typeof lastUserMessage === 'string' ? lastUserMessage : '').toLowerCase();
+      const thaiDrugAliases: Record<string, string> = {
+        'พารา': 'paracetamol',
+        'พาราเซตามอล': 'paracetamol',
+        'ซัลบูทามอล': 'salbutamol',
+        'มอร์ฟีน': 'morphine',
+        'เพทิดีน': 'pethidine',
+        'เฟนทานิล': 'fentanyl',
+        'อัลบูมิน': 'albumin',
+        'เซฟไตร': 'ceftriaxone',
+        'เซฟไตรอะโซน': 'ceftriaxone',
+        'อะดรีนาลีน': 'epinephrine',
+        'เอพิเนฟริน': 'epinephrine',
+        'แอตโทรปีน': 'atropine',
+        'ไดอะซีแพม': 'diazepam',
+        'อินซูลิน': 'insulin',
+        'โอเซลทามิเวียร์': 'oseltamivir',
+        'เรมเดซิเวียร์': 'remdesivir',
+      };
+
+      const drugKeywords = [
+        'para', 'paracetamol', 'พาราเซตามอล', 'พารา',
+        'salbutamol', 'ซัลบูทามอล',
+        'morphine', 'มอร์ฟีน',
+        'pethidine', 'เพทิดีน',
+        'fentanyl', 'เฟนทานิล',
+        'albumin', 'อัลบูมิน',
+        'ceftriaxone', 'เซฟไตร', 'เซฟไตรอะโซน',
+        'epinephrine', 'adrenaline', 'อะดรีนาลีน', 'เอพิเนฟริน',
+        'atropine', 'แอตโทรปีน',
+        'diazepam', 'ไดอะซีแพม',
+        'insulin', 'อินซูลิน',
+        'oseltamivir', 'โอเซลทามิเวียร์',
+        'remdesivir', 'เรมเดซิเวียร์',
+        'n95', 'ppe',
+      ];
+
+      detectedKeyword = null;
       for (const kw of drugKeywords) {
         if (lowerMsg.includes(kw)) {
-          detectedKeyword = kw === 'พารา' ? 'paracetamol' : kw === 'มอร์ฟีน' ? 'morphine' : kw === 'เพทิดีน' ? 'pethidine' : kw === 'เฟนทานิล' ? 'fentanyl' : kw === 'อัลบูมิน' ? 'albumin' : kw;
+          detectedKeyword = thaiDrugAliases[kw] || kw;
           break;
         }
       }
+
+      if (!detectedKeyword && lowerMsg) {
+        try {
+          const allDms = await query<{ generic_name: string }>(
+            'SELECT DISTINCT lower(generic_name) AS generic_name FROM drug_master',
+          );
+          for (const row of allDms.rows) {
+            if (row.generic_name && lowerMsg.includes(row.generic_name)) {
+              detectedKeyword = row.generic_name;
+              break;
+            }
+          }
+        } catch {
+          // ignore
+        }
+      }
+
+      needsFormulationClarify = false;
+      needsUrgencyClarify = false;
+      availableFormulationOptions = [];
+      const hasUrgencySpecified = /(ปกติ|normal|routine|ด่วน|urgent|เร่งด่วน|ด่วนมาก|very.?urgent|ฉุกเฉิน|emergency|วิกฤต|critical|stat)/i.test(lowerMsg);
+      const isBorrowOrRequestIntent = /(ยืม|ขอ|เบิก|นำส่ง|borrow|request|transfer|lender)/i.test(lowerMsg);
+
+      // Check if operator already answered / clarified in previous turns of this conversation
+      const hasPreviousClarification = messages.some((m) => {
+        if (m.role !== 'user') return false;
+        const c = String(m.content || '').toLowerCase();
+        return c.includes('ตอบคำถาม') || c.includes('tablet') || c.includes('syrup') || c.includes('เม็ด') || c.includes('น้ำเชื่อม') || c.includes('urgent') || c.includes('normal') || c.includes('ด่วน');
+      });
 
       if (detectedKeyword) {
         try {
@@ -319,10 +409,93 @@ export class ReActEngine {
 
           if (dmCheck.rows.length > 0) {
             const list = dmCheck.rows.map((r) => `- ${r.full_name} (ID: ${r.id}, หน่วย: ${r.base_unit})`).join('\n');
-            preFetchedContexts.push({
-              role: 'system',
-              content: `[Database Grounding - Available Formulations for "${detectedKeyword}"]:\nThe following are the ONLY registered formulations in the regional database:\n${list}\n\nCRITICAL: Do NOT invent, suggest, or ask for any other formulation (e.g. do NOT invent drops, IV, or injections that are not listed here). If only 1 formulation exists, use it directly without asking the operator. If multiple exist, only offer choices from this list.`,
+            const hasMultipleFormulations = dmCheck.rows.length > 1;
+
+            const specifiesTablet = /tablet|tab\b|เม็ด|ชนิดเม็ด|แผง/i.test(lowerMsg);
+            const specifiesSyrup = /syrup|syr\b|ยาน้ำ|น้ำเชื่อม|ขวด/i.test(lowerMsg);
+            const specifiesInhaler = /inhal|พ่น|กระบอก/i.test(lowerMsg);
+            const specifiesNeb = /nebul|หยด|หลอด/i.test(lowerMsg);
+            const specifiesStrength = dmCheck.rows.some((r) => {
+              if (!r.strength) return false;
+              const sClean = r.strength.toLowerCase().replace(/\s+/g, '');
+              const sNormal = r.strength.toLowerCase();
+              return lowerMsg.includes(sNormal) || lowerMsg.includes(sClean);
             });
+
+            const isFormulationSpecified =
+              (specifiesTablet !== specifiesSyrup && (specifiesTablet || specifiesSyrup)) ||
+              (specifiesInhaler !== specifiesNeb && (specifiesInhaler || specifiesNeb)) ||
+              specifiesStrength;
+
+            if (hasMultipleFormulations && !isFormulationSpecified && !hasPreviousClarification) {
+              needsFormulationClarify = true;
+              availableFormulationOptions = dmCheck.rows.map((r) => ({
+                label: `${r.full_name} (${r.dosage_form === 'tablet' ? 'ชนิดเม็ด' : r.dosage_form === 'syrup' ? 'ยาน้ำเชื่อม' : r.dosage_form})`,
+                description: `หน่วยนับ: ${r.base_unit}`,
+              }));
+            }
+
+            if (isBorrowOrRequestIntent && !hasUrgencySpecified && !hasPreviousClarification) {
+              needsUrgencyClarify = true;
+            }
+
+            if (needsFormulationClarify) {
+              preFetchedContexts.push({
+                role: 'system',
+                content: `[MANDATORY ZERO-ASSUMPTION POLICY - CLARIFICATION REQUIRED FOR "${detectedKeyword}"]
+The regional database contains ${dmCheck.rows.length} distinct formulations for "${detectedKeyword}":
+${list}
+
+CRITICAL OPERATIONAL INSTRUCTIONS:
+1. FORMULATION CLARIFICATION REQUIRED:
+   The operator requested "${detectedKeyword}" without specifying the exact formulation or dosage form.
+   DO NOT ASSUME OR CHOOSE ONE YOURSELF (e.g. "500 หน่วย" is a quantity, not a confirmed formulation).
+   YOU MUST CALL 'ask_operator' IMMEDIATELY WITH THIS QUESTION:
+   Question: "ต้องการยา ${detectedKeyword} ในรูปแบบและความแรงใด?"
+   Options: ${JSON.stringify(availableFormulationOptions)}
+
+${needsUrgencyClarify ? `2. URGENCY CLARIFICATION REQUIRED:
+   The operator did not specify the urgency level for this borrow request.
+   DO NOT ASSUME "URGENT".
+   In the SAME 'ask_operator' call, you MUST include a second question:
+   Question: "ระดับความเร่งด่วนของคำขอยืมยา"
+   Options: [
+     {"label": "ปกติ (NORMAL)", "description": "จัดส่งตามรอบปกติ ภายใน 24 ชั่วโมง"},
+     {"label": "ด่วน (URGENT)", "description": "ต้องการใช้เร่งด่วน ภายใน 2-4 ชั่วโมง"},
+     {"label": "ด่วนมาก (VERY_URGENT)", "description": "กรณีวิกฤต/ฉุกเฉิน ต้องการทันที"}
+   ]` : ''}
+
+3. TERMINAL TOOL RESTRICTION:
+   YOU ARE STRICTLY FORBIDDEN from calling 'get_ranked_lender_ladder', 'draft_lender_communication', or 'submit_pharmacist_proposal' in this turn.
+   You MUST call 'ask_operator' so the operator can select from the clickable cards before you calculate any lender ranking or proposal.
+4. ZERO EMOJIS: Never use any emojis or decorative symbols in your response or tool arguments.`,
+              });
+            } else if (needsUrgencyClarify) {
+              preFetchedContexts.push({
+                role: 'system',
+                content: `[MANDATORY ZERO-ASSUMPTION POLICY - URGENCY CLARIFICATION REQUIRED]
+The operator requested a drug borrow/transfer without specifying the urgency level.
+Under Health Region 6 Zero-Assumption Policy, YOU MUST NOT ASSUME "URGENT" OR ANY DEFAULT URGENCY.
+YOU MUST CALL 'ask_operator' to confirm urgency:
+Question: "ระดับความเร่งด่วนของคำขอยืมยา"
+Options: [
+  {"label": "ปกติ (NORMAL)", "description": "จัดส่งตามรอบปกติ ภายใน 24 ชั่วโมง"},
+  {"label": "ด่วน (URGENT)", "description": "ต้องการใช้เร่งด่วน ภายใน 2-4 ชั่วโมง"},
+  {"label": "ด่วนมาก (VERY_URGENT)", "description": "กรณีวิกฤต/ฉุกเฉิน ต้องการทันที"}
+]
+DO NOT call proposal tools until the operator confirms urgency.
+ZERO EMOJIS: Never use any emojis or decorative symbols in your response or tool arguments.`,
+              });
+            } else {
+              preFetchedContexts.push({
+                role: 'system',
+                content: `[Database Grounding - Available Formulations for "${detectedKeyword}"]:
+The following are the ONLY registered formulations in the regional database:
+${list}
+
+CRITICAL: Do NOT invent, suggest, or ask for any other formulation. Use the verified formulation directly. ZERO EMOJIS: Do not use emojis anywhere in your response.`,
+              });
+            }
           }
         } catch {
           // ignore
@@ -370,8 +543,10 @@ export class ReActEngine {
           ? {
               onDelta: (text) => {
                 if (!text) return;
-                streamedText += text;
-                void onEvent({ type: 'token', token: text });
+                const clean = stripEmojis(text);
+                if (!clean) return;
+                streamedText += clean;
+                void onEvent({ type: 'token', token: clean });
               },
             }
           : undefined,
@@ -379,13 +554,13 @@ export class ReActEngine {
 
       // Emit model reasoning / thinking if present (whole: providers stream text, not reasoning)
       if (response.thought) {
-        await onEvent({ type: 'thought', thought: response.thought });
+        await onEvent({ type: 'thought', thought: stripEmojis(response.thought) });
       }
 
       if (response.content) {
-        finalResponse = response.content;
+        finalResponse = stripEmojis(response.content);
         // A provider without delta streaming (or streaming disabled) returns the whole answer at once.
-        if (!streamedText) await onEvent({ type: 'token', token: response.content });
+        if (!streamedText) await onEvent({ type: 'token', token: finalResponse });
       }
 
       // Step 2: Check if LLM requested any tool calls
@@ -427,6 +602,68 @@ export class ReActEngine {
           });
         }
 
+        // Zero-Assumption Guardrail: If drug formulation or urgency is ambiguous and was not clarified by the operator,
+        // intercept any attempt to run lender ranking or draft communications and enforce interactive clarify turn.
+        if (
+          needsFormulationClarify &&
+          (toolName === 'get_ranked_lender_ladder' || toolName === 'draft_lender_communication')
+        ) {
+          const isThai = /[\u0E00-\u0E7F]/.test(lastUserMessage || '');
+          const questions: ToolQuestion[] = [
+            {
+              header: isThai ? 'รูปแบบและความแรงยา' : 'Drug Formulation',
+              question: isThai ? `ต้องการยา ${detectedKeyword || ''} ในรูปแบบและความแรงใด?` : `Which formulation of ${detectedKeyword || ''} is needed?`,
+              options: (availableFormulationOptions.length > 0
+                ? availableFormulationOptions
+                : getDefaultClarifyOptions(isThai ? 'รูปแบบยา' : 'Drug formulation', detectedKeyword || '')).map((opt) => ({
+                label: stripEmojis(opt.label),
+                description: opt.description ? stripEmojis(opt.description) : undefined,
+              })),
+              allowFreeText: true,
+              multiSelect: false,
+            },
+            ...(needsUrgencyClarify
+              ? [
+                  {
+                    header: isThai ? 'ระดับความเร่งด่วน' : 'Urgency Level',
+                    question: isThai ? 'ระดับความเร่งด่วนของคำขอยืมยา' : 'Urgency level for this borrow request',
+                    options: getDefaultClarifyOptions('urgency', 'urgency').map((opt) => ({
+                      label: stripEmojis(opt.label),
+                      description: opt.description ? stripEmojis(opt.description) : undefined,
+                    })),
+                    allowFreeText: true,
+                    multiSelect: false,
+                  },
+                ]
+              : []),
+          ];
+
+          await onEvent({ type: 'question', questions });
+          break reactLoop;
+        }
+
+        if (
+          needsUrgencyClarify &&
+          (toolName === 'get_ranked_lender_ladder' || toolName === 'draft_lender_communication')
+        ) {
+          const isThai = /[\u0E00-\u0E7F]/.test(lastUserMessage || '');
+          const questions: ToolQuestion[] = [
+            {
+              header: isThai ? 'ระดับความเร่งด่วน' : 'Urgency Level',
+              question: isThai ? 'ระดับความเร่งด่วนของคำขอยืมยา' : 'Urgency level for this borrow request',
+              options: getDefaultClarifyOptions('urgency', 'urgency').map((opt) => ({
+                label: stripEmojis(opt.label),
+                description: opt.description ? stripEmojis(opt.description) : undefined,
+              })),
+              allowFreeText: true,
+              multiSelect: false,
+            },
+          ];
+
+          await onEvent({ type: 'question', questions });
+          break reactLoop;
+        }
+
         // Execute via Tool Registry
         const cacheKey = cacheKeyFor(toolName, toolArgs);
         const cachedResult = toolResultCache.get(cacheKey);
@@ -450,7 +687,16 @@ export class ReActEngine {
 
         // A clarifying question is terminal: the panel collects the answer, which returns as the next user message.
         if (result.question) {
-          await onEvent({ type: 'question', questions: result.question.questions });
+          const sanitizedQuestions = result.question.questions.map((q) => ({
+            ...q,
+            header: stripEmojis(q.header),
+            question: stripEmojis(q.question),
+            options: (q.options || []).map((opt) => ({
+              label: stripEmojis(opt.label),
+              description: opt.description ? stripEmojis(opt.description) : undefined,
+            })),
+          }));
+          await onEvent({ type: 'question', questions: sanitizedQuestions });
           break reactLoop;
         }
 
@@ -464,8 +710,8 @@ export class ReActEngine {
             : [toolArgs];
 
           const recoveredQuestions = rawList.map((q: any) => {
-            const rawQ = String(q?.question || q?.prompt || q?.text || q?.title || (isThai ? 'กรุณาระบุข้อมูลเพิ่มเติมเพื่อดำเนินการต่อ' : 'Please provide additional information to continue')).trim();
-            const rawHeader = String(q?.header || q?.title || q?.label || (rawQ.length > 30 ? rawQ.slice(0, 30) : rawQ) || (isThai ? 'ข้อมูลเพิ่มเติม' : 'Additional Info')).trim().slice(0, 50);
+            const rawQ = stripEmojis(String(q?.question || q?.prompt || q?.text || q?.title || (isThai ? 'กรุณาระบุข้อมูลเพิ่มเติมเพื่อดำเนินการต่อ' : 'Please provide additional information to continue'))).trim();
+            const rawHeader = stripEmojis(String(q?.header || q?.title || q?.label || (rawQ.length > 30 ? rawQ.slice(0, 30) : rawQ) || (isThai ? 'ข้อมูลเพิ่มเติม' : 'Additional Info'))).trim().slice(0, 50);
 
             const rawOptions = (Array.isArray(q?.options) && q.options.length > 0)
               ? q.options
@@ -481,17 +727,20 @@ export class ReActEngine {
 
             let options = rawOptions
               .map((opt: any) => {
-                if (typeof opt === 'string') return { label: opt.trim() };
+                if (typeof opt === 'string') return { label: stripEmojis(opt.trim()) };
                 return {
-                  label: String(opt?.label || opt?.text || opt?.value || opt?.name || opt?.choice || '').trim(),
-                  description: opt?.description ? String(opt.description).trim() : undefined,
+                  label: stripEmojis(String(opt?.label || opt?.text || opt?.value || opt?.name || opt?.choice || '').trim()),
+                  description: opt?.description ? stripEmojis(String(opt.description).trim()) : undefined,
                 };
               })
               .filter((opt: any) => Boolean(opt.label))
               .slice(0, 8);
 
             if (options.length === 0) {
-              options = getDefaultClarifyOptions(rawHeader, rawQ);
+              options = getDefaultClarifyOptions(rawHeader, rawQ).map((opt) => ({
+                label: stripEmojis(opt.label),
+                description: opt.description ? stripEmojis(opt.description) : undefined,
+              }));
             }
 
             return {
@@ -509,7 +758,10 @@ export class ReActEngine {
               {
                 header: isThai ? 'ข้อมูลเพิ่มเติม' : 'Additional Info',
                 question: isThai ? 'กรุณาระบุข้อมูลเพิ่มเติมเพื่อดำเนินการต่อ' : 'Please provide additional information to continue',
-                options: getDefaultClarifyOptions('ข้อมูลเพิ่มเติม', 'กรุณาระบุข้อมูลเพิ่มเติม'),
+                options: getDefaultClarifyOptions('ข้อมูลเพิ่มเติม', 'กรุณาระบุข้อมูลเพิ่มเติม').map((opt) => ({
+                  label: stripEmojis(opt.label),
+                  description: opt.description ? stripEmojis(opt.description) : undefined,
+                })),
                 allowFreeText: true,
                 multiSelect: false,
               },
@@ -544,10 +796,17 @@ export class ReActEngine {
         // If tool generated a Proposal card, capture and emit event
         if (result.proposal) {
           if (typeof result.proposal.title === 'string') {
-            result.proposal.title = result.proposal.title.replace(/<\/?[a-z][a-z0-9]*[^<>]*>/gi, '').trim();
+            result.proposal.title = stripEmojis(result.proposal.title.replace(/<\/?[a-z][a-z0-9]*[^<>]*>/gi, '').trim());
           }
           if (typeof result.proposal.description === 'string') {
-            result.proposal.description = result.proposal.description.replace(/<\/?[a-z][a-z0-9]*[^<>]*>/gi, '').trim();
+            result.proposal.description = stripEmojis(result.proposal.description.replace(/<\/?[a-z][a-z0-9]*[^<>]*>/gi, '').trim());
+          }
+          if (result.proposal.summary && typeof result.proposal.summary === 'object') {
+            for (const [k, v] of Object.entries(result.proposal.summary)) {
+              if (typeof v === 'string') {
+                result.proposal.summary[k] = stripEmojis(v);
+              }
+            }
           }
           proposals.push(result.proposal);
           await onEvent({
@@ -637,9 +896,12 @@ function questionsFromValidation(
       : `Please specify ${label} (${field}) for ${toolName} — ${cleanMsg}`;
 
     return {
-      header,
-      question,
-      options: getDefaultClarifyOptions(header, question),
+      header: stripEmojis(header),
+      question: stripEmojis(question),
+      options: getDefaultClarifyOptions(header, question).map((opt) => ({
+        label: stripEmojis(opt.label),
+        description: opt.description ? stripEmojis(opt.description) : undefined,
+      })),
       allowFreeText: true,
       multiSelect: false,
     };

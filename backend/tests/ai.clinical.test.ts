@@ -17,7 +17,7 @@ import {
   submitErActionProposalTool,
 } from '../src/modules/ai/tools/clinical/er.tools.js';
 import { getDefaultClarifyOptions } from '../src/modules/ai/tools/askOperator.tool.js';
-import { buildSystemPrompt } from '../src/modules/ai/engine/react.engine.js';
+import { buildSystemPrompt, stripEmojis, ReActEngine } from '../src/modules/ai/engine/react.engine.js';
 import { clinicalTools } from '../src/modules/ai/tools/clinical/index.js';
 import { defaultToolRegistry, zodToJsonSchema } from '../src/modules/ai/tools/index.js';
 import { ToolRegistry } from '../src/modules/ai/tools/registry.js';
@@ -1160,4 +1160,68 @@ test('Zero-Assumption: buildSystemPrompt contains explicit Zero-Assumption Polic
   assert.ok(prompt.includes('ETA (Estimated Time of Arrival)'));
   assert.ok(prompt.includes('Triage Casualty Counts'));
   assert.ok(prompt.includes('Drug Formulation & Strength'));
+  assert.ok(prompt.includes('STRICT ZERO-EMOJI POLICY'));
+  assert.ok(prompt.includes('MANDATORY GROUNDING & FORMULATION CLARIFICATION RULE'));
+});
+
+test('Zero-Emoji: stripEmojis cleans emojis from text and rankings', () => {
+  const trophySample = '1. 🏆 โรงพยาบาลบางพลี (แนะนำอันดับ 1)';
+  assert.equal(stripEmojis(trophySample), '1. โรงพยาบาลบางพลี (แนะนำอันดับ 1)');
+
+  const alertSample = '🚨 สต็อกวิกฤต: Paracetamol 500 mg 💊 ยา 500 เม็ด 📦 2 กล่อง ✅ เรียบร้อย';
+  assert.equal(stripEmojis(alertSample), 'สต็อกวิกฤต: Paracetamol 500 mg ยา 500 เม็ด 2 กล่อง เรียบร้อย');
+});
+
+test('Zero-Assumption: ReActEngine forces clarification when medicine has multiple types and urgency is missing', async () => {
+  const events: any[] = [];
+  const engine = new ReActEngine();
+
+  // Mock provider that tries to prematurely call get_ranked_lender_ladder assuming 500 mg tablet and URGENT
+  const mockProvider = {
+    chat: async () => ({
+      model: 'test-model',
+      content: null,
+      toolCalls: [
+        {
+          id: 'call_ladder_1',
+          type: 'function',
+          function: {
+            name: 'get_ranked_lender_ladder',
+            arguments: JSON.stringify({
+              drugMasterId: '510d13f5-3c60-4466-922b-488122981938',
+              quantityNeeded: 500,
+              urgency: 'URGENT',
+            }),
+          },
+        },
+      ],
+    }),
+  } as any;
+
+  await engine.execute({
+    messages: [{ role: 'user', content: 'ยืม Paracetamol 500 หน่วย' }],
+    context: { role: 'PHARMACIST', hospitalId: 'hosp-001' },
+    providerOverride: mockProvider,
+    onEvent: async (ev) => {
+      events.push(ev);
+    },
+  });
+
+  const questionEvents = events.filter((e) => e.type === 'question');
+  assert.equal(questionEvents.length, 1, 'Must emit exactly one clarification turn');
+  const questions = questionEvents[0].questions;
+  assert.ok(questions.length >= 2, 'Must ask for both formulation and urgency');
+
+  // Question 1: Drug formulation
+  const drugQ = questions.find((q: any) => q.header.includes('รูปแบบ') || q.question.includes('รูปแบบ'));
+  assert.ok(drugQ, 'Must have a question for drug formulation');
+  assert.ok(drugQ.options.length >= 2, 'Must offer choices for multiple formulations');
+  assert.ok(drugQ.options.some((o: any) => o.label.includes('500 mg') && o.label.includes('tablet')));
+  assert.ok(drugQ.options.some((o: any) => o.label.includes('120 mg') && o.label.includes('syrup')));
+
+  // Question 2: Urgency
+  const urgencyQ = questions.find((q: any) => q.header.includes('เร่งด่วน') || q.question.includes('เร่งด่วน'));
+  assert.ok(urgencyQ, 'Must have a question for urgency level');
+  assert.ok(urgencyQ.options.some((o: any) => o.label.includes('NORMAL')));
+  assert.ok(urgencyQ.options.some((o: any) => o.label.includes('URGENT')));
 });

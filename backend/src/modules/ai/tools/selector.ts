@@ -59,7 +59,7 @@ interface Family {
 
 const FAMILIES: Family[] = [
   { id: 'stock', intent: /สต็อก|คงคลัง|rop|reorder|ขาดยา|วิกฤต|สต็อกวิกฤต|stock|alert|reorder/i, tools: /stock|alert|reorder|forecast_trend|near_expiry/i },
-  { id: 'borrow', intent: /ยืม|lender|borrow|คำขอ|อนุมัติ|waiver/i, tools: /borrow|lender|waiver|ladder|reorder_recommendation/i },
+  { id: 'borrow', intent: /ยืม|lender|borrow|คำขอ|อนุมัติ|waiver/i, tools: /borrow|lender|waiver|ladder|reorder_recommendation|stock/i },
   { id: 'incident', intent: /เหตุ|incident|ฉุกเฉิน|emergency|คัดกรอง|ผู้ป่วย|แผนเวชภัณฑ์|antidote|ยาแก้พิษ|ชุดยา|kit/i, tools: /incident|kit|emergency|antidote|cold_chain|hospital_kpi|submit_er_action_proposal/i },
   { id: 'transport', intent: /ขนส่ง|รถ|driver|trip|จัดส่ง|เส้นทาง|eta|dispatch|อุณหภูมิ|barcode|tamper/i, tools: /trip|transport|dispatch|traffic|temperature|barcode|tamper|cold_chain/i },
   { id: 'pool', intent: /pool|จัดสรร|allocation|หมดอายุ|near.?expiry|แบ่งจ่าย|fefo/i, tools: /pool|allocation|near_expiry|fefo|expiry/i },

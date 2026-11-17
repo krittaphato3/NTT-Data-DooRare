@@ -35,6 +35,20 @@
     "date": "2026-11-17"
   },
   {
+    "path": "sessions/2026-11-17-1900-antigravity-review-pr18-byok-security.md",
+    "title": "Session: PR #18 Review Investigation & Fixes (BYOK Key, SSRF/DNS, Borrow Update)",
+    "summary": "Session",
+    "tags": "session",
+    "date": "2026-11-17"
+  },
+  {
+    "path": "sessions/2026-11-17-2030-antigravity-zero-assumption-formulation-urgency-zero-emoji.md",
+    "title": "Session: Zero-Assumption Clarifications for Multi-Formulation Drugs, Urgency, & Zero-Emoji Enforcement",
+    "summary": "Session",
+    "tags": "session",
+    "date": "2026-11-17"
+  },
+  {
     "path": "sessions/2026-11-17-graphify-incremental-update.md",
     "title": "Session: Incremental Knowledge Graph Update (/graphify --update)",
     "summary": "Session",

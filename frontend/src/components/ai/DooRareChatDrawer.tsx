@@ -601,8 +601,8 @@ export const DooRareChatDrawer: React.FC = () => {
                   ...m,
                   isThinking: false,
                   content: m.content
-                    ? `${m.content}\n\n⚠️ ขออภัย เกิดข้อผิดพลาด: ${errMsg}`
-                    : `⚠️ ขออภัย เกิดข้อผิดพลาด: ${errMsg}`,
+                    ? `${m.content}\n\nเกิดข้อผิดพลาด: ${errMsg}`
+                    : `เกิดข้อผิดพลาด: ${errMsg}`,
                 }
               : m,
           ),
