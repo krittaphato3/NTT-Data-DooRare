@@ -836,7 +836,7 @@ export const DooRareChatDrawer: React.FC = () => {
                     setIsFullScreen(true);
                     setShowSessionsDrawer(false);
                   }}
-                  title="ขยายเต็มหน้าจอ (Full Screen)"
+                  title="ขยายเต็มจอ"
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <polyline points="15 3 21 3 21 9" />

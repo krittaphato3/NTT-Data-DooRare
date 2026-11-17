@@ -87,6 +87,7 @@ export function taskToShipment(t: ApiTransportTask, now = new Date()): Shipment 
     to: t.to.code as HospitalCode,
     status: t.status,
     updatedAt: fmtThaiTime(t.updatedAt, now),
+    updatedIso: t.updatedAt,
     updatedBy: lastActor(t.events),
     driver: t.driver?.name,
     pending: t.pendingSync || undefined,

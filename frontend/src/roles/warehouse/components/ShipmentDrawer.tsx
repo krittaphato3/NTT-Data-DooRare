@@ -55,10 +55,10 @@ interface ShipmentDrawerProps {
 function returnNote(s: Shipment): string {
   if (s.kind === 'F1') {
     return s.ref.includes('EMERGENCY')
-      ? 'ส่วนประกอบโลหิต: คืนผ่านธนาคารเลือด (BLOOD_REPLACEMENT)'
+      ? 'ส่วนประกอบโลหิต: คืนผ่านธนาคารเลือด'
       : 'ยืม: ผู้ยืมต้องคืนเป็นยาตัวเดิมจำนวนเท่ากันภายใน 30 วันหลังรับ · ล็อตที่ให้ยืมอายุ > 180 วัน';
   }
-  return 'โอนยาใกล้หมดอายุ (F2): โอนถาวร ไม่ต้องคืน · ล็อตถูกกันไว้ที่ต้นทางจนขึ้นรถ';
+  return 'โอนยาใกล้หมดอายุ: โอนถาวร ไม่ต้องคืน · ล็อตถูกกันไว้ที่ต้นทางจนขึ้นรถ';
 }
 
 export function ShipmentDrawer(p: ShipmentDrawerProps) {
@@ -100,7 +100,7 @@ export function ShipmentDrawer(p: ShipmentDrawerProps) {
     <aside className="tr-drawer" aria-label="รายละเอียดงานขนส่ง">
       <div className="tr-drawer-head">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-          <span className="sub">{out ? 'ส่งออกจากเรา' : 'รับเข้าเรา'} · งานขนส่ง · UI-14</span>
+          <span className="sub">{out ? 'ส่งออกจากเรา' : 'รับเข้าเรา'} · งานขนส่ง</span>
           <button className="icbtn" aria-label="ปิด / Close" onClick={p.onClose}>
             <Icon name="x" />
           </button>
@@ -110,7 +110,7 @@ export function ShipmentDrawer(p: ShipmentDrawerProps) {
             {s.id}
           </h2>
           <StatusBadge status={status} />
-          <span className={`badge ${s.kind === 'F1' ? 't-blue' : 't-teal'}`}>{s.kind === 'F1' ? 'ยืม (F1)' : 'โอนยาใกล้หมดอายุ (F2)'}</span>
+          <span className={`badge ${s.kind === 'F1' ? 't-blue' : 't-teal'}`}>{s.kind === 'F1' ? 'ยืมยา' : 'โอนยาใกล้หมดอายุ'}</span>
           {p.pending && <span className="badge t-amber">รอซิงก์</span>}
         </div>
         <div style={{ fontSize: 14, color: '#0F2A5C' }}>
@@ -153,7 +153,7 @@ export function ShipmentDrawer(p: ShipmentDrawerProps) {
 
         <div>
           <h3 className="tr-h3">
-            ขั้นตอน <span className="en">SM-6</span>
+            ขั้นตอน
           </h3>
           <ol className="stepper">
             {STEPS.map((st, i) => {
@@ -171,7 +171,7 @@ export function ShipmentDrawer(p: ShipmentDrawerProps) {
                   </span>
                   <span className="step-body">
                     <span className="step-label" style={{ color: done || cur ? '#0F2A5C' : '#475569', fontWeight: cur ? 600 : 400 }}>
-                      {st.label} <span className="code" style={{ fontSize: 10.5 }}>{st.code}</span>
+                      {st.label}
                     </span>
                     <span className="step-sub">{sub}</span>
                   </span>
@@ -207,7 +207,7 @@ export function ShipmentDrawer(p: ShipmentDrawerProps) {
         {showPick && (
           <div>
             <h3 className="tr-h3">
-              ล็อตที่จะหยิบ <span className="en">FEFO · เตรียมก่อนขึ้นรถ</span>
+              ล็อตที่จะหยิบ <span className="en">ล็อตหมดอายุก่อน · เตรียมก่อนขึ้นรถ</span>
             </h3>
             <ul className="kt-list">
               {s.pick!.map((l) => (
@@ -239,7 +239,7 @@ export function ShipmentDrawer(p: ShipmentDrawerProps) {
         )}
         {p.proxies.map((x, i) => (
           <div key={i} role="status" className="proxy-done">
-            บันทึกแทนคนขับ → {x.to} · เหตุผล: “{x.reason}” · บันทึกใน audit log
+            บันทึกแทนคนขับ → {x.to} · เหตุผล: “{x.reason}” · มีบันทึกไว้ตรวจสอบ
           </div>
         ))}
 
@@ -389,7 +389,7 @@ export function ShipmentDrawer(p: ShipmentDrawerProps) {
           )}
           <button className="btn btn-s" onClick={p.onSlip} disabled={p.busy}>
             <Icon name="printer" />
-            {s.kind === 'F1' ? 'ใบยืม BORROW_SLIP' : 'ใบโอน TRANSFER_SLIP'}
+            {s.kind === 'F1' ? 'ใบยืมยา' : 'ใบโอนยา'}
           </button>
           {canRequestCancel && <button className="btn btn-g">ขอยกเลิก (ต้องได้ความยินยอม)</button>}
         </div>

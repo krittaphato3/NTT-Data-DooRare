@@ -45,7 +45,7 @@ export const INCIDENT_HEADER: IncidentSummary = {
   reportTime: '19:18 น.',
   etaMinutes: 690, // 11m 30s
   etaTimeStr: '19:43 น.',
-  etaDesc: 'รายงาน 25 นาที (ไม่แน่ใจ) · เดินทางจริง 26 นาที — ได้ 25 F-26',
+  etaDesc: 'รายงาน 25 นาที (ไม่แน่ใจ) · เดินทางจริง 26 นาที — ใช้ 25 นาที',
   triage: {
     red: 7,
     yellow: 10,

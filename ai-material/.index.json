@@ -49,6 +49,20 @@
     "date": "2026-11-16"
   },
   {
+    "path": "sessions/2026-11-16-claude-hide-dev-codes-pharmacist.md",
+    "title": "Hide dev/spec codes on pharmacist screens",
+    "summary": "Removed spec IDs, enum codes and model names from user-visible text on…",
+    "tags": "session, frontend, ui-cleanup, pharmacist, transport, incident",
+    "date": "2026-11-16"
+  },
+  {
+    "path": "sessions/2026-11-16-claude-warehouse-ui-jargon-and-clutter-list.md",
+    "title": "Warehouse role UI - jargon removal and clutter to-do list",
+    "summary": "Removed spec codes, feature codes and English tags from the 4 warehouse…",
+    "tags": "session, frontend, ui-cleanup, warehouse, f3, transport, backlog",
+    "date": "2026-11-16"
+  },
+  {
     "path": "sessions/2026-11-14-2145-antigravity-webfetch-clarify-wizard-and-attachments.md",
     "title": "AI Session: WebFetch Pre-fetch Script, Single-Round Clarification Wizard, Optional Web Search & File Attachment",
     "summary": "AI Session",
@@ -109,6 +123,13 @@
     "title": "Session Note: ask_operator Tooling, Language Adaptation, and Clarify Card Fixes",
     "summary": "Session Note",
     "tags": "session",
+    "date": "2026-11-14"
+  },
+  {
+    "path": "sessions/2026-11-14-2237-claude-pharmacist-stock-alerts-ux-declutter.md",
+    "title": "Pharmacist stock alerts page - UX declutter (big rework reverted, jargon-only pass kept)",
+    "summary": "Big rework reverted; second pass only removes technical terms and the forecast-method…",
+    "tags": "session, frontend, pharmacist, alerts, stock-alerts, ui-ux, dashboard",
     "date": "2026-11-14"
   },
   {

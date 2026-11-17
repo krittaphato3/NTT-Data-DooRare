@@ -12,7 +12,7 @@ import { AgentExtrasPanel } from './AgentExtrasPanel';
 import { LiveBorrowStatus } from './LiveBorrowStatus';
 import { LivePackPanel } from './LivePack';
 import { LiveSummaryPanel } from './LiveSummary';
-import { LiveExtrasTable, LiveKitTable, PlanNotes } from './PlanTables';
+import { LiveExtrasTable, LiveKitTable } from './PlanTables';
 import { useIncident, useIncidentList } from './hooks';
 
 /**
@@ -72,7 +72,6 @@ export function LiveConsole({ role = 'PHARMACIST' }: { role?: RoleCode }) {
                   <LiveKitTable plan={incident.plan} editable={false} />
                   <LiveExtrasTable plan={incident.plan} editable={false} />
                   <AgentExtrasPanel incidentId={incident.id} extrasInPlan={incident.plan.extras.map((e) => e.key)} mayAsk={role === 'PHARMACIST'} />
-                  <PlanNotes plan={incident.plan} />
                 </div>
               ) : (
                 <div className="card" style={{ padding: '14px 18px', fontSize: 12.5, color: '#64748b' }}>ยังไม่มีแผนสำหรับเหตุนี้</div>

@@ -496,7 +496,7 @@ export function BorrowRequestsPage({
     {mayCreate && (
       <button className="btn btn-p" disabled={!isLive} title={isLive ? undefined : 'ต้องเชื่อมต่อ API'} onClick={() => setManualOpen(true)}>
         <Icon name="plus" />
-        สร้างคำขอยืมเอง <span style={{ fontWeight: 400 }}>UI-10</span>
+        สร้างคำขอยืมเอง
       </button>
     )}
   </div>
@@ -529,7 +529,7 @@ export function BorrowRequestsPage({
           </span>
           <span style={{ flex: 1, minWidth: 0 }}>
             <span className="dir-th">คำขอของเรา</span>
-            <span className="dir-en">เราเป็นผู้ยืม · UI-05</span>
+            <span className="dir-en">เราเป็นผู้ยืม</span>
           </span>
           <span className="num dir-count">{all.filter((r) => isOpenRequest(r.status)).length}</span>
           {pendingAll > 0 && (
@@ -538,13 +538,13 @@ export function BorrowRequestsPage({
             </span>
           )}
         </button>
-        <button className="dir" aria-pressed="false" title="UI-06 คิวตอบคำขอ" onClick={() => { window.location.search = withRole('?page=lend', role); }}>
+        <button className="dir" aria-pressed="false" title="คิวตอบคำขอ" onClick={() => { window.location.search = withRole('?page=lend', role); }}>
           <span className="dir-icon" style={{ background: '#FFF7ED', color: '#9A3412' }}>
             <Icon name="hand" className="ic20" />
           </span>
           <span style={{ flex: 1, minWidth: 0 }}>
             <span className="dir-th">คิวตอบคำขอ</span>
-            <span className="dir-en">เราเป็นผู้ให้ยืม · UI-06</span>
+            <span className="dir-en">เราเป็นผู้ให้ยืม</span>
           </span>
           <span className="num dir-count">{lenderTotal}</span>
           <span className="badge t-amber" style={{ fontWeight: 600 }}>
@@ -565,7 +565,7 @@ export function BorrowRequestsPage({
             </span>
             <span style={{ flex: 1, minWidth: 0 }}>
               <span className="dir-th">ภาระการคืน</span>
-              <span className="dir-en">เราเป็นผู้ยืม · SM-7 · API-XC-003</span>
+              <span className="dir-en">เราเป็นผู้ยืม</span>
             </span>
             <span className="num dir-count">{obligations.filter((o) => !["RETURNED", "WAIVED"].includes(o.state)).length}</span>
             {overdueCount > 0 && (
@@ -601,7 +601,7 @@ export function BorrowRequestsPage({
           <div className="tr-card-head">
             <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
               <h2 className="sec-h">
-                ภาระการคืน <span className="en">SM-7 · API-XC-003</span>
+                ภาระการคืน
               </h2>
               {stateFilter && (
                 <button className="link" onClick={() => setStateFilter(null)}>
@@ -628,7 +628,7 @@ export function BorrowRequestsPage({
                 <span className="br-banner-t">ยกเว้นภาระการคืนแล้ว</span>
                 <span className="br-banner-s">
                   {waiveBanner.id} เปลี่ยนสถานะเป็น WAIVED เมื่อ {waiveBanner.at} · บันทึกเหตุผลใน audit log แล้ว{' '}
-                  <span className="code">{waiveBanner.auditId}</span> (API-XC-005, SEC-003)
+                  <span className="code">{waiveBanner.auditId}</span>
                 </span>
               </span>
             </div>
@@ -639,7 +639,7 @@ export function BorrowRequestsPage({
             </span>
             <span style={{ flex: '1 1 0' }} />
             <span style={{ fontSize: 12 }}>
-              แจ้งเตือนอัตโนมัติ due−7 และ due−1 วัน <span className="en">FR-XC-003</span>
+              แจ้งเตือนอัตโนมัติ due−7 และ due−1 วัน
             </span>
           </div>
           <ObligationTable rows={obligationRows} mayWaive={mayWaive} onWaive={setWaiveTarget} />
@@ -649,7 +649,7 @@ export function BorrowRequestsPage({
           <div className="tr-card-head">
             <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
               <h2 className="sec-h">
-                สถานะคำขอ <span className="en">SM-1</span>
+                สถานะคำขอ
               </h2>
               {(group || onlyNeedLender) && (
                 <button className="link" onClick={() => { setGroup(null); setOnlyNeedLender(false); }}>
@@ -684,8 +684,8 @@ export function BorrowRequestsPage({
             </select>
             <select className={`sel ${context !== 'all' ? 'sel-on' : ''}`} aria-label="บริบท" value={context} onChange={(e) => setContext(e.target.value as 'all' | BorrowContext)}>
               <option value="all">บริบท: ทั้งหมด</option>
-              <option value="STOCK_ALERT">STOCK_ALERT · แจ้งเตือนสต็อก</option>
-              <option value="MANUAL">MANUAL · สร้างเอง</option>
+              <option value="STOCK_ALERT">แจ้งเตือนสต็อก</option>
+              <option value="MANUAL">สร้างเอง</option>
             </select>
             <select className={`sel ${days !== 90 ? 'sel-on' : ''}`} aria-label="ช่วงเวลา" value={days} onChange={(e) => setDays(Number(e.target.value))}>
               <option value={36500}>ทั้งหมด</option>
@@ -720,7 +720,7 @@ export function BorrowRequestsPage({
       {/* Waive (API-XC-005): a mandatory reason, then WAIVED + an audit row (SEC-003). */}
       {waiveTarget && (
         <ReasonDialog
-          title="ยกเว้นภาระการคืน · Waive (API-XC-005)"
+          title="ยกเว้นภาระการคืน"
           detail={
             <>
               <div>
@@ -750,7 +750,7 @@ export function BorrowRequestsPage({
 
       {rejectTarget && (
         <ReasonDialog
-          title="ไม่อนุมัติคำขอยืม · reject (API-F1b-006)"
+          title="ไม่อนุมัติคำขอยืม"
           detail={<div><b className="code">{rejectTarget.id}</b> · {rejectTarget.drug} · {rejectTarget.qty} {rejectTarget.unit}<div style={{ marginTop: 8 }}>คำขอจะถูกยกเลิก (CANCELLED) และแจ้งเตือนสต็อกที่เชื่อมอยู่จะกลับเป็นรับทราบ</div></div>}
           confirmLabel="ยืนยันไม่อนุมัติ"
           onConfirm={confirmReject}
@@ -761,7 +761,7 @@ export function BorrowRequestsPage({
       {/* Cancel in-progress borrow request (QA-PHARM-005, spec §7.15). */}
       {cancelTarget && (
         <ReasonDialog
-          title="ยกเลิกคำขอยืม · cancel (API-F1b-006 / §7.15)"
+          title="ยกเลิกคำขอยืม"
           detail={
             <div>
               <b className="code">{cancelTarget.id}</b> · {cancelTarget.drug} · {cancelTarget.qty} {cancelTarget.unit}
@@ -781,8 +781,8 @@ export function BorrowRequestsPage({
 
       {/* Record return dialog (QA-PHARM-005, API-XC-004). */}
       {returnTarget && returnObligation && (
-        <Modal label="บันทึกการคืนยา / Record Return (API-XC-004)" onClose={() => { setReturnTarget(null); setReturnObligation(null); }}>
-          <h2 className="sec-h">บันทึกการคืนยา <span className="en">UI-05 · API-XC-004</span></h2>
+        <Modal label="บันทึกการคืนยา" onClose={() => { setReturnTarget(null); setReturnObligation(null); }}>
+          <h2 className="sec-h">บันทึกการคืนยา</h2>
           <div style={{ marginTop: 10, fontSize: 13, lineHeight: '20px', color: '#475569' }}>
             บันทึกการคืนยาให้แก่โรงพยาบาลผู้ให้ยืม ระบบจะตัดสต็อกยาตามลำดับหมดอายุก่อน (FEFO) อัตโนมัติ
           </div>
@@ -850,7 +850,7 @@ export function BorrowRequestsPage({
       {/* escalate-manual (API-F1b-012): only reachable from an ESCALATED request. */}
       {escalateTarget && (
         <ReasonDialog
-          title="เพิ่มผู้ให้ยืมด้วยตนเอง · escalate-manual (API-F1b-012)"
+          title="เพิ่มผู้ให้ยืมด้วยตนเอง"
           detail={
             <>
               <div>
@@ -859,7 +859,7 @@ export function BorrowRequestsPage({
               <div>{escalateTarget.banner.text}</div>
               <div style={{ marginTop: 8 }}>
                 สถานะ <b>{escalateTarget.status}</b> — ลำดับผู้ให้ยืมของระบบหมดแล้ว จึงเพิ่มผู้ให้ยืมนอกลำดับได้
-                (FR-F1b-011, SM-1) · ระบบจะเพิ่มรอบใหม่และบันทึกไว้ใน audit log
+                ระบบจะเพิ่มรอบใหม่และบันทึกไว้ใน audit log
               </div>
               {isLive && (
                 <div style={{ marginTop: 10, display: 'flex', flexWrap: 'wrap', gap: 8 }}>

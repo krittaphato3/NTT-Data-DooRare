@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { listLenderQueue } from '../../../services/borrowApi';
 import { onLoadFailure, onLoadSuccess } from '../../../services/dataSource';
+import { LIVE, useLiveRefresh } from '../../../lib/liveEvents';
 import { BORROW_REQUESTS } from './lender';
 import type { BorrowRequest, LendableStock, LotOption } from './lender';
 import { lenderItemToView } from './lenderLive';
@@ -30,5 +31,6 @@ export function useLenderQueue() {
   useEffect(() => {
     void load();
   }, [load]);
+  useLiveRefresh(LIVE.lender, load);
   return { ...state, reload: load };
 }

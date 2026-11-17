@@ -62,12 +62,12 @@ export function LiveTrackPage({ role = 'ER_STAFF' }: { role?: RoleCode }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       <ErBreadcrumb role={role} label="ติดตามคำขอและจัดชุด" />
       {!access.mayWrite && <ViewOnlyBanner />}
-      <ErPageHeading title="ติดตามคำขอและจัดชุด" titleEn="/ Track & pack" subtitle="UI-11 · UI-13 · คำขอยืมแยกตามเหตุการณ์และโรงพยาบาล · จัดชุดจากของแยก · ตอบคำขอเร่งด่วนจากโรงพยาบาลอื่น" />
-      <div style={{ display: 'flex', gap: 6, borderBottom: '1px solid #e2e8f0', paddingBottom: 2 }}>
+      <ErPageHeading title="ติดตามคำขอและจัดชุด" titleEn="/ Track & pack" subtitle="คำขอยืมแยกตามเหตุการณ์และโรงพยาบาล · จัดชุดจากของแยก · ตอบคำขอเร่งด่วนจากโรงพยาบาลอื่น" />
+      <div className="sa-tabs" role="tablist" aria-label="หมวดของหน้านี้">
         {tabs.map((t) => (
-          <button key={t.id} type="button" className="tab" onClick={() => setTab(t.id)} style={{ height: 38, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none', borderBottom: tab === t.id ? '2.5px solid #2563eb' : '2.5px solid transparent', background: 'none', color: tab === t.id ? '#2563eb' : '#64748b', display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span>{t.label}</span>
-            {t.badge !== undefined && <span style={{ fontSize: 11, background: '#fee2e2', color: '#b91c1c', padding: '1px 6px', borderRadius: 10, fontWeight: 700 }}>{t.badge}</span>}
+          <button key={t.id} type="button" role="tab" aria-selected={tab === t.id} className={`tab ${tab === t.id ? 'tab-on' : ''}`} onClick={() => setTab(t.id)}>
+            {t.label}
+            {t.badge !== undefined && <span className="cnt">{t.badge}</span>}
           </button>
         ))}
       </div>

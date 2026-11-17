@@ -6,6 +6,12 @@
 export type NearExpiryStatus = 'PENDING' | 'RELEASED' | 'ALLOCATED' | 'KEPT' | 'EXPIRED' | 'TRANSFERRED' | 'DISMISSED';
 export type RepeatFlag = 'WATCH' | 'RECOMMEND';
 
+/** Notes written by the system end with a rule code like "(BR-F2a-024)"; users don't need it. */
+export const cleanNote = (n?: string | null): string => (n ?? '').replace(/\s*\((?:BR|FR|ASM)-[A-Za-z0-9-]+\)/g, '').trim();
+
+/** Thai badge text for the repeat-expiry level (WATCH = 2+ lots in 12 months, RECOMMEND = 3+ or high lost value). */
+export const REPEAT_LABEL: Record<RepeatFlag, string> = { WATCH: 'หมดอายุซ้ำ', RECOMMEND: 'หมดอายุซ้ำบ่อย' };
+
 export interface ExpiryHistoryEntry {
   lot: string;
   text: string;
@@ -76,7 +82,7 @@ export const NEAR_EXPIRY_ITEMS: NearExpiryItem[] = [
     detectedAgoDays: 1,
     history: [
       { lot: 'VK23H11', text: 'ล็อตก่อนหน้า 18 AMP · ปล่อยเข้าคลัง ต.ค. 2568 · ใช้หมดก่อนอายุ' },
-      { lot: 'VK24J02', text: 'ล็อตนี้เข้าเกณฑ์รอบที่ 2 ใน 12 เดือน → WATCH (F2b)' },
+      { lot: 'VK24J02', text: 'ล็อตนี้ใกล้หมดอายุเป็นรอบที่ 2 ใน 12 เดือน → เฝ้าระวัง' },
     ],
   },
   {
@@ -200,26 +206,26 @@ export interface ExpiryKpi {
 export const EXPIRY_KPIS: ExpiryKpi[] = [
   {
     label: 'ตรวจพบวันนี้',
-    en: 'DETECTED',
+    en: 'pending',
     value: '3 ล็อต',
     sub: 'รวมมูลค่า ฿1,830 · ต้องตัดสินใจภายใน 24 ชม. 1 ตัว',
     accent: '#D97706',
     accentBg: '#FFF7ED',
   },
   {
-    label: 'ปล่อยเข้าคลังกลาง · จัดสรรแล้ว',
-    en: 'RELEASED · ALLOCATED',
+    label: 'ปล่อยเข้าคลังกลางแล้ว',
+    en: 'released',
     value: '2 ล็อต',
     sub: 'รวมมูลค่า ฿9,000 · ไปอยู่ในแผนจัดสรร 2 แผน',
     accent: '#166534',
     accentBg: '#F0FDF4',
   },
   {
-    label: 'มูลค่าที่เลี่ยงการหายไป 12 เดือน',
-    en: 'VALUE AVOIDED',
+    label: 'มูลค่ายาที่ไม่ต้องทิ้ง (12 เดือน)',
+    en: 'avoided',
     value: '฿21,600',
     sub: 'ลดลง ฿38,200 เทียบช่วงเดียวกันปีก่อนที่ยังไม่มีระบบ',
-    accent: '#B91C1C',
-    accentBg: '#FEF2F2',
+    accent: '#1D4ED8',
+    accentBg: '#EFF6FF',
   },
 ];

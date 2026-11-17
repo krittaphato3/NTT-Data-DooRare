@@ -1,6 +1,6 @@
 import { Icon } from '../../../components/common/icons';
 import type { IconName } from '../../../components/common/icons';
-import { mayActFor, maySeePeerStock, requiredRoleHint } from '../../../lib/rbac';
+import { mayActFor, requiredRoleHint } from '../../../lib/rbac';
 import type { Action, RoleCode } from '../../../lib/rbac';
 import { withRole } from '../../../data/navigation';
 import { fmtTime } from '../../../lib/time';
@@ -78,7 +78,7 @@ export function BorrowDrawer({ request: r, tick, decision, onDecide, onClose, on
     <aside className="tr-drawer" aria-label="รายละเอียดคำขอยืม">
       <div className="tr-drawer-head">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-          <span className="sub">คำขอของเรา (เราเป็นผู้ยืม) · Request detail · UI-05</span>
+          <span className="sub">คำขอของเรา (เราเป็นผู้ยืม) · Request detail</span>
           <button className="icbtn" aria-label="ปิด / Close" onClick={onClose}>
             <Icon name="x" />
           </button>
@@ -89,7 +89,6 @@ export function BorrowDrawer({ request: r, tick, decision, onDecide, onClose, on
           </h2>
           <BorrowStatusBadge status={r.status} kit={r.isKit} />
           <UrgencyBadge urgency={r.urgency} />
-          <span className="badge t-grey code">{r.context}</span>
           {r.returnState && <ReturnBadge state={r.returnState} />}
         </div>
         <div className="br-drug" style={{ fontSize: 15, fontWeight: 600, color: '#0F2A5C' }}>
@@ -130,7 +129,7 @@ export function BorrowDrawer({ request: r, tick, decision, onDecide, onClose, on
           <div className="tr-box" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
               <h3 className="tr-h3" style={{ margin: 0 }}>
-                กฎหยุด <span className="en">F-20</span>
+                กฎหยุด
               </h3>
               <span style={{ fontSize: 13, fontWeight: 600, color: '#0F2A5C' }}>
                 ได้ยืนยัน <span className="num">{r.stop.got} / {r.stop.target}</span>
@@ -144,7 +143,7 @@ export function BorrowDrawer({ request: r, tick, decision, onDecide, onClose, on
 
         <div>
           <h3 className="tr-h3">
-            ลำดับผู้ให้ยืมและรอบการขอ <span className="en">Legs · {r.sendMode}</span>
+            ลำดับผู้ให้ยืมและรอบการขอ <span className="en">{r.sendMode}</span>
           </h3>
           {r.ladderNote && <div className="sub" style={{ margin: '2px 0 8px' }}>{r.ladderNote}</div>}
           {r.legs.length === 0 ? (
@@ -172,11 +171,7 @@ export function BorrowDrawer({ request: r, tick, decision, onDecide, onClose, on
                             the borrow flow sees the proposed lender and its own requested quantity only. */}
                         {/* Si is the Agent's own score (rbac.md §3); a lender added manually outside
                             the ladder has none, so the line is omitted rather than faked. */}
-                        {maySeePeerStock(role) && l.si !== undefined && (
-                          <span className="code" style={{ marginLeft: 'auto' }}>
-                            Si {l.si.toFixed(4)}
-                          </span>
-                        )}
+                        
                       </span>
                       <span className="sub" style={{ display: 'block' }}>
                         {l.detail}
@@ -194,7 +189,7 @@ export function BorrowDrawer({ request: r, tick, decision, onDecide, onClose, on
           )}
           {r.agentNote && (
             <div className="br-agent">
-              <b style={{ color: '#1D4ED8', fontWeight: 600 }}>Agent ({r.agentNote.code})</b>{r.agentNote.model && r.agentNote.status === 'OK' ? <span className="sub"> · {r.agentNote.model}{r.agentNote.confidence ? ` · ความมั่นใจ ${r.agentNote.confidence}` : ''}</span> : null} · {r.agentNote.text}
+              <b style={{ color: '#1D4ED8', fontWeight: 600 }}>Agent</b>{r.agentNote.confidence && r.agentNote.status === 'OK' ? <span className="sub"> · ความมั่นใจ {r.agentNote.confidence}</span> : null} · {r.agentNote.text}
             </div>
           )}
         </div>

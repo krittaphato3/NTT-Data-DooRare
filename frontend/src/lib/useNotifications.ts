@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { fmtThaiTime } from '../roles/warehouse/data/transportLive';
 import { onLoadFailure, onLoadSuccess } from '../services/dataSource';
 import { getUnreadNotifications, markNotificationRead } from '../services/notificationsApi';
+import { LIVE, useLiveRefresh } from './liveEvents';
 
 export interface BellItem {
   id?: string;
@@ -29,6 +30,7 @@ export function useNotifications(enabled: boolean, mock: BellItem[]) {
     const t = setInterval(() => void load(), 60_000);
     return () => clearInterval(t);
   }, [enabled, load]);
+  useLiveRefresh(LIVE.notification, load, enabled);
   const markRead = useCallback(
     async (id: string) => {
       await markNotificationRead(id);

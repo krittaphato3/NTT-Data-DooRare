@@ -52,6 +52,31 @@ function stockLines(plan: ApiPlan): StockLine[] {
   return [...kits, ...extras];
 }
 
+/** Three numbers on top of the plan: what is needed, what the hospital can cover itself, what has to be borrowed. */
+function PlanCards({ plan }: { plan: ApiPlan }) {
+  const need = plan.kits.reduce((n, k) => n + k.estimated, 0);
+  const ready = plan.kits.reduce((n, k) => n + k.useReady, 0);
+  const pack = plan.kits.reduce((n, k) => n + k.pack, 0);
+  const setBorrow = plan.kits.reduce((n, k) => n + k.borrowSet, 0);
+  const extraBorrow = plan.extras.filter((e) => e.borrow > 0).length;
+  const cards = [
+    { title: 'ชุดยาที่ต้องใช้', n: need, unit: 'ชุด', sub: `ชุดยา ${plan.kits.length} แบบ · ยานอกชุด ${plan.extras.length} รายการ`, color: '#2563eb' },
+    { title: 'เตรียมเองได้', n: ready + pack, unit: 'ชุด', sub: `ชุดพร้อมใช้ ${ready} · จัดจากของแยก ${pack}`, color: '#15803d' },
+    { title: 'ต้องยืมจากโรงพยาบาลอื่น', n: setBorrow + extraBorrow, unit: 'รายการ', sub: `ยืมทั้งชุด ${setBorrow} ชุด · ยานอกชุด ${extraBorrow} รายการ`, color: '#b91c1c' },
+  ];
+  return (
+    <section className="sa-cards" aria-label="สรุปแผน">
+      {cards.map((c) => (
+        <div key={c.title} className={`card sa-card${c.n === 0 ? ' sa-card-zero' : ''}`} style={{ borderLeft: `4px solid ${c.color}` }}>
+          <div className="sa-card-head"><span className="sa-card-title">{c.title}</span></div>
+          <div className="num sa-card-num">{c.n.toLocaleString('en-US')}<span style={{ fontSize: 13, fontWeight: 500, color: '#64748b', marginLeft: 6 }}>{c.unit}</span></div>
+          <div className="sa-card-sub">{c.sub}</div>
+        </div>
+      ))}
+    </section>
+  );
+}
+
 const emptyEdits = (): PlanEdits => ({ packOverrides: {}, removeKits: [], removeExtras: [], setKits: {}, setExtras: {} });
 
 /**
@@ -311,8 +336,7 @@ export function LiveIncidentFlow({ role = 'ER_STAFF' }: { role?: RoleCode }) {
       {!access.mayWrite && <ViewOnlyBanner />}
       <ErPageHeading
         title={incident ? `รับเหตุและวางแผน · ${incident.incidentNo}` : 'รับเหตุและวางแผน'}
-        titleEn="/ Incident → plan → borrow"
-        subtitle="UI-11 · UI-12 · กู้ภัยแจ้ง ER กรอกข้อมูล → ระบบคำนวณแผนตามกฎ → Agent ตัดรายการที่ไม่เกี่ยวกับเหตุและถามเจ้าหน้าที่ → ตรวจ/แก้ → ตรวจสต็อก → ส่งคำขอยืม"
+        subtitle="กรอกข้อมูลเหตุ → ระบบคำนวณแผน → ตรวจและแก้ → ตรวจสต็อก → ส่งคำขอยืม"
       />
       <FlowStepper steps={STEPS} current={step} reached={reached} onGo={go} />
       <ErrorNote message={error} />
@@ -382,6 +406,7 @@ export function LiveIncidentFlow({ role = 'ER_STAFF' }: { role?: RoleCode }) {
                   questions={(agent.latest?.lines ?? []).filter((l) => l.decision === 'ASK').length}
                 />
               )}
+              <PlanCards plan={preview} />
               <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap' }}>
                 <div style={{ flex: '1 1 640px', minWidth: 320, display: 'flex', flexDirection: 'column', gap: 16 }}>
                   <LiveKitTable plan={preview} editable={access.mayWrite} onPack={editPack} onRemove={removeKit} />
@@ -428,16 +453,6 @@ export function LiveIncidentFlow({ role = 'ER_STAFF' }: { role?: RoleCode }) {
                     onApplyAll={() => removeLines(agentRemovals())}
                   />
                   <div className="card" style={{ padding: '14px 16px' }}>
-                    <div style={{ fontSize: 13.5, fontWeight: 700, color: '#0f2a5c', marginBottom: 8 }}>สรุปความต้องการ</div>
-                    <table className="qt">
-                      <tbody>
-                        <tr><td>ชุดที่ต้องใช้</td><td className="r"><b>{preview.kits.reduce((n, k) => n + k.estimated, 0)}</b> ชุด</td></tr>
-                        <tr><td>ใช้ชุดพร้อมใช้</td><td className="r">{preview.kits.reduce((n, k) => n + k.useReady, 0)} ชุด</td></tr>
-                        <tr><td>จัดจากของแยก</td><td className="r">{preview.kits.reduce((n, k) => n + k.pack, 0)} ชุด</td></tr>
-                        <tr><td>ยืมทั้งชุด</td><td className="r" style={{ color: '#dc2626', fontWeight: 700 }}>{preview.kits.reduce((n, k) => n + k.borrowSet, 0)} ชุด</td></tr>
-                        <tr><td>รายการนอกชุดที่ต้องยืม</td><td className="r" style={{ color: '#dc2626', fontWeight: 700 }}>{preview.extras.filter((e) => e.borrow > 0).length} รายการ</td></tr>
-                      </tbody>
-                    </table>
                     {dirty && <div style={{ fontSize: 11.5, color: '#92400e', marginTop: 8 }}>มีการแก้แผนโดยเจ้าหน้าที่ · ยังไม่บันทึกจนกว่าจะกดยืนยัน</div>}
                     {pendingNew && <div style={{ fontSize: 11.5, color: '#92400e', marginTop: 8 }}>มีแผนฉบับ {incident?.plan?.revision} รออนุมัติ (หลังจำนวนผู้ป่วยเปลี่ยน)</div>}
                   </div>

@@ -14,7 +14,7 @@ export function EtaLine({ eta, status }: { eta: ApiIncidentSummary['eta']; statu
     <span>
       ETA {eta.minutes} นาที{eta.source === 'ROUTE' ? ' (จากเส้นทางจริง)' : ' (รายงานจากหน่วยกู้ภัย)'}
       {eta.unsure ? ' · ไม่แน่ใจ' : ''} · ถึงประมาณ <b>{clock(eta.arrivalAt)}</b>
-      {running && left !== null && (left > 0 ? <> · เหลือ <b style={{ fontFamily: 'Inter, monospace', color: left < 300 ? '#b91c1c' : '#0f2a5c' }}>{mmss(left)}</b></> : <b style={{ color: '#b91c1c' }}> · ถึงเวลา ETA แล้ว (PATIENTS_ARRIVED)</b>)}
+      {running && left !== null && (left > 0 ? <> · เหลือ <b style={{ fontFamily: 'Inter, monospace', color: left < 300 ? '#b91c1c' : '#0f2a5c' }}>{mmss(left)}</b></> : <b style={{ color: '#b91c1c' }}> · ถึงเวลา ETA แล้ว</b>)}
       {eta.flags.includes('ROUTE_UNAVAILABLE') && <span style={{ color: '#92400e' }}> · ไม่มีข้อมูลเส้นทางจริง</span>}
     </span>
   );

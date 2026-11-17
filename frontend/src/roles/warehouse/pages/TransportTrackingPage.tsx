@@ -19,6 +19,21 @@ import { createDocument } from '../../../services/documentsApi';
 import '../transport.css';
 
 const MOCK_DRIVER = 'คุณสมชาย แก้วกล้า';
+const PAGE_SIZE = 20;
+const PERIODS = [
+  { days: 7, label: '7 วันล่าสุด' },
+  { days: 30, label: '30 วันล่าสุด' },
+  { days: 90, label: '90 วันล่าสุด' },
+  { days: 0, label: 'ทั้งหมด' },
+];
+
+/** Open work always shows; finished work (received / cancelled) only within the chosen period. */
+function inPeriod(r: ShipmentRowState, days: number, now: number): boolean {
+  if (!days || (r.status !== 'RECEIVED' && r.status !== 'CANCELLED')) return true;
+  const iso = r.shipment.updatedIso;
+  if (!iso) return true;
+  return now - new Date(iso).getTime() <= days * 86400000;
+}
 
 function useOnline(): boolean {
   const [online, setOnline] = useState(() => (typeof navigator === 'undefined' ? true : navigator.onLine));
@@ -90,6 +105,8 @@ export function TransportTrackingPage({ role = 'WAREHOUSE_OFFICER' }: { role?: T
   const [q, setQ] = useState('');
   const [kind, setKind] = useState<'all' | ShipmentKind>('all');
   const [driver, setDriver] = useState('all');
+  const [days, setDays] = useState(7);
+  const [page, setPage] = useState(0);
   const [busy, setBusy] = useState(false);
   const [actError, setActError] = useState<string | null>(null);
   const [pendingPhotos, setPendingPhotos] = useState<Record<string, { key: string; url: string }[]>>({});
@@ -120,7 +137,9 @@ export function TransportTrackingPage({ role = 'WAREHOUSE_OFFICER' }: { role?: T
   const drivers = useMemo(() => [...new Set(tr.shipments.map((s) => s.driver).filter((d): d is string => !!d))].sort(), [tr.shipments]);
   const queued = all.filter((r) => r.pending).length;
 
-  const byDir = all.filter((r) => (dir === 'out' ? isOutbound(r.shipment) : !isOutbound(r.shipment)));
+  const now = Date.now();
+  const scoped = all.filter((r) => inPeriod(r, days, now));
+  const byDir = scoped.filter((r) => (dir === 'out' ? isOutbound(r.shipment) : !isOutbound(r.shipment)));
   const counts = Object.fromEntries(TILE_ORDER.map((c) => [c, byDir.filter((r) => r.status === c).length])) as Record<TransportStatus, number>;
 
   const needle = q.trim().toLowerCase();
@@ -131,8 +150,13 @@ export function TransportTrackingPage({ role = 'WAREHOUSE_OFFICER' }: { role?: T
     .filter((r) => live || !isDriver || r.shipment.driver === MOCK_DRIVER)
     .filter((r) => !needle || [r.shipment.id, r.shipment.ref, r.shipment.drug].some((t) => t.toLowerCase().includes(needle)));
 
-  const outAll = all.filter((r) => isOutbound(r.shipment));
-  const inAll = all.filter((r) => !isOutbound(r.shipment));
+  const pageCount = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+  const curPage = Math.min(page, pageCount - 1);
+  const pageRows = rows.slice(curPage * PAGE_SIZE, (curPage + 1) * PAGE_SIZE);
+  const periodLabel = PERIODS.find((p) => p.days === days)?.label ?? '';
+
+  const outAll = scoped.filter((r) => isOutbound(r.shipment));
+  const inAll = scoped.filter((r) => !isOutbound(r.shipment));
   const waiting = outAll.filter((r) => r.status === 'WAITING_DISPATCH').length;
   const toReceive = inAll.filter((r) => r.status === 'ARRIVED').length;
   const options: DirectionOption[] = [
@@ -260,13 +284,13 @@ export function TransportTrackingPage({ role = 'WAREHOUSE_OFFICER' }: { role?: T
             <a href={homeHrefFor(role)} className="link" style={{ fontSize: 12, fontWeight: 400 }}>หน้าหลัก</a> <span aria-hidden="true">›</span> <span aria-current="page">ติดตามการขนส่ง</span>
           </nav>
           <h1 className="tr-title">
-            ติดตามการขนส่ง <span>/ Transport tracking · UI-14</span>
+            ติดตามการขนส่ง
           </h1>
-          <div style={{ fontSize: 13 }}>รพ.สมุทรปราการ · สต็อกต้นทางตัดเมื่อขึ้นรถ (LOADED) ปลายทางรับเข้าเมื่อยืนยันรับ (RECEIVED) · ขั้นตอนขนส่งไม่มี Agent</div>
+          <div style={{ fontSize: 13 }}>รพ.สมุทรปราการ · สต็อกต้นทางตัดเมื่อขึ้นรถ ปลายทางรับเข้าเมื่อยืนยันรับ</div>
           {canOperate && (
             <div style={{ fontSize: 12.5, marginTop: 2 }}>
-              งานส่งออกเข้าที่นี่เมื่อเภสัชกรอนุมัติ (F1/F2) หรือ WH ยืนยันคำขอเร่งด่วน (F3) · ขั้นตอน: รอขึ้นรถ (เตรียมของ) → ขึ้นรถ + รูป → ถึง{' '}
-              <a className="link" href="?role=warehouse&page=kit" style={{ fontSize: 12.5 }}>ไปที่คำขอเร่งด่วน F3</a>
+              งานส่งออกเข้าที่นี่เมื่อเภสัชกรอนุมัติ หรือคลังยืนยันคำขอเร่งด่วน · ขั้นตอน: รอขึ้นรถ (เตรียมของ) → ขึ้นรถ + รูป → ถึง{' '}
+              <a className="link" href="?role=warehouse&page=kit" style={{ fontSize: 12.5 }}>ไปที่คำขอเร่งด่วน</a>
             </div>
           )}
         </div>
@@ -277,7 +301,7 @@ export function TransportTrackingPage({ role = 'WAREHOUSE_OFFICER' }: { role?: T
           </button>
           <button className="btn btn-s">
             <Icon name="printer" />
-            พิมพ์เอกสาร <span style={{ fontWeight: 400 }}>UI-15</span>
+            พิมพ์เอกสาร
           </button>
         </div>
       </section>
@@ -311,31 +335,37 @@ export function TransportTrackingPage({ role = 'WAREHOUSE_OFFICER' }: { role?: T
             onChange={(d) => {
               setDir(d);
               setStatus(null);
+              setPage(0);
             }}
           />
           <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
             <h2 className="sec-h">
-              สถานะงานขนส่ง <span className="en">SM-6 · 7 วันล่าสุด</span>
+              สถานะงานขนส่ง <span className="en">{days ? `${periodLabel} · งานที่ยังไม่จบแสดงเสมอ` : periodLabel}</span>
             </h2>
             {status && (
-              <button className="link" onClick={() => setStatus(null)}>
+              <button className="link" onClick={() => { setStatus(null); setPage(0); }}>
                 ล้างตัวกรองสถานะ
               </button>
             )}
           </div>
-          <StatusTiles counts={counts} active={status} onPick={setStatus} />
+          <StatusTiles counts={counts} active={status} onPick={(s) => { setStatus(s); setPage(0); }} />
         </div>
         <div className="tr-filters">
           <label className="tr-search">
             <Icon name="search" />
-            <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="เลขงาน TR- / เลขคำขอ / ชื่อยา" aria-label="ค้นหางานขนส่ง" />
+            <input type="search" value={q} onChange={(e) => { setQ(e.target.value); setPage(0); }} placeholder="เลขงาน TR- / เลขคำขอ / ชื่อยา" aria-label="ค้นหางานขนส่ง" />
           </label>
-          <select className={`sel ${kind !== 'all' ? 'sel-on' : ''}`} aria-label="ประเภทงาน" value={kind} onChange={(e) => setKind(e.target.value as 'all' | ShipmentKind)}>
-            <option value="all">ประเภท: ทั้งหมด</option>
-            <option value="F1">ยืม (BORROW_LEG)</option>
-            <option value="F2">โอนยาใกล้หมดอายุ (ALLOCATION_LINE)</option>
+          <select className={`sel ${days !== 7 ? 'sel-on' : ''}`} aria-label="ช่วงเวลา" value={days} onChange={(e) => { setDays(Number(e.target.value)); setPage(0); }}>
+            {PERIODS.map((p) => (
+              <option key={p.days} value={p.days}>{p.label}</option>
+            ))}
           </select>
-          <select className={`sel ${driver !== 'all' ? 'sel-on' : ''}`} aria-label="คนขับ" value={driver} onChange={(e) => setDriver(e.target.value)}>
+          <select className={`sel ${kind !== 'all' ? 'sel-on' : ''}`} aria-label="ประเภทงาน" value={kind} onChange={(e) => { setKind(e.target.value as 'all' | ShipmentKind); setPage(0); }}>
+            <option value="all">ประเภท: ทั้งหมด</option>
+            <option value="F1">ยืม</option>
+            <option value="F2">โอนยาใกล้หมดอายุ</option>
+          </select>
+          <select className={`sel ${driver !== 'all' ? 'sel-on' : ''}`} aria-label="คนขับ" value={driver} onChange={(e) => { setDriver(e.target.value); setPage(0); }}>
             <option value="all">คนขับ: ทั้งหมด</option>
             {drivers.map((d) => (
               <option key={d} value={d}>{d}</option>
@@ -344,7 +374,7 @@ export function TransportTrackingPage({ role = 'WAREHOUSE_OFFICER' }: { role?: T
           <span style={{ flex: '1 1 0' }} />
           <span style={{ fontSize: 12 }}>เรียง: ต้องทำก่อน → อัปเดตล่าสุด</span>
         </div>
-        <ShipmentTable rows={rows} activeId={drawerOpen && sel ? sel.shipment.id : null} onOpen={open} onAction={onAction} canOperate={canOperate} canCancel={canCancel} isDriver={isDriver} />
+        <ShipmentTable rows={pageRows} paging={{ page: curPage, pageCount, total: rows.length, pageSize: PAGE_SIZE, onPage: setPage }} activeId={drawerOpen && sel ? sel.shipment.id : null} onOpen={open} onAction={onAction} canOperate={canOperate} canCancel={canCancel} isDriver={isDriver} />
       </section>
 
       {drawerOpen && sel && (

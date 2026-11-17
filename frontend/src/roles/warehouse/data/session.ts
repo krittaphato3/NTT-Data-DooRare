@@ -3,7 +3,7 @@ import type { UserProfile } from '../../../data/session';
 export const WAREHOUSE_USER: UserProfile = {
   name: 'คุณประเสริฐ ใจงาม',
   role: 'WAREHOUSE_OFFICER',
-  roleTh: 'เจ้าหน้าที่คลัง (Warehouse officer)',
+  roleTh: 'เจ้าหน้าที่คลัง',
   scopeLabel: 'เห็นเฉพาะข้อมูล รพ.สมุทรปราการ',
   hospitalLabel: 'โรงพยาบาลสมุทรปราการ',
   initial: 'ป',

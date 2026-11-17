@@ -69,8 +69,8 @@ const CONFIDENCE: Record<string, { label: string; cls: string }> = {
 /** Why the agent could not help, from its flags. */
 function fallbackReason(a: ApiPlanAgent): string {
   if (a.status === 'SKIPPED' || a.flags.includes('AGENT_DISABLED')) return 'ปิด Agent อยู่ (kill switch)';
-  if (a.flags.includes('NO_LLM_CONFIGURED')) return 'ยังไม่ได้ตั้งค่า LLM (ผู้ดูแลระบบตั้งได้ที่หน้าตั้งค่า AI)';
-  if (a.flags.includes('LLM_ERROR')) return 'เรียก LLM ไม่สำเร็จหรือเกินเวลา';
+  if (a.flags.includes('NO_LLM_CONFIGURED')) return 'ยังไม่ได้ตั้งค่าระบบ AI (ผู้ดูแลระบบตั้งได้ที่หน้าตั้งค่า AI)';
+  if (a.flags.includes('LLM_ERROR')) return 'เรียก AI ไม่สำเร็จหรือใช้เวลานานเกินไป';
   return 'คำตอบของ Agent ไม่ผ่านการตรวจของระบบ 2 ครั้ง';
 }
 
@@ -109,15 +109,15 @@ export function AgentPlanCard({ agent, plan, removed, mayWrite, busy, onRemove, 
         {agent.running ? (
           <span className="badge st-pending" style={{ height: 20, fontSize: 11 }}>กำลังประเมิน…</span>
         ) : a && a.status !== 'OK' ? (
-          <span className="badge st-timeout" style={{ height: 20, fontSize: 11 }}>FALLBACK</span>
+          <span className="badge st-timeout" style={{ height: 20, fontSize: 11 }}>ใช้แผนตามกฎ</span>
         ) : conf ? (
           <span className={`badge ${conf.cls}`} style={{ height: 20, fontSize: 11 }}>{conf.label}</span>
         ) : null}
       </div>
 
-      {a && !agent.running && (
+      {a && !agent.running && a.latencyMs !== null && (
         <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 8 }}>
-          F3_T1 · {a.model ?? '—'}{a.latencyMs !== null ? ` · ใช้เวลา ${(a.latencyMs / 1000).toFixed(1)} วินาที` : ''} · สถานะ {a.status}
+          Agent ใช้เวลา {(a.latencyMs / 1000).toFixed(1)} วินาที
         </div>
       )}
 
@@ -133,7 +133,7 @@ export function AgentPlanCard({ agent, plan, removed, mayWrite, busy, onRemove, 
         <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: 8, padding: '10px 12px' }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: '#0369a1', marginBottom: 4 }}>ใช้แผนตามกฎของโรงพยาบาล</div>
           <div style={{ fontSize: 12, color: '#0369a1', lineHeight: '18px' }}>{fallbackReason(a)} · จำนวนยังคำนวณตามกฎเหมือนเดิม · ไม่มีคำถามเพิ่มเติม</div>
-          <div style={{ fontSize: 11, color: '#0284c7', marginTop: 6 }}>บันทึกใน agent_run แล้ว</div>
+          <div style={{ fontSize: 11, color: '#0284c7', marginTop: 6 }}>บันทึกผลประเมินแล้ว</div>
         </div>
       )}
 
@@ -215,7 +215,7 @@ export function AgentPlanCard({ agent, plan, removed, mayWrite, busy, onRemove, 
       )}
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginTop: 10 }}>
-        <div style={{ fontSize: 11, color: '#94a3b8', lineHeight: '16px' }}>Agent เลือกจากรายการที่โค้ดคำนวณ ไม่เปลี่ยนจำนวน · เจ้าหน้าที่ตรวจและยืนยันแผน (BR-F3-008)</div>
+        <div style={{ fontSize: 11, color: '#94a3b8', lineHeight: '16px' }}>Agent เลือกจากรายการที่ระบบคำนวณ ไม่เปลี่ยนจำนวน · เจ้าหน้าที่ตรวจและยืนยันแผน</div>
         {mayWrite && !agent.running && (
           <button type="button" className="btn btn-s btn-sm" style={{ height: 26, fontSize: 11, flex: 'none' }} disabled={busy} onClick={agent.ask}>{a ? 'ประเมินใหม่' : 'ให้ Agent ประเมิน'}</button>
         )}

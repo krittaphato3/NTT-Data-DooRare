@@ -8,6 +8,26 @@ const th = (label: string, right = false, width?: number) => (
   </th>
 );
 
+const TAG: React.CSSProperties = { height: 18, fontSize: 10.5, padding: '0 6px' };
+const SUB: React.CSSProperties = { fontSize: 11.5, color: '#64748b', marginTop: 2, lineHeight: '16px' };
+/** Row that still needs a borrow gets a soft red wash, so the eye lands on it first. */
+const needRow = (need: boolean): React.CSSProperties | undefined => (need ? { background: '#fef2f2' } : undefined);
+
+/** The "how many to borrow" cell: a red pill when something is short, a quiet green word when it is covered. */
+function BorrowNeed({ n, unit }: { n: number; unit: string }) {
+  return n > 0 ? (
+    <span style={{ display: 'inline-block', background: '#fee2e2', color: '#b91c1c', fontWeight: 700, fontSize: 12.5, padding: '2px 10px', borderRadius: 12, whiteSpace: 'nowrap' }}>ยืม {num(n)} {unit}</span>
+  ) : (
+    <span style={{ color: '#15803d', fontSize: 12, fontWeight: 600 }}>ครบ</span>
+  );
+}
+
+const removeBtn = (name: string, onClick?: () => void) => (
+  <button type="button" className="btn btn-s btn-sm" title={`เอา ${name} ออกจากแผน`} aria-label={`เอา ${name} ออกจากแผน`} onClick={onClick} style={{ width: 28, padding: 0 }}>
+    <Icon name="xc" className="ic12" />
+  </button>
+);
+
 interface KitTableProps {
   plan: ApiPlan;
   /** Staff may change the pack count / remove a line. */
@@ -18,30 +38,28 @@ interface KitTableProps {
   onRemove?: (kit: ApiPlanKit) => void;
 }
 
-/** UI-12 preset kits per patient: estimate, critical minimum, ready sets, pack from loose stock, borrow whole sets (F-27). */
+/** Ready-made kits per patient: how many are needed, how many are ready, how many staff pack from loose stock, how many whole sets to borrow. */
 export function LiveKitTable({ plan, editable, disabledHint, onPack, onRemove }: KitTableProps) {
   return (
-    <div className="card" style={{ padding: '14px 16px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, flexWrap: 'wrap', gap: 6 }}>
-        <div style={{ fontSize: 13.5, fontWeight: 700, color: '#0f2a5c' }}>
-          ชุดสำเร็จรูป (Preset Kit ต่อผู้ป่วย) <span style={{ fontSize: 12, fontWeight: 400, color: '#94a3b8' }}>F-27 · แผนฉบับที่ {plan.revision}</span>
+    <div className="card" style={{ padding: '14px 18px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4, flexWrap: 'wrap', gap: 6 }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: '#0f2a5c' }}>
+          ชุดยาสำเร็จรูป <span style={{ fontSize: 12, fontWeight: 400, color: '#94a3b8' }}>แผนฉบับที่ {plan.revision}</span>
         </div>
-        <div style={{ fontSize: 11.5, color: '#64748b' }}>ลำดับ: ใช้ชุดพร้อมใช้ → จัดเพิ่มจากของแยก (ครบทุกชิ้น) → ยืมทั้งชุด · ไม่ยืมแยกชิ้น (BR-F3-013)</div>
       </div>
+      <div style={{ fontSize: 12, color: '#64748b', marginBottom: 10 }}>ใช้ชุดที่พร้อมอยู่แล้วก่อน → จัดเพิ่มจากของแยก → ที่เหลือยืมมาทั้งชุด (ไม่ยืมแยกชิ้น)</div>
       {plan.kits.length === 0 ? (
         <div style={{ fontSize: 12.5, color: '#64748b' }}>ไม่มีชุดยาในแผนนี้</div>
       ) : (
         <div style={{ overflowX: 'auto' }}>
-          <table className="qt" style={{ minWidth: 720 }}>
+          <table className="qt" style={{ minWidth: 600 }}>
             <thead>
               <tr>
                 {th('ชุด')}
-                {th('ประมาณการ', true)}
-                {th('ขั้นวิกฤต', true)}
-                {th('ส่วนเผื่อ', true)}
-                {th('ใช้ชุดพร้อมใช้', true)}
+                {th('ต้องใช้', true)}
+                {th('มีพร้อมใช้', true)}
                 <th scope="col" style={{ textAlign: 'center' }}>จัดจากของแยก</th>
-                {th('ยืมทั้งชุด', true)}
+                <th scope="col" style={{ textAlign: 'center' }}>ต้องยืม</th>
                 {editable && th('', false, 36)}
               </tr>
             </thead>
@@ -50,25 +68,26 @@ export function LiveKitTable({ plan, editable, disabledHint, onPack, onRemove }:
                 const cls = classMeta(k.class);
                 const max = k.packMax !== null ? Math.min(k.packMax, k.estimated - k.useReady) : k.pack;
                 return (
-                  <tr key={k.code}>
+                  <tr key={k.code} style={needRow(k.borrowSet > 0)}>
                     <td style={{ minWidth: 190 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                        <span style={{ fontWeight: 600, color: '#0f2a5c', fontSize: 13 }}>{k.name}</span>
-                        <span className={`badge ${cls.cls}`} style={{ height: 18, fontSize: 10.5, padding: '0 5px' }}>{cls.label}</span>
-                        {k.edited && <span className="badge st-pending" style={{ height: 18, fontSize: 10.5, padding: '0 5px' }}>แก้โดยเจ้าหน้าที่</span>}
-                        {k.noRecipe && <span className="badge st-rejected" style={{ height: 18, fontSize: 10.5, padding: '0 5px' }}>NO_RECIPE</span>}
+                        <span style={{ fontWeight: 600, color: '#0f172a', fontSize: 13 }}>{k.name}</span>
+                        <span className={`badge ${cls.cls}`} style={TAG}>{cls.label}</span>
+                        {k.edited && <span className="badge st-pending" style={TAG}>แก้โดยเจ้าหน้าที่</span>}
+                        {k.noRecipe && <span className="badge st-rejected" style={TAG}>ยังไม่มีสูตรชุด</span>}
                       </div>
-                      <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>{ruleText(k.rule, 'ชุด')}</div>
+                      <div style={SUB}>{ruleText(k.rule, 'ชุด')}</div>
                       {k.borrowSet > 0 && !k.noRecipe && k.packMax !== null && k.packMax < k.estimated - k.useReady && (
-                        <div style={{ fontSize: 11, color: '#92400e', marginTop: 2 }}>ของแยกจัดได้อีกสูงสุด {k.packMax} ชุด · ขาดชิ้นเดียวก็ยืมทั้งชุด (BR-F3-013)</div>
+                        <div style={{ ...SUB, color: '#92400e' }}>ของแยกจัดได้อีกสูงสุด {k.packMax} ชุด · ขาดชิ้นเดียวก็ต้องยืมทั้งชุด</div>
                       )}
                     </td>
-                    <td className="r" style={{ fontWeight: 600 }}>{num(k.estimated)}</td>
-                    <td className="r">{num(k.critical)}</td>
-                    <td className="r" style={{ color: '#64748b' }}>{num(k.buffer)}</td>
                     <td className="r">
-                      {num(k.useReady)}
-                      {k.ready !== null && <span style={{ color: '#94a3b8', fontSize: 11 }}> / มี {num(k.ready)}</span>}
+                      <b style={{ fontSize: 14 }}>{num(k.estimated)}</b>
+                      <div style={SUB}>ขั้นต่ำ {num(k.critical)}</div>
+                    </td>
+                    <td className="r">
+                      <b>{num(k.useReady)}</b>
+                      {k.ready !== null && <div style={SUB}>ในคลังมี {num(k.ready)}</div>}
                     </td>
                     <td style={{ textAlign: 'center' }}>
                       {editable && !k.noRecipe ? (
@@ -81,14 +100,8 @@ export function LiveKitTable({ plan, editable, disabledHint, onPack, onRemove }:
                         <b>{num(k.pack)}</b>
                       )}
                     </td>
-                    <td className="r" style={{ fontWeight: 700, color: k.borrowSet ? '#dc2626' : '#15803d' }}>{num(k.borrowSet)}</td>
-                    {editable && (
-                      <td>
-                        <button type="button" className="btn btn-s btn-sm" title={`เอา ${k.name} ออกจากแผน`} aria-label={`เอา ${k.name} ออกจากแผน`} onClick={() => onRemove?.(k)} style={{ width: 28, padding: 0 }}>
-                          <Icon name="xc" className="ic12" />
-                        </button>
-                      </td>
-                    )}
+                    <td style={{ textAlign: 'center' }}><BorrowNeed n={k.borrowSet} unit="ชุด" /></td>
+                    {editable && <td>{removeBtn(k.name, () => onRemove?.(k))}</td>}
                   </tr>
                 );
               })}
@@ -97,8 +110,8 @@ export function LiveKitTable({ plan, editable, disabledHint, onPack, onRemove }:
         </div>
       )}
       {editable && disabledHint && <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 8 }}>{disabledHint}</div>}
-      <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 8, lineHeight: '16px' }}>
-        ลดจำนวนที่จัดเองได้อย่างเดียว ส่วนที่ลดจะกลายเป็นยืมทั้งชุดอัตโนมัติ (BR-F3-014) · ระบบไม่เปิดชุดที่แพ็กแล้วมาใช้ (BR-F3-010)
+      <div style={{ fontSize: 11.5, color: '#94a3b8', marginTop: 8, lineHeight: '16px' }}>
+        ลดจำนวนที่จัดได้อย่างเดียว ส่วนที่ลดจะกลายเป็นยืมทั้งชุดอัตโนมัติ
       </div>
     </div>
   );
@@ -111,26 +124,23 @@ interface ExtraTableProps {
   onSetQty?: (extra: ApiPlanExtra, qty: number) => void;
 }
 
-/** Items outside the kits: estimate, critical minimum, stock now, borrow quantity. PRC group O is capped (BR-F3-031). */
+/** Items outside the kits: how many are needed, how many are in stock, how many to borrow. Blood (PRC group O) is capped at 6 units. */
 export function LiveExtrasTable({ plan, editable, onRemove, onSetQty }: ExtraTableProps) {
   return (
-    <div className="card" style={{ padding: '14px 16px' }}>
-      <div style={{ fontSize: 13.5, fontWeight: 700, color: '#0f2a5c', marginBottom: 10 }}>
-        ยาและเวชภัณฑ์นอกชุด <span style={{ fontSize: 12, fontWeight: 400, color: '#94a3b8' }}>BR-F3-003 · ระบบคิดจำนวนจากกฎต่อผู้ป่วย</span>
-      </div>
+    <div className="card" style={{ padding: '14px 18px' }}>
+      <div style={{ fontSize: 14, fontWeight: 700, color: '#0f2a5c', marginBottom: 4 }}>ยาและเวชภัณฑ์นอกชุด</div>
+      <div style={{ fontSize: 12, color: '#64748b', marginBottom: 10 }}>ระบบคิดจำนวนจากกฎต่อผู้ป่วยแต่ละระดับ · แก้จำนวนในช่อง “ต้องใช้” ได้</div>
       {plan.extras.length === 0 ? (
         <div style={{ fontSize: 12.5, color: '#64748b' }}>ไม่มีรายการนอกชุดในแผนนี้</div>
       ) : (
         <div style={{ overflowX: 'auto' }}>
-          <table className="qt" style={{ minWidth: 700 }}>
+          <table className="qt" style={{ minWidth: 560 }}>
             <thead>
               <tr>
                 {th('รายการ')}
-                {th('กฎ')}
-                {th('ประมาณการ', true)}
-                {th('ขั้นวิกฤต', true)}
-                {th('สต็อกที่ใช้ได้', true)}
-                {th('ยืม', true)}
+                {th('ต้องใช้', true)}
+                {th('มีในสต็อก', true)}
+                <th scope="col" style={{ textAlign: 'center' }}>ต้องยืม</th>
                 {editable && th('', false, 36)}
               </tr>
             </thead>
@@ -138,17 +148,17 @@ export function LiveExtrasTable({ plan, editable, onRemove, onSetQty }: ExtraTab
               {plan.extras.map((e) => {
                 const cls = classMeta(e.class);
                 return (
-                  <tr key={e.key}>
-                    <td style={{ minWidth: 200 }}>
+                  <tr key={e.key} style={needRow(e.borrow > 0)}>
+                    <td style={{ minWidth: 220 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                        <span style={{ fontWeight: 600, color: '#0f2a5c', fontSize: 13 }}>{e.name}</span>
-                        <span className={`badge ${cls.cls}`} style={{ height: 18, fontSize: 10.5, padding: '0 5px' }}>{e.blood ? 'โลหิต · เฉพาะ รพ.มีธนาคารเลือด' : cls.label}</span>
-                        {e.edited && <span className="badge st-pending" style={{ height: 18, fontSize: 10.5, padding: '0 5px' }}>แก้โดยเจ้าหน้าที่</span>}
+                        <span style={{ fontWeight: 600, color: '#0f172a', fontSize: 13 }}>{e.name}</span>
+                        <span className={`badge ${cls.cls}`} style={TAG}>{e.blood ? 'โลหิต' : cls.label}</span>
+                        {e.edited && <span className="badge st-pending" style={TAG}>แก้โดยเจ้าหน้าที่</span>}
                       </div>
-                      {e.blood && <div style={{ fontSize: 11, color: '#b91c1c', marginTop: 2 }}>ต้องให้ธนาคารเลือดยืนยัน ABO/Rh และ cross-match ก่อนให้ · สูงสุด 6 ยูนิต{e.capped ? ' (ปรับลดตามเพดานแล้ว)' : ''}</div>}
+                      <div style={SUB}>{ruleText(e.rule, e.unit ?? 'หน่วย')}</div>
+                      {e.blood && <div style={{ ...SUB, color: '#b91c1c' }}>ขอได้เฉพาะโรงพยาบาลที่มีธนาคารเลือด · ต้องตรวจหมู่เลือดและ cross-match ก่อนให้ · สูงสุด 6 ยูนิต{e.capped ? ' (ปรับลดตามเพดานแล้ว)' : ''}</div>}
                     </td>
-                    <td style={{ fontSize: 11.5, color: '#64748b' }}>{ruleText(e.rule, e.unit ?? 'หน่วย')}</td>
-                    <td className="r" style={{ fontWeight: 600 }}>
+                    <td className="r" style={{ whiteSpace: 'nowrap' }}>
                       {editable && onSetQty ? (
                         <input
                           type="number"
@@ -160,23 +170,17 @@ export function LiveExtrasTable({ plan, editable, onRemove, onSetQty }: ExtraTab
                             const v = Number(ev.target.value);
                             if (Number.isInteger(v) && v >= 0 && v !== e.estimated) onSetQty(e, v);
                           }}
-                          style={{ width: 64, height: 28, textAlign: 'right', border: '1px solid #cbd5e1', borderRadius: 6, fontFamily: 'inherit' }}
+                          style={{ width: 64, height: 28, textAlign: 'right', border: '1px solid #cbd5e1', borderRadius: 6, fontFamily: 'inherit', fontWeight: 600 }}
                         />
                       ) : (
-                        num(e.estimated)
-                      )}{' '}
-                      <span style={{ color: '#94a3b8', fontSize: 11, fontWeight: 400 }}>{e.unit}</span>
+                        <b style={{ fontSize: 14 }}>{num(e.estimated)}</b>
+                      )}
+                      {e.unit && <span style={{ color: '#94a3b8', fontSize: 11, marginLeft: 4 }}>{e.unit}</span>}
+                      <div style={SUB}>ขั้นต่ำ {num(e.critical)}</div>
                     </td>
-                    <td className="r">{num(e.critical)}</td>
                     <td className="r">{num(e.loose)}</td>
-                    <td className="r" style={{ fontWeight: 700, color: e.borrow ? '#dc2626' : '#15803d' }}>{num(e.borrow)}</td>
-                    {editable && (
-                      <td>
-                        <button type="button" className="btn btn-s btn-sm" title={`เอา ${e.name} ออกจากแผน`} aria-label={`เอา ${e.name} ออกจากแผน`} onClick={() => onRemove?.(e)} style={{ width: 28, padding: 0 }}>
-                          <Icon name="xc" className="ic12" />
-                        </button>
-                      </td>
-                    )}
+                    <td style={{ textAlign: 'center' }}><BorrowNeed n={e.borrow} unit={e.unit ?? 'หน่วย'} /></td>
+                    {editable && <td>{removeBtn(e.name, () => onRemove?.(e))}</td>}
                   </tr>
                 );
               })}
@@ -201,7 +205,7 @@ export function PlanNotes({ plan }: { plan: ApiPlan }) {
       </ul>
       {plan.shortfall.length > 0 && (
         <div style={{ marginTop: 8 }}>
-          <b style={{ color: '#0f2a5c' }}>ผลตรวจรวมแบบ one-pass (กระจายชุดตามสูตร เทียบของแยก + ของในชุดพร้อมใช้):</b>
+          <b style={{ color: '#0f2a5c' }}>ผลตรวจรวม (กระจายชุดตามสูตร เทียบของแยก + ของในชุดพร้อมใช้):</b>
           <ul style={{ margin: '4px 0 0', paddingLeft: 18 }}>
             {plan.shortfall.map((s) => (
               <li key={s.item}>

@@ -23,19 +23,14 @@ const MOVING: PlanStatus[] = ['APPROVED', 'AUTO_APPROVED', 'TRANSPORTING'];
 const FINISHED: PlanStatus[] = ['COMPLETED', 'CANCELLED'];
 const tabOfPlan = (st: PlanStatus): PoolTab => (MOVING.includes(st) ? 'approved' : FINISHED.includes(st) ? 'history' : 'plans');
 
-const TABS: { id: PoolTab; label: string; ui: string }[] = [
-  { id: 'pool', label: 'คลังกลาง (ถูกกันไว้)', ui: 'UI-08' },
-  { id: 'plans', label: 'แผนรอเห็นชอบ', ui: 'UI-09' },
-  { id: 'approved', label: 'อนุมัติแล้ว · ขนส่ง', ui: 'UI-09' },
-  { id: 'history', label: 'จบแล้ว', ui: 'UI-09' },
+const TABS: { id: PoolTab; label: string }[] = [
+  { id: 'pool', label: 'รอจับคู่' },
+  { id: 'plans', label: 'รอเห็นชอบ' },
+  { id: 'approved', label: 'อนุมัติแล้ว · เตรียมจัดส่ง' },
+  { id: 'history', label: 'จบแล้ว' },
 ];
 
 
-/**
- * UI-08 Central pool + UI-09 Allocation plan review (spec F2a). UI only: mock
- * data; approve / uneconomical decisions are local state. Pool quantities are
- * held (ถูกกันไว้) at the origin hospital until a plan ships them.
- */
 /**
  * UI-08 Central pool + UI-09 Allocation plan review. `role` gates every approval through
  * `lib/rbac.ts` and drives the breadcrumb home.
@@ -74,15 +69,15 @@ export function PoolAllocationPage({ role = 'PHARMACIST' }: { role?: RoleCode })
       .catch((e: Error) => setActionError(e.message))
       .finally(() => setBusy(false));
   };
-  const liveApprove = (p: AllocationPlan) => p.live && run(p, decidePlan(p.live.uuid, 'APPROVED', p.version), 'บันทึกการเห็นชอบแล้ว (audit_log)');
+  const liveApprove = (p: AllocationPlan) => p.live && run(p, decidePlan(p.live.uuid, 'APPROVED', p.version), 'บันทึกการเห็นชอบแล้ว');
   const liveApproveAll = (p: AllocationPlan, noteText: string, lines?: { receiver: string; qty: number }[]) =>
-    p.live && run(p, decidePlan(p.live.uuid, 'APPROVED', p.version, noteText, true, lines), 'บันทึกมติที่ประชุมและปรับปรุงยอดจัดสรรเรียบร้อยแล้ว · เริ่มขั้นตอนขนส่ง (UI-14)');
+    p.live && run(p, decidePlan(p.live.uuid, 'APPROVED', p.version, noteText, true, lines), 'บันทึกมติที่ประชุมและปรับยอดจัดสรรแล้ว · เริ่มขั้นตอนขนส่ง');
   const liveRevise = (p: AllocationPlan, note: string, lines: { receiverHospitalId: string; qty: number }[]) =>
     p.live && run(p, revisePlan(p.live.uuid, p.version, lines, note), 'ปรับยอดจัดสรรแล้ว · ส่งให้ทุก รพ. เห็นชอบรอบใหม่');
   const liveReject = (p: AllocationPlan, comment: string) => p.live && run(p, decidePlan(p.live.uuid, 'REJECTED', p.version, comment), 'บันทึกการไม่เห็นชอบแล้ว · แผนเข้าสถานะต้องหารือ');
-  const liveOption = (p: AllocationPlan, id: string, label: string) => p.live && run(p, choosePlanOption(p.live.uuid, id as ApiPlanOption, p.version), `บันทึกทางเลือกแล้ว: ${label} (audit_log)`);
-  const liveCancel = (p: AllocationPlan, reason: string) => p.live && run(p, cancelPlan(p.live.uuid, reason), 'ส่งคำขอยกเลิกแล้ว · ถ้าเป็นแผนที่อนุมัติแล้วต้องให้อีกฝ่ายยินยอมด้วย');
-  const liveObject = (p: AllocationPlan, reason: string) => p.live && run(p, objectPlan(p.live.uuid, reason), 'ยื่นคัดค้านแล้ว · แผนเข้าสถานะต้องหารือ และแจ้งทุก รพ.ในแผน');
+  const liveOption = (p: AllocationPlan, id: string, label: string) => p.live && run(p, choosePlanOption(p.live.uuid, id as ApiPlanOption, p.version), `บันทึกทางเลือกแล้ว: ${label}`);
+  const liveCancel = (p: AllocationPlan, reason: string) => p.live && run(p, cancelPlan(p.live.uuid, reason), 'ส่งคำขอยกเลิกแล้ว · แผนที่อนุมัติแล้วต้องให้อีกฝ่ายยินยอมด้วย');
+  const liveObject = (p: AllocationPlan, reason: string) => p.live && run(p, objectPlan(p.live.uuid, reason), 'ยื่นคัดค้านแล้ว · แผนต้องหารือกัน และแจ้งทุก รพ.ในแผนแล้ว');
 
   /* F2: the owner pharmacist turns a pool lot into a plan, by the allocation agent or by hand. */
   const { user } = useAuth();
@@ -90,7 +85,7 @@ export function PoolAllocationPage({ role = 'PHARMACIST' }: { role?: RoleCode })
   const [manualFor, setManualFor] = useState<PoolLot | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const planCreated = (planNo: string, status: string, detail = '') => {
-    setNotice(`สร้างแผน ${planNo} แล้ว · ${status === 'READY_FOR_APPROVAL' ? 'รอ รพ.ที่เกี่ยวข้องเห็นชอบ' : 'อนุมัติอัตโนมัติ (เครือข่ายเดียวกัน) · เริ่มขั้นตอนขนส่ง'}${detail}`);
+    setNotice(`สร้างแผน ${planNo} แล้ว · ${status === 'READY_FOR_APPROVAL' ? 'รอ รพ.ที่เกี่ยวข้องเห็นชอบ' : 'อนุมัติอัตโนมัติแล้ว · เริ่มขั้นตอนขนส่ง'}${detail}`);
     setTab('plans');
     return data.reload();
   };
@@ -163,14 +158,14 @@ export function PoolAllocationPage({ role = 'PHARMACIST' }: { role?: RoleCode })
       try {
         const pre = await getPoolCandidates(l.live!.uuid).then(({ data: d }) => ({ blocker: d.blocker, any: d.candidates.some((c) => c.maxQty > 0) })).catch(() => null);
         if (pre && (pre.blocker || !pre.any)) {
-          results.push({ lot: l.drug, ok: false, skipped: true, text: pre.blocker ?? 'ไม่มี รพ.ในเขตที่ใช้ยานี้ได้ทันก่อนหมดอายุ (ต้องมีรายการยาที่จับคู่แล้วและผลพยากรณ์) · ข้าม ไม่สร้างแผน' });
+          results.push({ lot: l.drug, ok: false, skipped: true, text: pre.blocker ?? 'ไม่มี รพ.ในเขตที่ใช้ยานี้ได้ทันก่อนหมดอายุ · ข้ามไม่สร้างแผน' });
           setBatch({ running: true, done: results.length, total: lots.length });
           continue;
         }
         const { data: r } = await sendPoolToAgent(l.live!.uuid);
         const a = r.agent;
-        const how = a.status === 'OK' ? `Agent (${a.model ?? '—'})` : `สูตร F-22 แทน Agent (${a.status})`;
-        results.push({ lot: l.drug, ok: true, plan: r.plan.status, text: `แผน ${r.plan.planNo} · ${r.plan.status === 'READY_FOR_APPROVAL' ? 'รอ รพ.ที่เกี่ยวข้องเห็นชอบ' : 'อนุมัติอัตโนมัติ (เครือข่ายเดียวกัน)'} · ${how}${a.summary ? ` — ${a.summary}` : ''}` });
+        const how = a.status === 'OK' ? 'จับคู่โดยระบบ' : 'จับคู่ด้วยสูตรสำรอง';
+        results.push({ lot: l.drug, ok: true, plan: r.plan.status, text: `แผน ${r.plan.planNo} · ${r.plan.status === 'READY_FOR_APPROVAL' ? 'รอ รพ.ที่เกี่ยวข้องเห็นชอบ' : 'อนุมัติอัตโนมัติแล้ว'} · ${how}` });
       } catch (e) {
         results.push({ lot: l.drug, ok: false, text: (e as Error).message });
       }
@@ -220,11 +215,11 @@ export function PoolAllocationPage({ role = 'PHARMACIST' }: { role?: RoleCode })
           : p,
       ),
     );
-    setDecisions((m) => ({ ...m, [id]: 'เห็นชอบแผนแล้ว 19:22 น. · ระบบสร้างเอกสารให้พิมพ์ทันที (XC-1)' }));
+    setDecisions((m) => ({ ...m, [id]: 'เห็นชอบแผนแล้ว · ระบบสร้างเอกสารให้พิมพ์ทันที' }));
   };
 
   const decideUneconomical = (id: string, label: string) => {
-    setDecisions((m) => ({ ...m, [id]: `บันทึกตัดสินใจแล้ว: ${label} · 19:22 น. (audit_log)` }));
+    setDecisions((m) => ({ ...m, [id]: `บันทึกตัดสินใจแล้ว: ${label}` }));
   };
 
   return (
@@ -237,12 +232,9 @@ export function PoolAllocationPage({ role = 'PHARMACIST' }: { role?: RoleCode })
             </a>{' '}
             <span aria-hidden="true">›</span> <span aria-current="page">คลังกลาง · แผนจัดสรร</span>
           </nav>
-          <h1 className="tr-title">
-            คลังกลาง · แผนจัดสรร <span>/ Central pool · UI-08 · Allocation plans · UI-09</span>
-          </h1>
+          <h1 className="tr-title">คลังกลาง · แผนจัดสรร</h1>
           <div style={{ fontSize: 13 }}>
-            เขตสุขภาพที่ 6 · คลังกลางรวมเฉพาะข้อมูล (ถูกกันไว้ = กันออกจากสต็อกใช้งาน) · แผนจัดสรรมาจากการจับคู่ของ Agent ·
-            แผนที่ไม่คุ้มค่าขนส่ง (F-23 ≥ {COST_LIMIT_PCT}%) ต้องเลือก 1 ใน 4 ทางก่อนส่ง
+            เขตสุขภาพที่ 6 · ยาใกล้หมดอายุที่โรงพยาบาลปล่อยมาแบ่งปัน ถูกกันออกจากสต็อกใช้งานแล้ว
           </div>
         </div>
         <div className="pagehead-actions">
@@ -266,20 +258,18 @@ export function PoolAllocationPage({ role = 'PHARMACIST' }: { role?: RoleCode })
 
       {needsDiscussion > 0 && (
         <section className="pl-alert" role="alert" data-part="discussion-alert">
-          <h2>
-            ⚠ {needsDiscussion} แผนที่มี รพ. ไม่เห็นด้วย — ต้องหารือก่อนส่งของ <span className="en" style={{ fontWeight: 400 }}>NEEDS_DISCUSSION · ASM-16</span>
-          </h2>
+          <h2>{needsDiscussion} แผนที่มี รพ. ไม่เห็นด้วย · ต้องหารือก่อนส่งของ</h2>
           {plans.filter((p) => p.status === 'NEEDS_DISCUSSION').map((p) => {
             const rejected = p.approvals.filter((a) => a.state === 'REJECTED');
             return (
               <div key={p.id} className="pl-alert-row">
                 <div className="pl-alert-main">
-                  <b>{p.id}</b> · {p.drug} · <span className="num">{p.qty.toLocaleString()} {p.unit}</span>
+                  <b>{p.drug}</b> · <span className="num">{p.qty.toLocaleString()} {p.unit}</span>
                   <div className="why">
                     {rejected.length > 0
                       ? rejected.map((a) => `${a.hospital}${a.comment ? ` — "${a.comment}"` : ''}`).join(' · ')
                       : 'มี รพ.ไม่เห็นชอบหรือคัดค้านแผน'}
-                    {' '}· รอนัดหารือ {p.approvals.length} รพ.
+                    {' '}· รอหารือ {p.approvals.length} รพ.
                   </div>
                 </div>
                 <button className="btn btn-p btn-sm" onClick={() => { setTab('plans'); open(p.id); }}>
@@ -294,35 +284,27 @@ export function PoolAllocationPage({ role = 'PHARMACIST' }: { role?: RoleCode })
       {/* KPI row */}
       <section className="pl-kpis">
         <div className="pl-kpi">
-          <div className="pl-kpi-label">
-            ในคลังกลาง (ถูกกันไว้) <span className="en">POOL · ASM-12</span>
-          </div>
-          <div className="pl-kpi-val num">{POOL_LOTS.length} ล็อต</div>
+          <div className="pl-kpi-label">ในคลังกลาง</div>
+          <div className={`pl-kpi-val num${POOL_LOTS.length === 0 ? ' pl-zero' : ''}`}>{POOL_LOTS.length} ล็อต</div>
           <div className="pl-kpi-sub num">
-            รวม ฿{Math.round(POOL_TOTAL_VALUE).toLocaleString()} · อยู่ในแผน {plans.filter((p) => p.live?.openForApproval).length} แผน
+            มูลค่ารวม ฿{Math.round(POOL_TOTAL_VALUE).toLocaleString()}
           </div>
         </div>
         <div className="pl-kpi pl-kpi-warn">
-          <div className="pl-kpi-label">
-            รอฉันเห็นชอบ <span className="en">MY APPROVAL</span>
-          </div>
-          <div className="pl-kpi-val num">{pendingMine} แผน</div>
-          <div className="pl-kpi-sub">{live ? 'ทุก รพ.ที่เกี่ยวข้องต้องเห็นชอบ · เกินกำหนดเข้าสถานะต้องหารือ' : 'AP-2026-000046 ใกล้หมดเวลา 14:30 น.'}</div>
+          <div className="pl-kpi-label">รอฉันเห็นชอบ</div>
+          <div className={`pl-kpi-val num${pendingMine === 0 ? ' pl-zero' : ''}`}>{pendingMine} แผน</div>
+          <div className="pl-kpi-sub">ทุก รพ.ในแผนต้องเห็นชอบก่อนส่งของ</div>
         </div>
         <div className="pl-kpi">
-          <div className="pl-kpi-label">
-            รอออกเอกสาร <span className="en">XC-1</span>
-          </div>
-          <div className="pl-kpi-val num">{needDoc} แผน</div>
-          <div className="pl-kpi-sub">อนุมัติครบแล้ว ระบบสร้างใบส่งของให้พิมพ์ทันที</div>
+          <div className="pl-kpi-label">อนุมัติแล้ว</div>
+          <div className={`pl-kpi-val num${needDoc === 0 ? ' pl-zero' : ''}`}>{needDoc} แผน</div>
+          <div className="pl-kpi-sub">ระบบสร้างใบส่งของให้พิมพ์แล้ว</div>
         </div>
         <div className="pl-kpi" style={{ borderLeftColor: '#D97706', background: needsDiscussion > 0 ? '#FFFBEB' : '#FFFFFF' }}>
-          <div className="pl-kpi-label">
-            รอนัดประชุมหารือ <span className="en">NEEDS_DISCUSSION · ASM-16</span>
-          </div>
+          <div className="pl-kpi-label">ต้องหารือ</div>
           <div className="pl-kpi-val num" style={{ color: needsDiscussion > 0 ? '#D97706' : undefined }}>{needsDiscussion} แผน</div>
           <div className="pl-kpi-sub">
-            {needsDiscussion > 0 ? 'มี รพ. ปฏิเสธยอดจัดสรร · ต้องเจรจาเฉพาะ รพ. ในแผน' : 'ไม่มีแผนที่ติดข้อโต้แย้ง'}
+            {needsDiscussion > 0 ? 'มี รพ.ไม่เห็นด้วยกับยอดจัดสรร' : 'ไม่มีแผนที่ติดข้อโต้แย้ง'}
           </div>
         </div>
       </section>
@@ -336,7 +318,7 @@ export function PoolAllocationPage({ role = 'PHARMACIST' }: { role?: RoleCode })
       {batchResult && (
         <section className="card pl-batch" role="status" data-part="agent-batch-result">
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
-            <b>Agent จัดสรรเสร็จแล้ว · สร้างแผน {batchResult.filter((r) => r.ok).length} แผนจาก {batchResult.length} ล็อต{batchResult.some((r) => r.skipped) ? ` · ข้าม ${batchResult.filter((r) => r.skipped).length} ล็อตที่ไม่มีผู้รับ` : ''}</b>
+            <b>จัดสรรเสร็จแล้ว · สร้างแผน {batchResult.filter((r) => r.ok).length} แผนจาก {batchResult.length} ล็อต{batchResult.some((r) => r.skipped) ? ` · ข้าม ${batchResult.filter((r) => r.skipped).length} ล็อตที่ไม่มีผู้รับ` : ''}</b>
             <button className="link" onClick={() => setBatchResult(null)}>ปิด</button>
           </div>
           <ul>
@@ -347,31 +329,36 @@ export function PoolAllocationPage({ role = 'PHARMACIST' }: { role?: RoleCode })
             ))}
           </ul>
           <div className="sub">
-            {batchResult.some((r) => r.plan === 'READY_FOR_APPROVAL') ? 'แผนที่รอเห็นชอบอยู่ในแท็บ "แผนรอเห็นชอบ" · ทุก รพ.ในแผนต้องเห็นชอบก่อนส่งของ' : ''}
-            {batchResult.some((r) => r.ok && r.plan !== 'READY_FOR_APPROVAL') ? ' แผนที่อนุมัติอัตโนมัติ (เครือข่ายเดียวกัน) เริ่มขนส่งแล้ว อยู่ในแท็บ "อนุมัติแล้ว · ขนส่ง"' : ''}
-            {batchResult.every((r) => !r.ok) ? 'ไม่มีแผนใหม่ · ล็อตที่ไม่มีผู้รับถอนกลับมาใช้เองได้ที่ปุ่มในแถว' : ''}
+            {batchResult.some((r) => r.plan === 'READY_FOR_APPROVAL') ? 'แผนที่รอเห็นชอบอยู่ในแท็บ "รอเห็นชอบ"' : ''}
+            {batchResult.some((r) => r.ok && r.plan !== 'READY_FOR_APPROVAL') ? ' แผนที่อนุมัติอัตโนมัติเริ่มขนส่งแล้ว อยู่ในแท็บ "อนุมัติแล้ว · เตรียมจัดส่ง"' : ''}
+            {batchResult.every((r) => !r.ok) ? 'ไม่มีแผนใหม่ · ล็อตที่ไม่มีผู้รับถอนกลับมาใช้เองได้' : ''}
           </div>
         </section>
       )}
 
       <section className="card" style={{ padding: 0 }}>
         <div className="tr-card-head">
-          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
-            {TABS.map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                className={`tab ${tab === t.id ? 'tab-on' : ''}`}
-                onClick={() => setTab(t.id)}
-              >
-                {t.id === 'pool' ? 'คลังกลาง · รอจับคู่' : t.label} <span className="cnt">{t.id === 'pool' ? waitingLots.length : t.id === 'approved' ? approvedPlans.length : t.id === 'history' ? historyPlans.length : awaitingPlans.length}</span>
-              </button>
-            ))}
-            <span className="sub" style={{ marginLeft: 6 }}>
-              {tab === 'pool'
-                ? 'สินค้ายังอยู่ที่ รพ.ต้นทาง · เบิกใช้ไม่ได้จนกว่าจะส่งมอบ'
-                : tab === 'plans' ? 'แผนที่ยังรอ รพ. เห็นชอบหรือหารือ · กดแถวเพื่อดูสูตร F-22 / F-23 และตัดสินใจ' : 'กดแถวเพื่อดูรายละเอียดแผน'}
-            </span>
+          <div className="sa-tabs" role="tablist" aria-label="มุมมองคลังกลางและแผนจัดสรร">
+            {TABS.map((t) => {
+              const n = t.id === 'pool' ? waitingLots.length : t.id === 'approved' ? approvedPlans.length : t.id === 'history' ? historyPlans.length : awaitingPlans.length;
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={tab === t.id}
+                  className={`tab ${tab === t.id ? 'tab-on' : ''}`}
+                  onClick={() => setTab(t.id)}
+                >
+                  {t.label} <span className={`cnt${n === 0 ? ' cnt-zero' : ''}`}>{n}</span>
+                </button>
+              );
+            })}
+          </div>
+          <div className="sub">
+            {tab === 'pool'
+              ? 'ยายังอยู่ที่ รพ.ต้นทางจนกว่าจะส่งมอบ'
+              : tab === 'plans' ? 'กดแถวเพื่อดูรายละเอียดและตัดสินใจ' : 'กดแถวเพื่อดูรายละเอียดแผน'}
           </div>
         </div>
 
@@ -392,129 +379,122 @@ export function PoolAllocationPage({ role = 'PHARMACIST' }: { role?: RoleCode })
                         ref={(el) => { if (el) el.indeterminate = chosen.length > 0 && chosen.length < mine.length; }}
                         onChange={(e) => setSelected(e.target.checked ? new Set(mine.map((l) => l.live!.uuid)) : new Set())}
                       />
-                      เลือกทุกล็อตในรอบนี้ ({mine.length})
+                      เลือกทั้งหมด ({mine.length})
                     </label>
                     <button
                       className="btn btn-p"
                       disabled={!mayPlan || chosen.length === 0 || !!batch}
-                      title="ส่งล็อตที่เลือกให้ Agent จับคู่ รพ.ผู้รับ · โค้ดตรวจ F-22/F-23 ก่อนบันทึกทุกแผน"
+                      title="ระบบจะจับคู่ล็อตที่เลือกกับ รพ.ที่ต้องการยา และตรวจความเป็นไปได้ก่อนบันทึกทุกแผน"
                       onClick={() => void runAgentBatch(chosen)}
                     >
                       <Icon name="sparkle" />
-                      {batch ? `กำลังจัดสรร ${batch.done}/${batch.total}…` : `ให้ Agent จัดสรรรอบนี้ ${chosen.length} ล็อต`}
+                      {batch ? `กำลังจัดสรร ${batch.done}/${batch.total}…` : `ให้ระบบจัดสรร ${chosen.length} ล็อต`}
                     </button>
-                    <span className="sub">
-                      ส่งยาที่ทุก รพ.ปล่อยเข้าคลังกลางไปจับคู่ผู้รับทั้งเขตทีเดียว (เรียงล็อตที่ใกล้หมดอายุก่อน) · ผู้รับคือ รพ.ในเขตที่ใช้ยาตัวนี้ ไม่ต้องเคยปล่อยยาเข้าคลังกลาง · ได้แผนแยกต่อล็อต ทุก รพ.ในแผนต้องเห็นชอบ
-                    </span>
+                    <span className="sub">จับคู่กับ รพ.ในเขตที่ต้องใช้ยา แล้วเสนอแผนให้ทุก รพ.เห็นชอบ</span>
                   </>
                 ) : (
-                  <span className="sub">ไม่มีล็อตที่จัดสรรได้ในรอบนี้</span>
+                  <span className="sub">ไม่มีล็อตที่จัดสรรได้ตอนนี้</span>
                 )}
                 {noReceiver > 0 && (
                   <span className="sub" style={{ color: '#92400E' }}>
-                    ⚠ {noReceiver} ล็อตไม่มี รพ.ที่ใช้ทันก่อนหมดอายุ จึงไม่รวมในรอบ (เจ้าของล็อตกด "ถอนกลับมาใช้เอง" ในแถวได้)
+                    {noReceiver} ล็อตไม่มี รพ.ที่ใช้ทันก่อนหมดอายุ จึงไม่รวมในรอบนี้
                   </span>
                 )}
               </div>
             );
           })()}
           <div className="ne-tablewrap">
-            <table className="tbl pl-tbl" aria-label="คลังกลาง">
+            <table className="tbl pl-tbl pl-tbl-pool" aria-label="คลังกลาง">
               <thead>
                 <tr>
-                  <th>ล็อต</th>
+                  {live && <th style={{ width: 44 }}><span className="srt">เลือก</span></th>}
                   <th>ยา</th>
-                  <th style={{ width: 110 }}>จำนวน</th>
+                  <th style={{ width: 120 }}>จำนวน</th>
                   <th style={{ width: 110, textAlign: 'right' }}>มูลค่า</th>
                   <th style={{ width: 170 }}>หมดอายุ</th>
                   <th>ปล่อยโดย</th>
-                  <th style={{ width: 120 }}>สถานะ</th>
-                  {live && <th style={{ width: 230 }}>จัดสรร</th>}
+                  {live && <th style={{ width: 230 }}><span className="srt">การดำเนินการ</span></th>}
                 </tr>
               </thead>
               <tbody>
-                {waitingLots.map((l) => (
-                  <tr key={l.id}>
-                    <td>
-                      <span className="code" style={{ fontWeight: 600, color: '#1D4ED8' }}>
-                        {l.id}
-                      </span>
-                    </td>
-                    <td>
-                      <b style={{ color: '#0F2A5C', fontWeight: 600 }}>{l.drug}</b>
-                      <div className="sub code">รหัส {l.code}</div>
-                    </td>
-                    <td className="num" style={{ fontWeight: 600, color: '#0F2A5C' }}>
-                      {l.qty} {l.unit}
-                    </td>
-                    <td style={{ textAlign: 'right' }} className="num">
-                      ฿{l.value.toLocaleString()}
-                    </td>
-                    <td>
-                      {l.expiry} <span className="sub num">· เหลือ {l.daysLeft} วัน</span>
-                    </td>
-                    <td>
-                      {l.from}
-                      <div className="sub">
-                        {l.releasedBy} · {l.releasedAt}
-                      </div>
-                    </td>
-                    <td>
-                      <span className="badge t-teal">ถูกกันไว้</span>
-                      {l.live?.planNo && <div className="sub code">{l.live.status === 'ALLOCATED' ? 'กำลังขนส่ง' : 'ในแผน'} {l.live.planNo}</div>}
-                    </td>
-                    {live && (
+                {waitingLots.map((l) => {
+                  const canPick = !!l.live && mineOpen(l) && cands[l.live.uuid]?.ok !== false;
+                  return (
+                    <tr key={l.id}>
+                      {live && (
+                        <td>
+                          {canPick && (
+                            <input type="checkbox" checked={selected.has(l.live!.uuid)} disabled={!!batch} onChange={() => toggleLot(l.live!.uuid)} aria-label={`เลือก ${l.drug} ให้ระบบจัดสรร`} />
+                          )}
+                        </td>
+                      )}
                       <td>
-                        {!l.live ? (
-                          <span className="sub">–</span>
-                        ) : l.live.status === 'ALLOCATED' ? (
-                          <span className="sub">ส่วนที่เหลือ {l.live.qtyAvailable.toLocaleString()} {l.unit} จัดสรรได้เมื่อแผนก่อนหน้าส่งถึง</span>
-                        ) : l.live.qtyAvailable > 0 ? (
-                          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
-                            {cands[l.live.uuid]?.ok === false ? (
-                              <>
-                                <span className="badge t-amber" title={cands[l.live.uuid].note}>ไม่มีผู้รับที่ใช้ทัน</span>
-                                {l.live.originId === user?.hospitalId && l.live.itemId ? (
-                                  <button className="btn btn-s btn-sm" disabled={busy || !mayPlan} onClick={() => { setWithdrawError(undefined); setWithdrawTarget(l); }} title="ถอนออกจากคลังกลาง กลับไปเป็นของ รพ.เรา">
-                                    ถอนกลับมาใช้เอง
-                                  </button>
-                                ) : (
-                                  <span className="sub">เจ้าของล็อตถอนกลับได้</span>
-                                )}
-                              </>
-                            ) : (
-                            <label className="pl-pick">
-                              <input type="checkbox" checked={selected.has(l.live.uuid)} disabled={!!batch} onChange={() => toggleLot(l.live!.uuid)} aria-label={`เลือก ${l.drug} ให้ Agent จัดสรร`} />
-                              ให้ Agent จัดสรร
-                            </label>
-                            )}
-                            {l.live.originId === user?.hospitalId && (
-                              <button className="link" disabled={!mayPlan || !!batch} onClick={() => setManualFor(l)}>
-                                สร้างแผนเอง
-                              </button>
-                            )}
-                            <span className="sub num" style={{ width: '100%' }}>เหลือจัดสรร {l.live.qtyAvailable.toLocaleString()} {l.unit}</span>
-                          </div>
-                        ) : (
-                          <span className="sub">อยู่ในแผนครบจำนวนแล้ว</span>
+                        <b style={{ color: '#0F2A5C', fontWeight: 600 }}>{l.drug}</b>
+                        <div className="sub code">{l.code}</div>
+                      </td>
+                      <td className="num" style={{ fontWeight: 600, color: '#0F2A5C' }}>
+                        {l.qty.toLocaleString()} {l.unit}
+                        {live && l.live && l.live.qtyAvailable > 0 && l.live.qtyAvailable < l.qty && (
+                          <div className="sub" style={{ fontWeight: 400 }}>เหลือจัดสรร {l.live.qtyAvailable.toLocaleString()}</div>
                         )}
                       </td>
-                    )}
-                  </tr>
-                ))}
+                      <td style={{ textAlign: 'right' }} className="num">
+                        ฿{l.value.toLocaleString()}
+                      </td>
+                      <td>
+                        {l.expiry}
+                        <div className="sub num" style={l.daysLeft <= 30 ? { color: '#B91C1C', fontWeight: 600 } : undefined}>เหลือ {l.daysLeft} วัน</div>
+                      </td>
+                      <td>
+                        {l.from}
+                        <div className="sub">{l.releasedAt}</div>
+                      </td>
+                      {live && (
+                        <td>
+                          {!l.live ? (
+                            <span className="sub">–</span>
+                          ) : l.live.status === 'ALLOCATED' ? (
+                            <span className="sub">ส่วนที่เหลือจัดสรรได้เมื่อแผนก่อนหน้าส่งถึง</span>
+                          ) : l.live.qtyAvailable > 0 ? (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
+                              {cands[l.live.uuid]?.ok === false && (
+                                <>
+                                  <span className="badge t-amber" title={cands[l.live.uuid].note}>ไม่มีผู้รับที่ใช้ทัน</span>
+                                  {l.live.originId === user?.hospitalId && l.live.itemId ? (
+                                    <button className="btn btn-s btn-sm" disabled={busy || !mayPlan} onClick={() => { setWithdrawError(undefined); setWithdrawTarget(l); }} title="ถอนออกจากคลังกลาง กลับไปเป็นของ รพ.เรา">
+                                      ถอนกลับมาใช้เอง
+                                    </button>
+                                  ) : (
+                                    <span className="sub">เจ้าของล็อตถอนกลับได้</span>
+                                  )}
+                                </>
+                              )}
+                              {l.live.originId === user?.hospitalId && (
+                                <button className="link" disabled={!mayPlan || !!batch} onClick={() => setManualFor(l)}>
+                                  สร้างแผนเอง
+                                </button>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="sub">อยู่ในแผนครบจำนวนแล้ว</span>
+                          )}
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
           {matchedLots.length > 0 && (
             <details className="pl-matched" data-part="matched-lots">
               <summary>
-                จับคู่แล้ว · อยู่ในแผน ({matchedLots.length} ล็อต) <span className="sub">ไม่ต้องจัดสรรซ้ำ · ส่วนที่เหลือจัดสรรได้เมื่อแผนเดิมส่งถึง</span>
+                อยู่ในแผนแล้ว ({matchedLots.length} ล็อต) <span className="sub">ไม่ต้องจัดสรรซ้ำ</span>
               </summary>
               <div className="ne-tablewrap">
-                <table className="tbl pl-tbl" aria-label="ล็อตที่จับคู่แล้ว">
+                <table className="tbl pl-tbl pl-tbl-matched" aria-label="ล็อตที่จับคู่แล้ว">
                   <thead>
                     <tr>
-                      <th>ล็อต</th>
                       <th>ยา</th>
                       <th style={{ width: 110 }}>จำนวน</th>
                       <th style={{ width: 110, textAlign: 'right' }}>มูลค่า</th>
@@ -526,8 +506,7 @@ export function PoolAllocationPage({ role = 'PHARMACIST' }: { role?: RoleCode })
                   <tbody>
                     {matchedLots.map((l) => (
                       <tr key={l.id}>
-                        <td className="code">{l.code}</td>
-                        <td><b>{l.drug}</b></td>
+                        <td><b style={{ color: '#0F2A5C', fontWeight: 600 }}>{l.drug}</b><div className="sub code">{l.code}</div></td>
                         <td className="num">{l.qty.toLocaleString()} {l.unit}</td>
                         <td style={{ textAlign: 'right' }} className="num">฿{l.value.toLocaleString()}</td>
                         <td>{l.expiry} <span className="sub num">· เหลือ {l.daysLeft} วัน</span></td>
@@ -535,10 +514,10 @@ export function PoolAllocationPage({ role = 'PHARMACIST' }: { role?: RoleCode })
                         <td>
                           {l.live?.planNo ? (
                             <button className="link code" onClick={() => { const pl = allPlans.find((p) => p.id === l.live!.planNo); if (pl) { setTab(tabOfPlan(pl.status)); open(pl.id); } else { setTab('approved'); } }}>
-                              {l.live.status === 'ALLOCATED' ? 'กำลังขนส่ง' : 'ในแผน'} {l.live.planNo}
+                              {l.live.status === 'ALLOCATED' ? 'กำลังขนส่ง' : 'ดูแผน'} {l.live.planNo}
                             </button>
                           ) : <span className="sub">–</span>}
-                          {l.live && l.live.qtyAvailable > 0 && <div className="sub">ส่วนที่เหลือ {l.live.qtyAvailable.toLocaleString()} {l.unit} รอแผนเดิมส่งถึง</div>}
+                          {l.live && l.live.qtyAvailable > 0 && <div className="sub">เหลือ {l.live.qtyAvailable.toLocaleString()} {l.unit} รอแผนเดิมส่งถึง</div>}
                         </td>
                       </tr>
                     ))}
@@ -557,15 +536,15 @@ export function PoolAllocationPage({ role = 'PHARMACIST' }: { role?: RoleCode })
                   <th>ยา</th>
                   <th>ต้นทาง → ปลายทาง</th>
                   <th style={{ width: 100, textAlign: 'right' }}>มูลค่า</th>
-                  <th style={{ width: 190 }}>ค่าขนส่ง / F-23</th>
+                  <th style={{ width: 190 }}>ค่าขนส่ง</th>
                   <th style={{ width: 190 }}>สถานะ</th>
                 </tr>
               </thead>
               <tbody>
                 {tabPlans.length === 0 && (
                   <tr>
-                    <td colSpan={6} style={{ padding: '28px 16px', textAlign: 'center', color: '#94A3B8' }}>
-                      {tab === 'plans' ? 'ไม่มีแผนที่รอเห็นชอบ · พร้อมสำหรับรอบจัดสรรถัดไป' : tab === 'approved' ? 'ยังไม่มีแผนที่อนุมัติและอยู่ระหว่างขนส่ง' : 'ยังไม่มีแผนที่จบแล้ว'}
+                    <td colSpan={6} style={{ padding: '28px 16px', textAlign: 'center', color: '#64748B' }}>
+                      {tab === 'plans' ? 'ไม่มีแผนที่รอเห็นชอบ' : tab === 'approved' ? 'ยังไม่มีแผนที่อนุมัติแล้ว' : 'ยังไม่มีแผนที่จบแล้ว'}
                     </td>
                   </tr>
                 )}
@@ -578,7 +557,6 @@ export function PoolAllocationPage({ role = 'PHARMACIST' }: { role?: RoleCode })
                           <span className="code" style={{ fontWeight: 600, color: '#1D4ED8' }}>
                             {p.id}
                           </span>
-                          <div className="sub">v{p.version}</div>
                         </button>
                       </td>
                       <td>
@@ -588,7 +566,7 @@ export function PoolAllocationPage({ role = 'PHARMACIST' }: { role?: RoleCode })
                             <b style={{ color: '#0F2A5C', fontWeight: 600 }}>{p.drug}</b>
                           </div>
                           <div className="sub num">
-                            {p.qty} {p.unit} · Lot {p.lotNo}
+                            {p.qty} {p.unit} · ล็อต {p.lotNo}
                           </div>
                         </button>
                       </td>
@@ -619,14 +597,14 @@ export function PoolAllocationPage({ role = 'PHARMACIST' }: { role?: RoleCode })
                         <span className={`badge ${meta.tone}`}>{meta.label}</span>
                         {p.live && !p.live.involved && <span className="badge t-amber" style={{ marginLeft: 4 }}>{p.live.canObject ? 'คัดค้านได้' : 'ดูอย่างเดียว'}</span>}
                         {p.status === 'NEEDS_DISCUSSION' && (
-                          <div className="sub" style={{ color: '#D97706', fontWeight: 500, marginTop: 2 }}>
-                            ⚠ {live
-                              ? `${p.approvals.filter((a) => a.state === 'REJECTED').map((a) => a.hospital).join(', ') || 'มี รพ.'} ไม่เห็นชอบ/คัดค้าน · รอนัดประชุม ${p.approvals.length} รพ.`
-                              : 'รพ.บางบ่อ ปฏิเสธยอด · รอนัดประชุม 3 รพ.'}
+                          <div className="sub" style={{ color: '#92400E', fontWeight: 500, marginTop: 2 }}>
+                            {live
+                              ? `${p.approvals.filter((a) => a.state === 'REJECTED').map((a) => a.hospital).join(', ') || 'มี รพ.'} ไม่เห็นด้วย`
+                              : 'รพ.บางบ่อ ไม่เห็นด้วยกับยอด'}
                           </div>
                         )}
                         {!p.economical && p.status === 'PENDING_MY_APPROVAL' && (
-                          <div className="pl-warn-line">⚠ เกินเกณฑ์ {COST_LIMIT_PCT}% · ต้องเลือก 1 ใน 4 ทาง</div>
+                          <div className="pl-warn-line">ค่าขนส่งสูงเกินไป · ต้องเลือกทางออกก่อน</div>
                         )}
                       </td>
                     </tr>
@@ -640,10 +618,9 @@ export function PoolAllocationPage({ role = 'PHARMACIST' }: { role?: RoleCode })
         <div className="tbl-foot">
           <span>
             {tab === 'pool'
-              ? `รวม ${POOL_LOTS.length} ล็อต · ฿${POOL_TOTAL_VALUE.toLocaleString()} · กันออกจากสต็อกใช้งานทั้งหมด (FR-F2a-013)`
-              : `รวม ${tabPlans.length} แผน · รอฉันเห็นชอบ ${pendingMine} · ค่าขนส่งคำนวณจาก 300 + 8 บาท/กม. (+500 ค่าความเย็น)`}
+              ? `รวม ${POOL_LOTS.length} ล็อต · ฿${Math.round(POOL_TOTAL_VALUE).toLocaleString()}`
+              : `รวม ${tabPlans.length} แผน`}
           </span>
-          <span className="num">JOB-06 · จับคู่โดย Agent</span>
         </div>
       </section>
 
@@ -671,7 +648,7 @@ export function PoolAllocationPage({ role = 'PHARMACIST' }: { role?: RoleCode })
           title="ถอนล็อตออกจากคลังกลาง"
           detail={
             <>
-              <div><b>{withdrawTarget.drug}</b> · ล็อต {withdrawTarget.id} · <span className="num">{withdrawTarget.qty.toLocaleString()} {withdrawTarget.unit}</span></div>
+              <div><b>{withdrawTarget.drug}</b> · <span className="num">{withdrawTarget.qty.toLocaleString()} {withdrawTarget.unit}</span></div>
               <div style={{ marginTop: 8 }}>ล็อตนี้ไม่มี รพ.ในเขตที่ใช้ทันก่อนหมดอายุ การถอนจะ</div>
               <ul style={{ margin: '4px 0 0', paddingLeft: 18 }}>
                 <li>ปลดการกันสต็อก กลับมาเป็นสต็อกใช้งานของ รพ.เรา</li>

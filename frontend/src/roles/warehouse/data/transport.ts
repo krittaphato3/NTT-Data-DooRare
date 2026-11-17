@@ -56,6 +56,8 @@ export interface Shipment {
   to: HospitalCode;
   status: TransportStatus;
   updatedAt: string;
+  /** Raw last-update timestamp (live data only) for the period filter; mock rows leave it unset. */
+  updatedIso?: string;
   updatedBy: string;
   driver?: string;
   pending?: boolean;

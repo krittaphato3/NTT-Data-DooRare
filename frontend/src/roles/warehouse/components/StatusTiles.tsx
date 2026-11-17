@@ -37,9 +37,6 @@ export function StatusTiles({ counts, active, onPick }: StatusTilesProps) {
               <Icon name={m.icon} className="ic14" />
               {m.tileLabel}
             </span>
-            <span className="code" style={{ fontSize: 10.5, lineHeight: '14px' }}>
-              {code}
-            </span>
           </button>
         );
       })}

@@ -139,7 +139,7 @@ export function IncidentFlowPage({ role = 'ER_STAFF' }: { role?: RoleCode }) {
       <ErPageHeading
         title={incidentId ? `รับเหตุและวางแผน · ${incidentId}` : 'รับเหตุและวางแผน'}
         titleEn="/ Incident → plan → borrow"
-        subtitle="UI-11 · UI-12 · กู้ภัยแจ้ง ER กรอกข้อมูล → Agent เสนอแผน → ตรวจ/แก้ → ตรวจสต็อก → ส่งคำขอยืม"
+        subtitle="กู้ภัยแจ้ง ER กรอกข้อมูล → Agent เสนอแผน → ตรวจ/แก้ → ตรวจสต็อก → ส่งคำขอยืม"
       />
       <FlowStepper steps={STEPS} current={step} reached={reached} onGo={go} />
 

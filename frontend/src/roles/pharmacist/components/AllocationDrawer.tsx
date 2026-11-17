@@ -25,7 +25,15 @@ interface AllocationDrawerProps {
   role?: RoleCode;
 }
 
-/** UI-09 Allocation plan review — F-22 feasibility, F-23 economics, approval chain. */
+/** Thai names for the cost options, used when a finished plan no longer lists them. */
+const OPTION_TH: Record<string, string> = {
+  MERGE_SHIPMENTS: 'รวมรอบขนส่ง',
+  RAISE_VALUE: 'เพิ่มปริมาณให้คุ้มค่าขนส่ง',
+  DONATE_OR_DISCARD: 'บริจาคหรือทำลาย',
+  HOLD: 'เก็บไว้ในคลังกลางต่อ',
+};
+
+/** Allocation plan review: feasibility, transport cost vs value, approval chain. */
 export function AllocationDrawer({ plan: p, decision, onApprove, onApproveAll, onRevise, onUneconomical, onReject, onCancel, onObject, busy = false, error = null, onClose, role = 'PHARMACIST' }: AllocationDrawerProps) {
   const [note, setNote] = useState('');
   const [cancelNote, setCancelNote] = useState('');
@@ -66,7 +74,7 @@ export function AllocationDrawer({ plan: p, decision, onApprove, onApproveAll, o
     <aside className="tr-drawer" aria-label="รายละเอียดแผนจัดสรร">
       <div className="tr-drawer-head">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-          <span className="sub">แผนจัดสรร · UI-09 · รายละเอียด</span>
+          <span className="sub">แผนจัดสรร · รายละเอียด</span>
           <button className="icbtn" aria-label="ปิด / Close" onClick={onClose}>
             <Icon name="x" />
           </button>
@@ -95,10 +103,10 @@ export function AllocationDrawer({ plan: p, decision, onApprove, onApproveAll, o
           <div className="pl-meeting-banner" role="alert">
             <div className="pl-meeting-banner-head">
               <Icon name="tri" style={{ width: 17, height: 17, color: '#D97706', flexShrink: 0 }} />
-              <span>แผนถูกระงับชั่วคราว — รอนัดหมายประชุมหารือ (NEEDS_DISCUSSION)</span>
+              <span>แผนถูกระงับชั่วคราว · รอนัดประชุมหารือ</span>
             </div>
             <div className="pl-meeting-banner-desc">
-              <strong>เกณฑ์ BR-F2a-013 & ASM-16:</strong> การจัดสรรยาต้องได้รับความเห็นชอบ <strong>100%</strong> จากทุกโรงพยาบาลที่เกี่ยวข้อง (ทั้งต้นทางและปลายทาง)
+              <strong>เงื่อนไข:</strong> การจัดสรรยาต้องได้รับความเห็นชอบ <strong>100%</strong> จากทุกโรงพยาบาลที่เกี่ยวข้อง (ทั้งต้นทางและปลายทาง)
               เนื่องจากมี รพ. ปฏิเสธยอดจัดสรร แผนจึงถูกระงับทันที และระบบเปิดรอบประชุมเจรจาเฉพาะโรงพยาบาลในแผนนี้
             </div>
             <div className="pl-meeting-parties">
@@ -229,7 +237,7 @@ export function AllocationDrawer({ plan: p, decision, onApprove, onApproveAll, o
                 {onRevise ? (
                   <>
                     <textarea className="sel" rows={2} style={{ width: '100%', height: 'auto' }} placeholder="ผลการหารือ / เหตุผลที่ปรับยอด (อย่างน้อย 3 ตัวอักษร)" value={reviseNote} onChange={(e) => setReviseNote(e.target.value)} />
-                    <div className="sub">ใส่ 0 เพื่อตัด รพ. ออกจากแผน · ระบบตรวจเพดานที่ใช้ได้ทันก่อนหมดอายุ (F-22) ใหม่ แล้วส่งให้ทุก รพ. ในแผนกดเห็นชอบอีกครั้ง (ฝั่งคุณถือว่าเห็นชอบแล้ว) เมื่อครบจึงเริ่มขนส่ง</div>
+                    <div className="sub">ใส่ 0 เพื่อตัด รพ. ออกจากแผน · ระบบตรวจเพดานที่ใช้ได้ทันก่อนหมดอายุใหม่ แล้วส่งให้ทุก รพ. ในแผนกดเห็นชอบอีกครั้ง (ฝั่งคุณถือว่าเห็นชอบแล้ว) เมื่อครบจึงเริ่มขนส่ง</div>
                     {error && <div role="alert" style={{ color: '#B91C1C', fontSize: 12.5 }}>{error}</div>}
                     <button
                       type="button"
@@ -272,14 +280,14 @@ export function AllocationDrawer({ plan: p, decision, onApprove, onApproveAll, o
                 <li key={l.receiver}>{l.receiver} · <b className="num">{l.qty.toLocaleString()} {p.unit}</b> · {l.km} กม. · ค่าขนส่ง ฿{l.cost.toLocaleString()}{l.taskNo ? ` · ${l.taskNo}` : ''}</li>
               ))}
             </ul>
-            {L.option && <div className="sub" style={{ marginTop: 6 }}>ทางเลือกที่เจ้าของยาเลือก: {L.options.find((o) => o.id === L.option)?.label ?? L.option}</div>}
+            {L.option && <div className="sub" style={{ marginTop: 6 }}>ทางเลือกที่เจ้าของยาเลือก: {L.options.find((o) => o.id === L.option)?.label ?? OPTION_TH[L.option] ?? 'เลือกแล้ว'}</div>}
           </div>
         )}
 
         {/* F-22 feasibility */}
         <div className="tr-box">
           <h3 className="tr-h3">
-            ความเป็นไปได้ก่อนส่ง <span className="en">F-22</span>
+            ความเป็นไปได้ก่อนส่ง
           </h3>
           <div style={{ fontSize: 13, lineHeight: '20px', color: '#334155' }}>
             อายุที่เหลือ <b className="num">{p.daysLeft} วัน</b> &gt; เวลาเดินทาง + เวลาใช้ที่ปลายทาง{' '}
@@ -291,7 +299,7 @@ export function AllocationDrawer({ plan: p, decision, onApprove, onApproveAll, o
         {/* F-23 economics */}
         <div className={`tr-box ${nowEconomical ? '' : 'pl-box-bad'}`}>
           <h3 className="tr-h3">
-            ค่าขนส่งเทียบมูลค่า <span className="en">F-23</span>
+            ค่าขนส่งเทียบมูลค่า
           </h3>
           <div className="pl-ratio" style={{ marginBottom: 8 }}>
             <div className="pl-ratio-bar" style={{ maxWidth: 'none' }}>
@@ -345,7 +353,7 @@ export function AllocationDrawer({ plan: p, decision, onApprove, onApproveAll, o
         {/* Approvals */}
         <div>
           <h3 className="tr-h3">
-            การเห็นชอบ <span className="en">ทุก รพ.ต้องอนุมัติ 100% · A4 · ASM-16</span>
+            การเห็นชอบ <span className="en">ต้องครบทุก รพ.</span>
           </h3>
           <ul className="pl-appr">
             {p.approvals.map((a) => (
@@ -391,7 +399,7 @@ export function AllocationDrawer({ plan: p, decision, onApprove, onApproveAll, o
           </ul>
           <div className="sub" style={{ marginTop: 10, padding: '8px 10px', background: '#F8FAFC', borderRadius: 6, border: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', gap: 6 }}>
             <Icon name="users" style={{ width: 14, height: 14, color: '#475569', flexShrink: 0 }} />
-            <span><strong>เกณฑ์ฉันทามติ 100% (ASM-16):</strong> ทุก รพ. ที่เกี่ยวข้องต้องเห็นชอบครบถ้วน หากมีแม้แต่ รพ. เดียวไม่เห็นชอบ แผนจะระงับทันทีเพื่อจัดประชุมหารือ</span>
+            <span><strong>ต้องเห็นชอบครบ:</strong> ทุก รพ. ที่เกี่ยวข้องต้องเห็นชอบครบถ้วน หากมีแม้แต่ รพ. เดียวไม่เห็นชอบ แผนจะระงับทันทีเพื่อจัดประชุมหารือ</span>
           </div>
         </div>
 
@@ -403,7 +411,7 @@ export function AllocationDrawer({ plan: p, decision, onApprove, onApproveAll, o
           </div>
         ) : L && !L.involved ? (
           <div className="pl-decide">
-            <h3 className="tr-h3">คัดค้านแผน <span className="en">รพ.ในเขตที่ไม่อยู่ในแผน · ASM-16</span></h3>
+            <h3 className="tr-h3">คัดค้านแผน <span className="en">สำหรับ รพ.ในเขตที่ไม่อยู่ในแผน</span></h3>
             <div className="sub">
               โรงพยาบาลของคุณไม่ได้อยู่ในแผนนี้ · ถ้าไม่เห็นด้วยกับการจัดสรร ให้ยื่นคัดค้านพร้อมเหตุผลได้จนกว่าของจะขึ้นรถ
               แผนจะถูกระงับเป็น “ต้องหารือ” งานขนส่งที่ยังไม่ออกจะถูกพักไว้ และทุก รพ.ในแผนได้รับแจ้ง
@@ -418,7 +426,7 @@ export function AllocationDrawer({ plan: p, decision, onApprove, onApproveAll, o
         ) : isNeedsDiscussion ? null : needsOption ? (
           <div className="pl-decide">
             <h3 className="tr-h3" style={{ color: '#B91C1C' }}>
-              ⚠ ค่าขนส่งเกินเกณฑ์ · เจ้าของยาต้องเลือก 1 ใน 4 ทาง <span className="en">FR-F2a-005</span>
+              ค่าขนส่งสูงเกินไป · เจ้าของยาต้องเลือกทางออกก่อน
             </h3>
             {error && <div role="alert" style={{ color: '#B91C1C', fontSize: 12.5 }}>{error}</div>}
             {options.map((o) => (
@@ -433,7 +441,7 @@ export function AllocationDrawer({ plan: p, decision, onApprove, onApproveAll, o
               </label>
             ))}
             {(picked === 'accept' || picked === 'MERGE_SHIPMENTS' || picked === 'RAISE_VALUE') && !nowEconomical && (
-              <div className="pl-warn-line">ยืนยันว่ายอมจ่ายค่าขนส่ง {effectiveRatio}% (เกินเกณฑ์ {COST_LIMIT_PCT}%) · บันทึก audit_log</div>
+              <div className="pl-warn-line">ยืนยันว่ายอมจ่ายค่าขนส่ง {effectiveRatio}% (เกินเกณฑ์ {COST_LIMIT_PCT}%)</div>
             )}
             <div style={{ display: 'flex', gap: 8 }}>
               <button
@@ -485,17 +493,17 @@ export function AllocationDrawer({ plan: p, decision, onApprove, onApproveAll, o
           </div>
         ) : (
           <div className="sub">
-            {p.status === 'CANCELLED' ? 'แผนถูกยกเลิก · ปริมาณกลับไปรอจับคู่ใหม่ในคลังกลาง' : p.status === 'COMPLETED' ? 'ส่งมอบครบแล้ว · นับเป็นมูลค่าที่เลี่ยงการหมดอายุ' : p.status === 'TRANSPORTING' ? 'อนุมัติครบแล้ว · กำลังขนส่ง (UI-14)' : null}
+            {p.status === 'CANCELLED' ? 'แผนถูกยกเลิก · ปริมาณกลับไปรอจับคู่ใหม่ในคลังกลาง' : p.status === 'COMPLETED' ? 'ส่งมอบครบแล้ว · นับเป็นมูลค่าที่เลี่ยงการหมดอายุ' : p.status === 'TRANSPORTING' ? 'อนุมัติครบแล้ว · กำลังขนส่ง' : null}
             {p.status === 'NEEDS_DISCUSSION'
-              ? 'แผนถูกตีกลับ → เข้าสู่ NEEDS_DISCUSSION · นัดหารือและแก้แผน แล้วส่งเห็นชอบใหม่ (FR-F2a-007)'
+              ? 'แผนถูกตีกลับ · นัดหารือและแก้แผน แล้วส่งเห็นชอบใหม่'
               : p.status === 'AUTO_APPROVED'
-                ? 'เครือข่ายเดียวกัน → Auto Approve · แก้/ยกเลิกได้ก่อน LOADED (A1)'
-                : 'อนุมัติครบแล้ว · รอเอกสาร XC-1 และขั้นตอนขนส่ง UI-14'}
+                ? 'เครือข่ายเดียวกัน อนุมัติอัตโนมัติแล้ว · แก้หรือยกเลิกได้ก่อนขึ้นของ'
+                : 'อนุมัติครบแล้ว · รอเอกสารและขั้นตอนขนส่ง'}
           </div>
         )}
         {mayCancel && (
           <div className="pl-decide">
-            <h3 className="tr-h3">ยกเลิกแผน <span className="en">FR-F2a-018</span></h3>
+            <h3 className="tr-h3">ยกเลิกแผน</h3>
             {L?.cancelRequestedBy && <div className="sub">มี รพ.ขอยกเลิกแล้ว · รออีกฝ่าย (เจ้าของยา) ยินยอมด้วยการกดยกเลิกจาก รพ.ของตน</div>}
             <input className="sel" style={{ width: '100%' }} placeholder="เหตุผล (อย่างน้อย 3 ตัวอักษร)" value={cancelNote} onChange={(e) => setCancelNote(e.target.value)} />
             <button className="btn btn-g" disabled={!mayApprove || busy || !cancelNoteOk} onClick={() => onCancel?.(cancelNote.trim())}>

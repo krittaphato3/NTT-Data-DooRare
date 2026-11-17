@@ -8,7 +8,7 @@ export function WhPageHeader() {
     <section className="pagehead" data-part="page-header">
       <div>
         <h1 style={{ margin: 0, fontSize: 28, lineHeight: '40px', fontWeight: 600, color: '#0F2A5C' }}>
-          ภาพรวม <span style={{ fontSize: 16, fontWeight: 400, color: '#94A3B8' }}>/ Dashboard</span>
+          ภาพรวม
         </h1>
         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px 12px', marginTop: 2 }}>
           <span>

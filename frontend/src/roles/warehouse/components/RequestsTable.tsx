@@ -61,7 +61,7 @@ export function RequestsTable({ rows, activeId, urgentLeft, onOpen, onConfirm, o
                   <span className="sub" style={{ display: 'block' }}>{r.requestedBy}</span>
                 </td>
                 <td style={{ fontSize: 12.5 }}>
-                  {r.urgent && open ? (
+                  {r.urgent && open && urgentLeft !== '—' ? (
                     <span style={{ color: '#B91C1C', fontWeight: 600 }}>
                       เหลือ <span className="ib-timer">{urgentLeft}</span>
                     </span>
@@ -75,7 +75,7 @@ export function RequestsTable({ rows, activeId, urgentLeft, onOpen, onConfirm, o
                 </td>
                 <td className="r">
                   {open && r.href ? (
-                    <a className="btn btn-sm btn-p" href={r.href} style={{ textDecoration: 'none' }}>ไปยืนยันที่ Emergency</a>
+                    <a className="btn btn-sm btn-p" href={r.href} style={{ textDecoration: 'none' }}>ไปยืนยันที่หน้าเหตุฉุกเฉิน</a>
                   ) : open ? (
                     <span style={{ display: 'inline-flex', gap: 6 }}>
                       <button className="btn btn-sm btn-p" onClick={() => onConfirm(r.id)}>{confirmLabel}</button>

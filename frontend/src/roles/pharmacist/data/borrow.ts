@@ -81,7 +81,7 @@ export const BORROW_REQUESTS: BorrowRequest[] = [
     lender: ['ลำดับ 4 แห่ง · รอบแรก', 'รพ.บางพลี'], urgency: 'CRITICAL', status: 'PENDING_APPROVAL',
     note: 'Agent ร่างข้อความแล้ว · รออนุมัติ', action: 'approve',
     banner: { title: 'รอเภสัชกรอนุมัติก่อนส่ง', text: 'Agent ร่างข้อความถึงผู้ให้ยืมแล้ว · เร่งด่วนมาก ส่งพร้อมกันได้ ≤ 3 แห่ง' },
-    contextLabel: 'STOCK_ALERT · จากแจ้งเตือนสต็อก', firstRound: '27 AMP', sendMode: 'ส่งพร้อมกัน ≤ 3 แห่ง',
+    contextLabel: 'จากแจ้งเตือนสต็อก', firstRound: '27 AMP', sendMode: 'ส่งพร้อมกัน ≤ 3 แห่ง',
     createdBy: 'ระบบ (แจ้งเตือนสต็อก) · 13 ต.ค. 19:04',
     legs: [
       { hospital: 'รพ.บางพลี', si: 0.8721, state: 'NOT_SENT', detail: 'ลำดับ 1 · รอบแรก' },
@@ -97,7 +97,7 @@ export const BORROW_REQUESTS: BorrowRequest[] = [
     stop: { got: 0, target: 14, formula: 'E: หยุดเมื่อได้ ≥ u×L − สต็อก − กำลังมา = 8×3 − 10 − 0 = 14', remaining: 'คงต้องการ (borrow_remaining) 21 SYRINGE · ถ้าได้บางส่วน ระบบขอส่วนที่เหลือจากลำดับถัดไป' },
     note: 'เตือน 50% แล้ว 19:05', action: 'detail',
     banner: { title: 'รอ รพ.บางพลี ตอบ (รอบ 1)', text: 'หมดเวลา 22:05 น. → ระบบส่งต่อลำดับถัดไปอัตโนมัติ · เตือน 50% แล้ว 19:05' },
-    contextLabel: 'STOCK_ALERT · จากแจ้งเตือนสต็อก', firstRound: '21 SYRINGE · R = 30.65', sendMode: 'ส่งทีละแห่ง',
+    contextLabel: 'จากแจ้งเตือนสต็อก', firstRound: '21 SYRINGE', sendMode: 'ส่งทีละแห่ง',
     createdBy: `${NATTAWUT} · 13 ต.ค. 15:58`, approvedBy: `${NATTAWUT} (PHARMACIST)`,
     legs: [
       { hospital: 'รพ.บางพลี', si: 0.8445, state: 'WAITING', detail: 'รอบ 1 · ขอ 21 · ส่ง 16:05 · เตือน 19:05 ✓ · หมดเวลา 22:05' },
@@ -112,7 +112,7 @@ export const BORROW_REQUESTS: BorrowRequest[] = [
     stop: { got: 10, target: 15, remaining: 'คงต้องการ (borrow_remaining) 14 VIAL · ผู้ดูแลเพิ่มผู้ให้ยืมนอกลำดับได้' },
     note: 'ยังขาด 14 · แจ้งผู้ดูแลแล้ว', action: 'addLender',
     banner: { title: 'ลำดับผู้ให้ยืมหมดแล้ว · ส่งต่อผู้ดูแล', text: 'ได้ 10 VIAL จาก รพ.พระสมุทรเจดีย์ฯ (TR-2026-000336 กำลังเดินทาง) · ยังขาด 14 VIAL · แจ้งผู้ดูแลแล้ว 18:20' },
-    contextLabel: 'STOCK_ALERT · จากแจ้งเตือนสต็อก', firstRound: '24 VIAL', sendMode: 'ส่งทีละแห่ง',
+    contextLabel: 'จากแจ้งเตือนสต็อก', firstRound: '24 VIAL', sendMode: 'ส่งทีละแห่ง',
     createdBy: `${NATTAWUT} · 13 ต.ค. 09:24`, approvedBy: `${NATTAWUT} (PHARMACIST)`,
     legs: [
       { hospital: 'รพ.บางพลี', si: 0.8445, state: 'DECLINED', detail: 'รอบ 1 · ขอ 24 · ปฏิเสธ 11:02 · สต็อกไม่พอ' },
@@ -125,7 +125,7 @@ export const BORROW_REQUESTS: BorrowRequest[] = [
     lender: ['รพ.บางพลี'], urgency: 'CRITICAL', status: 'FULFILLED', returnState: 'PENDING',
     note: 'เหตุ INC-2026-000014 · รับ 02:40', action: 'detail',
     banner: { title: 'ได้ครบแล้ว · รับ 12 ต.ค. 02:40', text: 'ส่วนประกอบโลหิต: คืนผ่านธนาคารเลือด (BLOOD_REPLACEMENT) · TR-2026-000335' },
-    contextLabel: 'EMERGENCY · เหตุ INC-2026-000014', firstRound: '4 UNIT', sendMode: 'ส่งพร้อมกัน',
+    contextLabel: 'เหตุฉุกเฉิน INC-2026-000014', firstRound: '4 UNIT', sendMode: 'ส่งพร้อมกัน',
     createdBy: `${NATTAWUT} · 12 ต.ค. 01:52`, approvedBy: `${NATTAWUT} (PHARMACIST)`,
     legs: [{ hospital: 'รพ.บางพลี', si: 0.8445, state: 'ACCEPTED', detail: 'ขอ 4 · ตอบรับ 4 · 01:58' }],
   },
@@ -134,7 +134,7 @@ export const BORROW_REQUESTS: BorrowRequest[] = [
     lender: ['รพ.บางพลี 20 · รพ.พระสมุทรเจดีย์ฯ 10'], urgency: 'CRITICAL', status: 'FULFILLED', returnState: 'PENDING',
     note: 'ครบ 30 · รับ 11 ต.ค.', action: 'detail',
     banner: { title: 'ได้ครบแล้ว 30 AMP · รับ 11 ต.ค. 15:05', text: 'ต้องคืนเป็นยาตัวเดิมจำนวนเท่ากันภายใน 30 วันหลังรับ' },
-    contextLabel: 'STOCK_ALERT · จากแจ้งเตือนสต็อก', firstRound: '30 AMP', sendMode: 'ส่งพร้อมกัน 2 แห่ง',
+    contextLabel: 'จากแจ้งเตือนสต็อก', firstRound: '30 AMP', sendMode: 'ส่งพร้อมกัน 2 แห่ง',
     createdBy: `${NATTAWUT} · 11 ต.ค. 08:40`, approvedBy: `${NATTAWUT} (PHARMACIST)`,
     legs: [
       { hospital: 'รพ.บางพลี', si: 0.8445, state: 'ACCEPTED', detail: 'รอบ 1 · ขอ 30 · ตอบรับ 20 · TR-2026-000333 รับ 14:20' },
@@ -146,7 +146,7 @@ export const BORROW_REQUESTS: BorrowRequest[] = [
     lender: ['—'], urgency: 'URGENT', status: 'CANCELLED',
     note: 'ไม่อนุมัติ: ได้จาก PO 10 ต.ค.', action: 'detail',
     banner: { title: 'ยกเลิก · ไม่อนุมัติ', text: `${NATTAWUT} ไม่อนุมัติ 8 ต.ค. · ได้ยาจากใบสั่งซื้อ (PO) 10 ต.ค.` },
-    contextLabel: 'STOCK_ALERT · จากแจ้งเตือนสต็อก', firstRound: '2 AMP', sendMode: 'ส่งทีละแห่ง',
+    contextLabel: 'จากแจ้งเตือนสต็อก', firstRound: '2 AMP', sendMode: 'ส่งทีละแห่ง',
     createdBy: 'ระบบ (แจ้งเตือนสต็อก) · 8 ต.ค. 10:12',
     legs: [],
   },
@@ -155,7 +155,7 @@ export const BORROW_REQUESTS: BorrowRequest[] = [
     lender: ['ลำดับหมด 3 แห่ง'], urgency: 'URGENT', status: 'CLOSED_UNFULFILLED',
     note: 'ผู้ดูแลปิด 3 ต.ค. · ได้จากคลังเขตแทน', action: 'detail',
     banner: { title: 'ปิด · ไม่ได้ยา', text: 'ลำดับผู้ให้ยืมหมด 3 แห่ง · ผู้ดูแลปิดคำขอ 3 ต.ค. · ได้จากคลังเขตแทน' },
-    contextLabel: 'STOCK_ALERT · จากแจ้งเตือนสต็อก', firstRound: '3 AMP', sendMode: 'ส่งทีละแห่ง',
+    contextLabel: 'จากแจ้งเตือนสต็อก', firstRound: '3 AMP', sendMode: 'ส่งทีละแห่ง',
     createdBy: `${NATTAWUT} · 2 ต.ค. 14:30`, approvedBy: `${NATTAWUT} (PHARMACIST)`,
     legs: [
       { hospital: 'รพ.บางพลี', si: 0.8445, state: 'DECLINED', detail: 'รอบ 1 · ขอ 3 · ปฏิเสธ 15:10' },
@@ -168,7 +168,7 @@ export const BORROW_REQUESTS: BorrowRequest[] = [
     lender: ['รพ.บางพลี'], urgency: 'NORMAL', status: 'FULFILLED', returnState: 'OVERDUE',
     note: 'รับ 12 ก.ย.', action: 'recordReturn',
     banner: { title: 'ได้ครบแล้ว · คืนเกินกำหนด', text: 'ต้องคืน CefTRIAXone 1 g inj 20 VIAL ภายใน 12 ต.ค. (30 วันหลังรับ) · เกินกำหนด 2 วัน' },
-    contextLabel: 'MANUAL · สร้างเอง (UI-10)', firstRound: '20 VIAL', sendMode: 'ส่งทีละแห่ง',
+    contextLabel: 'สร้างเอง', firstRound: '20 VIAL', sendMode: 'ส่งทีละแห่ง',
     createdBy: `${NATTAWUT} · 10 ก.ย. 09:00`, approvedBy: `${NATTAWUT} (PHARMACIST)`,
     legs: [{ hospital: 'รพ.บางพลี', si: 0.8445, state: 'ACCEPTED', detail: 'รอบ 1 · ขอ 20 · ตอบรับ 20 · รับ 12 ก.ย.' }],
   },
@@ -177,7 +177,7 @@ export const BORROW_REQUESTS: BorrowRequest[] = [
     lender: ['รพ.บางพลี'], urgency: 'CRITICAL', status: 'FULFILLED', returnState: 'RETURNED',
     note: 'รับ 21 ส.ค.', action: 'detail',
     banner: { title: 'ได้ครบแล้ว · คืนครบแล้ว', text: 'รับ 21 ส.ค. · คืน ADRENaline 27 AMP ครบ 15 ก.ย.' },
-    contextLabel: 'STOCK_ALERT · จากแจ้งเตือนสต็อก', firstRound: '27 AMP', sendMode: 'ส่งพร้อมกัน',
+    contextLabel: 'จากแจ้งเตือนสต็อก', firstRound: '27 AMP', sendMode: 'ส่งพร้อมกัน',
     createdBy: `${NATTAWUT} · 21 ส.ค. 07:50`, approvedBy: `${NATTAWUT} (PHARMACIST)`,
     legs: [{ hospital: 'รพ.บางพลี', si: 0.8445, state: 'ACCEPTED', detail: 'รอบ 1 · ขอ 27 · ตอบรับ 27 · 08:05' }],
   },
@@ -195,11 +195,11 @@ export const GROUPS: { id: StatusGroup; label: string; codes: string; tone: Tone
 ];
 
 export const TILES: { id: TileGroup; label: string; codes: string; tone: Tone; icon: IconName }[] = [
-  { id: 'pending', label: 'รออนุมัติ', codes: 'PENDING_APPROVAL · DRAFT', tone: 'amber', icon: 'hourglass' },
+  { id: 'pending', label: 'รออนุมัติ', codes: '', tone: 'amber', icon: 'hourglass' },
   { id: 'progress', label: 'กำลังขอยืม', codes: 'รอผู้ให้ยืมตอบ · ต้องเพิ่มผู้ให้ยืม', tone: 'blue', icon: 'send' },
   { id: 'accepted', label: 'ตอบรับแล้ว', codes: 'ผู้ให้ยืมตอบรับ · รอขนส่ง', tone: 'green', icon: 'checkc' },
-  { id: 'fulfilled', label: 'ได้ครบแล้ว', codes: 'FULFILLED', tone: 'green', icon: 'checkc' },
-  { id: 'closed', label: 'ปิด · ยกเลิก', codes: 'CLOSED_UNFULFILLED · CANCELLED', tone: 'grey', icon: 'minusc' },
+  { id: 'fulfilled', label: 'ได้ครบแล้ว', codes: '', tone: 'green', icon: 'checkc' },
+  { id: 'closed', label: 'ปิด · ยกเลิก', codes: '', tone: 'grey', icon: 'minusc' },
 ];
 
 export const STATUS_META: Record<BorrowStatus, { label: string; group: StatusGroup }> = {

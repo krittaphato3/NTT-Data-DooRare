@@ -14,7 +14,7 @@ export function WhKpiRow({ urgentLeft, shipments }: { urgentLeft: string; shipme
       <div className="card kpi-card">
         <div style={headStyle}>
           <span style={labelStyle}>
-            กล่องงานเข้า รอยืนยัน<span className="en" style={{ display: 'block' }}>Work inbox</span>
+            กล่องงานเข้า รอยืนยัน
           </span>
           <span className="sev" style={{ width: 32, height: 32, background: '#FEF3C7', color: '#92400E' }}>
             <Icon name="inbox" />
@@ -28,7 +28,7 @@ export function WhKpiRow({ urgentLeft, shipments }: { urgentLeft: string; shipme
       <div className="card kpi-card">
         <div style={headStyle}>
           <span style={labelStyle}>
-            อยู่ระหว่างจัดส่ง<span className="en" style={{ display: 'block' }}>On the way</span>
+            อยู่ระหว่างจัดส่ง
           </span>
           <span className="sev" style={{ width: 32, height: 32, background: '#DBEAFE', color: '#1E40AF' }}>
             <Icon name="truck" />
@@ -42,7 +42,7 @@ export function WhKpiRow({ urgentLeft, shipments }: { urgentLeft: string; shipme
       <div className="card kpi-card">
         <div style={headStyle}>
           <span style={labelStyle}>
-            รอขึ้นรถ<span className="en" style={{ display: 'block' }}>Waiting dispatch</span>
+            รอขึ้นรถ
           </span>
           <span className="sev" style={{ width: 32, height: 32, background: '#FEF3C7', color: '#92400E' }}>
             <Icon name="hourglass" />
@@ -56,7 +56,7 @@ export function WhKpiRow({ urgentLeft, shipments }: { urgentLeft: string; shipme
       <div className="card kpi-card">
         <div style={headStyle}>
           <span style={labelStyle}>
-            รอยืนยันรับของ<span className="en" style={{ display: 'block' }}>Awaiting receipt</span>
+            รอยืนยันรับของ
           </span>
           <span className="sev" style={{ width: 32, height: 32, background: '#DCFCE7', color: '#166534' }}>
             <Icon name="checkc" />
@@ -68,7 +68,7 @@ export function WhKpiRow({ urgentLeft, shipments }: { urgentLeft: string; shipme
       <div className="card kpi-card wh-kpi-urgent">
         <div style={headStyle}>
           <span style={labelStyle}>
-            คำขอเร่งด่วนรอยืนยัน<span className="en" style={{ display: 'block' }}>Urgent lender requests</span>
+            คำขอเร่งด่วนรอยืนยัน
           </span>
           <span className="sev sev-crit" style={{ width: 32, height: 32 }}>
             <Icon name="siren" />
@@ -77,7 +77,7 @@ export function WhKpiRow({ urgentLeft, shipments }: { urgentLeft: string; shipme
         <div className="num kpi-num" style={{ color: '#B91C1C' }}>{t.inbox.newTotal}</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, lineHeight: '16px', color: '#B91C1C' }}>
           <Icon name="clock" className="ic14" />
-          {t.inbox.newTotal > 0 ? <>เหลือ <span className="wh-timer">{urgentLeft}</span> · F3 ฝั่งผู้ให้</> : 'ไม่มีคำขอเร่งด่วนค้างอยู่'}
+          {t.inbox.newTotal > 0 ? <>เหลือเวลา <span className="wh-timer">{urgentLeft}</span></> : 'ไม่มีคำขอเร่งด่วนค้างอยู่'}
         </div>
       </div>
     </section>

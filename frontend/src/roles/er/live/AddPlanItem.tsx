@@ -57,13 +57,13 @@ export function AddPlanItem({ kitsInPlan, extrasInPlan, disabled, onAddKit, onAd
   return (
     <div className="card" style={{ padding: '14px 16px' }}>
       <div style={{ fontSize: 13.5, fontWeight: 700, color: '#0f2a5c', marginBottom: 4 }}>
-        เพิ่มรายการเอง <span style={{ fontSize: 12, fontWeight: 400, color: '#94a3b8' }}>BR-F3-008 · ระบบคำนวณแผนใหม่ทันทีหลังเพิ่ม</span>
+        เพิ่มรายการเอง <span style={{ fontSize: 12, fontWeight: 400, color: '#94a3b8' }}>ระบบคำนวณแผนใหม่ทันทีหลังเพิ่ม</span>
       </div>
       <div style={{ fontSize: 12, color: '#64748b', marginBottom: 10 }}>เพิ่มชุดยาหรือยา/เวชภัณฑ์ที่กฎไม่ได้ใส่มา · ใส่จำนวนที่คาดว่าต้องใช้ ระบบตรวจสต็อกและคิดจำนวนที่ต้องยืมให้</div>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
         <select aria-label="ประเภทรายการ" value={kind} disabled={disabled} onChange={(e) => { setKind(e.target.value as 'drug' | 'kit'); setPicked(''); }} style={field}>
           <option value="drug">ยา / เวชภัณฑ์</option>
-          <option value="kit">ชุดยา (Preset Kit)</option>
+          <option value="kit">ชุดยา</option>
         </select>
         {kind === 'drug' && (
           <input aria-label="ค้นหายา" placeholder="ค้นหาชื่อยา / รหัส (อย่างน้อย 2 ตัวอักษร)" value={q} disabled={disabled} onChange={(e) => setQ(e.target.value)} style={{ ...field, flex: '1 1 200px' }} />
@@ -71,7 +71,7 @@ export function AddPlanItem({ kitsInPlan, extrasInPlan, disabled, onAddKit, onAd
         <select aria-label="รายการที่จะเพิ่ม" value={picked} disabled={disabled} onChange={(e) => setPicked(e.target.value)} style={{ ...field, flex: '2 1 240px', maxWidth: '100%' }}>
           <option value="">{kind === 'kit' ? `เลือกชุดยา (${kitOptions.length})` : q.trim().length < 2 ? 'พิมพ์ค้นหาก่อน' : `เลือกยา (${drugOptions.length} รายการ)`}</option>
           {kind === 'kit'
-            ? kitOptions.map((k) => <option key={k.code} value={k.code}>{k.name} ({k.code})</option>)
+            ? kitOptions.map((k) => <option key={k.code} value={k.code}>{k.name}</option>)
             : drugOptions.map((d) => <option key={d.id} value={d.master!.id}>[{d.ved}] {d.localName} ({d.master!.baseUnit})</option>)}
         </select>
         <input aria-label="จำนวนที่คาดว่าต้องใช้" type="number" min={1} placeholder="จำนวน" value={qty} disabled={disabled} onChange={(e) => setQty(e.target.value)} style={{ ...field, width: 90 }} />

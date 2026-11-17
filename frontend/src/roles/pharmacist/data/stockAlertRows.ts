@@ -16,7 +16,6 @@ const round = (n: number, digits = 0) => {
   const k = 10 ** digits;
   return Math.round(n * k) / k;
 };
-const n0 = (n: number) => n.toLocaleString('en-US');
 
 function alertRef(a: ApiAlert | undefined): AlertRef | null {
   if (!a) return null;
@@ -32,17 +31,17 @@ function alertRef(a: ApiAlert | undefined): AlertRef | null {
 
 function noteFor(a: ApiAlert | undefined, row: { onHand: number; daysLeft: number; predict: number | null; totalTarget: number | null }): { note: string; noteTone: NoteTone } {
   if (a) {
-    const days = row.daysLeft < 999 ? `เหลือใช้ ~${row.daysLeft.toLocaleString('en-US', { maximumFractionDigits: 1 })} วัน` : 'ไม่มีข้อมูลการใช้';
+    /* The days left already have their own column, so the note only says why the alert exists. */
     switch (a.type) {
-      case 'LOW_STOCK': return { note: `${days} · ต่ำกว่า Predict ${row.predict === null ? '' : n0(row.predict)}`.trim(), noteTone: 'crit' };
-      case 'ORDER_AHEAD': return { note: `${days} · ต่ำกว่า Total Target ${row.totalTarget === null ? '' : n0(row.totalTarget)} · เตรียมสั่งล่วงหน้า`.trim(), noteTone: 'warn' };
-      case 'ORDER_EARLIER': return { note: `ต่ำกว่า Predict รายเดือน · ควรสั่งซื้อให้เร็วขึ้น`, noteTone: 'warn' };
-      case 'MIN_MAX': return { note: `ต่ำกว่าระดับ Min · สั่งเติมถึง Max (ไม่ผ่าน Agent)`, noteTone: 'crit' };
-      case 'LOW_CONFIDENCE': return { note: 'ประวัติน้อย · ผลพยากรณ์ความมั่นใจต่ำ', noteTone: 'info' };
-      default: return { note: days, noteTone: 'info' };
+      case 'LOW_STOCK': return { note: 'ต่ำกว่าที่ควรมี', noteTone: 'crit' };
+      case 'ORDER_AHEAD': return { note: 'ต่ำกว่าเป้า · เตรียมสั่งซื้อ', noteTone: 'warn' };
+      case 'ORDER_EARLIER': return { note: 'ควรสั่งซื้อให้เร็วขึ้น', noteTone: 'warn' };
+      case 'MIN_MAX': return { note: 'ต่ำกว่าระดับขั้นต่ำ', noteTone: 'crit' };
+      case 'LOW_CONFIDENCE': return { note: 'ข้อมูลน้อย · พยากรณ์อาจคลาดเคลื่อน', noteTone: 'info' };
+      default: return { note: row.daysLeft < 999 ? `ใช้ได้อีก ${row.daysLeft.toLocaleString('en-US', { maximumFractionDigits: 1 })} วัน` : 'ไม่มีข้อมูลการใช้', noteTone: 'info' };
     }
   }
-  return { note: 'คงเหลือเพียงพอเมื่อเทียบกับ Total Target', noteTone: 'ok' };
+  return { note: 'คงเหลือเพียงพอ', noteTone: 'ok' };
 }
 
 /** One row per forecast item (WEEK); alert-only listings (e.g. Min-Max items) get a row from the alert itself. */
@@ -78,7 +77,7 @@ export function buildStockAlertRows(forecasts: ForecastItem[], usable: Map<strin
       totalTarget: f.totalTarget,
       ...noteFor(a, { onHand, daysLeft, predict, totalTarget: f.totalTarget }),
       method: f.method ? (METHOD_MAP[f.method] ?? null) : null,
-      methodNote: lowConfidence ? 'LOW_CONFIDENCE' : 'ปกติ',
+      methodNote: lowConfidence ? 'ข้อมูลพยากรณ์น้อย' : 'ปกติ',
       lowConfidence,
       alert: alertRef(a),
     });
@@ -114,10 +113,10 @@ export function buildSummaryCards(alerts: ApiAlert[], nearExpiry: number | null)
   const low = of('LOW_STOCK');
   const sev = (s: string) => low.filter((a) => a.severity === s).length;
   return [
-    { key: 'LOW_STOCK', labelTh: 'สต็อกต่ำ', code: 'LOW_STOCK', count: low.length, subTh: `เร่งด่วนมาก ${sev('VERY_URGENT')} · เร่งด่วน ${sev('URGENT')} · ปกติ ${sev('NORMAL')}`, tone: 'crit' },
-    { key: 'ORDER_AHEAD', labelTh: 'เตรียมสั่งซื้อ', code: 'ORDER_AHEAD', count: of('ORDER_AHEAD', 'ORDER_EARLIER').length, subTh: 'ต่ำกว่า Total Target · แจ้งให้เตรียมสั่งล่วงหน้า', tone: 'warn' },
-    { key: 'MIN_MAX', labelTh: 'ต่ำกว่า Min', code: 'MIN_MAX', count: of('MIN_MAX').length, subTh: 'รายการ Min-Max (VED = D) · ไม่ผ่าน Agent', tone: 'blue' },
-    { key: 'LOW_CONFIDENCE', labelTh: 'พยากรณ์ไม่มั่นใจ', code: 'LOW_CONFIDENCE', count: of('LOW_CONFIDENCE').length, subTh: 'ประวัติ < 90 วัน (COLD_START)', tone: 'warn' },
-    { key: 'NEAR_EXPIRY', labelTh: 'ใกล้หมดอายุ ≤ 180 วัน', count: nearExpiry ?? 0, subTh: 'ลิสต์ตรวจสอบ · ไปหน้า UI-07', tone: 'teal', href: '#UI-07' },
+    { key: 'LOW_STOCK', labelTh: 'สต็อกต่ำ', count: low.length, subTh: `เร่งด่วนมาก ${sev('VERY_URGENT')} · เร่งด่วน ${sev('URGENT')} · ปกติ ${sev('NORMAL')}`, tone: 'crit' },
+    { key: 'ORDER_AHEAD', labelTh: 'เตรียมสั่งซื้อ', count: of('ORDER_AHEAD', 'ORDER_EARLIER').length, subTh: 'ต่ำกว่าเป้า · เตรียมสั่งซื้อล่วงหน้า', tone: 'warn' },
+    { key: 'MIN_MAX', labelTh: 'ต่ำกว่าระดับขั้นต่ำ', count: of('MIN_MAX').length, subTh: 'ยากลุ่ม D ที่ตั้งขั้นต่ำ–สูงสุด', tone: 'blue' },
+    { key: 'LOW_CONFIDENCE', labelTh: 'พยากรณ์ไม่มั่นใจ', count: of('LOW_CONFIDENCE').length, subTh: 'ประวัติการใช้ยาไม่ถึง 90 วัน', tone: 'warn' },
+    { key: 'NEAR_EXPIRY', labelTh: 'ใกล้หมดอายุ', count: nearExpiry ?? 0, subTh: 'ภายใน 180 วัน', tone: 'teal', href: '?page=expiry' },
   ];
 }
