@@ -58,8 +58,36 @@ function agentNoteOf(r: ApiBorrowRequest): NonNullable<BorrowRequest['agentNote'
   if (a?.status === 'OK' && a.summary) {
     return { code: 'F1_T2', text: `${a.summary}${a.priorityAfter.length ? ` · ถ้ารอบแรกไม่พอ ขอต่อ: ${a.priorityAfter.join(' → ')}` : ''} · เภสัชกรตรวจและอนุมัติก่อนส่ง`, model: a.model, confidence: a.confidence, status: 'OK' };
   }
-  const why = a?.status === 'SKIPPED' ? 'ปิด Agent อยู่' : a?.flags.includes('NO_LLM_CONFIGURED') ? 'ยังไม่ได้ตั้งค่า LLM' : a ? 'Agent ตอบไม่ได้หรือไม่ผ่านการตรวจ' : 'ไม่ได้ใช้ Agent';
-  return { code: 'F1_T2', text: `${why} — ระบบจัดลำดับให้อัตโนมัติ · เภสัชกรตรวจและอนุมัติก่อนส่ง`, status: a?.status ?? 'SKIPPED', model: a?.model ?? null };
+  return { code: 'F1_T2', text: ruleReason(r), status: a?.status ?? 'SKIPPED', model: a?.model ?? null };
+}
+
+/**
+ * Without the agent: why the code ranked the lenders this way, written from the ladder's own numbers (lendable stock, transit
+ * time, reliability score of F-14..F-18). Nothing is invented: every figure comes from the stored plan.
+ */
+function ruleReason(r: ApiBorrowRequest): string {
+  const ladder = r.proposal?.ladder ?? [];
+  const unit = r.drug.baseUnit;
+  if (!ladder.length) return 'ไม่มีโรงพยาบาลที่ให้ยืมได้ตามเกณฑ์ · เภสัชกรตรวจก่อนดำเนินการต่อ';
+  const first = ladder.filter((e) => e.qtyPlanned > 0);
+  const rest = ladder.filter((e) => e.qtyPlanned <= 0);
+  const why = (e: (typeof ladder)[number]) => {
+    const parts = [
+      e.lendable >= e.qtyPlanned ? `ให้ยืมได้ครบ ${n(e.qtyPlanned)} ${unit}` : `ให้ยืมได้ ${n(e.lendable)} ${unit}`,
+      `เดินทาง ${n(Math.round(e.transitMin))} นาที`,
+    ];
+    if (e.parts.reliability >= 0.8) parts.push('ตอบรับตรงเวลาบ่อย');
+    return parts.join(' ');
+  };
+  const lead = first.length
+    ? first.length === 1
+      ? `เลือก ${first[0].name} เป็นอันดับ 1 เพราะ${why(first[0])}`
+      : `ขอพร้อมกัน ${first.length} แห่งในรอบแรก: ${first.map((e) => `${e.name} (${why(e)})`).join(', ')}`
+    : '';
+  const backup = rest.length
+    ? `สำรอง${rest.map((e) => `อันดับ ${e.rank} คือ ${e.name} (ให้ยืมได้ ≤ ${n(e.lendable)} ${unit})`).join(' และ')} จะขอเมื่อแห่งก่อนหน้าให้ไม่พอ`
+    : '';
+  return [lead, backup, 'เภสัชกรตรวจและอนุมัติก่อนส่ง'].filter(Boolean).join(' · ');
 }
 
 export function borrowRequestToView(r: ApiBorrowRequest, now = Date.now(), returnState?: ReturnState): BorrowRequest {
