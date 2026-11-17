@@ -921,6 +921,66 @@ test('submitErActionProposalTool: recovers from hallucinated or uncreated incide
   }
 });
 
+test('submitErActionProposalTool: UPDATE_INCIDENT does NOT overwrite triage counts with zeros when counts omitted', async () => {
+  const hosp = (await query('SELECT id FROM hospital WHERE active = true LIMIT 1')).rows[0];
+  const incident = (
+    await query<{ id: string }>('SELECT id FROM incident WHERE hospital_id = $1 LIMIT 1', [hosp.id])
+  ).rows[0];
+
+  if (incident) {
+    // 1. UPDATE_INCIDENT without specifying casualty counts (e.g., only updating ETA and description)
+    const resNoCounts = await submitErActionProposalTool.execute(
+      {
+        actionType: 'UPDATE_INCIDENT',
+        targetId: incident.id,
+        title: 'อัปเดตระยะเวลาเดินทางของผู้ป่วย',
+        description: 'รถพยาบาลกำลังนำส่ง คาดว่าจะถึงในอีก 25 นาที',
+        payload: {
+          reportedEtaMin: 25,
+          description: 'รถพยาบาลกำลังนำส่ง คาดว่าจะถึงในอีก 25 นาที',
+        },
+      },
+      { role: 'ER_STAFF', hospitalId: hosp.id },
+    );
+
+    assert.equal(resNoCounts.success, true);
+    assert.ok(resNoCounts.proposal);
+    assert.equal(resNoCounts.proposal?.actionApi.endpoint, `/api/v1/incidents/${incident.id}/counts`);
+    assert.equal(resNoCounts.proposal?.actionApi.method, 'PATCH');
+    // Ensure counts and patientCounts are NOT included in the payload (must be undefined to prevent clobbering to zeros)
+    assert.equal(resNoCounts.proposal?.actionApi.payload.counts, undefined);
+    assert.equal(resNoCounts.proposal?.actionApi.payload.patientCounts, undefined);
+    assert.equal((resNoCounts.proposal?.summary as any).counts, undefined);
+    assert.equal(resNoCounts.proposal?.actionApi.payload.reportedEtaMin, 25);
+
+    // 2. UPDATE_INCIDENT with explicit casualty counts (must set counts and update summary)
+    const resWithCounts = await submitErActionProposalTool.execute(
+      {
+        actionType: 'UPDATE_INCIDENT',
+        targetId: incident.id,
+        title: 'อัปเดตยอดผู้บาดเจ็บล่าสุดจากจุดเกิดเหตุ',
+        description: 'มีผู้ป่วยสีแดง 4 ราย สีเหลือง 2 ราย',
+        payload: {
+          counts: { RED: 4, YELLOW: 2 },
+          reportedEtaMin: 15,
+        },
+      },
+      { role: 'ER_STAFF', hospitalId: hosp.id },
+    );
+
+    assert.equal(resWithCounts.success, true);
+    assert.ok(resWithCounts.proposal);
+    assert.deepEqual(resWithCounts.proposal?.actionApi.payload.counts, {
+      RED: 4,
+      YELLOW: 2,
+      GREEN: 0,
+      BLACK: 0,
+    });
+    assert.equal((resWithCounts.proposal?.summary as any).total_casualties, 6);
+    assert.equal(resWithCounts.proposal?.actionApi.payload.reportedEtaMin, 15);
+  }
+});
+
 test('Task 9: clinicalTools collection contains exactly 12 tools with unique names', () => {
   assert.equal(clinicalTools.length, 12, 'Must export exactly 12 clinical tools');
 

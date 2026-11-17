@@ -883,8 +883,18 @@ export const submitErActionProposalTool: IAgentTool<{
 
       if (args.actionType === 'DECLARE_INCIDENT' || args.actionType === 'UPDATE_INCIDENT') {
         extractedDetails = extractIncidentDetails(args);
-        payloadToValidate.counts = extractedDetails.standardizedCounts;
-        payloadToValidate.patientCounts = extractedDetails.standardizedCounts;
+        const totalPatients =
+          extractedDetails.standardizedCounts.RED +
+          extractedDetails.standardizedCounts.YELLOW +
+          extractedDetails.standardizedCounts.GREEN +
+          extractedDetails.standardizedCounts.BLACK;
+
+        // Set counts if casualties are extracted, or for DECLARE_INCIDENT.
+        // For UPDATE_INCIDENT without counts, leave counts undefined so updateCounts preserves existing counts.
+        if (args.actionType === 'DECLARE_INCIDENT' || totalPatients > 0) {
+          payloadToValidate.counts = extractedDetails.standardizedCounts;
+          payloadToValidate.patientCounts = extractedDetails.standardizedCounts;
+        }
         if (extractedDetails.etaMin !== undefined && payloadToValidate.reportedEtaMin === undefined) {
           payloadToValidate.reportedEtaMin = extractedDetails.etaMin;
         }
@@ -897,6 +907,12 @@ export const submitErActionProposalTool: IAgentTool<{
         if (!payloadToValidate.title && args.title) {
           payloadToValidate.title = args.title;
         }
+        if (!payloadToValidate.description && args.description) {
+          payloadToValidate.description = args.description;
+        }
+      }
+
+      if (args.actionType === 'UPDATE_INCIDENT') {
         if (!payloadToValidate.description && args.description) {
           payloadToValidate.description = args.description;
         }
@@ -931,20 +947,29 @@ export const submitErActionProposalTool: IAgentTool<{
           standardizedCounts.BLACK;
 
         // Enrich summary so the card displays all triage numbers, total casualties, and ETA
-        args.summary = {
-          ...args.summary,
-          counts: standardizedCounts,
-          patientCounts: standardizedCounts,
-          triageCounts: standardizedCounts,
-          triage_red: standardizedCounts.RED,
-          triage_yellow: standardizedCounts.YELLOW,
-          triage_green: standardizedCounts.GREEN,
-          triage_black: standardizedCounts.BLACK,
-          total_casualties: totalPatients,
-          totalCasualties: totalPatients,
-          casualties: totalPatients,
-          ...(etaMin !== undefined ? { eta_minutes: etaMin, eta: etaMin, reportedEtaMin: etaMin } : {}),
-        };
+        if (args.actionType === 'DECLARE_INCIDENT' || totalPatients > 0) {
+          args.summary = {
+            ...args.summary,
+            counts: standardizedCounts,
+            patientCounts: standardizedCounts,
+            triageCounts: standardizedCounts,
+            triage_red: standardizedCounts.RED,
+            triage_yellow: standardizedCounts.YELLOW,
+            triage_green: standardizedCounts.GREEN,
+            triage_black: standardizedCounts.BLACK,
+            total_casualties: totalPatients,
+            totalCasualties: totalPatients,
+            casualties: totalPatients,
+          };
+        }
+        if (etaMin !== undefined) {
+          args.summary = {
+            ...args.summary,
+            eta_minutes: etaMin,
+            eta: etaMin,
+            reportedEtaMin: etaMin,
+          };
+        }
 
         if (args.actionType === 'DECLARE_INCIDENT') {
           if (totalPatients === 0) {
@@ -987,8 +1012,9 @@ export const submitErActionProposalTool: IAgentTool<{
         } else if (args.actionType === 'UPDATE_INCIDENT') {
           actionApiPayload = {
             ...actionApiPayload,
-            counts: standardizedCounts,
-            patientCounts: standardizedCounts,
+            ...(totalPatients > 0
+              ? { counts: standardizedCounts, patientCounts: standardizedCounts }
+              : {}),
             ...(etaMin !== undefined ? { reportedEtaMin: etaMin } : {}),
             ...(edits ? { edits } : {}),
           };

@@ -33,9 +33,16 @@ Investigate review feedback on GitHub PR #18 (`https://github.com/krittaphato3/N
 - `backend/src/modules/ai/byok/byok.crypto.ts`
 - `backend/src/modules/ai/tools/web/web.tools.ts`
 - `backend/src/modules/borrow/borrow.service.ts`
+- `backend/src/modules/ai/tools/clinical/er.tools.ts`
 - `backend/tests/ai.responsible-safeguards.test.ts`
+- `backend/tests/ai.clinical.test.ts`
 - `frontend/src/components/ai/ClarifyPanel.tsx`
 - `frontend/src/components/ai/DooRareChatDrawer.tsx`
+
+## Follow-up Fix (UPDATE_INCIDENT Triage Clobbering)
+- **Issue:** In `er.tools.ts` -> `submitErActionProposalTool`, when proposing `UPDATE_INCIDENT` without mentioning patient counts (e.g., only updating ETA or description), `extractIncidentDetails` produced `{ RED: 0, YELLOW: 0, GREEN: 0, BLACK: 0 }` and unconditionally assigned it to `actionApiPayload.counts`. When the proposal was approved, `PATCH /incidents/:id/counts` received all zeros and wiped out existing triage casualties in the database, breaking the emergency kit plan.
+- **Fix:** In `er.tools.ts`, `counts` and `patientCounts` are now conditionally attached to `payloadToValidate` and `actionApiPayload` only when `totalPatients > 0` (or for `DECLARE_INCIDENT`). When counts are omitted, `counts` remains `undefined`, and `incidentsService.updateCounts` (`parseCounts(body.counts, before)`) safely preserves existing counts.
+- **Tests:** Added unit test in `tests/ai.clinical.test.ts` verifying omitted counts stay undefined and explicit counts update correctly. All 49 clinical tests pass.
 
 ## Verification
 - `npm --prefix backend run build`: PASSED (0 errors)
