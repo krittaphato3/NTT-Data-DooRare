@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Icon } from '../../../components/common/icons';
 import type { RoleCode } from '../../../lib/rbac';
 import { ErBreadcrumb } from '../components/ErBreadcrumb';
@@ -37,7 +37,8 @@ function BorrowCell({ b }: { b: { requests: number; waiting: number; confirmed: 
 export function LiveIncidentList({ role = 'ER_STAFF' }: { role?: RoleCode }) {
   const access = getIncidentAccess(role);
   const [group, setGroup] = useState<Group>('all');
-  const selectedId = readParam('incident');
+  const urlSelected = readParam('incident') || readParam('id');
+  const [selectedId, setSelectedId] = useState<string | undefined>(urlSelected);
   const list = useIncidentList(group);
   const detail = useIncident(selectedId);
   /* Numbers of the cards above the list always cover every incident, whatever tab is open. */
@@ -48,6 +49,28 @@ export function LiveIncidentList({ role = 'ER_STAFF' }: { role?: RoleCode }) {
     { title: 'รอผู้ให้ยืมตอบ', n: live.reduce((a, i) => a + i.borrow.waiting, 0), sub: 'คำขอยืมที่ยังไม่มีคำตอบ', color: '#d97706' },
     { title: 'ผู้ป่วยในเหตุที่เปิดอยู่', n: live.reduce((a, i) => a + i.counts.total, 0), sub: 'รวมทุกระดับ', color: '#2563eb' },
   ];
+
+  useEffect(() => {
+    if (urlSelected && urlSelected !== selectedId) {
+      setSelectedId(urlSelected);
+    }
+  }, [urlSelected]);
+
+  useEffect(() => {
+    const onIncidentOpen = (e: any) => {
+      const id = e?.detail?.id;
+      if (id) {
+        list.reload();
+        setSelectedId(id);
+      }
+    };
+    window.addEventListener('doorare:incident-created', onIncidentOpen);
+    window.addEventListener('doorare:open-incident', onIncidentOpen);
+    return () => {
+      window.removeEventListener('doorare:incident-created', onIncidentOpen);
+      window.removeEventListener('doorare:open-incident', onIncidentOpen);
+    };
+  }, [list]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -64,7 +87,20 @@ export function LiveIncidentList({ role = 'ER_STAFF' }: { role?: RoleCode }) {
           )
         }
       />
-      {selectedId && <a className="link" href={erHref('incidents')} style={{ fontSize: 12.5 }}>← กลับไปรายการทั้งหมด</a>}
+      {selectedId && (
+        <a
+          className="link"
+          href={erHref('incidents')}
+          onClick={(e) => {
+            e.preventDefault();
+            setSelectedId(undefined);
+            window.history.pushState(null, '', erHref('incidents'));
+          }}
+          style={{ fontSize: 12.5 }}
+        >
+          ← กลับไปรายการทั้งหมด
+        </a>
+      )}
       {selectedId ? (
         detail.incident ? (
           <LiveIncidentDetail incident={detail.incident} access={access} reload={() => { detail.reload(); list.reload(); }} />

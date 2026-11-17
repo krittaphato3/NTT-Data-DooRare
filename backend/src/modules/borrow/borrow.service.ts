@@ -399,6 +399,101 @@ export class BorrowService {
     });
   }
 
+  /** Update an existing borrow request (quantities, urgency, reason) while in DRAFT or PENDING_APPROVAL. */
+  async update(req: Request, rawId: string) {
+    const user = req.user!;
+    mustBePharmacistOf(user);
+    const id = uuidParam(rawId, 'id');
+    const body = bodyObject(req.body);
+
+    const updated = await withTransaction(async (client) => {
+      const request = await loadRequest(client, id);
+      assertBorrower(user, request);
+      const r = request!;
+
+      if (r.status !== 'DRAFT' && r.status !== 'PENDING_APPROVAL') {
+        throw new HttpError(
+          409,
+          'INVALID_STATE',
+          `ไม่สามารถแก้ไขคำขอยืมในสถานะ ${r.status} ได้ (แก้ไขได้เฉพาะคำขอที่ยังไม่อนุมัติ)`,
+        );
+      }
+
+      const newQty = optionalNumber(body.qtyRequested ?? body.qty, 'qtyRequested', { min: 0.001 });
+      const newUrgency = body.urgency ? (body.urgency as Urgency) : undefined;
+      const newReason = typeof body.reason === 'string' ? String(body.reason).trim().slice(0, 1000) : undefined;
+
+      const sets: string[] = ['updated_at = now()', 'version = version + 1'];
+      const values: unknown[] = [r.id];
+
+      if (newQty !== undefined) {
+        sets.push(`first_round_qty = $${values.push(newQty)}`);
+
+        // Find items belonging to this borrow request to prevent clobbering multi-item requests
+        const items = (
+          await client.query<{ id: string }>(
+            'SELECT id FROM borrow_request_item WHERE request_id = $1 ORDER BY created_at ASC',
+            [r.id],
+          )
+        ).rows;
+
+        const targetItemId = body.itemId ? String(body.itemId) : undefined;
+        if (targetItemId) {
+          const match = items.find((it) => it.id === targetItemId);
+          if (!match) {
+            throw new HttpError(404, 'ITEM_NOT_FOUND', `ไม่พบรายการยา ${targetItemId} ในคำขอยืมนี้`);
+          }
+          await client.query(
+            `UPDATE borrow_request_item SET qty_requested = $2 WHERE id = $1`,
+            [targetItemId, newQty],
+          );
+        } else if (items.length === 1) {
+          await client.query(
+            `UPDATE borrow_request_item SET qty_requested = $2 WHERE id = $1`,
+            [items[0].id, newQty],
+          );
+        } else if (items.length > 1) {
+          throw new HttpError(
+            400,
+            'AMBIGUOUS_ITEM',
+            'คำขอยืมมีรายการยาหลายรายการ กรุณาระบุ itemId ที่ต้องการแก้ไขจำนวน',
+          );
+        }
+      }
+      if (newUrgency !== undefined) {
+        sets.push(`urgency = $${values.push(newUrgency)}::alert_severity`);
+      }
+      if (newReason !== undefined) {
+        sets.push(`reason = $${values.push(newReason)}`);
+      }
+
+      await client.query(`UPDATE borrow_request SET ${sets.join(', ')} WHERE id = $1`, values);
+
+      await writeAudit(client, auditContext(req), {
+        action: 'REQ_EDITED',
+        entityType: 'borrow_request',
+        entityId: r.id,
+        after: {
+          requestNo: r.request_no,
+          qtyRequested: newQty ?? r.qty_requested,
+          urgency: newUrgency ?? r.urgency,
+          reason: newReason,
+        },
+      });
+
+      return { id: r.id };
+    });
+
+    // If proposed before, re-calculate ladder with updated quantity so candidate allocations refresh
+    try {
+      const reproposed = await this.propose(req, updated.id);
+      return { ok: true, id: updated.id, version: reproposed.version, data: reproposed.data };
+    } catch {
+      const view = await withTransaction(async (c) => requestView(c, await loadDetail(c, updated.id), user));
+      return { ok: true, id: updated.id, version: view.version, data: view };
+    }
+  }
+
   /** API-F1b-007: edit the first-round plan before approval (quantities per lender, message texts); the plan is re-validated. */
   async editLadder(req: Request, rawId: string) {
     const user = req.user!;

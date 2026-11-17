@@ -57,6 +57,66 @@ export function getDefaultClarifyOptions(header?: string, question?: string): Cl
       { label: 'ด่วนมาก (VERY_URGENT)', description: 'วิกฤต/ฉุกเฉิน นำส่งทันที' },
     ];
   }
+  if (
+    combined.includes('eta') ||
+    combined.includes('เวลาเดินทาง') ||
+    combined.includes('เวลาที่มาถึง') ||
+    combined.includes('มาถึง') ||
+    combined.includes('arrival') ||
+    combined.includes('transit') ||
+    combined.includes('lead time')
+  ) {
+    return [
+      { label: 'ทีมกู้ชีพ EMS นำส่ง (~15-30 นาที)', description: 'รถพยาบาลฉุกเฉินกำลังนำส่งผู้ป่วยมายังห้องฉุกเฉิน' },
+      { label: 'รับส่งต่อจาก รพ.ชุมชน (~45-60 นาที)', description: 'การส่งต่อผู้ป่วยวิกฤตระหว่างโรงพยาบาลในเครือข่าย' },
+      { label: 'ผู้ป่วยมาถึงห้องฉุกเฉินแล้ว (Immediate)', description: 'ผู้ป่วยถึงจุดคัดแยก ER หรือเดินเข้ามารับการรักษาแล้ว' },
+      { label: 'ยังไม่ทราบ ETA แน่ชัด (ประเมินตามระบบ)', description: 'บันทึกสถานะ ETA_UNAVAILABLE และประสานงานวิทยุสื่อสาร' },
+    ];
+  }
+  if (
+    combined.includes('ผู้บาดเจ็บ') ||
+    combined.includes('ผู้ป่วย') ||
+    combined.includes('casualt') ||
+    combined.includes('patient') ||
+    combined.includes('triage') ||
+    combined.includes('คัดแยก') ||
+    combined.includes('สีแดง') ||
+    combined.includes('แดง') ||
+    combined.includes('เหลือง')
+  ) {
+    return [
+      { label: 'แดง 1-2 ราย, เหลือง 3-5 ราย', description: 'อุบัติเหตุทั่วไป / ผู้บาดเจ็บวิกฤตจำนวนจำกัด' },
+      { label: 'แดง 3-5 ราย, เหลือง 5-10 ราย', description: 'อุบัติเหตุหมู่ระดับกลาง / ภัยพิบัติในเขตรับผิดชอบ' },
+      { label: 'แดง > 5 ราย, เหลือง > 10 ราย', description: 'อุบัติเหตุหมู่รุนแรง / สาธารณภัยระดับเขต' },
+      { label: 'ยังไม่ทราบยอดแน่ชัด (ประเมินขั้นต่ำ: แดง 1, เหลือง 2)', description: 'เปิดแผนเวชภัณฑ์ขั้นต่ำเบื้องต้นเพื่อเตรียมพร้อม' },
+    ];
+  }
+  if (
+    combined.includes('ประเภทเหตุการณ์') ||
+    combined.includes('incident type') ||
+    combined.includes('ประเภทเหตุ') ||
+    combined.includes('ลักษณะเหตุ') ||
+    combined.includes('อุบัติเหตุ') ||
+    combined.includes('สาธารณภัย')
+  ) {
+    return [
+      { label: 'อุบัติเหตุหมู่ / บาดเจ็บรุนแรง (Mass Trauma)', description: 'อุบัติเหตุจราจร, อาคารถล่ม, บาดเจ็บหลายระบบ' },
+      { label: 'สารเคมีรั่วไหล / วัตถุอันตราย (Hazardous / Hazmat)', description: 'สารพิษอุตสาหกรรม, ออร์กาโนฟอสเฟต, แก๊สพิษ' },
+      { label: 'อัคคีภัย / แผลไหม้รุนแรง (Major Fire / Burn)', description: 'ไฟไหม้, แผลไฟไหม้บริเวณกว้าง, ภาวะสำลักควัน' },
+      { label: 'ผู้ป่วยวิกฤตเฉพาะราย / พิษงู (Snakebite / Toxidrome)', description: 'ถูกงูพิษกัด, ภาวะเป็นพิษเฉียบพลัน, ต้องการเซรุ่มด่วน' },
+    ];
+  }
+  if (
+    combined.includes('อุณหภูมิ') ||
+    combined.includes('cold chain') ||
+    combined.includes('แช่เย็น') ||
+    combined.includes('temperature')
+  ) {
+    return [
+      { label: 'ควบคุมอุณหภูมิ 2-8°C (Cold Chain)', description: 'สำหรับวัคซีน, เซรุ่ม, เลือด, หรือชีววัตถุ' },
+      { label: 'อุณหภูมิห้องปกติ (Room Temperature)', description: 'เวชภัณฑ์ทั่วไปที่ไม่ต้องแช่เย็น' },
+    ];
+  }
   return [];
 }
 

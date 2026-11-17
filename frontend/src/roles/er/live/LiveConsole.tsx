@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { RoleCode } from '../../../lib/rbac';
 import { ErBreadcrumb } from '../components/ErBreadcrumb';
 import { ErPageHeading } from '../components/ErPageHeading';
@@ -22,10 +22,34 @@ import { useIncident, useIncidentList } from './hooks';
 export function LiveConsole({ role = 'PHARMACIST' }: { role?: RoleCode }) {
   const access = getIncidentAccess(role);
   const list = useIncidentList('all');
-  const [picked, setPicked] = useState<string | undefined>(undefined);
+  const urlParams = new URLSearchParams(window.location.search);
+  const urlId = urlParams.get('id') || urlParams.get('incident') || undefined;
+  const [picked, setPicked] = useState<string | undefined>(urlId);
   const [tab, setTab] = useState<IncidentTab>('plan');
   const { incident } = useIncident(picked, 8000);
   const mayRecord = role === 'PHARMACIST' || role === 'ER_STAFF';
+
+  useEffect(() => {
+    if (urlId && urlId !== picked) {
+      setPicked(urlId);
+    }
+  }, [urlId]);
+
+  useEffect(() => {
+    const onIncidentOpen = (e: any) => {
+      const id = e?.detail?.id;
+      if (id) {
+        list.reload();
+        setPicked(id);
+      }
+    };
+    window.addEventListener('doorare:incident-created', onIncidentOpen);
+    window.addEventListener('doorare:open-incident', onIncidentOpen);
+    return () => {
+      window.removeEventListener('doorare:incident-created', onIncidentOpen);
+      window.removeEventListener('doorare:open-incident', onIncidentOpen);
+    };
+  }, [list]);
   const items = list.items.filter((i) => i.status !== 'CANCELLED' || i.id === picked);
   const waiting = incident ? incident.borrowLines.reduce((n, l) => n + l.legs.filter((g) => g.status === 'SENT').length, 0) : 0;
   const packOpen = incident ? incident.kitTasks.filter((t) => t.status === 'TODO').length : 0;

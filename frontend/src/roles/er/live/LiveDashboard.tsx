@@ -104,9 +104,11 @@ export function LiveErDashboard({ role = 'ER_STAFF' }: { role?: RoleCode }) {
                     <div style={{ fontSize: 12, color: needsFlow ? '#92400e' : '#64748b', marginTop: 2 }}>{nextAction(r)}</div>
                   </div>
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                    {access.mayWrite && needsFlow && <a className="btn btn-p btn-sm" href={erHref('flow', { incident: r.id })}>ทำต่อ →</a>}
-                    {r.status === 'ACTIVE' && <a className="btn btn-p btn-sm" href={erHref('track')}>ติดตามและจัดชุด</a>}
-                    <a className="btn btn-s btn-sm" href={erHref('incidents', { incident: r.id })}>รายละเอียด</a>
+                    {needsFlow ? (
+                      <a className="btn btn-p btn-sm" href={erHref('flow', { incident: r.id })}>ทำต่อ →</a>
+                    ) : (
+                      <a className="btn btn-s btn-sm" href={erHref('incidents', { incident: r.id })}>รายละเอียด</a>
+                    )}
                   </div>
                 </div>
               );

@@ -61,6 +61,7 @@ export function readParam(name: string): string | undefined {
 export function erPageFromQuery(): ErPage {
   try {
     const p = new URLSearchParams(window.location.search).get('page');
+    if (p === 'incident' || p === 'inc') return 'incidents';
     return ER_ITEMS.find((d) => d.page === p)?.page ?? 'dashboard';
   } catch {
     return 'dashboard';

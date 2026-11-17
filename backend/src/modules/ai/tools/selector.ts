@@ -32,6 +32,23 @@ const DEFAULT_MAX = 10;
 /** Fewer confident matches than this and we keep the full list instead of guessing. */
 const MIN_MATCHED = 4;
 
+/**
+ * Explicit mapping from DooRare user roles to their registered HITL primary proposal tool.
+ * Covers all 10 system roles.
+ */
+export const ROLE_PROPOSAL_TOOL: Record<string, string> = {
+  ER_STAFF: 'submit_er_action_proposal',
+  WAREHOUSE_OFFICER: 'submit_warehouse_confirmation_proposal',
+  DRIVER: 'submit_driver_status_proposal',
+  PROCUREMENT_OFFICER: 'submit_procurement_proposal',
+  AUDITOR: 'submit_auditor_finding_proposal',
+  PHARMACIST: 'submit_pharmacist_proposal',
+  HOSPITAL_ADMIN: 'submit_hospital_admin_proposal',
+  REGION_ADMIN: 'submit_region_admin_proposal',
+  DATA_ADMIN: 'submit_data_admin_proposal',
+  SYSTEM_ADMIN: 'submit_system_admin_proposal',
+};
+
 interface Family {
   id: string;
   /** Intent words in the user's message or the current screen. */
@@ -84,9 +101,10 @@ export function stageTools(all: ToolDefinition[], input: StageInput): StageResul
 
   // The role's own HITL proposal tool is never staged away: an answer that cannot propose an action is worse than a few
   // extra tokens. Other roles' proposal tools stay out unless their family matched.
-  const primaryProposal = `submit_${String(input.role ?? '').toLowerCase()}_proposal`;
+  const roleKey = String(input.role ?? '').trim().toUpperCase();
+  const primaryProposal = ROLE_PROPOSAL_TOOL[roleKey] || `submit_${String(input.role ?? '').toLowerCase()}_proposal`;
   // ask_operator is the escape hatch every tool leans on: it is never staged away.
-  const picked: ToolDefinition[] = all.filter((t) => t.name === primaryProposal || t.name === 'ask_operator');
+  const picked: ToolDefinition[] = all.filter((t) => (primaryProposal && t.name === primaryProposal) || t.name === 'ask_operator');
   const ranked = scored
     .filter((s) => s.score > 0)
     .sort((a, b) => b.score - a.score || a.index - b.index);

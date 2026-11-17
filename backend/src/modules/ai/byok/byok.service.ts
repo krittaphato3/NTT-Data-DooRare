@@ -11,6 +11,7 @@ import type {
   TestConnectionResponse,
 } from './byok.types.js';
 import { maskCredentials, validateAiConfig } from './byok.utils.js';
+import { decryptCredentials, encryptCredentials } from './byok.crypto.js';
 import { providerFactory } from '../providers/factory.js';
 import { MockProvider } from '../providers/mock.provider.js';
 import { OpenAIProvider } from '../providers/openai.provider.js';
@@ -74,12 +75,13 @@ export class ByokService {
 
     for (const r of rows.rows) {
       if (r.key === CONFIG_KEY && r.value) {
+        const decryptedCredentials = decryptCredentials(r.value.credentials || {});
         config = {
           ...config,
           ...r.value,
           credentials: {
             ...config.credentials,
-            ...(r.value.credentials || {}),
+            ...decryptedCredentials,
           },
         };
         updatedAt = new Date(r.updated_at).toISOString();
@@ -133,7 +135,17 @@ export class ByokService {
         )
       ).rows[0];
 
-      const currentConfig: AIConfig = existingRow?.value || this.getDefaultConfig();
+      let currentConfig: AIConfig = this.getDefaultConfig();
+      if (existingRow?.value) {
+        currentConfig = {
+          ...currentConfig,
+          ...existingRow.value,
+          credentials: {
+            ...currentConfig.credentials,
+            ...decryptCredentials(existingRow.value.credentials || {}),
+          },
+        };
+      }
 
       // Merge new fields
       const newCredentials = { ...currentConfig.credentials };
@@ -185,6 +197,12 @@ export class ByokService {
 
       validateAiConfig(updatedConfig);
 
+      // Encrypt credentials at rest before storing in config_setting table
+      const dbConfig = {
+        ...updatedConfig,
+        credentials: encryptCredentials(updatedConfig.credentials),
+      };
+
       const written = (
         await client.query<{ updated_at: Date }>(
           `INSERT INTO config_setting (key, scope, value, description, updated_by, updated_at)
@@ -192,7 +210,7 @@ export class ByokService {
            ON CONFLICT (key, scope) DO UPDATE
               SET value = EXCLUDED.value, updated_by = EXCLUDED.updated_by, updated_at = now()
            RETURNING updated_at`,
-          [CONFIG_KEY, JSON.stringify(updatedConfig), user.id],
+          [CONFIG_KEY, JSON.stringify(dbConfig), user.id],
         )
       ).rows[0];
 
@@ -243,16 +261,23 @@ export class ByokService {
     const { config: activeConfig } = await this.getRawConfig();
 
     // Candidate or fallback to saved credentials
+    const candidateCredentials = { ...activeConfig.credentials };
+    if (body.credentials) {
+      for (const [key, value] of Object.entries(body.credentials)) {
+        if (typeof value === 'string' && value.includes('...')) {
+          continue; // preserve decrypted active credential
+        }
+        (candidateCredentials as any)[key] = value;
+      }
+    }
+
     const candidateConfig: AIConfig = {
       provider: body.provider || activeConfig.provider,
       modelPrimary: body.modelId || activeConfig.modelPrimary,
       modelFast: body.modelId || activeConfig.modelFast,
       monthlyBudgetUsd: activeConfig.monthlyBudgetUsd,
       estimatedSpendUsd: activeConfig.estimatedSpendUsd,
-      credentials: {
-        ...activeConfig.credentials,
-        ...(body.credentials || {}),
-      },
+      credentials: candidateCredentials,
     };
 
     let provider: ILLMProvider;

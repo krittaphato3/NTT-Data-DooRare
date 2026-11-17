@@ -5,7 +5,18 @@ import { dateTime, incidentStatusMeta } from './format';
 /** Chooses which incident the page shows. Defaults to the newest one still running (or the newest at all). */
 export function IncidentPicker({ items, value, onChange }: { items: ApiIncidentSummary[]; value: string | undefined; onChange: (id: string) => void }) {
   useEffect(() => {
-    if (value && items.some((i) => i.id === value)) return;
+    if (!value || items.length === 0) {
+      const first = items.find((i) => i.group === 'active') ?? items[0];
+      if (first) onChange(first.id);
+      return;
+    }
+    const match = items.find((i) => i.id === value || i.incidentNo === value);
+    if (match) {
+      if (match.id !== value) {
+        onChange(match.id);
+      }
+      return;
+    }
     const first = items.find((i) => i.group === 'active') ?? items[0];
     if (first) onChange(first.id);
   }, [items, value, onChange]);
