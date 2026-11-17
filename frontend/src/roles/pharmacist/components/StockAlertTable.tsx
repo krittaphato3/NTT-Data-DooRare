@@ -14,7 +14,7 @@ import type { AlertStatus, StockAlertRow } from '../data/stockAlerts';
 export type RowActionCond = 'request' | 'create' | 'ack' | 'snooze' | 'detail';
 
 interface RowAction {
-  kind: 'primary' | 'approve' | 'secondary';
+  kind: 'primary' | 'secondary';
   label: string;
   cond: RowActionCond;
   /** Action the button performs; when the viewer lacks it the button renders disabled with a hint. */
@@ -69,7 +69,7 @@ function actionsFor(row: StockAlertRow, status: AlertStatus, role: RoleCode): Ro
   if (status === 'linked') {
     const isPending = !row.alert?.requestStatus || row.alert.requestStatus === 'DRAFT' || row.alert.requestStatus === 'PENDING_APPROVAL';
     next = isPending
-      ? { kind: 'approve', label: 'อนุมัติคำขอ', cond: 'request', needs: 'approveBorrow' }
+      ? { kind: 'primary', label: 'อนุมัติคำขอ', cond: 'request', needs: 'approveBorrow' }
       : { kind: 'secondary', label: 'ติดตามคำขอ', cond: 'request' };
   } else if (status === 'open' && (row.alert?.type === 'LOW_STOCK' || row.alert?.type === 'MIN_MAX')) {
     if (controlled) {
@@ -269,7 +269,7 @@ export function StockAlertTable({ rows, acked, snoozed, created, busy, onAction,
                     )}
                     {next ? (
                       <button
-                        className={`btn btn-sm ${next.kind === 'primary' ? 'btn-p' : next.kind === 'approve' ? 'btn-ok' : 'btn-s'}${busy?.has(row.id) ? ' sa-btn-busy' : ''}`}
+                        className={`btn btn-sm ${next.kind === 'primary' ? 'btn-p' : 'btn-s'}${busy?.has(row.id) ? ' sa-btn-busy' : ''}`}
                         disabled={busy?.has(row.id) || (!!next.needs && !mayActFor(role, 'PHARMACIST', next.needs))}
                         aria-busy={busy?.has(row.id) || undefined}
                         title={next.needs && !mayActFor(role, 'PHARMACIST', next.needs) ? requiredRoleHint(next.needs) : undefined}

@@ -196,7 +196,7 @@ export function BorrowDrawer({ request: r, tick, decision, onDecide, onClose, on
             {r.action === 'approve' && (
               <>
                 <button
-                  className="btn btn-ok"
+                  className="btn btn-p"
                   disabled={!approve.allowed}
                   title={approve.hint}
                   onClick={() => onDecide('approve')}
