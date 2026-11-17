@@ -28,6 +28,13 @@
     "date": "2026-11-17"
   },
   {
+    "path": "sessions/2026-11-17-1830-antigravity-fix-clarify-card-view-only-persistence.md",
+    "title": "Session: Fix Clarify Card Persistence & Read-Only State Upon Completion",
+    "summary": "Session",
+    "tags": "session",
+    "date": "2026-11-17"
+  },
+  {
     "path": "sessions/2026-11-17-graphify-incremental-update.md",
     "title": "Session: Incremental Knowledge Graph Update (/graphify --update)",
     "summary": "Session",

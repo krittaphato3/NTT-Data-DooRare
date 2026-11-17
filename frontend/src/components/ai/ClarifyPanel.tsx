@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { ClarifyQuestion } from '../../services/aiChatApi';
 
 export interface ClarifyAnswer {
@@ -123,6 +123,39 @@ export const ClarifyPanel: React.FC<ClarifyPanelProps> = ({
 
   const [submitted, setSubmitted] = useState(false);
 
+  useEffect(() => {
+    if (isAnswered) {
+      setSubmitted(true);
+    }
+  }, [isAnswered]);
+
+  useEffect(() => {
+    if (savedAnswers && savedAnswers.length > 0) {
+      const initialPicked: Record<number, string[]> = {};
+      const initialCustom: Record<number, string> = {};
+      questions.forEach((q, idx) => {
+        const matching = savedAnswers.find(
+          (a) =>
+            a.header === q.header ||
+            a.header.toLowerCase().includes(q.header.toLowerCase()) ||
+            q.header.toLowerCase().includes(a.header.toLowerCase()),
+        );
+        if (matching && matching.answer) {
+          const split = matching.answer.split(',').map((s) => s.trim());
+          const qOpts = (q.options && q.options.length > 0) ? q.options : getDefaultOptions(q.header, q.question);
+          const matched = qOpts.filter((o) => split.includes(o.label)).map((o) => o.label);
+          if (matched.length > 0) {
+            initialPicked[idx] = matched;
+          } else if (matching.answer !== 'ไม่ระบุ' && matching.answer !== 'Not specified') {
+            initialCustom[idx] = matching.answer;
+          }
+        }
+      });
+      setPicked(initialPicked);
+      setCustom(initialCustom);
+    }
+  }, [savedAnswers, questions]);
+
   const isViewOnly = Boolean(isAnswered || submitted);
   const isThai = questions.some((q) => /[\u0E00-\u0E7F]/.test(`${q.header} ${q.question}`));
 
@@ -202,7 +235,17 @@ export const ClarifyPanel: React.FC<ClarifyPanelProps> = ({
 
         <div className="doorare-clarify-summary-list">
           {questions.map((item, index) => {
-            const ans = (savedAnswers && savedAnswers[index]?.answer) || answerFor(index) || (isThai ? 'ไม่ระบุ' : 'Not specified');
+            const matching = savedAnswers?.find(
+              (a) =>
+                a.header === item.header ||
+                a.header.toLowerCase().includes(item.header.toLowerCase()) ||
+                item.header.toLowerCase().includes(a.header.toLowerCase()),
+            );
+            const ans =
+              matching?.answer ||
+              savedAnswers?.[index]?.answer ||
+              answerFor(index) ||
+              (isThai ? 'ไม่ระบุ' : 'Not specified');
             return (
               <div key={`${item.header}-${index}`} className="doorare-clarify-summary-item">
                 <span className="doorare-clarify-summary-num">{index + 1}</span>

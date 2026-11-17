@@ -6,22 +6,37 @@ const IV_LENGTH_BYTES = 12; // 96-bit IV standard for AES-GCM (NIST SP 800-38D)
 const TAG_LENGTH_BYTES = 16; // 128-bit auth tag
 const ENCRYPTION_PREFIX = 'enc:v1:';
 const PERSISTENT_FALLBACK_KEY = 'doorare-byok-default-fallback-encryption-key-32b-seed';
+let hasWarnedMissingKey = false;
 
 /**
  * Derives a 32-byte (256-bit) encryption key for AES-256-GCM.
- * Priority:
- * 1. process.env.BYOK_ENCRYPTION_KEY
- * 2. process.env.JWT_SECRET
- * 3. Persistent fallback key
+ * Decoupled from JWT_SECRET to ensure JWT rotations do not invalidate stored credentials.
+ * Fails closed in production if BYOK_ENCRYPTION_KEY is missing.
  */
 export function getEncryptionKey(): Buffer {
   const envKey = process.env.BYOK_ENCRYPTION_KEY?.trim();
   if (envKey && /^[0-9a-fA-F]{64}$/.test(envKey)) {
     return Buffer.from(envKey, 'hex');
   }
+  if (envKey) {
+    return crypto.createHash('sha256').update(envKey, 'utf8').digest();
+  }
 
-  const secret = envKey || process.env.JWT_SECRET?.trim() || PERSISTENT_FALLBACK_KEY;
-  return crypto.createHash('sha256').update(secret, 'utf8').digest();
+  // In production, refuse to encrypt or decrypt with a public fallback key
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error(
+      '[BYOK Crypto Security Blocker] BYOK_ENCRYPTION_KEY must be configured in production (64-character hex key required). Refusing to use fallback key.',
+    );
+  }
+
+  if (!hasWarnedMissingKey) {
+    hasWarnedMissingKey = true;
+    console.warn(
+      '[BYOK Crypto Warning] BYOK_ENCRYPTION_KEY is not configured! Using non-production fallback seed. Configure BYOK_ENCRYPTION_KEY in production.',
+    );
+  }
+
+  return crypto.createHash('sha256').update(PERSISTENT_FALLBACK_KEY, 'utf8').digest();
 }
 
 /**

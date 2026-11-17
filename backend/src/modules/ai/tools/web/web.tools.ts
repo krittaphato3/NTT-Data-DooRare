@@ -80,11 +80,8 @@ export function isPrivateOrReservedIp(ip: string): boolean {
   if (family === 6) {
     const lower = ip.toLowerCase();
     if (lower === '::1' || lower === '::') return true;
-    if (/^(fe80|fc|fd|2002|64:ff9b)/i.test(lower)) return true;
-    if (lower.startsWith('::ffff:')) {
-      const v4 = lower.slice(7);
-      if (net.isIPv4(v4)) return isPrivateOrReservedIp(v4);
-    }
+    if (/^(fe[89ab]|fc|fd|ff|2002|64:ff9b|2001:db8)/i.test(lower)) return true;
+    if (/^(::ffff:|0:0:0:0:0:ffff:)/i.test(lower)) return true;
     return false;
   }
 
@@ -139,13 +136,13 @@ export function assertPublicUrl(raw: string): URL {
     throw new Error('ไม่อนุญาตให้เรียกที่อยู่ภายในเครือข่าย');
   }
 
-  // Check IPv6 loopback, link-local, unique-local, Teredo (2002::/16), NAT64 (64:ff9b::/96), or IPv4-mapped IPv6
+  // Check IPv6 loopback, link-local, unique-local, multicast, doc, Teredo (2002::/16), NAT64 (64:ff9b::/96), or IPv4-mapped IPv6
   if (bare.includes(':')) {
     if (
       bare === '::1' ||
       bare === '::' ||
-      /^(fe80|fc|fd|2002|64:ff9b)/i.test(bare) ||
-      bare.startsWith('::ffff:')
+      /^(fe[89ab]|fc|fd|ff|2002|64:ff9b|2001:db8)/i.test(bare) ||
+      /^(::ffff:|0:0:0:0:0:ffff:)/i.test(bare)
     ) {
       throw new Error('ไม่อนุญาตให้เรียกที่อยู่ภายในเครือข่าย');
     }
@@ -181,7 +178,13 @@ export type DnsLookupFunction = (
 /**
  * Resolves all DNS A and AAAA records for a host and asserts that NO resolved IP belongs to
  * a private, loopback, link-local, cloud metadata, or reserved subnet.
- * Defends against dynamic DNS wildcards (e.g. nip.io, sslip.io) and DNS rebinding / TOCTOU attacks.
+ *
+ * Mitigates wildcard dynamic DNS domains (e.g. *.nip.io, *.sslip.io) pointing to private subnets.
+ * NOTE (Residual Risk): When using Node's native fetch without a custom socket dispatcher pinned to
+ * the resolved IP, a Time-of-Check to Time-of-Use (TOCTOU) DNS rebinding window still exists if the
+ * authoritative nameserver serves a public IP with TTL=0 and switches to an internal IP on the
+ * subsequent connection lookup. Full prevention requires a pinned IP dispatcher (e.g. Undici Agent
+ * with connect.lookup pinning) or an egress firewall/proxy boundary.
  */
 export async function assertPublicHostDns(
   host: string,
@@ -234,7 +237,7 @@ export async function fetchPage(
     // 1. Syntactic safety check
     const validated = assertPublicUrl(currentUrl);
 
-    // 2. DNS resolution check (resolves all A/AAAA records and blocks private IPs like nip.io, sslip.io, or rebinding)
+    // 2. Pre-flight DNS resolution check (filters wildcard private domains like nip.io, sslip.io; note residual TOCTOU risk with unpinned fetch)
     await assertPublicHostDns(validated.hostname, dnsLookupFn);
 
     const res = await fetchFn(validated.href, {
@@ -249,6 +252,13 @@ export async function fetchPage(
 
     // Handle 3xx redirects securely: validate target location before following
     if (res.status >= 300 && res.status < 400) {
+      if (res.body) {
+        try {
+          await res.body.cancel();
+        } catch {
+          // ignore stream cancellation error
+        }
+      }
       const location = res.headers.get('location');
       if (!location) {
         throw new Error(`การ Redirect ล้มเหลว: ไม่พบ Location header (HTTP ${res.status})`);

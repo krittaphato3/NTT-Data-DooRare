@@ -428,10 +428,37 @@ export class BorrowService {
 
       if (newQty !== undefined) {
         sets.push(`first_round_qty = $${values.push(newQty)}`);
-        await client.query(
-          `UPDATE borrow_request_item SET qty_requested = $2 WHERE request_id = $1`,
-          [r.id, newQty],
-        );
+
+        // Find items belonging to this borrow request to prevent clobbering multi-item requests
+        const items = (
+          await client.query<{ id: string }>(
+            'SELECT id FROM borrow_request_item WHERE request_id = $1 ORDER BY created_at ASC',
+            [r.id],
+          )
+        ).rows;
+
+        const targetItemId = body.itemId ? String(body.itemId) : undefined;
+        if (targetItemId) {
+          const match = items.find((it) => it.id === targetItemId);
+          if (!match) {
+            throw new HttpError(404, 'ITEM_NOT_FOUND', `ไม่พบรายการยา ${targetItemId} ในคำขอยืมนี้`);
+          }
+          await client.query(
+            `UPDATE borrow_request_item SET qty_requested = $2 WHERE id = $1`,
+            [targetItemId, newQty],
+          );
+        } else if (items.length === 1) {
+          await client.query(
+            `UPDATE borrow_request_item SET qty_requested = $2 WHERE id = $1`,
+            [items[0].id, newQty],
+          );
+        } else if (items.length > 1) {
+          throw new HttpError(
+            400,
+            'AMBIGUOUS_ITEM',
+            'คำขอยืมมีรายการยาหลายรายการ กรุณาระบุ itemId ที่ต้องการแก้ไขจำนวน',
+          );
+        }
       }
       if (newUrgency !== undefined) {
         sets.push(`urgency = $${values.push(newUrgency)}::alert_severity`);

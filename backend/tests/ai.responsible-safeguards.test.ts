@@ -86,9 +86,13 @@ test('assertPublicUrl blocks trailing-dot FQDN bypasses', () => {
   }
 });
 
-test('assertPublicUrl blocks IPv6 loopback, link-local, Teredo, NAT64, and dangerous ports', () => {
+test('assertPublicUrl blocks IPv6 loopback, link-local, multicast, doc, Teredo, NAT64, IPv4-mapped, and dangerous ports', () => {
   assert.throws(() => assertPublicUrl('http://[::1]/'), /ไม่อนุญาตให้เรียกที่อยู่ภายในเครือข่าย/);
   assert.throws(() => assertPublicUrl('http://[fe80::1]/'), /ไม่อนุญาตให้เรียกที่อยู่ภายในเครือข่าย/);
+  assert.throws(() => assertPublicUrl('http://[ff02::1]/'), /ไม่อนุญาตให้เรียกที่อยู่ภายในเครือข่าย/);
+  assert.throws(() => assertPublicUrl('http://[2001:db8::1]/'), /ไม่อนุญาตให้เรียกที่อยู่ภายในเครือข่าย/);
+  assert.throws(() => assertPublicUrl('http://[::ffff:127.0.0.1]/'), /ไม่อนุญาตให้เรียกที่อยู่ภายในเครือข่าย/);
+  assert.throws(() => assertPublicUrl('http://[::ffff:7f00:1]/'), /ไม่อนุญาตให้เรียกที่อยู่ภายในเครือข่าย/);
   assert.throws(() => assertPublicUrl('http://[2002::1]/'), /ไม่อนุญาตให้เรียกที่อยู่ภายในเครือข่าย/);
   assert.throws(() => assertPublicUrl('http://[64:ff9b::1]/'), /ไม่อนุญาตให้เรียกที่อยู่ภายในเครือข่าย/);
   assert.throws(() => assertPublicUrl('http://admin:secret@example.com/'), /ไม่อนุญาตให้ระบุ username หรือ password/);
@@ -97,6 +101,16 @@ test('assertPublicUrl blocks IPv6 loopback, link-local, Teredo, NAT64, and dange
   assert.throws(() => assertPublicUrl('http://example.com:9200/'), /ไม่อนุญาตให้เชื่อมต่อ port 9200/);
   assert.throws(() => assertPublicUrl('http://example.com:5672/'), /ไม่อนุญาตให้เชื่อมต่อ port 5672/);
   assert.throws(() => assertPublicUrl('http://example.com:6443/'), /ไม่อนุญาตให้เชื่อมต่อ port 6443/);
+});
+
+test('isPrivateOrReservedIp detects IPv6 reserved and IPv4-mapped ranges', () => {
+  assert.equal(isPrivateOrReservedIp('::1'), true);
+  assert.equal(isPrivateOrReservedIp('fe80::1'), true);
+  assert.equal(isPrivateOrReservedIp('ff02::1'), true);
+  assert.equal(isPrivateOrReservedIp('2001:db8::1'), true);
+  assert.equal(isPrivateOrReservedIp('::ffff:127.0.0.1'), true);
+  assert.equal(isPrivateOrReservedIp('::ffff:7f00:1'), true);
+  assert.equal(isPrivateOrReservedIp('2606:4700:4700::1111'), false); // Cloudflare public DNS
 });
 
 test('fetchPage prevents SSRF via HTTP 302 redirect during hop traversal', async () => {

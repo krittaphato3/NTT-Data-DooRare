@@ -21,6 +21,69 @@ import './chatDrawer.css';
 
 import { ProposalCard } from './ProposalCard.js';
 
+/**
+ * Determines whether a clarify question turn is answered or completed,
+ * recovering saved answers from subsequent turns if not already persisted.
+ */
+function resolveQuestionState(
+  msg: DisplayChatMessage,
+  idx: number,
+  allMessages: DisplayChatMessage[],
+): { isAnswered: boolean; savedAnswers?: { header: string; answer: string }[] } {
+  // If explicitly answered and has savedAnswers, use them
+  if (msg.questionsAnswered && msg.savedAnswers && msg.savedAnswers.length > 0) {
+    return { isAnswered: true, savedAnswers: msg.savedAnswers };
+  }
+
+  // Check if there are subsequent messages in the conversation (meaning conversation proceeded past this turn)
+  const subsequentMessages = allMessages.slice(idx + 1);
+  const nextUserMsg = subsequentMessages.find((m) => m.role === 'user');
+  const hasSubsequentTurn = subsequentMessages.length > 0;
+
+  if (msg.questionsAnswered || hasSubsequentTurn) {
+    let recoveredAnswers = msg.savedAnswers;
+
+    if (!recoveredAnswers || recoveredAnswers.length === 0) {
+      if (nextUserMsg && nextUserMsg.content.includes('ตอบคำถาม:')) {
+        // Content format: "ตอบคำถาม: Header 1: Answer 1 | Header 2: Answer 2"
+        const cleanContent = nextUserMsg.content.replace(/^ตอบคำถาม:\s*/, '').trim();
+        const parts = cleanContent.split('|').map((p) => p.trim());
+        recoveredAnswers = parts.map((part) => {
+          const colonIdx = part.indexOf(':');
+          if (colonIdx !== -1) {
+            return {
+              header: part.substring(0, colonIdx).trim(),
+              answer: part.substring(colonIdx + 1).trim(),
+            };
+          }
+          return {
+            header: msg.questions?.[0]?.header || 'คำตอบ',
+            answer: part,
+          };
+        });
+      } else if (msg.questions && msg.questions.length > 0 && nextUserMsg) {
+        // Fallback: if user answered with a custom prompt right after
+        recoveredAnswers = [
+          {
+            header: msg.questions[0].header,
+            answer: nextUserMsg.content,
+          },
+        ];
+      }
+    }
+
+    return {
+      isAnswered: true,
+      savedAnswers: recoveredAnswers,
+    };
+  }
+
+  return {
+    isAnswered: false,
+    savedAnswers: undefined,
+  };
+}
+
 export const DooRareChatDrawer: React.FC = () => {
   const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
@@ -155,10 +218,34 @@ export const DooRareChatDrawer: React.FC = () => {
   const handleSelectSession = (session: ChatSession) => {
     activeSessionIdRef.current = session.id;
     setActiveSessionId(session.id);
-    setDisplayMessages(session.messages || []);
+
+    let hasHealed = false;
+    const healedMessages = (session.messages || []).map((m, idx, all) => {
+      if (m.role === 'assistant' && m.questions && m.questions.length > 0 && !m.questionsAnswered) {
+        const resolution = resolveQuestionState(m, idx, all);
+        if (resolution.isAnswered) {
+          hasHealed = true;
+          return {
+            ...m,
+            questionsAnswered: true,
+            savedAnswers: resolution.savedAnswers || m.savedAnswers,
+          };
+        }
+      }
+      return m;
+    });
+
+    setDisplayMessages(healedMessages);
     setProposals(session.proposals || []);
     setActiveTool(null);
     setShowSessionsDrawer(false);
+
+    if (hasHealed) {
+      saveSession(
+        { ...session, messages: healedMessages, updatedAt: session.updatedAt || Date.now() },
+        userScope,
+      );
+    }
   };
 
   const handleDeleteSession = (id: string) => {
@@ -1063,22 +1150,29 @@ export const DooRareChatDrawer: React.FC = () => {
                       </>
                     ) : null}
 
-                    {msg.role === 'assistant' && msg.questions && msg.questions.length > 0 && (
-                      <ClarifyPanel
-                        questions={msg.questions}
-                        disabled={isStreaming}
-                        isAnswered={Boolean(msg.questionsAnswered)}
-                        savedAnswers={msg.savedAnswers}
-                        onSubmit={(answers) => {
-                          setDisplayMessages((prev) =>
-                            prev.map((m) =>
+                    {msg.role === 'assistant' && msg.questions && msg.questions.length > 0 && (() => {
+                      const resolution = resolveQuestionState(msg, displayMessages.indexOf(msg), displayMessages);
+                      return (
+                        <ClarifyPanel
+                          key={`clarify_${msg.id}_${resolution.isAnswered ? 'answered' : 'pending'}`}
+                          questions={msg.questions}
+                          disabled={isStreaming}
+                          isAnswered={resolution.isAnswered}
+                          savedAnswers={resolution.savedAnswers || msg.savedAnswers}
+                          onSubmit={(answers) => {
+                            const updatedList = displayMessages.map((m) =>
                               m.id === msg.id ? { ...m, questionsAnswered: true, savedAnswers: answers } : m,
-                            ),
-                          );
-                          handleSend(`ตอบคำถาม: ${answers.map((a) => `${a.header}: ${a.answer}`).join(' | ')}`);
-                        }}
-                      />
-                    )}
+                            );
+                            setDisplayMessages(updatedList);
+                            persistCurrentSession(updatedList, proposals);
+                            handleSend(
+                              `ตอบคำถาม: ${answers.map((a) => `${a.header}: ${a.answer}`).join(' | ')}`,
+                              updatedList,
+                            );
+                          }}
+                        />
+                      );
+                    })()}
 
                     {msg.role === 'assistant' && msg.proposal && (
                       <ProposalCard
