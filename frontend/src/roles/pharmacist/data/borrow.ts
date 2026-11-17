@@ -80,8 +80,8 @@ export const BORROW_REQUESTS: BorrowRequest[] = [
     id: 'BR-2026-000125', context: 'STOCK_ALERT', createdAt: '13 ต.ค. 19:04', daysAgo: 1, ved: 'V', drug: 'ADRENaline 1 mg/mL inj', qty: 27, unit: 'AMP',
     lender: ['ลำดับ 4 แห่ง · รอบแรก', 'รพ.บางพลี'], urgency: 'CRITICAL', status: 'PENDING_APPROVAL',
     note: 'Agent ร่างข้อความแล้ว · รออนุมัติ', action: 'approve',
-    banner: { title: 'รอเภสัชกรอนุมัติก่อนส่ง', text: 'Agent ร่างข้อความถึงผู้ให้ยืมแล้ว · เร่งด่วนมาก ส่งพร้อมกันได้ ≤ 3 แห่ง' },
-    contextLabel: 'จากแจ้งเตือนสต็อก', firstRound: '27 AMP', sendMode: 'ส่งพร้อมกัน ≤ 3 แห่ง',
+    banner: { title: 'รอเภสัชกรอนุมัติก่อนส่ง', text: 'Agent ร่างข้อความถึงผู้ให้ยืมแล้ว' },
+    contextLabel: 'จากแจ้งเตือนสต็อก', firstRound: '27 AMP', sendMode: 'ส่งพร้อมกันได้สูงสุด 3 แห่ง',
     createdBy: 'ระบบ (แจ้งเตือนสต็อก) · 13 ต.ค. 19:04',
     legs: [
       { hospital: 'รพ.บางพลี', si: 0.8721, state: 'NOT_SENT', detail: 'ลำดับ 1 · รอบแรก' },

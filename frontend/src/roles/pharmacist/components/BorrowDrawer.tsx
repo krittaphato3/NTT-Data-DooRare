@@ -7,7 +7,6 @@ import { fmtTime } from '../../../lib/time';
 import { groupMeta, groupOf, LEG_META } from '../data/borrow';
 import type { BorrowLeg, BorrowRequest, StatusGroup } from '../data/borrow';
 import { BorrowStatusBadge, ReturnBadge, UrgencyBadge } from './BorrowBadges';
-import { StopBar } from './BorrowTable';
 
 export type Decision = 'approve' | 'reject' | undefined;
 
@@ -125,25 +124,9 @@ export function BorrowDrawer({ request: r, tick, decision, onDecide, onClose, on
           )}
         </dl>
 
-        {r.stop && (
-          <div className="tr-box" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
-              <h3 className="tr-h3" style={{ margin: 0 }}>
-                กฎหยุด
-              </h3>
-              <span style={{ fontSize: 13, fontWeight: 600, color: '#0F2A5C' }}>
-                ได้ยืนยัน <span className="num">{r.stop.got} / {r.stop.target}</span>
-              </span>
-            </div>
-            <StopBar got={r.stop.got} target={r.stop.target} />
-            {r.stop.formula && <div style={{ fontSize: 12.5, lineHeight: '18px', color: '#0F2A5C' }}>{r.stop.formula}</div>}
-            <div style={{ fontSize: 12.5, lineHeight: '18px' }}>{r.stop.remaining}</div>
-          </div>
-        )}
-
         <div>
           <h3 className="tr-h3">
-            ลำดับผู้ให้ยืมและรอบการขอ <span className="en">{r.sendMode}</span>
+            ลำดับผู้ให้ยืมและรอบการขอ
           </h3>
           {r.ladderNote && <div className="sub" style={{ margin: '2px 0 8px' }}>{r.ladderNote}</div>}
           {r.legs.length === 0 ? (
@@ -213,7 +196,7 @@ export function BorrowDrawer({ request: r, tick, decision, onDecide, onClose, on
             {r.action === 'approve' && (
               <>
                 <button
-                  className="btn btn-p"
+                  className="btn btn-ok"
                   disabled={!approve.allowed}
                   title={approve.hint}
                   onClick={() => onDecide('approve')}

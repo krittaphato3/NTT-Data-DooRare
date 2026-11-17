@@ -117,6 +117,15 @@ button {
   background: #eff6ff;
   color: #1d4ed8;
 }
+/* Approve actions: green, so "approve" never looks like "borrow" (blue .btn-p) in the same column. */
+.btn-ok {
+  background: #15803d;
+  color: #ffffff;
+}
+.btn-ok:hover {
+  background: #166534;
+  color: #ffffff;
+}
 .btn-g {
   background: transparent;
   color: #475569;
