@@ -359,6 +359,14 @@ export const getRankedLenderLadderTool: IAgentTool<{
       const candidates = res.rows.map((row, idx) => {
         const transit = row.transitMinutes ?? 999;
         const stock = row.usableStock ?? 0;
+        const quantityNeeded = Number(args.quantityNeeded) || 1;
+        const canFulfill = stock >= quantityNeeded;
+        const stockAvailability = canFulfill ? 'SUFFICIENT' : stock > 0 ? 'PARTIAL' : 'INSUFFICIENT';
+        const availabilityStatus = canFulfill
+          ? 'มีสต็อกพร้อมสนับสนุน'
+          : stock > 0
+          ? 'มีสต็อกสนับสนุนได้บางส่วน'
+          : 'สต็อกไม่เพียงพอ';
         // Simple composite scoring Si for presentation: higher usable stock, lower transit
         const score = Math.max(0, Math.round(((stock * 10) / (transit + 10)) * 100) / 100);
         return {
@@ -368,7 +376,9 @@ export const getRankedLenderLadderTool: IAgentTool<{
           hospitalName: row.name,
           transitMinutes: transit,
           hasColdChain: row.hasColdChain,
-          usableStock: stock,
+          stockAvailability,
+          availabilityStatus,
+          canFulfill,
           scoreSi: score,
         };
       });

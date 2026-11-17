@@ -16,6 +16,8 @@ import {
   trackUrgentDispatchEtaTool,
   submitErActionProposalTool,
 } from '../src/modules/ai/tools/clinical/er.tools.js';
+import { getDefaultClarifyOptions } from '../src/modules/ai/tools/askOperator.tool.js';
+import { buildSystemPrompt } from '../src/modules/ai/engine/react.engine.js';
 import { clinicalTools } from '../src/modules/ai/tools/clinical/index.js';
 import { defaultToolRegistry, zodToJsonSchema } from '../src/modules/ai/tools/index.js';
 import { ToolRegistry } from '../src/modules/ai/tools/registry.js';
@@ -116,6 +118,13 @@ test('getRankedLenderLadderTool: generates candidate ladder on-demand', async ()
   const data = res.data as { candidateCount: number; candidates: any[] };
   assert.equal(typeof data.candidateCount, 'number');
   assert.ok(Array.isArray(data.candidates));
+  for (const c of data.candidates) {
+    assert.ok('hospitalName' in c);
+    assert.ok('transitMinutes' in c);
+    assert.ok('stockAvailability' in c);
+    assert.ok('availabilityStatus' in c);
+    assert.equal('usableStock' in c, false, 'Peer hospital exact stock quantities must not be exposed');
+  }
 });
 
 test('getRankedLenderLadderTool: tenant isolation blocks foreign borrow request', async () => {
@@ -445,9 +454,11 @@ test('getAntidoteLocatorTool: privacy check - never exposes internal lot/cost da
     assert.ok('hospitalName' in h);
     assert.ok('travelMinutes' in h);
     assert.ok('antidoteName' in h);
-    assert.ok('availableQuantity' in h);
+    assert.ok('stockAvailability' in h);
+    assert.ok('availabilityStatus' in h);
 
-    // Forbidden internal fields:
+    // Forbidden internal fields (Data Governance & Privacy Protection):
+    assert.equal('availableQuantity' in h, false, 'Peer hospital exact quantities must not be exposed');
     assert.equal('lotNo' in h, false, 'Internal lot numbers must not be exposed');
     assert.equal('hospitalId' in h, false, 'Internal hospital UUIDs must not be exposed');
     assert.equal('qtyOnHand' in h, false, 'Internal raw inventory columns must not be exposed');
@@ -1033,4 +1044,60 @@ test('Task 9: RBAC matrix validation across roles (DRIVER, AUDITOR, PHARMACIST, 
       `SYSTEM_ADMIN must have access to ${tool.name}`,
     );
   }
+});
+
+test('Zero-Assumption: getDefaultClarifyOptions provides structured clinical options for ETA, triage, incident type, and quantity', () => {
+  // 1. ETA options
+  const etaOptions = getDefaultClarifyOptions('เวลาเดินทาง', 'คาดว่าจะมาถึงเมื่อใด (ETA)?');
+  assert.ok(etaOptions.length >= 3, 'Must return at least 3 options for ETA');
+  assert.ok(etaOptions.some((o) => o.label.includes('EMS') || o.label.includes('15-30')));
+  assert.ok(etaOptions.some((o) => o.label.includes('ยังไม่ทราบ ETA') || o.label.includes('ETA_UNAVAILABLE')));
+
+  // 2. Casualty Triage options
+  const triageOptions = getDefaultClarifyOptions('ยอดผู้บาดเจ็บ', 'จำนวนผู้ป่วยจำแนกตามสีความรุนแรง?');
+  assert.ok(triageOptions.length >= 3, 'Must return at least 3 options for casualty triage');
+  assert.ok(triageOptions.some((o) => o.label.includes('แดง') && o.label.includes('เหลือง')));
+
+  // 3. Incident Type options
+  const incidentOptions = getDefaultClarifyOptions('ประเภทเหตุการณ์', 'เป็นอุบัติเหตุหรือสาธารณภัยประเภทใด?');
+  assert.ok(incidentOptions.length >= 3, 'Must return at least 3 options for incident types');
+  assert.ok(incidentOptions.some((o) => o.label.includes('Mass Trauma') || o.label.includes('อุบัติเหตุหมู่')));
+  assert.ok(incidentOptions.some((o) => o.label.includes('Hazmat') || o.label.includes('สารเคมี')));
+
+  // 4. Cold Chain / Temperature options
+  const coldChainOptions = getDefaultClarifyOptions('การควบคุมอุณหภูมิ', 'ต้องการขนส่งแบบ Cold Chain หรือไม่?');
+  assert.ok(coldChainOptions.length >= 2, 'Must return options for cold chain');
+  assert.ok(coldChainOptions.some((o) => o.label.includes('2-8°C')));
+});
+
+test('Zero-Assumption: submitErActionProposalTool rejects DECLARE_INCIDENT when casualty count is 0', async () => {
+  const hosp = (await query('SELECT id FROM hospital WHERE active = true LIMIT 1')).rows[0];
+
+  const res = await submitErActionProposalTool.execute(
+    {
+      actionType: 'DECLARE_INCIDENT',
+      title: 'เหตุการณ์อุบัติเหตุไม่ระบุยอด',
+      description: 'เปิดเหตุฉุกเฉินโดยไม่ระบุจำนวนผู้บาดเจ็บ',
+      summary: {},
+      payload: {
+        eventType: 'TRAUMA',
+        counts: { RED: 0, YELLOW: 0, GREEN: 0, BLACK: 0 },
+      },
+    },
+    { role: 'ER_STAFF', hospitalId: hosp.id },
+  );
+
+  assert.equal(res.success, false);
+  assert.match(
+    res.error || '',
+    /Cannot declare emergency incident without casualty counts.*Zero-assumption policy/i,
+  );
+});
+
+test('Zero-Assumption: buildSystemPrompt contains explicit Zero-Assumption Policy instructions', () => {
+  const prompt = buildSystemPrompt({ role: 'ER_STAFF', hospitalId: 'hosp-001' });
+  assert.ok(prompt.includes('ZERO-ASSUMPTION POLICY FOR SAFETY-CRITICAL ATTRIBUTES'));
+  assert.ok(prompt.includes('ETA (Estimated Time of Arrival)'));
+  assert.ok(prompt.includes('Triage Casualty Counts'));
+  assert.ok(prompt.includes('Drug Formulation & Strength'));
 });

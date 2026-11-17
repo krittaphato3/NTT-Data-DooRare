@@ -2926,6 +2926,20 @@
   transform: translateY(0);
 }
 
+.doorare-proposal-open-page-btn.secondary {
+  color: #1d4ed8;
+  background: #eff6ff;
+  border-color: #93c5fd;
+  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.12);
+}
+
+.doorare-proposal-open-page-btn.secondary:hover {
+  background: #dbeafe;
+  border-color: #2563eb;
+  color: #1e40af;
+  box-shadow: 0 3px 8px rgba(37, 99, 235, 0.18);
+}
+
 .doorare-proposal-error-banner {
   padding: 8px 12px;
   background: #fef2f2;

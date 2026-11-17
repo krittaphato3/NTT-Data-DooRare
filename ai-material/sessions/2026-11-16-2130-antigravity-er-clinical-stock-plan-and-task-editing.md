@@ -39,12 +39,24 @@ Enrich ER Role Copilot emergency intake with grounded clinical stock/kit plannin
 - `backend/src/modules/incidents/incidents.shared.ts`
 - `backend/src/modules/incidents/plan.service.ts`
 - `frontend/src/components/ai/DooRareChatDrawer.tsx`
+- `frontend/src/components/ai/answerChips.ts`
 - `frontend/src/components/ai/chatDrawer.css`
+- `frontend/src/roles/er/data/navigation.ts`
+- `frontend/src/roles/er/live/IncidentPicker.tsx`
 - `frontend/src/roles/er/live/LiveConsole.tsx`
 - `frontend/src/roles/er/live/LiveIncidentFlow.tsx`
+- `frontend/src/roles/er/live/LiveIncidentList.tsx`
+
+- Single smart button navigation: Unified dual button actions across LiveDashboard and ProposalCard. Unfinalized incidents show a single blue button `ทำต่อ →` leading directly to the preparation flow. Once finalized / sent, shows a single button leading directly to that exact incident page.
+- Extracted `ProposalCard.tsx`: Moved `ProposalCard` from `DooRareChatDrawer.tsx` into standalone modular component `frontend/src/components/ai/ProposalCard.tsx` with clean typing and kit resolver.
+- BYOK AES-256-GCM Encryption-at-Rest: Implemented `backend/src/modules/ai/byok/byok.crypto.ts` with authenticated encryption, key derivation, and backward-compatible transparent decryption in `byok.service.ts`.
+- Tool Staging Safety Pin: Configured explicit `ROLE_PROPOSAL_TOOL` mapping in `backend/src/modules/ai/tools/selector.ts` guaranteeing primary proposal tools and `ask_operator` are never staged away across all 10 roles.
+- AWS Bedrock Converse API with SigV4: Replaced Bedrock stub with authentic AWS SigV4 signer and Bedrock Runtime Converse API in `backend/src/modules/ai/providers/bedrock.provider.ts`.
+- Comprehensive Unit Tests: Added test suites in `tests/ai.byok.crypto.test.ts`, `tests/bedrock.provider.test.ts`, and `tests/selector.test.ts` (37/37 passed).
 
 ## Errors Encountered
-- `ไม่พบชุดยา ชุดช่วยชีวิตผู้บาดเจ็บ (Trauma Resus)`: Proposal card passed Thai string instead of database enum code `TRAUMA_RESUS`. Resolved via `resolveKitCode`.
+- `ไม่พบชุดยา ชุดช่วยชีวิตผู้บาดเจ็บ (Trauma Resus)`: Proposal card passed Thai string instead of database enum code `TRAUMA_RESUS`. Resolved via `resolveKitCode` in both frontend and backend.
+- "Open incident" routing to all incidents page: Proposal card navigated to `?page=incident&id=...` without role context. In ER mode (`role=er`), `page=incident` was not a valid page in `ER_ITEMS`, falling back to `dashboard` (all incidents). Fixed by preserving role, routing to `?page=incidents&incident=${incId}&role=er`, listening to `doorare:open-incident` in `LiveIncidentList`, and adding a direct Flow action button.
 
 ## Next Steps
 - Verify in browser and check user experience.

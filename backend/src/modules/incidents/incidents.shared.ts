@@ -2,7 +2,7 @@
 import type pg from 'pg';
 import { emptyCounts, etaRemainingMin, resolveEta, TRIAGE_LEVELS } from '../../core/formulas/emergency.js';
 import type { Counts, EtaFlag, EtaSource, Triage } from '../../core/formulas/emergency.js';
-import { uuidParam } from '../../core/validate.js';
+import { isUuid, uuidParam } from '../../core/validate.js';
 import type { Db } from '../../db/tx.js';
 import { HttpError } from '../../middleware/httpError.js';
 import type { AuthSessionUser } from '../auth/auth.types.js';
@@ -53,9 +53,19 @@ export function hospitalOf(user: AuthSessionUser): string {
 
 /** The incident of the caller's own hospital (SEC-002: other hospitals get 404, not 403). */
 export async function ownIncident(db: Db, user: AuthSessionUser, rawId: unknown, lock = false): Promise<IncidentRow> {
-  const id = uuidParam(rawId, 'id');
   const hospitalId = hospitalOf(user);
-  const row = await loadIncident(db, id, lock);
+  let row: IncidentRow | null = null;
+  if (isUuid(rawId)) {
+    row = await loadIncident(db, rawId, lock);
+  } else if (typeof rawId === 'string' && rawId.trim()) {
+    const q = lock
+      ? `SELECT * FROM emergency_incident WHERE incident_no = $1 AND hospital_id = $2 FOR UPDATE`
+      : `SELECT * FROM emergency_incident WHERE incident_no = $1 AND hospital_id = $2`;
+    const res = await db.query(q, [rawId.trim(), hospitalId]);
+    row = (res.rows[0] as IncidentRow) ?? null;
+  } else {
+    throw new HttpError(400, 'VALIDATION', 'id ต้องเป็น UUID หรือเลขที่เหตุการณ์');
+  }
   if (!row || row.hospital_id !== hospitalId) throw new HttpError(404, 'NOT_FOUND', 'ไม่พบเหตุการณ์');
   return row;
 }

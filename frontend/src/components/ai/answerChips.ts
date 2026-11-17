@@ -42,7 +42,7 @@ export function citationsFrom(content: string, toolLogs?: ToolLogEntry[]): Citat
     add({ id: m[1], label: m[1], href: '?page=requests', kind: 'record' });
   }
   for (const m of haystack.matchAll(/\b(INC-[A-Za-z0-9-]{3,})\b/g)) {
-    add({ id: m[1], label: m[1], href: '?page=incident', kind: 'record' });
+    add({ id: m[1], label: m[1], href: `?page=incidents&incident=${encodeURIComponent(m[1])}&id=${encodeURIComponent(m[1])}`, kind: 'record' });
   }
   for (const m of haystack.matchAll(/https?:\/\/[^\s"'\\<>]+/g)) {
     const url = m[0].replace(/[),.;]+$/, '');

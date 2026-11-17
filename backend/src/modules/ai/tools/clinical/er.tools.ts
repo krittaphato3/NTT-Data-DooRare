@@ -92,14 +92,18 @@ export const getAntidoteLocatorTool: IAgentTool<{
 
       const res = await query(sql, [originHospitalId, searchQuery, radius]);
 
-      const formattedResults = res.rows.map((r) => ({
-        hospitalName: r.hospitalName,
-        travelMinutes: r.travelMinutes,
-        antidoteName: r.antidoteName,
-        unit: r.unit,
-        availableQuantity: r.availableQuantity,
-        meetsRequirement: requiredQty !== null ? r.availableQuantity >= requiredQty : true,
-      }));
+      const formattedResults = res.rows.map((r) => {
+        const meetsRequirement = requiredQty !== null ? r.availableQuantity >= requiredQty : true;
+        return {
+          hospitalName: r.hospitalName,
+          travelMinutes: r.travelMinutes,
+          antidoteName: r.antidoteName,
+          unit: r.unit,
+          stockAvailability: meetsRequirement ? 'SUFFICIENT' : 'PARTIAL',
+          availabilityStatus: meetsRequirement ? 'มีสต็อกพร้อมสนับสนุน' : 'มีสต็อกจำกัด',
+          meetsRequirement,
+        };
+      });
 
       return {
         success: true,
@@ -943,6 +947,12 @@ export const submitErActionProposalTool: IAgentTool<{
         };
 
         if (args.actionType === 'DECLARE_INCIDENT') {
+          if (totalPatients === 0) {
+            return {
+              success: false,
+              error: 'Cannot declare emergency incident without casualty counts. Zero-assumption policy requires asking the operator for estimated casualty counts (Red, Yellow, Green) and reported ETA using ask_operator before submitting this proposal.',
+            };
+          }
           const validated = parseRes.data as Record<string, unknown>;
           const incType =
             (validated.incidentType as string) ||

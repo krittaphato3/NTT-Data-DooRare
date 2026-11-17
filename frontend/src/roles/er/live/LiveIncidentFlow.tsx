@@ -62,6 +62,21 @@ export function LiveIncidentFlow({ role = 'ER_STAFF' }: { role?: RoleCode }) {
   const access = getIncidentAccess(role);
   const [incidentId, setIncidentId] = useState<string | undefined>(() => readParam('incident') || readParam('id'));
   const forceNew = readParam('new') === '1';
+
+  useEffect(() => {
+    const onIncidentOpen = (e: any) => {
+      const id = e?.detail?.id;
+      if (id) {
+        setIncidentId(id);
+      }
+    };
+    window.addEventListener('doorare:incident-created', onIncidentOpen);
+    window.addEventListener('doorare:open-incident', onIncidentOpen);
+    return () => {
+      window.removeEventListener('doorare:incident-created', onIncidentOpen);
+      window.removeEventListener('doorare:open-incident', onIncidentOpen);
+    };
+  }, []);
   const open = useIncidentList('active', 0);
   const { incident, reload } = useIncident(incidentId, 0);
   const initialIntake = useRef<IntakeState | null>(null);
@@ -454,6 +469,7 @@ export function LiveIncidentFlow({ role = 'ER_STAFF' }: { role?: RoleCode }) {
           onSent={(r) => {
             setSent(r);
             reload();
+            window.dispatchEvent(new CustomEvent('doorare:open-incident', { detail: { id: incidentId } }));
             go(5);
           }}
         />
