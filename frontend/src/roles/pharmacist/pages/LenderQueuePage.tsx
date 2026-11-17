@@ -36,10 +36,13 @@ const URGENCY_OPTS = [
   { value: 'urgent', label: 'เร่งด่วน' },
   { value: 'normal', label: 'ปกติ' },
 ];
+/** Thai text for the request context the API sends (`req.trigger` keeps the code: the answer path checks `EMERGENCY`). */
+const TRIGGER_LABEL: Record<string, string> = { STOCK_ALERT: 'จากแจ้งเตือนสต็อก', MANUAL: 'สร้างเอง', EMERGENCY: 'เหตุฉุกเฉิน' };
+const triggerLabel = (t: string) => TRIGGER_LABEL[t] ?? t;
 const TRIGGER_OPTS = [
   { value: '', label: 'บริบท: ทั้งหมด' },
-  { value: 'STOCK_ALERT', label: 'STOCK_ALERT' },
-  { value: 'MANUAL', label: 'MANUAL' },
+  { value: 'STOCK_ALERT', label: TRIGGER_LABEL.STOCK_ALERT },
+  { value: 'MANUAL', label: TRIGGER_LABEL.MANUAL },
 ];
 const STATUS_FILTER: { value: '' | 'open' | BRStatus; label: string }[] = [
   { value: 'open', label: 'สถานะ: ที่ยังเปิดอยู่' },
@@ -209,14 +212,17 @@ function LotRow({
   onToggle,
   qty,
   onQtyChange,
-  partial,
+  editable,
+  unit,
 }: {
   lot: LotOption;
   selected: boolean;
   onToggle: () => void;
   qty: number;
   onQtyChange: (v: number) => void;
-  partial: boolean;
+  /** Ticked lots show a quantity box (how much of this lot goes out). */
+  editable: boolean;
+  unit: string;
 }) {
   return (
     <div
@@ -232,8 +238,9 @@ function LotRow({
       <input
         type="checkbox"
         checked={selected && lot.fefoEligible}
-        disabled={!lot.fefoEligible}
+        disabled={!lot.fefoEligible || !editable}
         onChange={onToggle}
+        aria-label={`เลือกล็อต ${lot.lotId}`}
         style={{
           marginTop: 3,
           cursor: lot.fefoEligible ? 'pointer' : 'not-allowed',
@@ -252,32 +259,37 @@ function LotRow({
           >
             {lot.lotId} · หมดอายุ {lot.expDate} ({lot.daysLeft} วัน)
           </span>
-          {lot.fefoEligible && selected && partial ? (
-            <input
-              type="number"
-              min={1}
-              max={lot.qty}
-              value={qty}
-              onChange={(e) => onQtyChange(Number(e.target.value))}
-              style={{
-                width: 80,
-                height: 26,
-                border: '1px solid #cbd5e1',
-                borderRadius: 6,
-                padding: '0 6px',
-                fontSize: 12,
-                fontFamily: 'inherit',
-              }}
-            />
+          {lot.fefoEligible && selected && editable ? (
+            <span style={{ display: 'flex', alignItems: 'center', gap: 4, flex: 'none', fontSize: 12, color: '#475569' }}>
+              <input
+                type="number"
+                min={1}
+                max={lot.qty}
+                value={qty}
+                aria-label={`จำนวนจากล็อต ${lot.lotId}`}
+                onChange={(e) => onQtyChange(Number(e.target.value))}
+                style={{
+                  width: 80,
+                  height: 26,
+                  border: `1px solid ${qty > lot.qty ? '#dc2626' : '#cbd5e1'}`,
+                  borderRadius: 6,
+                  padding: '0 6px',
+                  fontSize: 12,
+                  fontFamily: 'inherit',
+                }}
+              />
+              / {lot.qty} {unit}
+            </span>
           ) : (
             <span
               style={{
                 fontSize: 13,
                 fontWeight: 700,
                 color: lot.fefoEligible ? '#0f2a5c' : '#94a3b8',
+                flex: 'none',
               }}
             >
-              {lot.fefoEligible ? `${lot.qty} VIAL` : '—'}
+              {lot.fefoEligible ? `มี ${lot.qty} ${unit}` : '—'}
             </span>
           )}
         </div>
@@ -444,58 +456,50 @@ function DetailPanel({
   const [partialQty, setPartialQty] = useState('');
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
-  const [selectedLots, setSelectedLots] = useState<Record<string, boolean>>(() => {
-    const lots = liveLots ?? LOTS[req.drug] ?? [];
-    const res: Record<string, boolean> = {};
-    let needed = req.qty;
-    for (const l of lots) {
-      if (l.fefoEligible && needed > 0) {
-        res[l.lotId] = true;
-        needed -= l.qty;
-      } else {
-        res[l.lotId] = false;
-      }
-    }
-    return res;
-  });
-  const [lotQtys, setLotQtys] = useState<Record<string, number>>(() => {
-    const lots = liveLots ?? LOTS[req.drug] ?? [];
-    const res: Record<string, number> = {};
-    let needed = req.qty;
-    for (const l of lots) {
-      if (l.fefoEligible && needed > 0) {
-        const take = Math.min(l.qty, needed);
-        res[l.lotId] = take;
-        needed -= take;
-      } else {
-        res[l.lotId] = 0;
-      }
-    }
-    return res;
-  });
-
   const lots = liveLots ?? LOTS[req.drug] ?? [];
+  // Lot picks: the pharmacist may change which lots (and how much of each) go out; the default is FEFO (soonest expiry first)
+  // for the quantity being given. The ticked lots are sent to the server, which re-checks lot, drug, > 180 days and free stock.
+  const fefoFill = (target: number) => {
+    const sel: Record<string, boolean> = {};
+    const qtys: Record<string, number> = {};
+    let needed = target;
+    for (const l of lots) {
+      const take = l.fefoEligible && needed > 0 ? Math.min(l.qty, needed) : 0;
+      sel[l.lotId] = take > 0;
+      qtys[l.lotId] = take;
+      needed -= take;
+    }
+    return { sel, qtys };
+  };
+  const [selectedLots, setSelectedLots] = useState<Record<string, boolean>>(() => fefoFill(req.qty).sel);
+  const [lotQtys, setLotQtys] = useState<Record<string, number>>(() => fefoFill(req.qty).qtys);
+  const resetLots = (target: number) => {
+    const f = fefoFill(target);
+    setSelectedLots(f.sel);
+    setLotQtys(f.qtys);
+  };
+
   const stock = live ? (liveStock ?? undefined) : LENDABLE_STOCK[req.drug];
   const urgencyMeta = BR_URGENCY_META[req.urgency];
   const statusMeta = BR_STATUS_META[req.status] ?? BR_STATUS_META.waiting;
 
-  // Partial answer: the quantity the pharmacist types is what is shipped; lots are taken in the listed (FEFO) order.
   const partialNum = Number(partialQty);
   const eligibleLots = lots.filter((l) => l.fefoEligible);
   const eligibleTotal = eligibleLots.reduce((sum, l) => sum + l.qty, 0);
   const partialMax = Math.min(req.qty - 1, live && eligibleLots.length ? eligibleTotal : req.qty - 1);
   const partialValid = Number.isFinite(partialNum) && partialNum >= 1 && partialNum <= partialMax;
-  const partialLots = (() => {
-    let left = partialNum;
-    const out: { lotId: string; qty: number }[] = [];
-    for (const l of eligibleLots) {
-      if (left <= 0 || !l.uuid) continue;
-      const take = Math.min(l.qty, left);
-      out.push({ lotId: l.uuid, qty: take });
-      left -= take;
-    }
-    return out;
-  })();
+
+  // F3 emergency answers go through the emergency confirmation, where the server picks the lots: no lot choice there.
+  const lotChoice = live && req.trigger !== 'EMERGENCY' && eligibleLots.length > 0 && kind !== 'decline';
+  const lotTarget = kind === 'full' ? req.qty : partialValid ? partialNum : 0;
+  const pickedLots = eligibleLots.filter((l) => selectedLots[l.lotId] && (lotQtys[l.lotId] ?? 0) > 0);
+  const pickedSum = pickedLots.reduce((s, l) => s + (lotQtys[l.lotId] ?? 0), 0);
+  const overLot = pickedLots.find((l) => (lotQtys[l.lotId] ?? 0) > l.qty + 1e-9);
+  const lotsOk = !lotChoice || (lotTarget > 0 && Math.abs(pickedSum - lotTarget) < 1e-6 && !overLot);
+  // a later-expiring lot is used while an earlier one is not taken in full: allowed, but the earlier lot stays here and may expire
+  const takenFrom = (e: LotOption) => (selectedLots[e.lotId] ? lotQtys[e.lotId] ?? 0 : 0);
+  const notFefo = pickedLots.some((l) => eligibleLots.some((e) => e.daysLeft < l.daysLeft && takenFrom(e) < e.qty - 1e-9));
+  const lotsBody = lotChoice && pickedLots.every((l) => l.uuid) ? { lots: pickedLots.map((l) => ({ lotId: l.uuid as string, qty: lotQtys[l.lotId] ?? 0 })) } : {};
 
   const confirmLabel =
     kind === 'full'
@@ -568,7 +572,7 @@ function DetailPanel({
               <Icon name={UG_ICON[req.urgency]} className="ic12" />
               {req.urgencyLabel}
             </span>
-            <span className="badge t-grey code">{req.trigger}</span>
+            <span className="badge t-grey">{triggerLabel(req.trigger)}</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6 }}>
             <span className={`ved ved-${req.ved} ved-sm`}>{req.ved}</span>
@@ -627,7 +631,7 @@ function DetailPanel({
           </div>
           <div>
             <div style={{ color: '#94a3b8', fontSize: 11 }}>บริบท</div>
-            <div style={{ color: '#0f2a5c', fontWeight: 600 }}>{req.trigger}</div>
+            <div style={{ color: '#0f2a5c', fontWeight: 600 }}>{triggerLabel(req.trigger)}</div>
           </div>
           <div>
             <div style={{ color: '#94a3b8', fontSize: 11 }}>ได้รับเมื่อ</div>
@@ -795,7 +799,11 @@ function DetailPanel({
               min={1}
               max={partialMax}
               value={partialQty}
-              onChange={(e) => setPartialQty(e.target.value)}
+              onChange={(e) => {
+                setPartialQty(e.target.value);
+                const v = Number(e.target.value);
+                resetLots(Number.isFinite(v) && v > 0 ? Math.min(v, partialMax) : 0);
+              }}
               placeholder={`1 – ${partialMax}`}
               aria-label="จำนวนที่ให้ยืมบางส่วน"
               style={{ width: 140, height: 32, border: '1px solid #93c5fd', borderRadius: 6, padding: '0 8px', fontSize: 13, fontFamily: 'inherit' }}
@@ -807,7 +815,7 @@ function DetailPanel({
         )}
 
         {/* FEFO lot selector */}
-        {req.status === 'waiting' && lots.length > 0 && kind !== 'partial' && (
+        {req.status === 'waiting' && lots.length > 0 && kind !== 'decline' && (
           <div>
             <div
               style={{
@@ -847,13 +855,27 @@ function DetailPanel({
                   key={lot.lotId}
                   lot={lot}
                   selected={!!selectedLots[lot.lotId]}
-                  onToggle={() => setSelectedLots((p) => ({ ...p, [lot.lotId]: !p[lot.lotId] }))}
-                  qty={lotQtys[lot.lotId] ?? lot.qty}
-                  onQtyChange={(v) => setLotQtys((p) => ({ ...p, [lot.lotId]: v }))}
-                  partial={false}
+                  onToggle={() => {
+                    const on = !selectedLots[lot.lotId];
+                    setSelectedLots((p) => ({ ...p, [lot.lotId]: on }));
+                    // a newly ticked lot takes what is still missing (up to what the lot holds)
+                    if (on && !(lotQtys[lot.lotId] > 0)) setLotQtys((p) => ({ ...p, [lot.lotId]: Math.max(1, Math.min(lot.qty, lotTarget - pickedSum)) }));
+                  }}
+                  qty={lotQtys[lot.lotId] ?? 0}
+                  onQtyChange={(v) => setLotQtys((p) => ({ ...p, [lot.lotId]: Number.isFinite(v) ? v : 0 }))}
+                  editable={lotChoice}
+                  unit={req.unit}
                 />
               ))}
             </div>
+            {lotChoice && lotTarget > 0 && (
+              <div role="status" style={{ fontSize: 12, marginTop: 6, color: lotsOk ? '#166534' : '#b91c1c' }}>
+                เลือกแล้ว {pickedSum.toLocaleString('en-US', { maximumFractionDigits: 3 })} จาก {lotTarget.toLocaleString('en-US', { maximumFractionDigits: 3 })} {req.unit}
+                {overLot ? ` · ล็อต ${overLot.lotId} มีไม่พอ` : !lotsOk ? ' · ต้องเลือกให้รวมเท่ากับจำนวนที่ให้ยืม' : ''}
+                {lotsOk && notFefo && <div style={{ color: '#92400e', marginTop: 2 }}>ไม่ได้หยิบล็อตที่หมดอายุก่อน: ล็อตนั้นจะค้างอยู่ที่เราและอาจหมดอายุ</div>}
+                {!lotsOk && <button type="button" className="link" style={{ marginLeft: 8, fontSize: 12, background: 'none', border: 0, padding: 0, cursor: 'pointer' }} onClick={() => resetLots(lotTarget)}>เลือกตามหมดอายุก่อนให้</button>}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -909,7 +931,7 @@ function DetailPanel({
                     background: kind === 'full' ? '#eff6ff' : '#ffffff',
                     color: kind === 'full' ? '#1d4ed8' : '#334155',
                   }}
-                  onClick={() => setKind('full')}
+                  onClick={() => { setKind('full'); resetLots(req.qty); }}
                 >
                   ให้ครบ
                 </button>
@@ -929,7 +951,7 @@ function DetailPanel({
                     background: kind === 'partial' ? '#eff6ff' : '#ffffff',
                     color: kind === 'partial' ? '#1d4ed8' : '#334155',
                   }}
-                  onClick={() => req.qty > 1 && setKind('partial')}
+                  onClick={() => { if (req.qty > 1) { setKind('partial'); resetLots(partialValid ? partialNum : 0); } }}
                 >
                   ให้บางส่วน
                 </button>
@@ -960,15 +982,17 @@ function DetailPanel({
                 style={{
                   width: '100%',
                   height: 42,
-                  background: '#2563eb',
+                  background: lotsOk ? '#2563eb' : '#94a3b8',
                   color: '#ffffff',
                   border: 'none',
                   borderRadius: 8,
                   fontSize: 14,
                   fontWeight: 600,
-                  cursor: 'pointer',
+                  cursor: lotsOk ? 'pointer' : 'not-allowed',
                   boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
                 }}
+                disabled={!lotsOk}
+                title={lotsOk ? undefined : 'เลือกล็อตให้รวมเท่ากับจำนวนที่ให้ยืมก่อน'}
                 onClick={() => setPhase('confirm')}
               >
                 {confirmLabel}
@@ -1008,11 +1032,11 @@ function DetailPanel({
                     background: kind === 'decline' ? '#b91c1c' : undefined,
                     color: kind === 'decline' ? '#fff' : undefined,
                   }}
-                  disabled={sending || (live && kind === 'decline' && declineReason.trim().length < 3) || (kind === 'partial' && !partialValid)}
+                  disabled={sending || (live && kind === 'decline' && declineReason.trim().length < 3) || (kind === 'partial' && !partialValid) || !lotsOk}
                   onClick={() => {
                     if (!live) return setPhase('done');
-                    // API-F1b-009: full = ACCEPT (server picks FEFO lots >= 180 days), partial = PARTIAL with the chosen lots, decline needs a reason.
-                    const body = kind === 'full' ? { decision: 'ACCEPT' as const } : kind === 'partial' ? { decision: 'PARTIAL' as const, qty: partialNum, ...(partialLots.length ? { lots: partialLots } : {}) } : { decision: 'REJECT' as const, reason: declineReason.trim() };
+                    // API-F1b-009: full = ACCEPT, partial = PARTIAL, both with the ticked lots (the server re-checks them); decline needs a reason.
+                    const body = kind === 'full' ? { decision: 'ACCEPT' as const, ...lotsBody } : kind === 'partial' ? { decision: 'PARTIAL' as const, qty: partialNum, ...lotsBody } : { decision: 'REJECT' as const, reason: declineReason.trim() };
                     setSending(true);
                     setSendError(null);
                     // F3 urgent requests go through the emergency confirmation (first confirmation wins, kits / FEFO picked by the server)
@@ -1438,7 +1462,7 @@ export function LenderQueuePage({ role = 'PHARMACIST', embedded = false }: { rol
                           {r.id}
                         </a>
                         <div style={{ fontSize: 11, color: '#64748b', marginTop: 2, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                          <span>รอบ {r.round} · <span className="code">{r.trigger}</span></span>
+                          <span>รอบ {r.round} · {triggerLabel(r.trigger)}</span>
                           <span className={`badge ${statusMeta.cls}`} style={{ fontSize: 10.5, padding: '1px 6px' }}>
                             <Icon name={STATUS_ICON[r.status] ?? 'hourglass'} className="ic12" />
                             {statusMeta.th}

@@ -269,13 +269,21 @@ export function StockAlertTable({ rows, acked, snoozed, created, busy, onAction,
                     )}
                     {next ? (
                       <button
-                        className={`btn btn-sm ${next.kind === 'primary' ? 'btn-p' : 'btn-s'}`}
+                        className={`btn btn-sm ${next.kind === 'primary' ? 'btn-p' : 'btn-s'}${busy?.has(row.id) ? ' sa-btn-busy' : ''}`}
                         disabled={busy?.has(row.id) || (!!next.needs && !mayActFor(role, 'PHARMACIST', next.needs))}
                         aria-busy={busy?.has(row.id) || undefined}
                         title={next.needs && !mayActFor(role, 'PHARMACIST', next.needs) ? requiredRoleHint(next.needs) : undefined}
                         onClick={() => onAction(row, next.cond)}
                       >
-                        {busy?.has(row.id) && next.cond === 'create' ? 'กำลังสร้างคำขอ…' : next.label}
+                        {busy?.has(row.id) ? (
+                          // create + the agent picking lenders (the row may already show the new request while it runs); short text so it fits the cell
+                          <>
+                            <span className="sa-spin" aria-hidden="true" />
+                            Agent กำลังทำงาน…
+                          </>
+                        ) : (
+                          next.label
+                        )}
                       </button>
                     ) : (
                       <span />

@@ -164,7 +164,7 @@ export function PoolAllocationPage({ role = 'PHARMACIST' }: { role?: RoleCode })
         }
         const { data: r } = await sendPoolToAgent(l.live!.uuid);
         const a = r.agent;
-        const how = a.status === 'OK' ? 'จับคู่โดยระบบ' : 'จับคู่ด้วยสูตรสำรอง';
+        const how = a.status === 'OK' ? 'Agent จับคู่ให้แล้ว' : 'Agent ตอบไม่ได้ · ใช้สูตรสำรองจับคู่';
         results.push({ lot: l.drug, ok: true, plan: r.plan.status, text: `แผน ${r.plan.planNo} · ${r.plan.status === 'READY_FOR_APPROVAL' ? 'รอ รพ.ที่เกี่ยวข้องเห็นชอบ' : 'อนุมัติอัตโนมัติแล้ว'} · ${how}` });
       } catch (e) {
         results.push({ lot: l.drug, ok: false, text: (e as Error).message });

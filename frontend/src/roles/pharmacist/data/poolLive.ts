@@ -27,9 +27,9 @@ function agentView(p: ApiPlan): AllocationPlan['agent'] {
   const run = p.agentRunId ? p.agentRunId.slice(0, 8) : '—';
   if (!p.agentRunId) return { run, confidence: '—', title: 'แผนที่เภสัชกรสร้างเอง', note: 'เภสัชกรเจ้าของยากำหนดผู้รับและจำนวนเอง · ระบบตรวจว่าใช้ทันก่อนหมดอายุและค่าขนส่งคุ้มค่าก่อนบันทึก' };
   if (!p.agent || p.agent.status === 'OK') {
-    return { run, confidence: CONFIDENCE[p.agent?.confidence ?? ''] ?? 'ปานกลาง', title: 'ระบบเสนอแผนนี้', note: p.agent?.summary ?? 'แผนจากการจับคู่อัตโนมัติ · ระบบตรวจซ้ำก่อนบันทึก' };
+    return { run, confidence: CONFIDENCE[p.agent?.confidence ?? ''] ?? 'ปานกลาง', title: 'Agent จับคู่ให้แล้ว · เหตุผลของ Agent', note: p.agent?.summary ?? 'Agent จับคู่ผู้รับให้ · ระบบตรวจซ้ำก่อนบันทึก' };
   }
-  return { run, confidence: '—', title: 'แผนจากสูตรสำรอง', note: 'แบ่งให้ รพ.ที่สต็อกเหลือน้อยวันที่สุดก่อน' };
+  return { run, confidence: '—', title: 'Agent ตอบไม่ได้ · ระบบจับคู่ด้วยสูตรสำรอง', note: 'แบ่งให้ รพ.ที่สต็อกเหลือน้อยวันที่สุดก่อน' };
 }
 
 function statusOf(p: ApiPlan): PlanStatus {

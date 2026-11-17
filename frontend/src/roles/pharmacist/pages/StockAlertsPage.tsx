@@ -160,7 +160,7 @@ export function StockAlertsPage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
         if (busy.has(row.id)) return; // already being created
         // API-F1b-001 then -004: the request is created and its lender ladder proposed; approval happens on the requests page.
         setBusy((prev) => new Set(prev).add(row.id));
-        setNotice(`กำลังสร้างคำขอยืม ${drugShort(row.drug).name} และให้ระบบเลือกผู้ให้ยืม อาจใช้เวลาประมาณ 1 นาที ห้ามกดซ้ำ`);
+        setNotice(`Agent กำลังสร้างคำขอยืม ${drugShort(row.drug).name} กรุณารอสักครู่`);
         void runAction(async () => {
           try {
             const created = await createBorrowRequest({ stockAlertId: row.alert!.alertId });
