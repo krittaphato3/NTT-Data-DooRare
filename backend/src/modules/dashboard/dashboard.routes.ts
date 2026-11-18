@@ -20,7 +20,9 @@ dashboardRouter.get('/', requireAuth, asyncHandler(async (req, res) => {
     one(`SELECT count(*) FILTER (WHERE status = 'PENDING_APPROVAL')::int AS pending_approval,
                 count(*) FILTER (WHERE status IN ('APPROVED','IN_PROGRESS','PARTIALLY_FULFILLED'))::int AS in_progress,
                 count(*) FILTER (WHERE status = 'ESCALATED')::int AS escalated
-           FROM borrow_request WHERE ($1::uuid IS NULL OR borrower_hospital_id = $1)`),
+           FROM borrow_request WHERE ($1::uuid IS NULL OR borrower_hospital_id = $1)
+            -- emergency (F3) requests are counted on the ER / warehouse side (incidents), not on the borrow page
+            AND context::text <> 'EMERGENCY'`),
     one(`SELECT count(*)::int AS waiting FROM borrow_leg WHERE status = 'SENT' AND ($1::uuid IS NULL OR lender_hospital_id = $1)`),
     one(`SELECT count(*) FILTER (WHERE status = 'DETECTED')::int AS detected, count(*) FILTER (WHERE status = 'RELEASED_TO_POOL')::int AS in_pool
            FROM near_expiry_item WHERE ($1::uuid IS NULL OR hospital_id = $1)`),

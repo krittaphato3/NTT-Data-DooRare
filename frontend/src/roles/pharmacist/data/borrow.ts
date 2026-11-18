@@ -14,7 +14,7 @@ export type BorrowStatus =
   | 'CANCELLED';
 export type StatusGroup = 'pending' | 'progress' | 'escalated' | 'fulfilled' | 'closed';
 /** Filter tiles of the request list. Not the same as `StatusGroup`, which colours badges and the drawer. */
-export type TileGroup = 'pending' | 'progress' | 'accepted' | 'fulfilled' | 'closed';
+export type TileGroup = 'pending' | 'progress' | 'accepted' | 'fulfilled' | 'closed' | 'escalated';
 export type Urgency = 'CRITICAL' | 'URGENT' | 'NORMAL';
 export type BorrowContext = 'STOCK_ALERT' | 'EMERGENCY' | 'MANUAL';
 export type ReturnState = 'PENDING' | 'OVERDUE' | 'RETURNED';
@@ -29,6 +29,8 @@ export interface BorrowLeg {
   /** Lender ranking score from the system order; absent for a lender added outside the ladder. */
   si?: number;
   state: LegState;
+  /** Planned (not sent) row of a request waiting for approval: editable first-round quantity. */
+  plan?: { hospitalId: string; lendable: number; qty: number };
   /** Raw backend leg status (e.g. SENT, ACCEPTED, LOADED, IN_TRANSIT, RECEIVED, CANCELLED). */
   rawStatus?: string;
   detail: string;
@@ -51,6 +53,10 @@ export interface BorrowRequest {
   unit: string;
   /** Lender column lines. */
   lender: string[];
+  /** Borrowing hospital (us), shown in the drawer summary. */
+  borrower?: string;
+  /** Quantity actually received so far (live only). */
+  received?: number;
   urgency: Urgency;
   status: BorrowStatus;
   returnState?: ReturnState;
@@ -68,7 +74,9 @@ export interface BorrowRequest {
   createdBy: string;
   approvedBy?: string;
   legs: BorrowLeg[];
-  agentNote?: { code: string; text: string; model?: string | null; confidence?: string | null; status?: 'OK' | 'FALLBACK' | 'SKIPPED' };
+  agentNote?: { code: string; text: string; model?: string | null; confidence?: string | null; status?: 'OK' | 'FALLBACK' | 'SKIPPED' | 'EDITED' };
+  /** Very urgent: the first round may ask several lenders at once. */
+  parallel?: boolean;
   /** F3 kit request: it has no drug item, so the ranked-lender steps (add a lender by hand) do not apply. */
   isKit?: boolean;
 }
@@ -196,7 +204,8 @@ export const GROUPS: { id: StatusGroup; label: string; codes: string; tone: Tone
 
 export const TILES: { id: TileGroup; label: string; codes: string; tone: Tone; icon: IconName }[] = [
   { id: 'pending', label: 'รออนุมัติ', codes: '', tone: 'amber', icon: 'hourglass' },
-  { id: 'progress', label: 'กำลังขอยืม', codes: 'รอผู้ให้ยืมตอบ · ต้องเพิ่มผู้ให้ยืม', tone: 'blue', icon: 'send' },
+  { id: 'progress', label: 'กำลังขอยืม', codes: 'รอผู้ให้ยืมตอบ', tone: 'blue', icon: 'send' },
+  { id: 'escalated', label: 'ต้องเพิ่มผู้ให้ยืม', codes: 'ไม่มีผู้ให้ยืมเหลือในลำดับ', tone: 'red', icon: 'tri' },
   { id: 'accepted', label: 'ตอบรับแล้ว', codes: 'ผู้ให้ยืมตอบรับ · รอขนส่ง', tone: 'green', icon: 'checkc' },
   { id: 'fulfilled', label: 'ได้ครบแล้ว', codes: '', tone: 'green', icon: 'checkc' },
   { id: 'closed', label: 'ปิด · ยกเลิก', codes: '', tone: 'grey', icon: 'minusc' },
@@ -248,13 +257,13 @@ export const isOpenRequest = (s: BorrowStatus) => !['FULFILLED', 'CLOSED_UNFULFI
 export const needsLender = (r: Pick<BorrowRequest, 'status' | 'isKit'>) => r.status === 'ESCALATED' && !r.isKit;
 
 /**
- * Tile a request is counted under. Escalated requests stay under "กำลังขอยืม" (flagged by `needsLender`);
+ * Tile a request is counted under (the open tiles add up to the tab count). Escalated = "ต้องเพิ่มผู้ให้ยืม";
  * a request moves to "ตอบรับแล้ว" once any lender confirmed (accepted, loaded, in transit or received).
  */
 export function tileOf(r: Pick<BorrowRequest, 'status' | 'legs'>): TileGroup {
   const g = STATUS_META[r.status].group;
   if (g === 'pending' || g === 'fulfilled' || g === 'closed') return g;
-  if (r.status === 'ESCALATED') return 'progress';
+  if (r.status === 'ESCALATED') return 'escalated';
   return r.legs.some((l) => l.state === 'ACCEPTED') ? 'accepted' : 'progress';
 }
 

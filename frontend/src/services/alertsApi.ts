@@ -21,6 +21,8 @@ export interface ApiAlert {
   suggestedBorrowQty: number | null;
   forecast: { method: string; p50: number | null; p90: number | null; p95: number | null; totalTarget: number | null; rop: number | null; uPerDay: number | null; leadTimeDays: number | null; confidenceFlag: string | null } | null;
   request: { id: string; requestNo: string; status: string } | null;
+  /** Open emergency (F3) request of the ER for the same drug (a note only; it does not block a stock request). */
+  emergencyRequest?: { requestNo: string } | null;
   snoozedUntil: string | null;
   createdAt: string;
   updatedAt: string;

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { refreshNavBadges } from '../../../lib/navBadges';
 import { createPortal } from 'react-dom';
 import { useAuth } from '../../../context/AuthContext';
 import { Icon } from '../../../components/common/icons';
@@ -21,7 +22,7 @@ import { ObligationTable, ObligationTiles } from '../components/ObligationTable'
 import { BORROW_REQUESTS, groupOf, isOpenRequest, LENDER_QUEUE, needsLender, TILES, tileOf } from '../data/borrow';
 import { isOpenLeg } from '../data/lender';
 import { useBorrowRequests } from '../data/useBorrowRequests';
-import { approveBorrowRequest, cancelBorrowRequest, skipBorrowLeg, escalateManual as escalateManualApi, rejectBorrowRequest, proposeBorrowRequest } from '../../../services/borrowApi';
+import { approveBorrowRequest, cancelBorrowRequest, skipBorrowLeg, acceptForLender, editLadder, escalateManual as escalateManualApi, rejectBorrowRequest, proposeBorrowRequest } from '../../../services/borrowApi';
 import { mockFallbackEnabled } from '../../../services/dataSource';
 import { getHospitals } from '../../../services/catalogApi';
 import type { ApiHospital } from '../../../services/catalogApi';
@@ -87,18 +88,19 @@ export function BorrowRequestsPage({
 }) {
   const { user } = useAuth();
   const tick = useTick();
-  // `?group=escalated` (old Action Center link) = "กำลังขอยืม" narrowed to the requests that need a lender.
+  // `?group=escalated` (old Action Center link) = the requests that need a lender (the red banner filter).
   const [group, setGroup] = useState<TileGroup | null>(() => {
     const g = new URLSearchParams(window.location.search).get('group');
-    if (g === 'escalated') return 'progress';
     return TILES.some((x) => x.id === g) ? (g as TileGroup) : null;
   });
-  const [onlyNeedLender, setOnlyNeedLender] = useState(() => new URLSearchParams(window.location.search).get('group') === 'escalated');
+  const [onlyNeedLender, setOnlyNeedLender] = useState(false);
   const [selId, setSelId] = useState('');
   // Detail drawer stays closed until a request is opened from the table.
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [decision, setDecision] = useState<Record<string, Decision>>({});
   const live = useBorrowRequests();
+  /** Reload the list and the sidebar badge (the badge only counts, the list is the source of truth). */
+  const reloadAll = () => { refreshNavBadges(); return live.reload(); };
   const lender = useLenderQueue();
   // Live data includes years of history, so the default period must not hide it (the 90-day default is for the mock fixtures).
   useEffect(() => {
@@ -187,8 +189,7 @@ export function BorrowRequestsPage({
     const linked = all.find((r) => r.id === linkedRequest || r.uuid === linkedRequest);
     if (linked) {
       // also when it is already finished (the default list shows only requests still in progress)
-      setGroup(tileOf(linked));
-      setOnlyNeedLender(false);
+      setGroup(tileOf(linked)); setOnlyNeedLender(false);
       setQ(linked.id);
       setSelId(linked.id);
       setDrawerOpen(true);
@@ -205,15 +206,14 @@ export function BorrowRequestsPage({
       let found = items.find((r) => r.id === targetId || r.uuid === targetId);
       if (!found) {
         // Try reloading live list to pick up newly created request
-        const fresh = await live.reload().catch(() => null);
+        const fresh = await reloadAll().catch(() => null);
         if (fresh && Array.isArray(fresh)) {
           items = fresh;
           found = items.find((r) => r.id === targetId || r.uuid === targetId);
         }
       }
       if (found) {
-        setGroup(tileOf(found));
-        setOnlyNeedLender(false);
+        setGroup(tileOf(found)); setOnlyNeedLender(false);
         setQ(found.id);
         setSelId(found.id);
         setDrawerOpen(true);
@@ -225,7 +225,6 @@ export function BorrowRequestsPage({
   // Emergency (F3) requests are worked in the incident console: they never show on this page.
   const inPeriod = all.filter((r) => r.daysAgo <= days).filter((r) => r.context !== 'EMERGENCY');
   const counts = Object.fromEntries(TILES.map((g) => [g.id, inPeriod.filter((r) => tileOf(r) === g.id).length])) as Record<TileGroup, number>;
-  const needLenderCount = inPeriod.filter(needsLender).length;
   const pendingAll = all.filter((r) => groupOf(r.status) === 'pending').length;
 
   const obligationCountList = useMemo(() => obligationCounts(obligations), [obligations]);
@@ -255,7 +254,7 @@ export function BorrowRequestsPage({
     if (!isLive || !sel?.uuid) return setDecision((m) => ({ ...m, [sel.id]: d }));
     setActionError(null);
     if (d === 'reject') return setRejectTarget(sel);
-    approveBorrowRequest(sel.uuid, sel.version).then(() => live.reload()).catch((e: Error) => setActionError(e.message));
+    approveBorrowRequest(sel.uuid, sel.version).then(() => reloadAll()).catch((e: Error) => setActionError(e.message));
   };
 
   /** Propose lender ladder for a DRAFT borrow request (API-F1b-004). */
@@ -265,13 +264,13 @@ export function BorrowRequestsPage({
     proposeBorrowRequest(r.uuid)
       .then((res) => {
         setCreatedNotice(`เสนอแผนผู้ให้ยืมสำหรับ ${r.id} เรียบร้อยแล้ว (${res.data.status === 'ESCALATED' ? 'ไม่พบผู้ให้ยืมที่มีสต็อกเกินเกณฑ์' : 'รออนุมัติก่อนส่ง'})`);
-        return live.reload();
+        return reloadAll();
       })
       .catch((e: Error) => setActionError(e.message));
   };
   const confirmReject = (reason: string) => {
     if (!rejectTarget?.uuid) return;
-    rejectBorrowRequest(rejectTarget.uuid, reason).then(() => { setRejectTarget(null); return live.reload(); }).catch((e: Error) => { setActionError(e.message); setRejectTarget(null); });
+    rejectBorrowRequest(rejectTarget.uuid, reason).then(() => { setRejectTarget(null); return reloadAll(); }).catch((e: Error) => { setActionError(e.message); setRejectTarget(null); });
   };
 
   /** Cancel an in-progress or approved borrow request (QA-PHARM-005, spec §7.15). */
@@ -282,7 +281,7 @@ export function BorrowRequestsPage({
         .then(() => {
           setCancelTarget(null);
           setCreatedNotice(`ยกเลิกคำขอ ${cancelTarget.id} เรียบร้อยแล้ว`);
-          return live.reload();
+          return reloadAll();
         })
         .catch((e: Error) => {
           setActionError(e.message);
@@ -394,7 +393,7 @@ export function BorrowRequestsPage({
           setReturnTarget(null);
           setReturnObligation(null);
           setCreatedNotice(`บันทึกการคืน ${returnObligation.requestNo} จำนวน ${qtyNum} ${returnObligation.drug.baseUnit || ''} เรียบร้อยแล้ว`);
-          return live.reload();
+          return reloadAll();
         })
         .catch((e: Error) => setActionError(e.message))
         .finally(() => setReturnSubmitting(false));
@@ -459,7 +458,7 @@ export function BorrowRequestsPage({
       const target = escalateTarget;
       setActionError(null);
       escalateManualApi(target.uuid!, { lenderHospitalId: escLender, qty: Number(escQty), reason })
-        .then(() => { setEscalateTarget(null); return live.reload(); })
+        .then(() => { setEscalateTarget(null); return reloadAll(); })
         .catch((e: Error) => { setActionError(e.message); setEscalateTarget(null); });
       return;
     }
@@ -482,7 +481,7 @@ export function BorrowRequestsPage({
     setSkipBusy(true);
     setActionError(null);
     skipBorrowLeg(skipTarget.r.uuid, skipTarget.leg.legId)
-      .then(() => live.reload())
+      .then(() => reloadAll())
       .catch((e: Error) => setActionError(e.message))
       .finally(() => { setSkipBusy(false); setSkipTarget(null); });
   };
@@ -588,7 +587,7 @@ export function BorrowRequestsPage({
           onCreated={(no, status) => {
             setManualOpen(false);
             setCreatedNotice(`สร้างคำขอ ${no} แล้ว (${status === 'ESCALATED' ? 'ไม่พบผู้ให้ยืมที่เหมาะสม' : 'รออนุมัติในรายการด้านล่าง'})`);
-            void live.reload();
+            void reloadAll();
           }}
         />
       )}
@@ -658,18 +657,6 @@ export function BorrowRequestsPage({
               )}
             </div>
             <BorrowStatusTiles counts={counts} active={group} onPick={(g) => { setGroup(g); setOnlyNeedLender(false); if (g) setHistoryOnly(false); }} />
-            {needLenderCount > 0 && (
-              <button
-                type="button"
-                className="bl-need"
-                aria-pressed={onlyNeedLender}
-                onClick={() => { setOnlyNeedLender((v) => !v); setGroup(onlyNeedLender ? null : 'progress'); setHistoryOnly(false); }}
-              >
-                <Icon name="tri" className="ic14" />
-                ต้องเพิ่มผู้ให้ยืม <span className="num">{needLenderCount}</span> รายการ — ไม่มีผู้ให้ยืมเหลือในลำดับ
-                <span aria-hidden="true">{onlyNeedLender ? ' ✓' : ' →'}</span>
-              </button>
-            )}
           </div>
           <div className="tr-filters">
             <label className="tr-search">
@@ -709,6 +696,8 @@ export function BorrowRequestsPage({
           onDecide={decide}
           onEscalate={setEscalateTarget}
           onSkipLeg={(r, leg) => setSkipTarget({ r, leg })}
+          onEditPlan={isLive ? (r, legs) => editLadder(r.uuid!, { version: r.version, legs }).then(async () => { await reloadAll().catch(() => undefined); }) : undefined}
+          onAcceptForLender={isLive ? (_r, leg) => acceptForLender(leg.legId!).then(() => { reloadAll().catch(() => undefined); }) : undefined}
           onCancel={setCancelTarget}
           onRecordReturn={handleOpenRecordReturn}
           onPropose={handlePropose}

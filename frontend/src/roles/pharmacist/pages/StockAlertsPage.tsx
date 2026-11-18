@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { refreshNavBadges } from '../../../lib/navBadges';
 import { Icon } from '../../../components/common/icons';
 import { homeHrefFor, withRole } from '../../../data/navigation';
 import type { RoleCode } from '../../../lib/rbac';
@@ -166,6 +167,7 @@ export function StockAlertsPage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
             const created = await createBorrowRequest({ stockAlertId: row.alert!.alertId });
             const proposed = await proposeBorrowRequest(created.id);
             await sa.reload();
+            refreshNavBadges();
             setNotice(`สร้างคำขอ ${proposed.data.requestNo} แล้ว (${proposed.data.status === 'ESCALATED' ? 'ไม่พบผู้ให้ยืมที่เหมาะสม' : 'รออนุมัติที่หน้า “คำขอยืม”'})`);
           } catch (e) {
             setNotice(null);

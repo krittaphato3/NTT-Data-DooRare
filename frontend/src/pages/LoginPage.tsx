@@ -172,8 +172,8 @@ export function LoginPage() {
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <img src={logoMark} alt="DooRare" style={{ width: 34, height: 34, objectFit: 'contain' }} />
-          <img src={logoWordmark} alt="DooRare ดูแร์" style={{ height: 20, objectFit: 'contain' }} />
+          <img src={logoMark} alt="PharmaSync+" style={{ width: 34, height: 34, objectFit: 'contain' }} />
+          <img src={logoWordmark} alt="PharmaSync+" style={{ height: 20, objectFit: 'contain' }} />
           <span
             style={{
               fontSize: 12,

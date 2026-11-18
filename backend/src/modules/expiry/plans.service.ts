@@ -486,11 +486,23 @@ export class PlansService {
   }
 
   /** API-F2a-009: approve / reject as an involved hospital (If-Match semantics via `version`). */
-  async decision(req: Request, rawId: string) {
+  /**
+   * `asHospitalId` (demo shortcut, POST /:id/approve-for): an involved pharmacist approves for another hospital of the plan whose
+   * answer is still pending, so a demo does not need to sign in as each hospital. Approve only; same checks and effects as that
+   * hospital pressing "เห็นชอบแผน".
+   */
+  async decision(req: Request, rawId: string, asHospitalId?: string) {
     const user = req.user!;
-    const hospitalId = mustBePharmacist(user);
+    const ownHospitalId = mustBePharmacist(user);
     const id = uuidParam(rawId, 'id');
     const body = bodyObject(req.body);
+    if (asHospitalId !== undefined) {
+      if (asHospitalId === ownHospitalId) throw new HttpError(422, 'VALIDATION', 'ใช้ปุ่มเห็นชอบของโรงพยาบาลเราเอง');
+      if (body.decision !== undefined && body.decision !== 'APPROVED') throw new HttpError(422, 'VALIDATION', 'เห็นชอบแทนได้อย่างเดียว');
+      if (body.approveAll) throw new HttpError(422, 'VALIDATION', 'เห็นชอบแทนทีละโรงพยาบาล');
+      body.decision = 'APPROVED';
+    }
+    const hospitalId = asHospitalId ?? ownHospitalId;
     const decision = body.decision;
     if (decision !== 'APPROVED' && decision !== 'REJECTED') throw new HttpError(400, 'VALIDATION', 'decision ต้องเป็น APPROVED หรือ REJECTED');
     const version = optionalNumber(body.version, 'version', { min: 1 });
@@ -501,6 +513,11 @@ export class PlansService {
       const plan = await loadPlan(client, id, user, true);
       if (!OPEN_FOR_APPROVAL.includes(plan.status)) throw new HttpError(409, 'ALREADY_DECIDED', `แผนอยู่ในสถานะ ${plan.status} ตัดสินใจไม่ได้`);
       assertVersion(plan, version);
+      if (asHospitalId !== undefined) {
+        const target = (await client.query(`SELECT decision::text AS decision FROM plan_approval WHERE plan_id = $1 AND hospital_id = $2 FOR UPDATE`, [id, asHospitalId])).rows[0];
+        if (!target) throw new HttpError(404, 'NOT_FOUND', 'โรงพยาบาลนี้ไม่อยู่ในแผน');
+        if (target.decision !== 'PENDING') throw new HttpError(409, 'ALREADY_DECIDED', 'โรงพยาบาลนี้ตอบแผนแล้ว');
+      }
       if (decision === 'APPROVED' && !plan.economical && !plan.option_chosen) throw new HttpError(409, 'OPTION_REQUIRED', 'ค่าขนส่งเกินเกณฑ์ ต้องให้เภสัชกรเจ้าของยาเลือกทางเลือกก่อน (BR-F2a-011)');
       if (body.approveAll && decision === 'APPROVED') {
         if (Array.isArray(body.lines)) {
@@ -527,8 +544,8 @@ export class PlansService {
         await client.query(`UPDATE plan_approval SET decision = $3::approval_decision, decided_by = $4, decided_at = now(), comment = $5 WHERE plan_id = $1 AND hospital_id = $2`, [id, hospitalId, decision, user.id, comment || null]);
       }
       const ctx = auditContext(req);
-      await writeAudit(client, ctx, { action: `PLAN_${decision}`, entityType: 'allocation_plan', entityId: id, reason: comment || null, after: { hospital: hospitalId, planNo: plan.plan_no } });
-      await logDecision(client, plan, decision, comment || null, user.id, decision === 'APPROVED' ? (body.approveAll ? 'approve_meeting' : 'approve') : 'reject');
+      await writeAudit(client, ctx, { action: `PLAN_${decision}`, entityType: 'allocation_plan', entityId: id, reason: comment || null, after: { hospital: hospitalId, planNo: plan.plan_no, ...(asHospitalId ? { by: 'DEMO_SHORTCUT', actorHospital: ownHospitalId } : {}) } });
+      await logDecision(client, plan, decision, comment || null, user.id, decision === 'APPROVED' ? (body.approveAll ? 'approve_meeting' : asHospitalId ? 'approve_for' : 'approve') : 'reject');
       let next = plan.status;
       let started = 0;
       if (decision === 'REJECTED') {

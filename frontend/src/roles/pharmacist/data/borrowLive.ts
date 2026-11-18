@@ -12,29 +12,33 @@ const LEG: Record<ApiBorrowLeg['status'], LegState> = {
 const n = (v: number) => v.toLocaleString('en-US', { maximumFractionDigits: 3 });
 const hh = (iso: string | null) => (iso ? fmtThaiTime(iso) : '');
 
+/** One line per asked lender: how much we asked, what they answered. The last segment is reused in the table note. */
 function legDetail(l: ApiBorrowLeg, unit: string): string {
-  const base = `รอบ ${l.round} · ขอ ${n(l.qtyAsked)} ${unit}`;
+  const base = `ขอยืม ${n(l.qtyAsked)} ${unit}${l.round > 1 ? ' (ขอต่อเพราะแห่งก่อนหน้าไม่พอ)' : ''}`;
+  const got = `ตอบรับ ${n(l.qtyAccepted ?? 0)} ${unit}`;
   switch (l.status) {
-    case 'SENT': return `${base} · ส่ง ${hh(l.sentAt)}${l.remindedAt ? ` · เตือน 50% ${hh(l.remindedAt)} ✓` : ''} · หมดเวลา ${hh(l.deadlineAt)}`;
-    case 'ACCEPTED': return `${base} · ตอบรับ ${n(l.qtyAccepted ?? 0)} · ${hh(l.respondedAt)}`;
-    case 'PARTIAL': return `${base} · ตอบรับบางส่วน ${n(l.qtyAccepted ?? 0)} · ${hh(l.respondedAt)}`;
-    case 'LOADED': case 'IN_TRANSIT': return `${base} · ตอบรับ ${n(l.qtyAccepted ?? 0)} · กำลังขนส่ง`;
-    case 'RECEIVED': return `${base} · ตอบรับ ${n(l.qtyAccepted ?? 0)} · รับแล้ว ${n(l.qtyReceived ?? 0)}`;
+    case 'SENT': return `${base} · ส่ง ${hh(l.sentAt)}${l.remindedAt ? ` · เตือนแล้ว ${hh(l.remindedAt)}` : ''} · ต้องตอบภายใน ${hh(l.deadlineAt)}`;
+    case 'ACCEPTED': return `${base} · ${got} · ${hh(l.respondedAt)}`;
+    case 'PARTIAL': return `${base} · ให้ได้บางส่วน ${n(l.qtyAccepted ?? 0)} ${unit} · ${hh(l.respondedAt)}`;
+    case 'LOADED': case 'IN_TRANSIT': return `${base} · ${got} · กำลังขนส่ง`;
+    case 'RECEIVED': return `${base} · ${got} · รับของแล้ว ${n(l.qtyReceived ?? 0)} ${unit}`;
     case 'REJECTED': return `${base} · ปฏิเสธ ${hh(l.respondedAt)}${l.rejectReason ? ` · ${l.rejectReason}` : ''}`;
-    case 'TIMED_OUT': return `${base} · หมดเวลา ${hh(l.deadlineAt)}`;
-    case 'CANCELLED': return `${base} · ยกเลิก${l.rejectReason === 'STOP_RULE' ? ' (ได้ครบตามกฎหยุดแล้ว)' : l.rejectReason === 'SKIPPED_BY_BORROWER' ? ' (ส่งต่อลำดับถัดไปแล้ว)' : ''}`;
+    case 'TIMED_OUT': return `${base} · ไม่ตอบภายใน ${hh(l.deadlineAt)}`;
+    case 'CANCELLED': return `${base} · ยกเลิก${l.rejectReason === 'STOP_RULE' ? ' (ได้ครบแล้ว ไม่ต้องขอที่นี่)' : l.rejectReason === 'SKIPPED_BY_BORROWER' ? ' (ส่งต่อแห่งถัดไปแล้ว)' : ''}`;
     default: return base;
   }
 }
 
-function banner(r: ApiBorrowRequest, waiting: ApiBorrowLeg | undefined): { title: string; text: string } {
+function banner(r: ApiBorrowRequest, waiting: ApiBorrowLeg | undefined, waitingCount = waiting ? 1 : 0): { title: string; text: string } {
   const unit = r.drug.baseUnit;
   switch (r.status) {
     case 'DRAFT': return { title: 'ร่างคำขอ', text: 'ยังไม่ได้เสนอแผนผู้ให้ยืม' };
     case 'PENDING_APPROVAL': return { title: 'รอเภสัชกรอนุมัติก่อนส่ง', text: `ร่างข้อความถึงผู้ให้ยืมแล้ว` };
     case 'APPROVED': case 'IN_PROGRESS': case 'PARTIALLY_FULFILLED':
       return waiting
-        ? { title: `รอ ${waiting.lender.name} ตอบ (รอบ ${waiting.round})`, text: `หมดเวลา ${hh(waiting.deadlineAt)} → ระบบส่งต่อลำดับถัดไปอัตโนมัติ${waiting.remindedAt ? ` · เตือน 50% แล้ว ${hh(waiting.remindedAt)}` : ''}` }
+        ? waitingCount > 1
+          ? { title: `รอ ${waitingCount} แห่งตอบพร้อมกัน`, text: `แห่งที่ไม่ตอบภายใน ${hh(waiting.deadlineAt)} ระบบจะขอแห่งถัดไปแทนให้เอง` }
+          : { title: `รอ ${waiting.lender.name} ตอบ`, text: `ถ้าไม่ตอบภายใน ${hh(waiting.deadlineAt)} ระบบจะขอแห่งถัดไปให้เอง${waiting.remindedAt ? ` · เตือนแล้ว ${hh(waiting.remindedAt)}` : ''}` }
         : { title: 'ผู้ให้ยืมตอบรับแล้ว · รอการขนส่ง', text: `ยืนยันแล้ว ${n(r.stop?.effective ?? 0)} ${unit} จาก ${n(r.qtyRequested)}` };
     case 'ESCALATED': return { title: 'ลำดับผู้ให้ยืมหมดแล้ว · ส่งต่อผู้ดูแล', text: `ได้ ${n(r.stop?.effective ?? 0)} ${unit} · ยังขาด ${n(r.stop?.remaining ?? 0)} ${unit} · แจ้งผู้ดูแลแล้ว` };
     case 'FULFILLED': return { title: 'ได้ครบแล้ว', text: `รับครบ ${n(r.qtyFulfilled)} ${unit} · ต้องคืนเป็นยาตัวเดิมจำนวนเท่ากัน` };
@@ -55,8 +59,17 @@ export function returnStateOf(requestNo: string, obligations: ApiReturnObligatio
 /** The pharmacist's note under the legs: what the lender-selection agent chose (AGT-F1), or why the rules were used. */
 function agentNoteOf(r: ApiBorrowRequest): NonNullable<BorrowRequest['agentNote']> {
   const a = r.proposal?.agent;
+  const unit = r.drug.baseUnit;
+  const ed = r.proposal?.edited;
+  if (ed) {
+    // the pharmacist changed the quantities: the agent's / rules' reasoning was about the old plan, so do not show it as current
+    const now = (r.proposal?.ladder ?? []).filter((e) => e.qtyPlanned > 0).map((e) => `${e.name} ${n(e.qtyPlanned)} ${unit}`).join(', ');
+    const was = ed.original.map((o) => `${o.name} ${n(o.qty)} ${unit}`).join(', ');
+    return { code: 'F1_T2', text: `เภสัชกรแก้แผนเอง: ขอ ${now} · เดิม${a?.status === 'OK' ? ' Agent' : 'ระบบ'}เสนอ ${was} · ข้อความถึงผู้ให้ยืมร่างใหม่ตามจำนวนที่แก้แล้ว`, status: 'EDITED', model: a?.model ?? null };
+  }
   if (a?.status === 'OK' && a.summary) {
-    return { code: 'F1_T2', text: `${a.summary}${a.priorityAfter.length ? ` · ถ้ารอบแรกไม่พอ ขอต่อ: ${a.priorityAfter.join(' → ')}` : ''} · เภสัชกรตรวจและอนุมัติก่อนส่ง`, model: a.model, confidence: a.confidence, status: 'OK' };
+    const nameOf = (code: string) => r.proposal?.ladder.find((e) => e.code === code)?.name ?? code;
+    return { code: 'F1_T2', text: `${a.summary}${a.priorityAfter.length ? ` · ถ้าแห่งแรกไม่พอ ขอต่อ: ${a.priorityAfter.map(nameOf).join(' → ')}` : ''} · เภสัชกรตรวจและอนุมัติก่อนส่ง`, model: a.model, confidence: a.confidence, status: 'OK' };
   }
   return { code: 'F1_T2', text: ruleReason(r), status: a?.status ?? 'SKIPPED', model: a?.model ?? null };
 }
@@ -93,7 +106,9 @@ function ruleReason(r: ApiBorrowRequest): string {
 export function borrowRequestToView(r: ApiBorrowRequest, now = Date.now(), returnState?: ReturnState): BorrowRequest {
   const unit = r.drug.baseUnit;
   const activeLegs = r.legs.filter((l) => l.status !== 'CANCELLED');
-  const waiting = r.legs.find((l) => l.status === 'SENT');
+  // legs still waiting for an answer (several at once when very urgent); the earliest deadline drives the countdown
+  const waitingLegs = r.legs.filter((l) => l.status === 'SENT').sort((a, b) => (a.remainingSec ?? Infinity) - (b.remainingSec ?? Infinity));
+  const waiting = waitingLegs[0];
   const asked = new Set(r.legs.map((l) => l.lender.id));
   const ladder = r.proposal?.ladder ?? [];
   const reserve = ladder.filter((e) => !asked.has(e.hospitalId));
@@ -101,21 +116,30 @@ export function borrowRequestToView(r: ApiBorrowRequest, now = Date.now(), retur
   const shown = r.status === 'PENDING_APPROVAL' ? ladder : open ? reserve : [];
   // lenders needed to cover what is still missing, asking in ladder order (the rest are spare)
   let covered = r.status === 'PENDING_APPROVAL' ? 0 : r.stop?.effective ?? 0;
+  // after approval, once the stop rule is met nobody else will be asked: the remaining rows are spare only
+  const enoughNow = r.status !== 'PENDING_APPROVAL' && !!r.stop?.met;
   const proposed: BorrowLeg[] = shown.map((e) => {
     const needed = covered < r.qtyRequested;
     covered += e.lendable;
     const first = r.status === 'PENDING_APPROVAL' && e.qtyPlanned > 0;
-    const tail = first ? `ลำดับ ${e.rank} · รอบแรก ขอ ${n(e.qtyPlanned)} ${unit}` : `ลำดับ ${e.rank} · ${needed ? 'ส่งต่อถ้าแห่งก่อนหน้าไม่ได้/ได้ไม่ครบ' : 'สำรอง · ใช้เมื่อแห่งก่อนหน้าไม่พอ'} · ให้ยืมได้ ไม่เกิน ${n(e.lendable)} ${unit}`;
-    return { hospital: e.name, si: e.si, state: 'NOT_SENT', detail: `${tail}${e.rationale ? ` · Agent: ${e.rationale}` : ''}` };
+    const tail = first
+      ? `จะขอยืม ${n(e.qtyPlanned)} ${unit}`
+      : enoughNow
+        ? 'สำรอง · ไม่ต้องขอแล้ว (ได้ตอบรับพอแล้ว)'
+        : `${needed ? 'ขอต่อถ้าแห่งก่อนหน้าไม่พอ' : 'สำรอง'} · ให้ยืมได้ไม่เกิน ${n(e.lendable)} ${unit}`;
+    return { hospital: e.name, si: e.si, state: 'NOT_SENT', detail: tail, ...(r.status === 'PENDING_APPROVAL' ? { plan: { hospitalId: e.hospitalId, lendable: Math.floor(e.lendable), qty: e.qtyPlanned } } : {}) };
   });
   const ladderNote = ladder.length && (r.status === 'PENDING_APPROVAL' || open)
     ? (() => {
         let c = r.status === 'PENDING_APPROVAL' ? 0 : r.stop?.effective ?? 0;
         let k = 0;
         for (const e of shown) { if (c >= r.qtyRequested) break; c += e.lendable; k += 1; }
-        const inFlight = r.legs.filter((l) => l.status === 'SENT').length;
-        const total = k + inFlight;
-        return `ระบบจะขอสูงสุด ${total} แห่งจนครบ ${n(r.qtyRequested)} ${unit}${shown.length > k ? ` (สำรองอีก ${shown.length - k} แห่ง)` : ''} · ส่งต่อทีละแห่งเมื่อแห่งก่อนหน้าปฏิเสธ หมดเวลา หรือกด "ส่งต่อลำดับถัดไป"`;
+        const spare = shown.length - k;
+        const spareText = spare > 0 ? ` · มีสำรอง ${spare} แห่ง` : '';
+        // nothing more to ask: enough is confirmed already (stop rule), the rest of the ladder is spare only
+        if (r.status !== 'PENDING_APPROVAL' && r.stop?.met) return `ได้ตอบรับพอแล้ว ไม่ต้องขอเพิ่ม${spareText}`;
+        const how = r.proposal?.parallel ? 'ขอพร้อมกันได้สูงสุด 3 แห่ง' : 'ขอทีละแห่ง';
+        return `${how} จนได้ครบ ${n(r.qtyRequested)} ${unit}${spareText} · แห่งไหนปฏิเสธหรือไม่ตอบ ระบบขอแห่งถัดไปให้เอง`;
       })()
     : undefined;
   const legs: BorrowLeg[] = r.legs.length
@@ -129,13 +153,20 @@ export function borrowRequestToView(r: ApiBorrowRequest, now = Date.now(), retur
         ...(r.proposal ? { formula: `${r.proposal.need.ved === 'V' ? 'V: หยุดเมื่อได้ ≥ 90% ของรอบแรก' : 'E: หยุดเมื่อได้ ≥ ปริมาณใช้ปกติ'} = ${n(r.stop.threshold)}` } : {}),
       }
     : undefined;
+  // Nobody left to answer and the stop rule is not met: the server only escalates once the confirmed goods arrive
+  // (borrow.flow advanceRequest), so say the shortfall now instead of a plain "กำลังดำเนินการ".
+  const noLenderLeft = ['APPROVED', 'IN_PROGRESS', 'PARTIALLY_FULFILLED'].includes(r.status) && !!r.stop && !r.stop.met && r.stop.remaining > 0 && r.legs.length > 0 && !r.legs.some((l) => l.status === 'SENT' || l.status === 'PENDING');
   const firstSent = r.legs.filter((l) => l.round === 1);
+  // first-round quantity as planned now (it may have been edited) or as really sent; the stored column is the original
+  const firstQty = r.status === 'PENDING_APPROVAL' && ladder.length
+    ? ladder.reduce((s, e) => s + e.qtyPlanned, 0)
+    : firstSent.length ? firstSent.reduce((s, l) => s + l.qtyAsked, 0) : (r.firstRoundQty ?? r.qtyRequested);
   const sendMode = r.proposal ? (r.proposal.parallel ? 'ส่งพร้อมกันได้สูงสุด 3 แห่ง' : 'ส่งทีละแห่ง') : firstSent.length > 1 ? `ส่งพร้อมกัน ${firstSent.length} แห่ง` : 'ส่งทีละแห่ง';
   const lender =
     activeLegs.length > 0
       ? [...new Set(activeLegs.map((l) => l.lender.name))].slice(0, 2)
       : r.proposal && r.proposal.ladder.length
-        ? [`ลำดับ ${r.proposal.ladder.length} แห่ง · รอบแรก`, r.proposal.ladder[0].name]
+        ? [`ลำดับ ${r.proposal.ladder.length} แห่ง · ขอแห่งแรก`, ...(() => { const firsts = r.proposal.ladder.filter((e) => e.qtyPlanned > 0).map((e) => e.name); return firsts.length ? firsts.slice(0, 2) : [r.proposal.ladder[0].name]; })()]
         : ['—'];
   const age = Math.max(0, Math.floor((now - new Date(r.createdAt).getTime()) / 86_400_000));
   return {
@@ -150,17 +181,20 @@ export function borrowRequestToView(r: ApiBorrowRequest, now = Date.now(), retur
     qty: r.qtyRequested,
     unit,
     lender,
+    borrower: r.borrower.name,
+    received: r.legs.reduce((s, l) => s + (l.qtyReceived ?? 0), 0),
     urgency: URGENCY[r.urgency],
     status: r.status,
     ...(returnState ? { returnState } : {}),
     ...(waiting?.remainingSec != null ? { countdownSec: waiting.remainingSec } : {}),
     ...(stop ? { stop } : {}),
-    note: waiting ? `รอ ${waiting.lender.name} · ${legDetail(waiting, unit).split(' · ').slice(-1)[0]}` : r.status === 'ESCALATED' ? `ยังขาด ${n(r.stop?.remaining ?? 0)} · แจ้งผู้ดูแลแล้ว` : r.status === 'PENDING_APPROVAL' ? 'ร่างข้อความแล้ว · รออนุมัติ' : r.status === 'FULFILLED' ? `ครบ ${n(r.qtyFulfilled)}` : r.status === 'CANCELLED' ? (r.reason ?? 'ยกเลิก') : 'กำลังดำเนินการ',
+    note: waiting ? `รอ ${waitingLegs.length > 1 ? `${waitingLegs.length} แห่ง` : waiting.lender.name} · ${legDetail(waiting, unit).split(' · ').slice(-1)[0]}` : r.status === 'ESCALATED' ? `ยังขาด ${n(r.stop?.remaining ?? 0)} · แจ้งผู้ดูแลแล้ว` : noLenderLeft ? `ยังขาด ${n(r.stop!.remaining)} · ไม่มีผู้ให้ยืมเหลือ · เพิ่มผู้ให้ยืมได้เมื่อรับของที่ตอบรับแล้ว` : r.status === 'PENDING_APPROVAL' ? 'ร่างข้อความแล้ว · รออนุมัติ' : r.status === 'FULFILLED' ? `ครบ ${n(r.qtyFulfilled)}` : r.status === 'CANCELLED' ? (r.reason ?? 'ยกเลิก') : 'กำลังดำเนินการ',
     action: r.status === 'PENDING_APPROVAL' ? 'approve' : r.status === 'ESCALATED' && r.drug.kind !== 'KIT' ? 'addLender' : (returnState === 'PENDING' || returnState === 'OVERDUE') ? 'recordReturn' : 'detail',
-    banner: banner(r, waiting),
+    banner: banner(r, waiting, waitingLegs.length),
     contextLabel: r.context === 'STOCK_ALERT' ? 'จากแจ้งเตือนสต็อก' : r.context === 'EMERGENCY' ? 'เหตุฉุกเฉิน' : 'สร้างเอง',
-    firstRound: `${n(r.firstRoundQty ?? r.qtyRequested)} ${unit}`,
-    sendMode,
+    firstRound: `${n(firstQty)} ${unit}`,
+    ...(r.proposal?.parallel ? { parallel: true } : {}),
+    sendMode: sendMode.replace('ส่ง', 'ขอ'),
     createdBy: `${r.createdBy} · ${fmtThaiTime(r.createdAt, new Date(now))}`,
     ...(r.approvedBy ? { approvedBy: `${r.approvedBy} (PHARMACIST)` } : {}),
     legs,

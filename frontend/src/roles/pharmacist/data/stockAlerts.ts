@@ -202,6 +202,8 @@ export interface AlertRef {
   brNo?: string;
   /** Live request status from borrow_request (e.g. DRAFT, PENDING_APPROVAL, IN_PROGRESS, FULFILLED). */
   requestStatus?: string;
+  /** Open emergency (F3) request of the ER for the same drug, shown as a note under the alert. */
+  emergencyNo?: string;
 }
 
 export interface StockAlertRow {

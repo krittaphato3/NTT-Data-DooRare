@@ -70,6 +70,8 @@ export interface ApiBorrowRequest {
     excluded: { hospitalId: string; code: string; reason: string | null }[];
     parallel: boolean;
     builtAt: string;
+    /** Set when the pharmacist changed the first-round quantities: the plan as first proposed. */
+    edited?: { at: string; original: { code: string; name: string; qty: number }[] } | null;
     agent?: { status: 'OK' | 'FALLBACK' | 'SKIPPED'; model: string | null; summary: string | null; confidence: string | null; flags: string[]; priorityAfter: string[] } | null;
   };
 }
@@ -108,11 +110,27 @@ const post = <T>(path: string, body: unknown = {}) =>
   apiJson<T>(path, { method: 'POST', headers: { 'Idempotency-Key': crypto.randomUUID() }, body: JSON.stringify(body) });
 type One = { ok: true; id: string; version: number; data: ApiBorrowRequest };
 
+/**
+ * Several widgets on one screen load the same list at the same moment (the hub, the page, the status panel, and every
+ * realtime event reloads each of them). Calls for the same path that start within a short burst share one request.
+ * Only a request still in flight is shared, nothing is cached: a later reload always fetches again.
+ */
+const inflight = new Map<string, { at: number; p: Promise<unknown> }>();
+const SHARE_MS = 300;
+function shared<T>(path: string, run: () => Promise<T>): Promise<T> {
+  const hit = inflight.get(path);
+  if (hit && Date.now() - hit.at < SHARE_MS) return hit.p as Promise<T>;
+  const p = run().finally(() => { if (inflight.get(path)?.p === p) inflight.delete(path); });
+  inflight.set(path, { at: Date.now(), p });
+  return p;
+}
+
 export const listBorrowRequests = (params: { status?: string; role?: 'borrower' | 'lender' | 'all'; limit?: number } = {}) => {
   const q = new URLSearchParams({ limit: String(params.limit ?? 200) });
   if (params.status) q.set('status', params.status);
   if (params.role) q.set('role', params.role);
-  return apiJsonAll<{ ok: true; items: ApiBorrowRequest[]; nextCursor: string | null }>(`/borrow-requests?${q}`);
+  const path = `/borrow-requests?${q}`;
+  return shared(path, () => apiJsonAll<{ ok: true; items: ApiBorrowRequest[]; nextCursor: string | null }>(path));
 };
 export const getBorrowRequest = (id: string) => apiJson<One>(`/borrow-requests/${id}`);
 
@@ -124,12 +142,16 @@ export const rejectBorrowRequest = (id: string, reason: string) => post<One>(`/b
 export const cancelBorrowRequest = (id: string, reason: string) => post<One>(`/borrow-requests/${id}/cancel`, { reason });
 /** Borrower stops waiting for a lender: that request is cancelled and the next lender of the ladder is asked now. */
 export const skipBorrowLeg = (id: string, legId: string) => post<One>(`/borrow-requests/${id}/legs/${legId}/skip`);
+/** Demo shortcut: the lender of this leg (of our own request) accepts the full quantity now; same checks as the lender's answer. */
+export const acceptForLender = (legId: string) => post<{ ok: true; id: string; data: { id: string; status: ApiLegStatus; requestStatus: string } }>(`/borrow-legs/${legId}/accept-for-lender`);
 export const escalateManual = (id: string, body: { lenderHospitalId: string; qty: number; reason: string }) => post<One>(`/borrow-requests/${id}/escalate-manual`, body);
 export const editLadder = (id: string, body: { version?: number; legs?: { hospitalId: string; qty: number }[]; messages?: Record<string, string> }) =>
   apiJson<One>(`/borrow-requests/${id}/ladder`, { method: 'PATCH', body: JSON.stringify(body) });
 
-export const listLenderQueue = (status?: string) =>
-  apiJsonAll<{ ok: true; items: ApiLenderItem[]; nextCursor: string | null }>(`/lender-queue?limit=200${status ? `&status=${status}` : ''}`);
+export const listLenderQueue = (status?: string) => {
+  const path = `/lender-queue?limit=200${status ? `&status=${status}` : ''}`;
+  return shared(path, () => apiJsonAll<{ ok: true; items: ApiLenderItem[]; nextCursor: string | null }>(path));
+};
 
 export interface RespondBody { decision: 'ACCEPT' | 'PARTIAL' | 'REJECT'; qty?: number; reason?: string; lots?: { lotId: string; qty: number }[] }
 export const respondToLeg = (legId: string, body: RespondBody) =>

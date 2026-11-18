@@ -3,7 +3,16 @@ import { groupMeta, groupOf, RETURN_META, STATUS_META, URGENCY_META } from '../d
 import type { BorrowStatus, ReturnState, Urgency } from '../data/borrow';
 
 /** `kit`: an F3 kit request never needs a lender added by hand, so ESCALATED reads as a hand-over to the admin. */
-export function BorrowStatusBadge({ status, kit = false }: { status: BorrowStatus; kit?: boolean }) {
+/** `accepted`: a lender confirmed (same rule as the "ตอบรับแล้ว" tile), so the badge says so instead of "กำลังขอยืม". */
+export function BorrowStatusBadge({ status, kit = false, accepted = false }: { status: BorrowStatus; kit?: boolean; accepted?: boolean }) {
+  if (accepted && (status === 'APPROVED' || status === 'IN_PROGRESS')) {
+    return (
+      <span className="badge t-green" title={status}>
+        <Icon name="checkc" className="ic14" />
+        ตอบรับแล้ว · รอขนส่ง
+      </span>
+    );
+  }
   const g = groupMeta(groupOf(status));
   return (
     <span className={`badge t-${g.tone}`} title={status}>

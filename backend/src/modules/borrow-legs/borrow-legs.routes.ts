@@ -75,3 +75,11 @@ borrowLegsRouter.post(
   idempotent(),
   asyncHandler(async (req, res) => res.json(await lenderService.respond(req, req.params.legId))),
 );
+// Demo shortcut: the borrower's pharmacist accepts the full quantity for the lender of its own leg (same checks as respond).
+borrowLegsRouter.post(
+  '/:legId/accept-for-lender',
+  requireAuth,
+  requireRole('PHARMACIST'),
+  idempotent(),
+  asyncHandler(async (req, res) => res.json(await lenderService.respond(req, req.params.legId, true))),
+);

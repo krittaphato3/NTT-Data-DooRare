@@ -78,7 +78,7 @@ function actionsFor(row: StockAlertRow, status: AlertStatus, role: RoleCode): Ro
     } else {
       next = {
         kind: 'primary',
-        label: row.alert?.severity === 'critical' ? 'ขอยืมด่วน' : 'ขอยืม',
+        label: row.alert?.severity === 'critical' ? 'สร้างคำขอยืมด่วน' : 'สร้างคำขอยืม',
         cond: 'create',
         needs: 'createBorrowRequest',
       };
@@ -223,7 +223,7 @@ export function StockAlertTable({ rows, acked, snoozed, created, busy, onAction,
                     }
                     const showSeverity = row.alert.severity !== 'normal';
                     const showStatus = status !== 'open';
-                    if (!showSeverity && !showStatus && !row.alert.brNo) return <span style={{ color: '#94A3B8' }}>—</span>;
+                    if (!showSeverity && !showStatus && !row.alert.brNo && !row.alert.emergencyNo) return <span style={{ color: '#94A3B8' }}>—</span>;
                     return (
                       <span style={{ display: 'inline-flex', flexWrap: 'wrap', alignItems: 'center', gap: 4 }}>
                         {showSeverity && <Badge cls={sevMeta.cls} label={sevMeta.labelTh} en={sevMeta.labelEn} icon={sevMeta.icon} />}
@@ -232,6 +232,14 @@ export function StockAlertTable({ rows, acked, snoozed, created, busy, onAction,
                           <button className="link code" style={{ fontSize: 11.5 }} onClick={() => onAction(row, 'request')}>
                             {row.alert.brNo}
                           </button>
+                        )}
+                        {row.alert.emergencyNo && (
+                          <span
+                            style={{ flexBasis: '100%', fontSize: 11.5, color: '#92400E' }}
+                            title="ER ยืมยานี้แบบฉุกเฉินอยู่ (ดูที่หน้าเหตุฉุกเฉิน) · ยังขอยืมเติมสต็อกได้ตามปกติ"
+                          >
+                            ER ยืมฉุกเฉินค้างอยู่ · {row.alert.emergencyNo}
+                          </span>
                         )}
                       </span>
                     );
@@ -279,7 +287,7 @@ export function StockAlertTable({ rows, acked, snoozed, created, busy, onAction,
                           // create + the agent picking lenders (the row may already show the new request while it runs); short text so it fits the cell
                           <>
                             <span className="sa-spin" aria-hidden="true" />
-                            Agent กำลังทำงาน…
+                            Agent ทำงาน…
                           </>
                         ) : (
                           next.label

@@ -23,12 +23,18 @@ const SELECT = `
          ${DRUG_NAME} AS drug_name, dm.base_unit, COALESCE(dm.is_cold_chain, false) AS cold_chain,
          f.p50::float8 AS p50, f.p90::float8 AS p90, f.p95::float8 AS p95, f.total_target::float8 AS total_target, f.rop::float8 AS rop,
          f.u_per_day::float8 AS u_per_day, f.method::text AS method, f.confidence_flag, f.lead_time_days::float8 AS lead_time_days,
-         br.id AS request_id, br.request_no, br.status::text AS request_status
+         br.id AS request_id, br.request_no, br.status::text AS request_status, em.request_no AS emergency_request_no
     FROM stock_alert a
     JOIN hospital_drug hd ON hd.id = a.hospital_drug_id
     LEFT JOIN drug_master dm ON dm.id = hd.drug_master_id
     LEFT JOIN forecast_result f ON f.id = a.forecast_result_id
-    LEFT JOIN LATERAL (SELECT id, request_no, status FROM borrow_request WHERE stock_alert_id = a.id ORDER BY created_at DESC LIMIT 1) br ON true`;
+    LEFT JOIN LATERAL (SELECT id, request_no, status FROM borrow_request WHERE stock_alert_id = a.id ORDER BY created_at DESC LIMIT 1) br ON true
+    -- an open emergency (F3) request of the ER for the same drug: shown as a note, it does not block a stock request
+    LEFT JOIN LATERAL (
+      SELECT x.request_no FROM borrow_request x JOIN borrow_request_item xi ON xi.request_id = x.id
+       WHERE x.borrower_hospital_id = a.hospital_id AND xi.drug_master_id = hd.drug_master_id AND x.context::text = 'EMERGENCY'
+         AND x.status::text IN ('DRAFT', 'PENDING_APPROVAL', 'APPROVED', 'IN_PROGRESS', 'PARTIALLY_FULFILLED', 'ESCALATED')
+       ORDER BY x.created_at DESC LIMIT 1) em ON true`;
 
 const view = (r: Record<string, any>) => ({
   id: r.id,
@@ -49,6 +55,7 @@ const view = (r: Record<string, any>) => ({
     ? { method: r.method, p50: r.p50, p90: r.p90, p95: r.p95, totalTarget: r.total_target, rop: r.rop, uPerDay: r.u_per_day, leadTimeDays: r.lead_time_days, confidenceFlag: r.confidence_flag }
     : null,
   request: r.request_id ? { id: r.request_id, requestNo: r.request_no, status: r.request_status } : null,
+  emergencyRequest: r.emergency_request_no ? { requestNo: r.emergency_request_no } : null,
   snoozedUntil: r.snoozed_until ? new Date(r.snoozed_until).toISOString() : null,
   createdAt: new Date(r.created_at).toISOString(),
   updatedAt: new Date(r.updated_at).toISOString(),

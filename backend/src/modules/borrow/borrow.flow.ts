@@ -36,6 +36,8 @@ export interface StoredLadder {
   builtAt: string;
   /** AGT-F1 result of the proposal (who the agent chose and why); absent when the agent was not used. */
   agent?: AgentInfo & { runId?: string };
+  /** Set once the pharmacist changed the first-round quantities (PATCH /ladder): the plan as first proposed. */
+  edited?: { by: string; at: string; original: { code: string; name: string; qty: number }[] };
 }
 
 /** The ladder frozen by this module; seed rows written before F1b hold an older array shape and count as "no ladder". */
@@ -120,7 +122,9 @@ export async function sendLegs(
   const plan = timeoutPlan(request.urgency, stockNow, stored.need.u, cfg.timeoutMin, cfg.reminderRatio);
   let sent = 0;
   for (const { entry, qty } of entries) {
-    const text = messages[entry.hospitalId] ?? stored.drafts[entry.hospitalId] ?? draftMessage({ requester: request.borrower_name, drug: request.drug_name, qty, unit: request.base_unit, urgency: request.urgency, round, deadlineMin: plan.effectiveMin });
+    // Stored drafts are written for the first round (and its quantities); a later round asks only the shortfall,
+    // so its message is drafted with the quantity really asked.
+    const text = messages[entry.hospitalId] ?? (round === 1 ? stored.drafts[entry.hospitalId] : undefined) ?? draftMessage({ requester: request.borrower_name, drug: request.drug_name, qty, unit: request.base_unit, urgency: request.urgency, round, deadlineMin: plan.effectiveMin });
     const leg = (
       await client.query(
         `INSERT INTO borrow_leg (request_id, request_item_id, lender_hospital_id, round_no, rank_in_ladder, status, score_si, score_parts, t_transit_min, window_max_days,

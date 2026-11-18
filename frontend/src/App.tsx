@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { NAV_BADGES_EVENT } from './lib/navBadges';
 import { mockFallbackEnabled } from './services/dataSource';
 import { useNotifications } from './lib/useNotifications';
 import { DataStatusBanner } from './components/layout/DataStatusBanner';
@@ -290,7 +291,7 @@ function AppRoot() {
             }}
           />
           <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
-          <div style={{ fontSize: 14, fontWeight: 600, color: '#0F2A5C' }}>กำลังโหลดระบบ DooRare...</div>
+          <div style={{ fontSize: 14, fontWeight: 600, color: '#0F2A5C' }}>กำลังโหลดระบบ PharmaSync+...</div>
           <div style={{ fontSize: 12, color: '#64748B', marginTop: 4 }}>กำลังตรวจสอบสิทธิ์การใช้งาน</div>
         </div>
       </div>
@@ -308,6 +309,13 @@ function AuthenticatedShell() {
   const { user, activeRole } = useAuth();
   const [badges, setBadges] = useState<Record<string, string>>({});
   const bell = useNotifications(Boolean(user), []);
+  const [badgeTick, setBadgeTick] = useState(0);
+  useEffect(() => {
+    // pages ask for a refetch after an action that changes a count (lib/navBadges.ts)
+    const onRefresh = () => setBadgeTick((n) => n + 1);
+    window.addEventListener(NAV_BADGES_EVENT, onRefresh);
+    return () => window.removeEventListener(NAV_BADGES_EVENT, onRefresh);
+  }, []);
   useEffect(() => {
     if (!user) return;
     getDashboard()
@@ -317,7 +325,7 @@ function AuthenticatedShell() {
         setBadges(live);
       })
       .catch(() => setBadges(Object.fromEntries(['alerts', 'req', 'lend', 'exp', 'pool', 'tr', 'inbox', 'transport', 'kit', 'track', 'hosp'].map((k) => [k, '']))));
-  }, [user, activeRole, window.location.search]);
+  }, [user, activeRole, window.location.search, badgeTick]);
 
   const [query, setQuery] = useState('');
   const [collapsed, setCollapsed] = useState(false);

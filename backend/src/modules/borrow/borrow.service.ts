@@ -121,10 +121,11 @@ export async function requestView(db: Db, row: Record<string, any>, viewer: Auth
       ? {
           proposal: {
             need: stored.need,
-            ladder: stored.ladder.map((e) => ({ hospitalId: e.hospitalId, code: e.code, name: e.name, rank: e.rank, si: e.si, parts: e.parts, transitMin: e.transitMin, lendable: e.lendable, stock: e.stock, qtyPlanned: e.qtyPlanned, message: stored.drafts[e.hospitalId] ?? null, rationale: stored.agent?.picks.find((p) => p.hospitalId === e.hospitalId)?.rationale ?? null })),
+            ladder: stored.ladder.map((e) => ({ hospitalId: e.hospitalId, code: e.code, name: e.name, rank: e.rank, si: e.si, parts: e.parts, transitMin: e.transitMin, lendable: e.lendable, stock: e.stock, qtyPlanned: e.qtyPlanned, message: stored.drafts[e.hospitalId] ?? null, rationale: (() => { const p = stored.agent?.picks.find((x) => x.hospitalId === e.hospitalId); return p && p.qty === e.qtyPlanned ? p.rationale : null; })() })),
             excluded: stored.excluded,
             parallel: stored.parallel,
             builtAt: stored.builtAt,
+            edited: stored.edited ? { at: stored.edited.at, original: stored.edited.original } : null,
             agent: stored.agent ? { status: stored.agent.runStatus, model: stored.agent.model, summary: stored.agent.summary, whatChanged: stored.agent.whatChanged ?? null, confidence: stored.agent.confidence, flags: stored.agent.flags, priorityAfter: stored.agent.priorityAfter } : null,
           },
         }
@@ -221,7 +222,9 @@ export class BorrowService {
       if (!force) {
         const dup = await client.query(
           `SELECT br.request_no FROM borrow_request br JOIN borrow_request_item i ON i.request_id = br.id
-            WHERE br.borrower_hospital_id = $1 AND i.drug_master_id = $2 AND br.status::text = ANY($3::text[]) LIMIT 1`,
+            WHERE br.borrower_hospital_id = $1 AND i.drug_master_id = $2 AND br.status::text = ANY($3::text[])
+              -- an emergency (F3) request is the ER's own and is worked on the incident page: it does not block a stock (F1) request
+              AND br.context::text <> 'EMERGENCY' LIMIT 1`,
           [hospitalId, drugMasterId, ACTIVE_REQUEST],
         );
         if (dup.rows[0]) throw new HttpError(409, 'CONFLICT', `มีคำขอยืมยานี้ที่ยังไม่ปิดแล้ว (${dup.rows[0].request_no})`, { requestNo: dup.rows[0].request_no });
@@ -518,6 +521,8 @@ export class BorrowService {
           const hospitalId = uuidParam(leg.hospitalId, 'legs[].hospitalId');
           const qty = optionalNumber(leg.qty, 'legs[].qty', { min: 0 });
           if (qty === undefined) throw new HttpError(400, 'VALIDATION', 'legs[].qty ต้องระบุ');
+          if (!Number.isInteger(qty)) throw new HttpError(422, 'VALIDATION', 'จำนวนต้องเป็นจำนวนเต็ม');
+          if (wanted.has(hospitalId)) throw new HttpError(422, 'VALIDATION', 'ระบุโรงพยาบาลเดียวกันซ้ำ');
           const entry = stored.ladder.find((e) => e.hospitalId === hospitalId);
           if (!entry) throw new HttpError(422, 'GUARDRAIL_REJECTED', 'โรงพยาบาลนี้ไม่อยู่ในรายชื่อผู้ให้ยืมที่ผ่านเกณฑ์');
           if (qty > entry.lendable) throw new HttpError(422, 'GUARDRAIL_REJECTED', `ขอเกินจำนวนที่ให้ยืมได้ของ ${entry.code} (${entry.lendable})`);
@@ -526,8 +531,20 @@ export class BorrowService {
         const active = [...wanted.values()].filter((q) => q > 0);
         const total = active.reduce((s, q) => s + q, 0);
         if (total > r.qty_requested + 1e-9) throw new HttpError(422, 'GUARDRAIL_REJECTED', 'ขอรวมเกินจำนวนที่ต้องยืม (BR-F1b-032)');
+        if (active.length === 0) throw new HttpError(422, 'VALIDATION', 'ต้องขออย่างน้อย 1 โรงพยาบาล');
         if (active.length > (stored.parallel ? cfg.maxParallel : 1)) throw new HttpError(422, 'GUARDRAIL_REJECTED', stored.parallel ? `ส่งพร้อมกันได้ไม่เกิน ${cfg.maxParallel} แห่ง` : 'ส่งทีละแห่งเท่านั้น');
+        const before = new Map(stored.ladder.map((e) => [e.hospitalId, e.qtyPlanned]));
+        // keep the plan as first proposed (agent or rules) the first time it is edited
+        if (!stored.edited) stored.edited = { by: user.id, at: new Date().toISOString(), original: stored.ladder.filter((e) => e.qtyPlanned > 0).map((e) => ({ code: e.code, name: e.name, qty: e.qtyPlanned })) };
+        else { stored.edited.by = user.id; stored.edited.at = new Date().toISOString(); }
         for (const e of stored.ladder) e.qtyPlanned = wanted.get(e.hospitalId) ?? 0;
+        // a changed quantity gets a new message with that quantity (the agent's text named the old one)
+        const timeout = timeoutPlan(stored.need.urgency, stored.need.stock, stored.need.u, cfg.timeoutMin, cfg.reminderRatio);
+        for (const e of stored.ladder) {
+          if (e.qtyPlanned > 0 && e.qtyPlanned !== before.get(e.hospitalId)) {
+            stored.drafts[e.hospitalId] = draftMessage({ requester: r.borrower_name, drug: r.drug_name, qty: e.qtyPlanned, unit: r.base_unit, urgency: stored.need.urgency, round: 1, deadlineMin: timeout.effectiveMin });
+          }
+        }
       }
       if (body.messages && typeof body.messages === 'object') {
         for (const [hospitalId, text] of Object.entries(body.messages as Record<string, unknown>)) {

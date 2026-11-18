@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { refreshNavBadges } from '../../../lib/navBadges';
 import { useAuth } from '../../../context/AuthContext';
 import { Icon } from '../../../components/common/icons';
 import type { IconName } from '../../../components/common/icons';
@@ -1541,7 +1542,7 @@ export function LenderQueuePage({ role = 'PHARMACIST', embedded = false }: { rol
               boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05)',
             }}
           >
-            <DetailPanel key={selected.legId ?? selected.id} req={selected} role={role} onClose={() => setSelected(null)} {...(selected.legId ? { liveLots: lq.lots[selected.legId] ?? [], liveStock: lq.stock[selected.legId] ?? null, onResponded: () => void lq.reload() } : {})} />
+            <DetailPanel key={selected.legId ?? selected.id} req={selected} role={role} onClose={() => setSelected(null)} {...(selected.legId ? { liveLots: lq.lots[selected.legId] ?? [], liveStock: lq.stock[selected.legId] ?? null, onResponded: () => { refreshNavBadges(); void lq.reload(); } } : {})} />
           </div>
         )}
       </div>

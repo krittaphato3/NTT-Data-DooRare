@@ -1,5 +1,5 @@
 import { fmtTime } from '../../../lib/time';
-import { ACTION_LABEL } from '../data/borrow';
+import { ACTION_LABEL, tileOf } from '../data/borrow';
 import type { BorrowRequest } from '../data/borrow';
 import { BorrowStatusBadge, ReturnBadge, UrgencyBadge } from './BorrowBadges';
 
@@ -74,7 +74,7 @@ export function BorrowTable({ rows, activeId, tick, onOpen }: BorrowTableProps) 
                   <UrgencyBadge urgency={r.urgency} />
                 </td>
                 <td>
-                  <BorrowStatusBadge status={r.status} kit={r.isKit} />
+                  <BorrowStatusBadge status={r.status} kit={r.isKit} accepted={tileOf(r) === 'accepted'} />
                   {r.returnState && (
                     <span style={{ display: 'block', marginTop: 4 }}>
                       <ReturnBadge state={r.returnState} />
@@ -89,9 +89,10 @@ export function BorrowTable({ rows, activeId, tick, onOpen }: BorrowTableProps) 
                   )}
                   {r.stop && (
                     <span style={{ display: 'flex', alignItems: 'center', gap: 6, margin: '3px 0' }}>
-                      <StopBar got={r.stop.got} target={r.stop.target} />
-                      <span className="num" style={{ color: '#0F2A5C' }}>
-                        {r.stop.got} / {r.stop.target}
+                      {/* Same denominator as the quantity column: confirmed by lenders / requested (the stop threshold stays in the drawer). */}
+                      <StopBar got={r.stop.got} target={r.qty} />
+                      <span className="num" style={{ color: '#0F2A5C', whiteSpace: 'nowrap' }} title={`ตอบรับแล้ว ${r.stop.got} จากที่ขอ ${r.qty} · หยุดขอเมื่อได้ ≥ ${r.stop.target}`}>
+                        ตอบรับ {r.stop.got} / {r.qty}
                       </span>
                     </span>
                   )}
