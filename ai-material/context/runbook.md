@@ -5,7 +5,7 @@ Install (repo tooling, for capture): `npm install` (repo root — playwright-cor
 
 Dev: `cd frontend && npm run dev` → http://localhost:5173
 Build: `cd frontend && npm run build` (tsc --noEmit + vite build → `frontend/dist`)
-Docker: `docker compose up --build -d` → http://localhost:8080 (nginx serves `frontend/dist`)
+Docker: `docker compose up --build -d` → http://localhost:8080 (nginx serves `frontend/dist`; no .env needed — backend uses the local `db` service by default; AWS/RDS needs `.env`, see `.env.example`)
 Test: none yet — `npm run build` is the verification gate
 Lint: none configured yet
 
