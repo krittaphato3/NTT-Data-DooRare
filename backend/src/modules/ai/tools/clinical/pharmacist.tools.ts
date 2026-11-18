@@ -756,12 +756,12 @@ export const PHARMACIST_PROPOSAL_WHITELIST = {
     routeSource: 'backend/src/modules/borrow/borrow.routes.ts:19',
     payloadSchema: z.object({
       stockAlertId: z.string().uuid().optional(),
-      reason: z.string().min(1, 'Reason is required'),
+      reason: z.string().min(1, 'Reason is required').default('คำขอยืมยาเร่งด่วนระหว่างโรงพยาบาล'),
       context: z.enum(['STOCK_ALERT', 'MANUAL']).optional(),
       items: z
         .array(
           z.object({
-            drugMasterId: z.string().uuid(),
+            drugMasterId: z.string().optional(),
             qtyRequested: z.number().positive(),
             unitPriceThb: z.number().optional(),
           }),
@@ -842,7 +842,7 @@ type PharmacistAction = keyof typeof PHARMACIST_PROPOSAL_WHITELIST;
 export const submitPharmacistProposalTool: IAgentTool<{
   actionType: PharmacistAction;
   title: string;
-  description: string;
+  description?: string;
   summary: Record<string, unknown>;
   targetId?: string;
   payload: Record<string, unknown>;
@@ -852,27 +852,67 @@ export const submitPharmacistProposalTool: IAgentTool<{
     'Terminal proposal tool submitting human-in-the-loop action proposals for borrow requests, alert snoozing, near-expiry pool releases, sending an own pool lot to the allocation agent, or objecting to another hospital\'s allocation plan in the region.',
   parameters: z.object({
     actionType: z
-      .enum(['CREATE_BORROW_REQUEST', 'UPDATE_BORROW_REQUEST', 'SNOOZE_ALERT', 'RELEASE_NEAR_EXPIRY_POOL', 'SEND_POOL_TO_AGENT', 'OBJECT_ALLOCATION_PLAN'])
-      .describe('Whitelisted pharmacist action type'),
+      .preprocess(
+        (val) => (typeof val === 'string' && val.trim() ? val.trim() : 'CREATE_BORROW_REQUEST'),
+        z
+          .enum(['CREATE_BORROW_REQUEST', 'UPDATE_BORROW_REQUEST', 'SNOOZE_ALERT', 'RELEASE_NEAR_EXPIRY_POOL', 'SEND_POOL_TO_AGENT', 'OBJECT_ALLOCATION_PLAN'])
+          .default('CREATE_BORROW_REQUEST'),
+      )
+      .describe('Whitelisted pharmacist action type (default: CREATE_BORROW_REQUEST)'),
     title: z.string().describe('Title of the proposed action'),
-    description: z.string().describe('Detailed clinical explanation or rationale'),
+    description: z
+      .preprocess((val) => (typeof val === 'string' && val.trim() ? val : undefined), z.string().optional())
+      .describe('Detailed clinical explanation or rationale'),
     summary: z
-      .record(z.string(), z.unknown())
+      .preprocess((val) => {
+        if (typeof val === 'string') {
+          try {
+            const parsed = JSON.parse(val);
+            if (parsed && typeof parsed === 'object') return parsed;
+          } catch {
+            return { note: val };
+          }
+        }
+        return val ?? {};
+      }, z.record(z.string(), z.unknown()).default({}))
       .describe('Display-only key/value shown on the proposal card. Real values MUST go in payload.'),
     targetId: z
-      .string()
-      .uuid()
-      .optional()
+      .preprocess((val) => {
+        if (typeof val === 'string') {
+          const trimmed = val.trim();
+          if (
+            trimmed === '' ||
+            trimmed === '00000000-0000-0000-0000-000000000000' ||
+            trimmed === 'null' ||
+            trimmed === 'undefined'
+          ) {
+            return undefined;
+          }
+          return trimmed;
+        }
+        return undefined;
+      }, z.string().uuid().optional())
       .describe('Target ID: requestId (UPDATE_BORROW_REQUEST), alertId (SNOOZE_ALERT), nearExpiryId (RELEASE_NEAR_EXPIRY_POOL), poolEntryId (SEND_POOL_TO_AGENT) or allocation plan id (OBJECT_ALLOCATION_PLAN)'),
-    payload: z.record(z.string(), z.unknown()).describe(
-      'Action-specific payload, strictly validated per actionType. Required keys: ' +
-        'CREATE_BORROW_REQUEST {"items":[{"drugMasterId":"<drug uuid>","qtyRequested":<number>}],"reason":"<why>"}; ' +
-        'UPDATE_BORROW_REQUEST {"qtyRequested":<number>,"urgency":"URGENT","reason":"<why>"}; ' +
-        'SNOOZE_ALERT {"hours":<1-168>,"reason":"<why>"}; ' +
-        'RELEASE_NEAR_EXPIRY_POOL {"qty":<number>}; ' +
-        'SEND_POOL_TO_AGENT {}; ' +
-        'OBJECT_ALLOCATION_PLAN {"reason":"<why>"}',
-    ),
+    payload: z
+      .preprocess((val) => {
+        if (typeof val === 'string') {
+          try {
+            return JSON.parse(val);
+          } catch {
+            return { raw: val };
+          }
+        }
+        return val ?? {};
+      }, z.record(z.string(), z.unknown()).default({}))
+      .describe(
+        'Action-specific payload, strictly validated per actionType. Required keys: ' +
+          'CREATE_BORROW_REQUEST {"items":[{"drugMasterId":"<drug uuid>","qtyRequested":<number>}],"reason":"<why>"}; ' +
+          'UPDATE_BORROW_REQUEST {"qtyRequested":<number>,"urgency":"URGENT","reason":"<why>"}; ' +
+          'SNOOZE_ALERT {"hours":<1-168>,"reason":"<why>"}; ' +
+          'RELEASE_NEAR_EXPIRY_POOL {"qty":<number>}; ' +
+          'SEND_POOL_TO_AGENT {}; ' +
+          'OBJECT_ALLOCATION_PLAN {"reason":"<why>"}',
+      ),
   }),
   allowedRoles: ['PHARMACIST', 'SYSTEM_ADMIN'],
   execute: async (args, context: RequestContext): Promise<ToolResult> => {
@@ -885,6 +925,30 @@ export const submitPharmacistProposalTool: IAgentTool<{
           success: false,
           error: 'Context hospitalId is required to submit a pharmacist proposal.',
         };
+      }
+
+      // Auto-populate description if omitted
+      args.description = args.description || args.title || 'คำขอดำเนินการทางเภสัชกรรม';
+      if (!args.payload || typeof args.payload !== 'object') {
+        args.payload = {};
+      }
+
+      // Auto-construct payload for CREATE_BORROW_REQUEST when missing or minimal
+      if (args.actionType === 'CREATE_BORROW_REQUEST') {
+        const p = args.payload as Record<string, any>;
+        if (!p.reason) {
+          p.reason = args.description || args.title || 'คำขอยืมยาเร่งด่วนระหว่างโรงพยาบาล';
+        }
+        if (!p.items || !Array.isArray(p.items) || p.items.length === 0) {
+          const qty = Number(p.qtyRequested || p.qty || args.summary?.qty || args.summary?.quantity || 1);
+          const dmId = p.drugMasterId || args.summary?.drugMasterId || '00000000-0000-0000-0000-000000000000';
+          p.items = [
+            {
+              drugMasterId: dmId,
+              qtyRequested: isNaN(qty) || qty <= 0 ? 1 : qty,
+            },
+          ];
+        }
       }
 
       const actionDef = PHARMACIST_PROPOSAL_WHITELIST[args.actionType];

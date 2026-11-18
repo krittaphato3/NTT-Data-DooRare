@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { z } from 'zod';
 import { askOperatorTool } from '../src/modules/ai/tools/askOperator.tool.js';
+import { submitPharmacistProposalTool } from '../src/modules/ai/tools/clinical/pharmacist.tools.js';
 import { ToolRegistry, zodToJsonSchema } from '../src/modules/ai/tools/registry.js';
 import { ReActEngine } from '../src/modules/ai/engine/react.engine.js';
 import type { ILLMProvider } from '../src/modules/ai/providers/types.js';
@@ -310,5 +311,25 @@ test('ask_operator: supports choices alias and comma-separated options string', 
     assert.equal(res.question?.questions[0].options[0].label, 'NORMAL');
     assert.equal(res.question?.questions[0].options[1].label, 'URGENT');
     assert.equal(res.question?.questions[0].options[2].label, 'VERY_URGENT');
+  }
+});
+
+test('submitPharmacistProposalTool: auto-coerces missing actionType, strips nil UUID targetId, and tolerates summary-only inputs', async () => {
+  const inputArgs = {
+    title: 'สร้างคำขออนุมัติยืมยา Paracetamol syrup 120 mg/5 mL (500 หน่วย)',
+    targetId: '00000000-0000-0000-0000-000000000000',
+    summary: {
+      qty: 500,
+      drug: 'Paracetamol syrup 120 mg/5 mL',
+      urgency: 'URGENT',
+    },
+  };
+
+  const parsed = submitPharmacistProposalTool.parameters.safeParse(inputArgs);
+  assert.equal(parsed.success, true);
+  if (parsed.success) {
+    assert.equal(parsed.data.actionType, 'CREATE_BORROW_REQUEST');
+    assert.equal(parsed.data.targetId, undefined);
+    assert.equal(parsed.data.title, inputArgs.title);
   }
 });

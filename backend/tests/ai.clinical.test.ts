@@ -1225,3 +1225,97 @@ test('Zero-Assumption: ReActEngine forces clarification when medicine has multip
   assert.ok(urgencyQ.options.some((o: any) => o.label.includes('NORMAL')));
   assert.ok(urgencyQ.options.some((o: any) => o.label.includes('URGENT')));
 });
+
+test('draftEmergencyIncidentTool: automatically infers TRAUMA from narrative keywords (e.g. รถชน)', async () => {
+  const res = await draftEmergencyIncidentTool.execute(
+    {
+      narrative: 'เกิดเหตุ รถชน ผู้ป่วยเหลือง 1 เขียว 1',
+    },
+    { role: 'ER_STAFF' },
+  );
+
+  assert.equal(res.success, true);
+  const data = res.data as any;
+  assert.equal(data.incidentType, 'TRAUMA', 'Must infer TRAUMA from รถชน');
+  assert.equal(data.triageCounts.yellow, 1);
+  assert.equal(data.triageCounts.green, 1);
+});
+
+test('submitErActionProposalTool: automatically infers TRAUMA and populates incident_type in summary', async () => {
+  const res = await submitErActionProposalTool.execute(
+    {
+      actionType: 'DECLARE_INCIDENT',
+      title: 'ประกาศเหตุฉุกเฉิน: รถชน',
+      description: 'เกิดเหตุ รถชน ผู้ป่วยเหลือง 1 เขียว 1 นำส่ง 30 นาที',
+      summary: {
+        eta_minutes: 30,
+      },
+      payload: {
+        counts: { RED: 0, YELLOW: 1, GREEN: 1, BLACK: 0 },
+        reportedEtaMin: 30,
+      },
+    },
+    { role: 'ER_STAFF', hospitalId: '11111111-1111-1111-1111-111111111111' },
+  );
+
+  assert.equal(res.success, true);
+  const proposal = (res as any)?.proposal;
+  assert.ok(proposal);
+  assert.equal(proposal.summary.incident_type, 'TRAUMA', 'Must infer TRAUMA from title/description');
+  assert.equal(proposal.summary.triage_yellow, 1);
+  assert.equal(proposal.summary.triage_green, 1);
+});
+
+test('ReActEngine: enforces single-round clarification limit and forbids second ask_operator turn', async () => {
+  const engine = new ReActEngine();
+  const events: any[] = [];
+
+  let callCount = 0;
+  const mockProvider = {
+    chat: async () => {
+      callCount++;
+      if (callCount === 1) {
+        // First iteration of turn 2: model attempts to call ask_operator again
+        return {
+          model: 'test-model',
+          content: null,
+          toolCalls: [
+            {
+              id: 'call_ask_2',
+              type: 'function',
+              function: {
+                name: 'ask_operator',
+                arguments: JSON.stringify({
+                  question: 'ประเภทเหตุการณ์ฉุกเฉิน',
+                  options: ['TRAUMA', 'BURN'],
+                }),
+              },
+            },
+          ],
+        };
+      }
+      // Second iteration: after interceptor returns tool error, model proceeds to final answer
+      return {
+        model: 'test-model',
+        content: 'ดำเนินการประกาศเหตุฉุกเฉินเรียบร้อย',
+        toolCalls: [],
+      };
+    },
+  } as any;
+
+  const res = await engine.execute({
+    messages: [
+      { role: 'user', content: 'เกิดเหตุ รถชน ผู้ป่วยเหลือง 1 เขียว 1' },
+      { role: 'assistant', content: 'กรุณาระบุ ETA' },
+      { role: 'user', content: 'ตอบคำถาม: หน่วยงานนำส่งและเวลาเดินทาง (ETA): 30 นาที' },
+    ],
+    context: { role: 'ER_STAFF', hospitalId: '11111111-1111-1111-1111-111111111111' },
+    providerOverride: mockProvider,
+    onEvent: async (ev) => {
+      events.push(ev);
+    },
+  });
+
+  const questionEvents = events.filter((e) => e.type === 'question');
+  assert.equal(questionEvents.length, 0, 'Must NOT emit question event when previous clarification answered');
+});
