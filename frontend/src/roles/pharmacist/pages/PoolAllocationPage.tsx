@@ -9,7 +9,7 @@ import { ExpiryPipelineStepper } from '../components/ExpiryPipelineStepper';
 import { ReasonDialog } from '../../hospital-admin/components/ReasonDialog';
 import { useNearExpiry } from '../data/useNearExpiry';
 import { ManualPlanDialog } from '../components/ManualPlanDialog';
-import { cancelPlan, choosePlanOption, decidePlan, getPoolCandidates, objectPlan, revisePlan, sendPoolToAgent, withdrawNearExpiry } from '../../../services/expiryApi';
+import { approvePlanFor, cancelPlan, choosePlanOption, decidePlan, getPoolCandidates, objectPlan, revisePlan, sendPoolToAgent, withdrawNearExpiry } from '../../../services/expiryApi';
 import type { ApiPlanOption } from '../../../services/expiryApi';
 import { usePoolAndPlans } from '../data/useExpiryF2';
 import { COST_LIMIT_PCT, planStatusMeta } from '../data/pool';
@@ -38,7 +38,8 @@ const TABS: { id: PoolTab; label: string }[] = [
 export function PoolAllocationPage({ role = 'PHARMACIST' }: { role?: RoleCode }) {
   const [tab, setTab] = useState<PoolTab>(() => {
     const t = new URLSearchParams(window.location.search).get('tab');
-    return t === 'pool' || t === 'approved' || t === 'history' ? t : 'plans';
+    // opening the menu lands on the regional pool (step 2); links with ?tab=plans|approved|history still open that tab
+    return t === 'plans' || t === 'approved' || t === 'history' ? t : 'pool';
   });
   const ne = useNearExpiry();
   const [selId, setSelId] = useState('');
@@ -66,6 +67,16 @@ export function PoolAllocationPage({ role = 'PHARMACIST' }: { role?: RoleCode })
     call
       .then(() => data.reload())
       .then(() => setDecisions((m) => ({ ...m, [p.id]: doneText })))
+      .catch((e: Error) => setActionError(e.message))
+      .finally(() => setBusy(false));
+  };
+  // demo shortcut: no "decided" banner for us, our own approve button must stay
+  const liveApproveFor = (p: AllocationPlan, hospitalId: string) => {
+    if (!p.live) return;
+    setBusy(true);
+    setActionError(null);
+    approvePlanFor(p.live.uuid, hospitalId, p.version)
+      .then(() => data.reload())
       .catch((e: Error) => setActionError(e.message))
       .finally(() => setBusy(false));
   };
@@ -637,6 +648,7 @@ export function PoolAllocationPage({ role = 'PHARMACIST' }: { role?: RoleCode })
           onUneconomical={(label, id) => (live && id ? liveOption(sel, id, label) : decideUneconomical(sel.id, label))}
           onCancel={(reason) => liveCancel(sel, reason)}
           onObject={(reason) => liveObject(sel, reason)}
+          {...(live ? { onApproveFor: (hospitalId: string) => liveApproveFor(sel, hospitalId), ...(user?.hospitalId ? { myHospitalId: user.hospitalId } : {}) } : {})}
           busy={busy}
           error={actionError}
           onClose={() => setDrawerOpen(false)}

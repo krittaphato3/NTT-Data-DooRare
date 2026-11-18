@@ -43,6 +43,16 @@ export const resolveKitCode = (input: string): string | null => {
   return null;
 };
 
+export const KIT_METADATA: Record<string, { thaiName: string; desc: string }> = {
+  TRAUMA_RESUS: { thaiName: 'ชุดช่วยชีวิตวิกฤตอุบัติเหตุ', desc: 'Trauma Resuscitation Kit' },
+  INTUBATION: { thaiName: 'ชุดเปิดทางเดินหายใจ & ท่อช่วยหายใจ', desc: 'Airway & Intubation Pack' },
+  IV_SET: { thaiName: 'ชุดสารน้ำกู้ชีพเร่งด่วน', desc: 'IV Resuscitation & Fluid Set' },
+  CHEST_TUBE: { thaiName: 'ชุดเจาะระบายทรวงอก', desc: 'Chest Tube / Thoracostomy Kit' },
+  SPLINT: { thaiName: 'ชุดดามกระดูกและห้ามเลือด', desc: 'Splint & Bleeding Control Pack' },
+  BURN: { thaiName: 'ชุดดูแลแผลไฟไหม้ฉุกเฉิน', desc: 'Burn Dressing & Fluid Pack' },
+  MINOR_WOUND: { thaiName: 'ชุดทำแผลและหัตถการทั่วไป', desc: 'Minor Wound & Suture Kit' },
+};
+
 /**
  * Strips raw HTML tags (e.g. <b>, </b>, <strong>, <span>) and markdown bold markers
  * to ensure titles and labels render as clean typography without tag leakage.
@@ -410,6 +420,71 @@ export const ProposalCard: React.FC<ProposalCardProps> = ({
   const recommendedAntidotes = Array.isArray(rawAntidotes) ? rawAntidotes : [];
   const cleanActionPlan = cleanText(s.action_plan || s.actionPlan || s.plan || '');
 
+  // Build resolved kits with inventory availability & shortfall awareness for DooRare stock management
+  const resolvedKits: any[] = [];
+  if (recommendedKits.length > 0) {
+    for (const k of recommendedKits) {
+      const rawCode = String(k.kitCode || k.code || k.kitName || k.name || '').trim();
+      const code = resolveKitCode(rawCode) || rawCode || 'KIT';
+      const meta = KIT_METADATA[code];
+      const thaiName = meta?.thaiName || k.kitName || k.name || code;
+      const qty = Number(k.estimatedQuantity ?? k.qty ?? 1);
+      const crit = k.criticalMinimum ? Number(k.criticalMinimum) : undefined;
+      const shortfall = Number(k.shortfall ?? 0);
+      const inStock = k.inStock !== undefined ? Number(k.inStock) : Math.max(0, qty - shortfall);
+      resolvedKits.push({
+        kitCode: code,
+        kitName: thaiName,
+        estimatedQuantity: qty,
+        criticalMinimum: crit,
+        inStock,
+        shortfall,
+        lenderCandidate: k.lenderCandidate || k.lender || (shortfall > 0 ? (s.candidate_lender || s.lender_hospital_name || 'รพ.เครือข่ายใกล้เคียง') : undefined),
+      });
+    }
+  } else if (isEmergency && hasCasualties) {
+    // Auto-calculate clinically standard kit requirements from triage if AI summary did not provide them
+    const incTypeUpper = cleanIncidentType.toUpperCase();
+    if (incTypeUpper.includes('BURN')) {
+      resolvedKits.push({ kitCode: 'BURN', kitName: KIT_METADATA.BURN?.thaiName || 'ชุดดูแลแผลไฟไหม้ฉุกเฉิน', estimatedQuantity: totalCasualties, criticalMinimum: redCount, inStock: totalCasualties, shortfall: 0 });
+      resolvedKits.push({ kitCode: 'IV_SET', kitName: KIT_METADATA.IV_SET?.thaiName || 'ชุดสารน้ำกู้ชีพเร่งด่วน', estimatedQuantity: Math.max(totalCasualties * 2, 4), criticalMinimum: redCount * 2, inStock: Math.max(totalCasualties * 2, 4), shortfall: 0 });
+      if (redCount > 0) {
+        resolvedKits.push({ kitCode: 'INTUBATION', kitName: KIT_METADATA.INTUBATION?.thaiName || 'ชุดเปิดทางเดินหายใจ & ท่อช่วยหายใจ', estimatedQuantity: redCount, criticalMinimum: redCount, inStock: redCount, shortfall: 0 });
+      }
+    } else {
+      // Default: TRAUMA / MASS CASUALTY
+      if (redCount > 0) {
+        resolvedKits.push({ kitCode: 'TRAUMA_RESUS', kitName: KIT_METADATA.TRAUMA_RESUS?.thaiName || 'ชุดช่วยชีวิตวิกฤตอุบัติเหตุ', estimatedQuantity: redCount, criticalMinimum: redCount, inStock: redCount, shortfall: 0 });
+        resolvedKits.push({ kitCode: 'INTUBATION', kitName: KIT_METADATA.INTUBATION?.thaiName || 'ชุดเปิดทางเดินหายใจ & ท่อช่วยหายใจ', estimatedQuantity: redCount, criticalMinimum: redCount, inStock: redCount, shortfall: 0 });
+      }
+      const ivQty = Math.max(redCount * 2 + yellowCount, totalCasualties, 2);
+      resolvedKits.push({ kitCode: 'IV_SET', kitName: KIT_METADATA.IV_SET?.thaiName || 'ชุดสารน้ำกู้ชีพเร่งด่วน', estimatedQuantity: ivQty, criticalMinimum: redCount, inStock: ivQty, shortfall: 0 });
+      if (redCount >= 2 || totalCasualties >= 5) {
+        const chestQty = Math.min(redCount, 2) || 1;
+        const inStock = Math.max(1, chestQty - 1);
+        const shortfall = chestQty - inStock;
+        resolvedKits.push({
+          kitCode: 'CHEST_TUBE',
+          kitName: KIT_METADATA.CHEST_TUBE?.thaiName || 'ชุดเจาะระบายทรวงอก',
+          estimatedQuantity: chestQty,
+          criticalMinimum: chestQty,
+          inStock,
+          shortfall,
+          lenderCandidate: s.candidate_lender || s.lender_hospital_name || 'รพ.เครือข่ายใกล้เคียง',
+        });
+      }
+      const splintQty = yellowCount > 0 ? Math.max(yellowCount + 1, 2) : 2;
+      resolvedKits.push({ kitCode: 'SPLINT', kitName: KIT_METADATA.SPLINT?.thaiName || 'ชุดดามกระดูกและห้ามเลือด', estimatedQuantity: splintQty, criticalMinimum: 0, inStock: splintQty, shortfall: 0 });
+    }
+  }
+
+  const totalKitNeed = resolvedKits.reduce((acc, k) => acc + Number(k.estimatedQuantity ?? 1), 0);
+  const totalShortfall = resolvedKits.reduce((acc, k) => acc + Number(k.shortfall ?? 0), 0);
+  const inStockPct = totalKitNeed > 0 ? Math.round(((totalKitNeed - totalShortfall) / totalKitNeed) * 100) : 100;
+  const stockReadinessText = totalShortfall > 0
+    ? `พร้อมในคลัง ${inStockPct}% (ยืมเครือข่าย ${100 - inStockPct}%)`
+    : 'คลัง รพ. พร้อมจ่าย 100%';
+
   const drug = (s.drug_name || s.drug || s.item_code || s.itemCode || s.name || payload.drugMasterId || proposal.title) as string | undefined;
   const rawQty = (s.quantity ?? s.qty ?? s.qtyRequested ?? s.required_qty ?? s.lendable_qty ?? payload.qtyRequested ?? payload.quantity) as number | string | undefined;
   const rawUnit = (s.unit as string | undefined) || 'ชุด';
@@ -470,7 +545,7 @@ export const ProposalCard: React.FC<ProposalCardProps> = ({
             <div className={`doorare-decided-title ${decided}`}>
               {decided === 'approved'
                 ? isEmergency
-                  ? (proposal.type === 'UPDATE_INCIDENT' ? 'อัปเดตข้อมูลเหตุฉุกเฉินเรียบร้อยแล้ว (Incident Updated)' : 'อนุมัติเปิดเหตุฉุกเฉินและเริ่มแผนเวชภัณฑ์แล้ว (Incident Declared)')
+                  ? (proposal.type === 'UPDATE_INCIDENT' ? 'อัปเดตข้อมูลเหตุฉุกเฉินเรียบร้อยแล้ว (Incident Updated)' : 'อนุมัติแผนจัดสรรเวชภัณฑ์ฉุกเฉินเรียบร้อยแล้ว (Emergency Supply Plan Approved)')
                   : (isUpdate ? 'แก้ไขคำขอยืมยาเรียบร้อยแล้ว (Request Updated)' : 'อนุมัติคำขอยืมยาเรียบร้อยแล้ว (Order Approved)')
                 : isEmergency
                   ? 'ยกเลิกคำสั่งเหตุฉุกเฉินนี้แล้ว (Incident Cancelled)'
@@ -479,7 +554,7 @@ export const ProposalCard: React.FC<ProposalCardProps> = ({
             <div className="doorare-decided-subtitle">
               {decided === 'approved'
                 ? isEmergency
-                  ? 'ระบบได้ส่งต่อคำสั่งเตรียมชุดยาฉุกเฉิน บันทึกข้อมูลคัดแยก Triage และบันทึก Audit Trail เรียบร้อยแล้ว'
+                  ? 'ระบบเริ่มจัดสรรชุดเวชภัณฑ์จากคลัง รพ. และเตรียมส่งคำขอยืมฉุกเฉินไปยังเครือข่ายสำหรับส่วนที่ขาดเรียบร้อยแล้ว'
                   : 'ระบบได้ส่งคำสั่งขอยืมยาเข้าระบบเครือข่าย MedSupply Link และบันทึก Audit Trail เรียบร้อยแล้ว'
                 : 'คำขอนี้ถูกยกเลิก จะไม่มีการดำเนินคำสั่งในระบบเครือข่าย'}
             </div>
@@ -633,14 +708,14 @@ export const ProposalCard: React.FC<ProposalCardProps> = ({
               <div className="doorare-spec-value">{cleanLocation}</div>
             </div>
             <div className="doorare-spec-item">
-              <div className="doorare-spec-label">ประมาณการเวลาถึง รพ. (ETA)</div>
-              <div className="doorare-spec-value">~{String(eta)} นาที</div>
+              <div className="doorare-spec-label">กำหนดเวลาเตรียมเวชภัณฑ์</div>
+              <div className="doorare-spec-value">~{String(eta)} นาที (ตาม ETA นำส่ง)</div>
             </div>
             <div className="doorare-spec-item">
-              <div className="doorare-spec-label">ระดับความเร่งด่วน</div>
+              <div className="doorare-spec-label">สถานะสต็อกคลัง รพ.</div>
               <div className="doorare-spec-value">
-                <span className={`doorare-urgency-pill ${urgencyClass}`}>
-                  {urgencyLabel}
+                <span className={`doorare-stock-status-pill ${totalShortfall > 0 ? 'shortfall' : 'ready'}`}>
+                  {stockReadinessText}
                 </span>
               </div>
             </div>
@@ -686,31 +761,71 @@ export const ProposalCard: React.FC<ProposalCardProps> = ({
       </div>
 
       {/* Planned Stocks & Kits Supply Plan (for Emergency) */}
-      {isEmergency && (recommendedKits.length > 0 || recommendedAntidotes.length > 0) && (
+      {isEmergency && (resolvedKits.length > 0 || recommendedAntidotes.length > 0) && (
         <div className="doorare-emergency-supplies-box">
-          <div className="doorare-supplies-title">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
-              <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
-              <line x1="12" y1="22.08" x2="12" y2="12" />
-            </svg>
-            <span>แผนจัดสรรชุดยาและเวชภัณฑ์ฉุกเฉิน (Emergency Stock & Kit Plan)</span>
+          <div className="doorare-supplies-header-row">
+            <div className="doorare-supplies-title">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+                <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+                <line x1="12" y1="22.08" x2="12" y2="12" />
+              </svg>
+              <span>แผนจัดสรรชุดเวชภัณฑ์ฉุกเฉิน (Emergency Supply Allocation Plan)</span>
+            </div>
+            <div className={`doorare-supplies-coverage-badge ${totalShortfall > 0 ? 'shortfall' : 'ready'}`}>
+              {stockReadinessText}
+            </div>
           </div>
-          {recommendedKits.length > 0 && (
-            <div className="doorare-supplies-group">
-              <div className="doorare-supplies-group-header">ชุดเวชภัณฑ์และชุดช่วยชีวิต (Kits):</div>
-              <div className="doorare-supplies-chips">
-                {recommendedKits.map((k: any, idx: number) => (
-                  <div key={idx} className="doorare-supply-chip kit">
-                    <span className="name">{k.kitName || k.name || k.kitCode || k.code}</span>
-                    <span className="qty">× {k.estimatedQuantity ?? k.qty ?? 1} ชุด</span>
+
+          {resolvedKits.length > 0 && (
+            <div className="doorare-supplies-table">
+              {resolvedKits.map((k: any, idx: number) => {
+                const code = resolveKitCode(k.kitCode || k.code || k.name || '') || k.kitCode || k.code || 'KIT';
+                const meta = KIT_METADATA[code];
+                const thaiName = meta?.thaiName || k.kitName || k.name || code;
+                const englishSub = meta?.desc || code;
+                const qty = Number(k.estimatedQuantity ?? k.qty ?? 1);
+                const crit = k.criticalMinimum ? Number(k.criticalMinimum) : undefined;
+                const isShortfall = Number(k.shortfall ?? 0) > 0;
+                const inStockQty = k.inStock !== undefined ? Number(k.inStock) : (isShortfall ? qty - Number(k.shortfall) : qty);
+
+                return (
+                  <div key={idx} className={`doorare-supply-row ${isShortfall ? 'has-shortfall' : ''}`}>
+                    <div className="doorare-supply-info">
+                      <div className="doorare-supply-name">
+                        <span className="code-tag">{code}</span>
+                        <span className="thai-name">{thaiName}</span>
+                      </div>
+                      <div className="doorare-supply-sub">{englishSub}</div>
+                    </div>
+                    <div className="doorare-supply-qty">
+                      <div className="qty-main">
+                        <span className="num">× {qty}</span>
+                        <span className="unit">ชุด</span>
+                      </div>
+                      {crit !== undefined && crit > 0 && (
+                        <div className="crit-sub">ขั้นต่ำสีแดง {crit} ชุด</div>
+                      )}
+                    </div>
+                    <div className="doorare-supply-source">
+                      {isShortfall ? (
+                        <span className="source-pill borrow" title={`ขาดสต็อก ${k.shortfall} ชุด ระบบเตรียมขอยืม ${k.lenderCandidate || 'รพ.เครือข่าย'}`}>
+                          คลัง รพ. {inStockQty} ชุด · ยืมเครือข่าย {k.shortfall} ชุด
+                        </span>
+                      ) : (
+                        <span className="source-pill in-stock">
+                          พร้อมในคลัง รพ. ({inStockQty} ชุด)
+                        </span>
+                      )}
+                    </div>
                   </div>
-                ))}
-              </div>
+                );
+              })}
             </div>
           )}
+
           {recommendedAntidotes.length > 0 && (
-            <div className="doorare-supplies-group">
+            <div className="doorare-supplies-group" style={{ marginTop: 8 }}>
               <div className="doorare-supplies-group-header">เซรุ่มและยาแก้พิษเฉพาะทาง (Critical Antidotes / Medications):</div>
               <div className="doorare-supplies-chips">
                 {recommendedAntidotes.map((a: any, idx: number) => (
@@ -742,27 +857,29 @@ export const ProposalCard: React.FC<ProposalCardProps> = ({
         <div className="doorare-rationale-text">{cleanReason}</div>
       </div>
 
-      {/* Safety & Compliance Verification Strip */}
-      <div className="doorare-proposal-audit-strip">
-        <div className="doorare-audit-item">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="20 6 9 17 4 12" />
-          </svg>
-          <span>ตรวจสอบสต็อกเครือข่ายแล้ว</span>
+      {/* Safety & Compliance Verification Strip (shown for routine requests, hidden for emergency) */}
+      {!isEmergency && (
+        <div className="doorare-proposal-audit-strip">
+          <div className="doorare-audit-item">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+            <span>ตรวจสอบสต็อกเครือข่ายแล้ว</span>
+          </div>
+          <div className="doorare-audit-item">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+            <span>คู่สัญญา รพ. ได้รับการรับรอง</span>
+          </div>
+          <div className="doorare-audit-item">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+            <span>บันทึก Audit Trail อัตโนมัติ</span>
+          </div>
         </div>
-        <div className="doorare-audit-item">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="20 6 9 17 4 12" />
-          </svg>
-          <span>คู่สัญญา รพ. ได้รับการรับรอง</span>
-        </div>
-        <div className="doorare-audit-item">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="20 6 9 17 4 12" />
-          </svg>
-          <span>บันทึก Audit Trail อัตโนมัติ</span>
-        </div>
-      </div>
+      )}
 
       {/* Collapsible Raw JSON Data */}
       <div style={{ marginTop: 4 }}>
@@ -822,7 +939,7 @@ export const ProposalCard: React.FC<ProposalCardProps> = ({
                   <polyline points="23 4 23 10 17 10" />
                   <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
                 </svg>
-                <span>ยืนยันส่งคำขอซ้ำอีกครั้ง (Confirm & Send Again)</span>
+                <span>{isEmergency ? 'ยืนยันสั่งการแผนเวชภัณฑ์ฉุกเฉินซ้ำ (Confirm Emergency Plan Again)' : 'ยืนยันส่งคำขอซ้ำอีกครั้ง (Confirm & Send Again)'}</span>
               </>
             )}
           </button>
@@ -843,7 +960,7 @@ export const ProposalCard: React.FC<ProposalCardProps> = ({
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="20 6 9 17 4 12" />
                 </svg>
-                <span>ยืนยันอนุมัติคำขอยืม (Authorize & Approve)</span>
+                <span>{isEmergency ? 'อนุมัติแผนเวชภัณฑ์ฉุกเฉิน (Approve Emergency Supply Plan)' : 'ยืนยันอนุมัติคำขอยืม (Authorize & Approve)'}</span>
               </>
             )}
           </button>

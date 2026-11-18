@@ -68,6 +68,7 @@ export function planToView(p: ApiPlan): AllocationPlan {
     agent: agentView(p),
     approvals: p.approvals.map((a) => ({
       hospital: `${short(a.hospital.name)}${a.kind === 'OBJECTOR' ? ' · ผู้คัดค้าน' : ''}`,
+      hospitalId: a.hospital.id,
       pharmacist: a.decidedBy ?? '—',
       state: a.decision === 'PENDING' ? 'WAITING' : a.decision,
       ...(a.decidedAt ? { at: fmtThaiTime(a.decidedAt) } : {}),

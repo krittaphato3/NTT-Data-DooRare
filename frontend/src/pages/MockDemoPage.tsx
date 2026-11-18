@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
+import logoMark from '../assets/logo-mark.png';
+import logoWordmark from '../assets/logo-wordmark.png';
 import { getDemoStats, getDemoPlan, runFill, type DbStats, type DemoPlan, type DemoOperationResponse } from '../services/mockDemoApi';
 
 const SEV_LABEL = { VERY_URGENT: 'ด่วนมาก', URGENT: 'ด่วน', NORMAL: 'ปกติ' } as const;
@@ -153,7 +155,10 @@ export const MockDemoPage: React.FC = () => {
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '28px', borderBottom: '1px solid #e2e8f0', paddingBottom: '20px' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <span style={{ fontSize: '20px', fontWeight: 800, color: '#0284c7', letterSpacing: '-0.5px' }}>DooRare</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+              <img src={logoMark} alt="" aria-hidden="true" style={{ width: 30, height: 28, objectFit: 'contain' }} />
+              <img src={logoWordmark} alt="PharmaSync+" style={{ height: 20, width: 'auto' }} />
+            </span>
             <span style={{ background: '#e0f2fe', color: '#0369a1', fontSize: '12px', fontWeight: 700, padding: '3px 9px', borderRadius: '6px' }}>DEMO CONTROL CENTER</span>
           </div>
           <h1 style={{ fontSize: '24px', fontWeight: 700, margin: '8px 0 4px 0', color: '#0f172a' }}>

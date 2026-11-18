@@ -229,7 +229,10 @@ export class ToolRegistry {
         for (const [k, v] of Object.entries(argsToParse)) {
           if (typeof v === 'string') {
             const trimmed = v.trim();
-            if (trimmed === '' && (k === 'targetId' || k === 'taskId' || k.toLowerCase().endsWith('id'))) {
+            if (
+              (trimmed === '' || trimmed === '00000000-0000-0000-0000-000000000000' || trimmed === 'null' || trimmed === 'undefined') &&
+              (k === 'targetId' || k === 'taskId' || k.toLowerCase().endsWith('id'))
+            ) {
               delete (argsToParse as Record<string, unknown>)[k];
               continue;
             }

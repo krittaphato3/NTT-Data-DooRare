@@ -128,12 +128,16 @@ export class LenderService {
     return { ok: true, items, nextCursor: slice.nextCursor };
   }
 
-  /** API-F1b-009: ACCEPT (full), PARTIAL (qty < asked) or REJECT (reason required). */
-  async respond(req: Request, rawLegId: string) {
+  /**
+   * API-F1b-009: ACCEPT (full), PARTIAL (qty < asked) or REJECT (reason required).
+   * `onBehalf` (demo shortcut): the borrower's pharmacist accepts the full quantity for the lender of one of its own
+   * legs, so a demo does not need to sign in as the lender. Same checks and effects as the lender pressing it.
+   */
+  async respond(req: Request, rawLegId: string, onBehalf = false) {
     const user = req.user!;
-    const hospitalId = mustBeLender(user);
+    const ownHospitalId = mustBeLender(user);
     const legId = uuidParam(rawLegId, 'legId');
-    const body = bodyObject(req.body);
+    const body = onBehalf ? { decision: 'ACCEPT' } as Record<string, unknown> : bodyObject(req.body);
     const decision = oneOf(body.decision, ['ACCEPT', 'PARTIAL', 'REJECT'] as const, 'decision');
     if (!decision) throw new HttpError(400, 'VALIDATION', 'ต้องระบุ decision (ACCEPT | PARTIAL | REJECT)');
     const version = optionalNumber(body.version, 'version', { min: 1 });
@@ -151,7 +155,10 @@ export class LenderService {
           [legId],
         )
       ).rows[0];
-      if (!leg || leg.lender_hospital_id !== hospitalId) throw new HttpError(404, 'NOT_FOUND', 'ไม่พบคำขอยืมที่ส่งถึงโรงพยาบาลนี้');
+      if (!leg || (onBehalf ? leg.borrower_hospital_id : leg.lender_hospital_id) !== ownHospitalId) {
+        throw new HttpError(404, 'NOT_FOUND', onBehalf ? 'ไม่พบคำขอยืมนี้ในคำขอของโรงพยาบาล' : 'ไม่พบคำขอยืมที่ส่งถึงโรงพยาบาลนี้');
+      }
+      const hospitalId: string = leg.lender_hospital_id;
       if (leg.status !== 'SENT' || leg.request_status === 'CANCELLED') {
         throw new HttpError(
           409,
@@ -231,7 +238,7 @@ export class LenderService {
       const carrier = await defaultCarrier(client, hospitalId, leg.cold_chain);
       const task = await createTransportTask(client, { refType: 'BORROW_LEG', refId: legId, fromHospitalId: hospitalId, toHospitalId: leg.borrower_hospital_id, vehicleId: carrier.vehicleId, driverId: carrier.driverId });
 
-      await writeAudit(client, ctx, { action: decision === 'ACCEPT' ? 'LEG_ACCEPTED' : 'LEG_PARTIAL', entityType: 'borrow_leg', entityId: legId, after: { requestNo: leg.request_no, qty, asked, lots: picks.map((p) => ({ lot: p.lotNo, qty: p.qty })), task: task.taskNo } });
+      await writeAudit(client, ctx, { action: decision === 'ACCEPT' ? 'LEG_ACCEPTED' : 'LEG_PARTIAL', entityType: 'borrow_leg', entityId: legId, after: { requestNo: leg.request_no, qty, asked, lots: picks.map((p) => ({ lot: p.lotNo, qty: p.qty })), task: task.taskNo, ...(onBehalf ? { onBehalfOfLender: hospitalId, by: 'BORROWER_DEMO_SHORTCUT' } : {}) } });
       await notifyRoles(client, leg.borrower_hospital_id, ['PHARMACIST', 'WAREHOUSE_OFFICER'], {
         kind: 'BORROW_LEG_ACCEPTED',
         title: `${decision === 'ACCEPT' ? 'ผู้ให้ยืมตอบรับ' : 'ผู้ให้ยืมให้บางส่วน'} ${leg.request_no}: ${qty.toLocaleString('en-US')} ${leg.base_unit}`,

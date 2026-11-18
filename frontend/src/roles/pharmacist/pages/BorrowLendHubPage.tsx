@@ -38,8 +38,10 @@ export function BorrowLendHubPage({ role = 'PHARMACIST', initialTab = 'outbound'
   const mine = useBorrowRequests();
   const lender = useLenderQueue();
 
-  const outOpen = mine.requests.filter((r) => isOpenRequest(r.status));
-  const outPending = mine.requests.filter((r) => r.status === 'PENDING_APPROVAL' || r.status === 'DRAFT').length;
+  // Emergency (F3) requests are worked on the ER / warehouse pages and hidden from this page's table: leave them out of the counts too.
+  const outMine = mine.requests.filter((r) => r.context !== 'EMERGENCY');
+  const outOpen = outMine.filter((r) => isOpenRequest(r.status));
+  const outPending = outMine.filter((r) => r.status === 'PENDING_APPROVAL' || r.status === 'DRAFT').length;
   const lenderDemo = lender.source === 'mock';
   const inToAnswer = lenderDemo ? LENDER_QUEUE.toAnswer : lender.requests.filter((r) => r.status === 'waiting').length;
   const inOpen = lenderDemo ? LENDER_QUEUE.total : lender.requests.filter((r) => isOpenLeg(r.status)).length;

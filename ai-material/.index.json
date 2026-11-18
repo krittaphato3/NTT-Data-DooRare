@@ -1,276 +1,94 @@
 [
   {
-    "path": "GUIDELINES.md",
-    "title": "Guidelines",
-    "summary": "Guidelines",
-    "tags": "session",
-    "date": "2026-11-17"
-  },
-  {
-    "path": "README.md",
-    "title": "ai-material",
-    "summary": "ai-material",
-    "tags": "session",
-    "date": "2026-11-17"
-  },
-  {
-    "path": "context/architecture.md",
-    "title": "Architecture",
-    "summary": "Architecture",
-    "tags": "session",
-    "date": "2026-11-17"
-  },
-  {
-    "path": "context/conventions.md",
-    "title": "Conventions",
-    "summary": "Conventions",
-    "tags": "session",
-    "date": "2026-11-17"
-  },
-  {
-    "path": "context/current-status.md",
-    "title": "Current Status",
-    "summary": "Current Status",
-    "tags": "session",
-    "date": "2026-11-17"
-  },
-  {
-    "path": "context/current-task.md",
-    "title": "Current Task",
-    "summary": "Current Task",
-    "tags": "session",
-    "date": "2026-11-17"
-  },
-  {
-    "path": "context/quality-checklist.md",
-    "title": "Quality Checklist",
-    "summary": "Quality Checklist",
-    "tags": "session",
-    "date": "2026-11-17"
-  },
-  {
-    "path": "context/runbook.md",
-    "title": "Runbook",
-    "summary": "Runbook",
-    "tags": "session",
-    "date": "2026-11-17"
-  },
-  {
-    "path": "sessions/2026-10-22-buffy-frontend-task4-accounts.md",
-    "title": "Frontend TASK 4 — SYSTEM_ADMIN AccountCrudTab wired to /users",
-    "summary": "Frontend TASK 4 — SYSTEM_ADMIN AccountCrudTab wired to /users",
-    "tags": "session",
-    "date": "2026-11-17"
-  },
-  {
-    "path": "sessions/2026-10-22-buffy-ha-qa-fixes.md",
-    "title": "HA (Step 8) QA fixes — FIX mode",
-    "summary": "HA (Step 8) QA fixes — FIX mode",
-    "tags": "session",
-    "date": "2026-11-17"
-  },
-  {
-    "path": "sessions/2026-10-23-1445-antigravity-warehouse-inbox-live.md",
-    "title": "Warehouse Inbox Live & Pharmacist Lender Queue Fixes",
-    "summary": "Warehouse Inbox Live & Pharmacist Lender Queue Fixes",
-    "tags": "session",
-    "date": "2026-11-17"
-  },
-  {
-    "path": "sessions/2026-10-23-1745-antigravity-f2-meeting-discussion-ui.md",
-    "title": "Session: Feature 2 Multi-Party Meeting & Discussion UI (ASM-16 / BR-F2a-013)",
+    "path": "sessions/2026-11-15-graphify-incremental-update.md",
+    "title": "Session: Incremental Knowledge Graph Update (/graphify --update)",
     "summary": "Session",
     "tags": "session",
-    "date": "2026-11-17"
+    "date": "2026-11-18"
   },
   {
-    "path": "sessions/2026-10-23-2055-antigravity-agent-runtime-copilot.md",
-    "title": "Session Note: 2026-10-23 20:55 - Person 2 Agent Runtime & UI Copilot Implementation",
-    "summary": "Session Note",
-    "tags": "session",
-    "date": "2026-11-17"
-  },
-  {
-    "path": "sessions/2026-10-23-2250-antigravity-clinical-emergency-tools.md",
-    "title": "Session: Clinical & Emergency AI Toolsets (Person 3 Scope)",
+    "path": "sessions/2026-11-16-0005-antigravity-responsible-ai-safeguards-2-5-6.md",
+    "title": "Session: Responsible AI Hardening (Fixes 2, 5, 6)",
     "summary": "Session",
     "tags": "session",
-    "date": "2026-11-17"
+    "date": "2026-11-18"
   },
   {
-    "path": "sessions/2026-10-24-0935-antigravity-logistics-tools.md",
-    "title": "Session: Logistics & Operations AI Toolsets (Person 4 Scope)",
+    "path": "sessions/2026-11-16-1855-antigravity-responsible-ai-pr18-fixes.md",
+    "title": "Session: Responsible AI PR #18 Hardening & Review Fixes",
     "summary": "Session",
     "tags": "session",
-    "date": "2026-11-17"
+    "date": "2026-11-18"
   },
   {
-    "path": "sessions/2026-10-24-1027-antigravity-governance-utils-part1.md",
-    "title": "Session: Governance AI Utilities (Person 5 Scope - Part 1)",
+    "path": "sessions/2026-11-16-2130-antigravity-er-clinical-stock-plan-and-task-editing.md",
+    "title": "Session: ER Clinical Stock Plan & Universal Task Editing",
     "summary": "Session",
     "tags": "session",
-    "date": "2026-11-17"
+    "date": "2026-11-18"
   },
   {
-    "path": "sessions/2026-10-24-1030-antigravity-governance-hospital-admin-part2.md",
-    "title": "Session: Hospital Admin Governance Tools (Person 5 Scope - Part 2)",
+    "path": "sessions/2026-11-17-1330-antigravity-fix-copilot-auto-approve-proposal-card.md",
+    "title": "Session: Fix Copilot Auto-Approve and Proposal Card Restoration",
     "summary": "Session",
     "tags": "session",
-    "date": "2026-11-17"
+    "date": "2026-11-18"
   },
   {
-    "path": "sessions/2026-10-24-1038-antigravity-governance-region-admin-part3.md",
-    "title": "Session: Region Admin Governance Tools (Person 5 Scope - Part 3)",
+    "path": "sessions/2026-11-17-1430-antigravity-inter-hospital-data-governance-rules.md",
+    "title": "Session: Inter-Hospital Data Governance & Confidentiality Rules Restriction",
     "summary": "Session",
     "tags": "session",
-    "date": "2026-11-17"
+    "date": "2026-11-18"
   },
   {
-    "path": "sessions/2026-10-24-1042-antigravity-governance-system-admin-part4.md",
-    "title": "Session: System Admin Governance Tools (Person 5 Scope - Part 4)",
+    "path": "sessions/2026-11-17-1655-antigravity-zero-assumption-clarifications.md",
+    "title": "Session: Zero-Assumption Policy & Mandatory Clarifications Enforcement",
     "summary": "Session",
     "tags": "session",
-    "date": "2026-11-17"
+    "date": "2026-11-18"
   },
   {
-    "path": "sessions/2026-10-24-1048-antigravity-governance-data-admin-part5.md",
-    "title": "Session: Data Admin Governance Tools (Person 5 Scope - Part 5)",
+    "path": "sessions/2026-11-17-1830-antigravity-fix-clarify-card-view-only-persistence.md",
+    "title": "Session: Fix Clarify Card Persistence & Read-Only State Upon Completion",
     "summary": "Session",
     "tags": "session",
-    "date": "2026-11-17"
+    "date": "2026-11-18"
   },
   {
-    "path": "sessions/2026-10-24-1057-antigravity-governance-auditor-part6.md",
-    "title": "Session: Auditor Governance Tools (Person 5 Scope - Part 6)",
+    "path": "sessions/2026-11-17-1900-antigravity-review-pr18-byok-security.md",
+    "title": "Session: PR #18 Review Investigation & Fixes (BYOK Key, SSRF/DNS, Borrow Update)",
     "summary": "Session",
     "tags": "session",
-    "date": "2026-11-17"
+    "date": "2026-11-18"
   },
   {
-    "path": "sessions/2026-10-24-1111-antigravity-governance-auditor-part6b.md",
-    "title": "Session: Auditor Governance Tools Verification & Schema Alignment (Person 5 Scope - Part 6b)",
+    "path": "sessions/2026-11-17-2030-antigravity-zero-assumption-formulation-urgency-zero-emoji.md",
+    "title": "Session: Zero-Assumption Clarifications for Multi-Formulation Drugs, Urgency, & Zero-Emoji Enforcement",
     "summary": "Session",
     "tags": "session",
-    "date": "2026-11-17"
+    "date": "2026-11-18"
   },
   {
-    "path": "sessions/2026-10-24-1115-antigravity-governance-cleanup-part6c.md",
-    "title": "Session: Governance Verify Payload Numeric Type Cleanup (Person 5 Scope - Part 6c)",
+    "path": "sessions/2026-11-17-graphify-incremental-update.md",
+    "title": "Session: Incremental Knowledge Graph Update (/graphify --update)",
     "summary": "Session",
     "tags": "session",
-    "date": "2026-11-17"
+    "date": "2026-11-18"
   },
   {
-    "path": "sessions/2026-10-24-1118-antigravity-governance-registry-part7.md",
-    "title": "Session: Governance Tools Registration & Registry Wiring (Person 5 Scope - Part 7)",
+    "path": "sessions/2026-11-18-1315-antigravity-emergency-proposal-stock-details.md",
+    "title": "Session: 2026-11-18-1315-antigravity-emergency-proposal-stock-details",
     "summary": "Session",
     "tags": "session",
-    "date": "2026-11-17"
+    "date": "2026-11-18"
   },
   {
-    "path": "sessions/2026-10-24-1145-antigravity-governance-tests-part8a.md",
-    "title": "Session: 2026-10-24 11:45 Governance Tools Unit Tests Part 8a",
-    "summary": "Session",
-    "tags": "session",
-    "date": "2026-11-17"
-  },
-  {
-    "path": "sessions/2026-10-24-1155-antigravity-governance-tests-part8a-fix.md",
-    "title": "Session: 2026-10-24 11:55 Governance Tools Unit Tests Part 8a Fix",
-    "summary": "Session",
-    "tags": "session",
-    "date": "2026-11-17"
-  },
-  {
-    "path": "sessions/2026-10-24-1204-antigravity-governance-tests-part8b.md",
-    "title": "Session: 2026-10-24 12:04 - Person 5 Scope: Governance Tests (Part 8b)",
-    "summary": "Session",
-    "tags": "session",
-    "date": "2026-11-17"
-  },
-  {
-    "path": "sessions/2026-10-24-1218-antigravity-governance-tests-part8c.md",
-    "title": "Session: 2026-10-24 12:18 - Person 5 Scope: Governance Tests (Part 8c)",
-    "summary": "Session",
-    "tags": "session",
-    "date": "2026-11-17"
-  },
-  {
-    "path": "sessions/2026-10-24-1230-antigravity-governance-tests-part8d.md",
-    "title": "Session: 2026-10-24 12:30 - Person 5 Scope: Governance Tests (Part 8d)",
-    "summary": "Session",
-    "tags": "session",
-    "date": "2026-11-17"
-  },
-  {
-    "path": "sessions/2026-10-24-1232-antigravity-governance-final-part9.md",
-    "title": "Session: 2026-10-24 12:32 - Person 5 Scope: Governance Final Verification & Capstone (Part 9 - Corrected)",
-    "summary": "Session",
-    "tags": "session",
-    "date": "2026-11-17"
-  },
-  {
-    "path": "sessions/2026-10-24-2130-claude-borrow-lend-hub.md",
-    "title": "Borrow & Lend Hub (pharmacist) — merge /requests + /lend",
-    "summary": "Borrow & Lend Hub (pharmacist) — merge /requests + /lend",
-    "tags": "session",
-    "date": "2026-11-17"
-  },
-  {
-    "path": "sessions/2026-10-24-2330-claude-expiry-pool-pipeline.md",
-    "title": "Pharmacist Near-expiry + Pool: 3-step pipeline UI",
-    "summary": "Pharmacist Near-expiry + Pool",
-    "tags": "session",
-    "date": "2026-11-17"
-  },
-  {
-    "path": "sessions/2026-10-25-0010-claude-incident-console-live-only.md",
-    "title": "Pharmacist incident console: live data only",
-    "summary": "Pharmacist incident console",
-    "tags": "session",
-    "date": "2026-11-17"
-  },
-  {
-    "path": "sessions/2026-10-25-0130-antigravity-aws-location-service.md",
-    "title": "Session: AWS Location Service Integration & Routing Engine (INT-04)",
-    "summary": "Session",
-    "tags": "session",
-    "date": "2026-11-17"
-  },
-  {
-    "path": "sessions/2026-10-25-0150-antigravity-aws-cognito-integration.md",
-    "title": "Session: AWS Cognito User Pool Integration (SEC-001 & INT-07)",
-    "summary": "Session",
-    "tags": "session",
-    "date": "2026-11-17"
-  },
-  {
-    "path": "sessions/2026-10-25-0200-claude-flow-test-f2-demo-script.md",
-    "title": "Main-flow test on the local Docker DB + F2 demo script",
-    "summary": "Main-flow test on the local Docker DB + F2 demo script",
-    "tags": "session",
-    "date": "2026-11-17"
-  },
-  {
-    "path": "sessions/2026-10-25-0900-claude-agents-f1-f3.md",
-    "title": "Agents for F1 (lender selection) and F3 (extra items outside kits)",
-    "summary": "Agents for F1 (lender selection) and F3 (extra items outside kits)",
-    "tags": "session",
-    "date": "2026-11-17"
-  },
-  {
-    "path": "sessions/2026-10-25-1300-claude-f2-start-only-demo.md",
-    "title": "F2 demo: start-only mode (flow by hand)",
-    "summary": "F2 demo",
-    "tags": "session",
-    "date": "2026-11-17"
-  },
-  {
-    "path": "sessions/2026-10-25-1430-antigravity-fix-er-action-proposal.md",
-    "title": "Session: Fix `submit_er_action_proposal` Hallucinated UUID and Emergency Borrow Payload",
-    "summary": "Session",
-    "tags": "session",
-    "date": "2026-11-17"
+    "path": "sessions/2026-11-18-1900-claude-borrow-accept-for-lender-demo.md",
+    "title": "Demo shortcut - borrower accepts the full quantity for a waiting lender (F1)",
+    "summary": "\"ตอบรับแทน\" button on waiting legs in BorrowDrawer; new POST /borrow-legs/:legId/accept-for-lender reuses lenderService.respond.",
+    "tags": "session, backend, frontend, borrow, f1b, demo, lender",
+    "date": "2026-11-18"
   },
   {
     "path": "sessions/2026-11-12-buffy-copilot-abort-context-summary-diff.md",
@@ -329,87 +147,10 @@
     "date": "2026-11-17"
   },
   {
-    "path": "sessions/2026-11-15-graphify-incremental-update.md",
-    "title": "Session: Incremental Knowledge Graph Update (/graphify --update)",
-    "summary": "Session",
-    "tags": "session",
-    "date": "2026-11-17"
-  },
-  {
-    "path": "sessions/2026-11-16-0005-antigravity-responsible-ai-safeguards-2-5-6.md",
-    "title": "Session: Responsible AI Hardening (Fixes 2, 5, 6)",
-    "summary": "Session",
-    "tags": "session",
-    "date": "2026-11-17"
-  },
-  {
-    "path": "sessions/2026-11-16-1855-antigravity-responsible-ai-pr18-fixes.md",
-    "title": "Session: Responsible AI PR #18 Hardening & Review Fixes",
-    "summary": "Session",
-    "tags": "session",
-    "date": "2026-11-17"
-  },
-  {
-    "path": "sessions/2026-11-16-2130-antigravity-er-clinical-stock-plan-and-task-editing.md",
-    "title": "Session: ER Clinical Stock Plan & Universal Task Editing",
-    "summary": "Session",
-    "tags": "session",
-    "date": "2026-11-17"
-  },
-  {
-    "path": "sessions/2026-11-17-1330-antigravity-fix-copilot-auto-approve-proposal-card.md",
-    "title": "Session: Fix Copilot Auto-Approve and Proposal Card Restoration",
-    "summary": "Session",
-    "tags": "session",
-    "date": "2026-11-17"
-  },
-  {
-    "path": "sessions/2026-11-17-1430-antigravity-inter-hospital-data-governance-rules.md",
-    "title": "Session: Inter-Hospital Data Governance & Confidentiality Rules Restriction",
-    "summary": "Session",
-    "tags": "session",
-    "date": "2026-11-17"
-  },
-  {
-    "path": "sessions/2026-11-17-1655-antigravity-zero-assumption-clarifications.md",
-    "title": "Session: Zero-Assumption Policy & Mandatory Clarifications Enforcement",
-    "summary": "Session",
-    "tags": "session",
-    "date": "2026-11-17"
-  },
-  {
-    "path": "sessions/2026-11-17-1830-antigravity-fix-clarify-card-view-only-persistence.md",
-    "title": "Session: Fix Clarify Card Persistence & Read-Only State Upon Completion",
-    "summary": "Session",
-    "tags": "session",
-    "date": "2026-11-17"
-  },
-  {
-    "path": "sessions/2026-11-17-1900-antigravity-review-pr18-byok-security.md",
-    "title": "Session: PR #18 Review Investigation & Fixes (BYOK Key, SSRF/DNS, Borrow Update)",
-    "summary": "Session",
-    "tags": "session",
-    "date": "2026-11-17"
-  },
-  {
-    "path": "sessions/2026-11-17-2030-antigravity-zero-assumption-formulation-urgency-zero-emoji.md",
-    "title": "Session: Zero-Assumption Clarifications for Multi-Formulation Drugs, Urgency, & Zero-Emoji Enforcement",
-    "summary": "Session",
-    "tags": "session",
-    "date": "2026-11-17"
-  },
-  {
     "path": "sessions/2026-11-17-2046-claude-borrow-approve-ladder-stale-fix.md",
     "title": "Borrow approve fails with LADDER_STALE - removed the emergency-fallback lendable rule",
     "summary": "Plan proposed lenders below their keep-level; approve rejected it. Fallback block removed.",
     "tags": "session, backend, borrow, f1b, bug, ladder, approve",
-    "date": "2026-11-17"
-  },
-  {
-    "path": "sessions/2026-11-17-graphify-incremental-update.md",
-    "title": "Session: Incremental Knowledge Graph Update (/graphify --update)",
-    "summary": "Session",
-    "tags": "session",
     "date": "2026-11-17"
   },
   {
@@ -427,6 +168,13 @@
     "date": "2026-11-16"
   },
   {
+    "path": "context/current-task.md",
+    "title": "Current Task",
+    "summary": "Current Task",
+    "tags": "session",
+    "date": "2026-11-14"
+  },
+  {
     "path": "sessions/2026-11-14-1955-antigravity-byok-google-ai-studio-preset.md",
     "title": "Central Admin BYOK - Google AI Studio API Key Preset",
     "summary": "Added Google AI Studio (Gemini) 1-click Quick Preset into Central Admin BYOK…",
@@ -441,6 +189,34 @@
     "date": "2026-11-14"
   },
   {
+    "path": "context/architecture.md",
+    "title": "Architecture",
+    "summary": "Architecture",
+    "tags": "session",
+    "date": "2026-11-13"
+  },
+  {
+    "path": "sessions/2026-10-25-0130-antigravity-aws-location-service.md",
+    "title": "Session: AWS Location Service Integration & Routing Engine (INT-04)",
+    "summary": "Session",
+    "tags": "session",
+    "date": "2026-11-13"
+  },
+  {
+    "path": "sessions/2026-10-25-0150-antigravity-aws-cognito-integration.md",
+    "title": "Session: AWS Cognito User Pool Integration (SEC-001 & INT-07)",
+    "summary": "Session",
+    "tags": "session",
+    "date": "2026-11-13"
+  },
+  {
+    "path": "sessions/2026-10-25-1430-antigravity-fix-er-action-proposal.md",
+    "title": "Session: Fix `submit_er_action_proposal` Hallucinated UUID and Emergency Borrow Payload",
+    "summary": "Session",
+    "tags": "session",
+    "date": "2026-11-13"
+  },
+  {
     "path": "sessions/2026-11-13-2000-claude-demo-seed-f2.md",
     "title": "Demo seed (one command) - part 1: F2 near-expiry / pool / approval scenarios",
     "summary": "db:demo-seed ONLY=f2 shapes stock + lots so A-network plans auto-approve and cross-network…",
@@ -448,10 +224,38 @@
     "date": "2026-11-13"
   },
   {
+    "path": "sessions/2026-10-24-2130-claude-borrow-lend-hub.md",
+    "title": "Borrow & Lend Hub (pharmacist) — merge /requests + /lend",
+    "summary": "Borrow & Lend Hub (pharmacist) — merge /requests + /lend",
+    "tags": "session",
+    "date": "2026-10-25"
+  },
+  {
+    "path": "sessions/2026-10-24-2330-claude-expiry-pool-pipeline.md",
+    "title": "Pharmacist Near-expiry + Pool: 3-step pipeline UI",
+    "summary": "Pharmacist Near-expiry + Pool",
+    "tags": "session",
+    "date": "2026-10-25"
+  },
+  {
+    "path": "sessions/2026-10-25-0010-claude-incident-console-live-only.md",
+    "title": "Pharmacist incident console: live data only",
+    "summary": "Pharmacist incident console",
+    "tags": "session",
+    "date": "2026-10-25"
+  },
+  {
     "path": "sessions/2026-10-25-0110-antigravity-aws-secrets-manager-integration.md",
     "title": "AWS Secrets Manager Integration and Dual Load Strategy (SEC-010)",
     "summary": "Integrated AWS Secrets Manager SDK into DooRare backend for enterprise credential management,…",
     "tags": "session, aws, secrets-manager, security, sec-010, config, backend",
+    "date": "2026-10-25"
+  },
+  {
+    "path": "sessions/2026-10-25-0200-claude-flow-test-f2-demo-script.md",
+    "title": "Main-flow test on the local Docker DB + F2 demo script",
+    "summary": "Main-flow test on the local Docker DB + F2 demo script",
+    "tags": "session",
     "date": "2026-10-25"
   },
   {
@@ -462,10 +266,143 @@
     "date": "2026-10-25"
   },
   {
+    "path": "sessions/2026-10-25-0900-claude-agents-f1-f3.md",
+    "title": "Agents for F1 (lender selection) and F3 (extra items outside kits)",
+    "summary": "Agents for F1 (lender selection) and F3 (extra items outside kits)",
+    "tags": "session",
+    "date": "2026-10-25"
+  },
+  {
+    "path": "sessions/2026-10-25-1300-claude-f2-start-only-demo.md",
+    "title": "F2 demo: start-only mode (flow by hand)",
+    "summary": "F2 demo",
+    "tags": "session",
+    "date": "2026-10-25"
+  },
+  {
     "path": "decisions/0005-f2-f3-feedback-rules.md",
     "title": "F2 allocation agent, objections and F3 late answers (feature feedback)",
     "summary": "Agent via BYOK with F-22 fallback; region objections until dispatch; late emergency…",
     "tags": "decision, f2, allocation, agent, objection, f3, emergency, borrow",
+    "date": "2026-10-24"
+  },
+  {
+    "path": "sessions/2026-10-23-2250-antigravity-clinical-emergency-tools.md",
+    "title": "Session: Clinical & Emergency AI Toolsets (Person 3 Scope)",
+    "summary": "Session",
+    "tags": "session",
+    "date": "2026-10-24"
+  },
+  {
+    "path": "sessions/2026-10-24-0935-antigravity-logistics-tools.md",
+    "title": "Session: Logistics & Operations AI Toolsets (Person 4 Scope)",
+    "summary": "Session",
+    "tags": "session",
+    "date": "2026-10-24"
+  },
+  {
+    "path": "sessions/2026-10-24-1027-antigravity-governance-utils-part1.md",
+    "title": "Session: Governance AI Utilities (Person 5 Scope - Part 1)",
+    "summary": "Session",
+    "tags": "session",
+    "date": "2026-10-24"
+  },
+  {
+    "path": "sessions/2026-10-24-1030-antigravity-governance-hospital-admin-part2.md",
+    "title": "Session: Hospital Admin Governance Tools (Person 5 Scope - Part 2)",
+    "summary": "Session",
+    "tags": "session",
+    "date": "2026-10-24"
+  },
+  {
+    "path": "sessions/2026-10-24-1038-antigravity-governance-region-admin-part3.md",
+    "title": "Session: Region Admin Governance Tools (Person 5 Scope - Part 3)",
+    "summary": "Session",
+    "tags": "session",
+    "date": "2026-10-24"
+  },
+  {
+    "path": "sessions/2026-10-24-1042-antigravity-governance-system-admin-part4.md",
+    "title": "Session: System Admin Governance Tools (Person 5 Scope - Part 4)",
+    "summary": "Session",
+    "tags": "session",
+    "date": "2026-10-24"
+  },
+  {
+    "path": "sessions/2026-10-24-1048-antigravity-governance-data-admin-part5.md",
+    "title": "Session: Data Admin Governance Tools (Person 5 Scope - Part 5)",
+    "summary": "Session",
+    "tags": "session",
+    "date": "2026-10-24"
+  },
+  {
+    "path": "sessions/2026-10-24-1057-antigravity-governance-auditor-part6.md",
+    "title": "Session: Auditor Governance Tools (Person 5 Scope - Part 6)",
+    "summary": "Session",
+    "tags": "session",
+    "date": "2026-10-24"
+  },
+  {
+    "path": "sessions/2026-10-24-1111-antigravity-governance-auditor-part6b.md",
+    "title": "Session: Auditor Governance Tools Verification & Schema Alignment (Person 5 Scope - Part 6b)",
+    "summary": "Session",
+    "tags": "session",
+    "date": "2026-10-24"
+  },
+  {
+    "path": "sessions/2026-10-24-1115-antigravity-governance-cleanup-part6c.md",
+    "title": "Session: Governance Verify Payload Numeric Type Cleanup (Person 5 Scope - Part 6c)",
+    "summary": "Session",
+    "tags": "session",
+    "date": "2026-10-24"
+  },
+  {
+    "path": "sessions/2026-10-24-1118-antigravity-governance-registry-part7.md",
+    "title": "Session: Governance Tools Registration & Registry Wiring (Person 5 Scope - Part 7)",
+    "summary": "Session",
+    "tags": "session",
+    "date": "2026-10-24"
+  },
+  {
+    "path": "sessions/2026-10-24-1145-antigravity-governance-tests-part8a.md",
+    "title": "Session: 2026-10-24 11:45 Governance Tools Unit Tests Part 8a",
+    "summary": "Session",
+    "tags": "session",
+    "date": "2026-10-24"
+  },
+  {
+    "path": "sessions/2026-10-24-1155-antigravity-governance-tests-part8a-fix.md",
+    "title": "Session: 2026-10-24 11:55 Governance Tools Unit Tests Part 8a Fix",
+    "summary": "Session",
+    "tags": "session",
+    "date": "2026-10-24"
+  },
+  {
+    "path": "sessions/2026-10-24-1204-antigravity-governance-tests-part8b.md",
+    "title": "Session: 2026-10-24 12:04 - Person 5 Scope: Governance Tests (Part 8b)",
+    "summary": "Session",
+    "tags": "session",
+    "date": "2026-10-24"
+  },
+  {
+    "path": "sessions/2026-10-24-1218-antigravity-governance-tests-part8c.md",
+    "title": "Session: 2026-10-24 12:18 - Person 5 Scope: Governance Tests (Part 8c)",
+    "summary": "Session",
+    "tags": "session",
+    "date": "2026-10-24"
+  },
+  {
+    "path": "sessions/2026-10-24-1230-antigravity-governance-tests-part8d.md",
+    "title": "Session: 2026-10-24 12:30 - Person 5 Scope: Governance Tests (Part 8d)",
+    "summary": "Session",
+    "tags": "session",
+    "date": "2026-10-24"
+  },
+  {
+    "path": "sessions/2026-10-24-1232-antigravity-governance-final-part9.md",
+    "title": "Session: 2026-10-24 12:32 - Person 5 Scope: Governance Final Verification & Capstone (Part 9 - Corrected)",
+    "summary": "Session",
+    "tags": "session",
     "date": "2026-10-24"
   },
   {
@@ -511,6 +448,20 @@
     "date": "2026-10-23"
   },
   {
+    "path": "sessions/2026-10-23-1445-antigravity-warehouse-inbox-live.md",
+    "title": "Warehouse Inbox Live & Pharmacist Lender Queue Fixes",
+    "summary": "Warehouse Inbox Live & Pharmacist Lender Queue Fixes",
+    "tags": "session",
+    "date": "2026-10-23"
+  },
+  {
+    "path": "sessions/2026-10-23-1745-antigravity-f2-meeting-discussion-ui.md",
+    "title": "Session: Feature 2 Multi-Party Meeting & Discussion UI (ASM-16 / BR-F2a-013)",
+    "summary": "Session",
+    "tags": "session",
+    "date": "2026-10-23"
+  },
+  {
     "path": "sessions/2026-10-23-1830-antigravity-byok-person1.md",
     "title": "Central Admin BYOK & Multi-Provider LLM Gateway (Person 1)",
     "summary": "Implemented Central Admin BYOK engine, multi-provider LLM gateway (Mock, OpenAI, Anthropic, Bedrock,…",
@@ -518,10 +469,31 @@
     "date": "2026-10-23"
   },
   {
+    "path": "sessions/2026-10-23-2055-antigravity-agent-runtime-copilot.md",
+    "title": "Session Note: 2026-10-23 20:55 - Person 2 Agent Runtime & UI Copilot Implementation",
+    "summary": "Session Note",
+    "tags": "session",
+    "date": "2026-10-23"
+  },
+  {
     "path": "sessions/2026-10-22-buffy-backend-step8-admin.md",
     "title": "Backend step 8 - Admin APIs (config, users, audit log, kill switch)",
     "summary": "Admin-role APIs only (matrix roles); config catalogue + read-only spec keys, user…",
     "tags": "session, backend, admin, config, users, audit, rbac, step8, detailed",
+    "date": "2026-10-22"
+  },
+  {
+    "path": "sessions/2026-10-22-buffy-frontend-task4-accounts.md",
+    "title": "Frontend TASK 4 — SYSTEM_ADMIN AccountCrudTab wired to /users",
+    "summary": "Frontend TASK 4 — SYSTEM_ADMIN AccountCrudTab wired to /users",
+    "tags": "session",
+    "date": "2026-10-22"
+  },
+  {
+    "path": "sessions/2026-10-22-buffy-ha-qa-fixes.md",
+    "title": "HA (Step 8) QA fixes — FIX mode",
+    "summary": "HA (Step 8) QA fixes — FIX mode",
+    "tags": "session",
     "date": "2026-10-22"
   },
   {
@@ -728,6 +700,27 @@
     "date": "2026-10-16"
   },
   {
+    "path": "README.md",
+    "title": "ai-material",
+    "summary": "ai-material",
+    "tags": "session",
+    "date": "2026-10-15"
+  },
+  {
+    "path": "context/conventions.md",
+    "title": "Conventions",
+    "summary": "Conventions",
+    "tags": "session",
+    "date": "2026-10-15"
+  },
+  {
+    "path": "context/runbook.md",
+    "title": "Runbook",
+    "summary": "Runbook",
+    "tags": "session",
+    "date": "2026-10-15"
+  },
+  {
     "path": "decisions/0002-role-based-frontend-structure.md",
     "title": "Role-based frontend structure",
     "summary": "Organize frontend by role with shared layout; responsive via CSS breakpoints.",
@@ -789,6 +782,27 @@
     "summary": "Which agent skills this repo keeps, why, and how to add more.",
     "tags": "skill, workflow, context",
     "date": "2026-10-14"
+  },
+  {
+    "path": "GUIDELINES.md",
+    "title": "Guidelines",
+    "summary": "Guidelines",
+    "tags": "session",
+    "date": "2026-10-13"
+  },
+  {
+    "path": "context/current-status.md",
+    "title": "Current Status",
+    "summary": "Current Status",
+    "tags": "session",
+    "date": "2026-10-13"
+  },
+  {
+    "path": "context/quality-checklist.md",
+    "title": "Quality Checklist",
+    "summary": "Quality Checklist",
+    "tags": "session",
+    "date": "2026-10-13"
   },
   {
     "path": "decisions/0001-shared-ai-context.md",

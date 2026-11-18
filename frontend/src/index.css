@@ -800,7 +800,8 @@ body.nav-open {
 }
 .side-brand-wordmark {
   display: block;
-  height: 20px;
+  /* PharmaSync+ wordmark is wide (6.6:1): 17px tall fits the brand column (~115px) without being clipped */
+  height: 17px;
   width: auto;
   margin-bottom: 2px;
 }
@@ -1812,7 +1813,8 @@ a.sa-card:hover {
 }
 .sa-actions {
   display: grid;
-  grid-template-columns: 72px 72px 100px;
+  /* the main button holds "สร้างคำขอยืมด่วน" (122px) and, while the agent runs, the spinner + "Agent ทำงาน…" (128px) */
+  grid-template-columns: 72px 72px 128px;
   align-items: center;
   justify-content: end;
   gap: 8px;
@@ -1825,7 +1827,7 @@ a.sa-card:hover {
 /* No main button on this row: the two quiet actions sit in the middle of the 3-slot width instead of leaving a hole on the right. */
 .sa-actions-2 {
   grid-template-columns: 72px 72px;
-  padding-right: 50px;
+  padding-right: 68px;
 }
 .sa-actions-2 > :nth-child(3) {
   display: none;

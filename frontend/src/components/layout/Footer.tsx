@@ -30,7 +30,7 @@ export function Footer({ isAdmin }: { isAdmin: boolean }) {
             </button>
           </span>
         )}
-        <span>MedSupply Link v2.4 · เขตสุขภาพที่ 6</span>
+        <span>PharmaSync+ v2.4 · เขตสุขภาพที่ 6</span>
       </span>
     </footer>
   );

@@ -18,6 +18,10 @@ interface AllocationDrawerProps {
   onCancel?: (reason: string) => void;
   /** A hospital of the region outside the plan objects with a reason. */
   onObject?: (reason: string) => void;
+  /** Demo shortcut: approve for another hospital of the plan that has not answered yet. */
+  onApproveFor?: (hospitalId: string) => void;
+  /** Our hospital (its row gets the normal approve button, not the shortcut). */
+  myHospitalId?: string;
   busy?: boolean;
   error?: string | null;
   onClose: () => void;
@@ -34,7 +38,7 @@ const OPTION_TH: Record<string, string> = {
 };
 
 /** Allocation plan review: feasibility, transport cost vs value, approval chain. */
-export function AllocationDrawer({ plan: p, decision, onApprove, onApproveAll, onRevise, onUneconomical, onReject, onCancel, onObject, busy = false, error = null, onClose, role = 'PHARMACIST' }: AllocationDrawerProps) {
+export function AllocationDrawer({ plan: p, decision, onApprove, onApproveAll, onRevise, onUneconomical, onReject, onCancel, onObject, onApproveFor, myHospitalId, busy = false, error = null, onClose, role = 'PHARMACIST' }: AllocationDrawerProps) {
   const [note, setNote] = useState('');
   const [cancelNote, setCancelNote] = useState('');
   const noteOk = note.trim().length >= 3;
@@ -371,8 +375,21 @@ export function AllocationDrawer({ plan: p, decision, onApprove, onApproveAll, o
                   <span style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
                       <b style={{ fontSize: 13, color: '#0F2A5C' }}>{a.hospital}</b>
-                      <span className={`badge ${a.state === 'APPROVED' ? 't-green' : a.state === 'REJECTED' ? 't-red' : 't-amber'}`} style={{ fontSize: 11 }}>
-                        {a.state === 'APPROVED' ? 'เห็นชอบ' : a.state === 'REJECTED' ? 'ไม่เห็นชอบ (มีข้อโต้แย้ง)' : 'รอการตอบรับ'}
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                        {onApproveFor && a.state === 'WAITING' && a.hospitalId && a.hospitalId !== myHospitalId && (p.status === 'PENDING_MY_APPROVAL' || p.status === 'AWAITING_APPROVAL') && (
+                          <button
+                            className="btn btn-s"
+                            style={{ height: 22, padding: '0 8px', fontSize: 11 }}
+                            disabled={busy}
+                            title={`ให้${a.hospital}เห็นชอบแผนนี้เลย (ไม่ต้องสลับไปบัญชีของ รพ.นั้น)`}
+                            onClick={() => onApproveFor(a.hospitalId!)}
+                          >
+                            DEMO
+                          </button>
+                        )}
+                        <span className={`badge ${a.state === 'APPROVED' ? 't-green' : a.state === 'REJECTED' ? 't-red' : 't-amber'}`} style={{ fontSize: 11 }}>
+                          {a.state === 'APPROVED' ? 'เห็นชอบ' : a.state === 'REJECTED' ? 'ไม่เห็นชอบ (มีข้อโต้แย้ง)' : 'รอการตอบรับ'}
+                        </span>
                       </span>
                     </div>
                     <span className="sub" style={{ display: 'block' }}>

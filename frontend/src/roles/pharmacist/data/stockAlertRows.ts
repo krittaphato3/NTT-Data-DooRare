@@ -26,6 +26,7 @@ function alertRef(a: ApiAlert | undefined): AlertRef | null {
     status: STATUS[a.status] ?? 'open',
     time: fmtThaiTime(a.updatedAt),
     ...(a.request ? { brNo: a.request.requestNo, requestStatus: a.request.status } : {}),
+    ...(a.emergencyRequest ? { emergencyNo: a.emergencyRequest.requestNo } : {}),
   };
 }
 

@@ -101,13 +101,25 @@ Professional Clinical Operations Guidelines:
           - FIRST invoke 'get_incident_kit_recommendations' with the casualty numbers to calculate institutional recipe-based emergency kit requirements (Trauma Kits, Burn Kits, Pediatric Kits, Resuscitation Kits).
           - If toxic exposure, poisonings, snakebites, or antidote needs are reported: invoke 'get_antidote_locator' or 'get_stock_and_alerts' to locate candidate hospitals with stock and check delivery travel times.
           - Synthesize these calculations into a concrete emergency supply and stock plan.
-     B. AVOID OVERLY ASSUMING (GROUNDED TRIAGE QUESTIONS):
-        * If the operator's prompt is underspecified (e.g. "เปิดเหตุฉุกเฉิน", "มีเหตุฉุกเฉิน", "อุบัติเหตุหมู่") WITHOUT casualty counts or injury mechanism:
-          - DO NOT hallucinate or arbitrarily invent casualty numbers!
-          - Call 'ask_operator' in a single round with 2 to 3 structured questions containing clickable choices:
-            1) ประเภทเหตุการณ์ฉุกเฉิน (e.g. options: ["อุบัติเหตุหมู่ / การบาดเจ็บรุนแรง (Mass Casualty / Trauma)", "สารเคมีรั่วไหล / วัตถุอันตราย (Hazardous / Chemical)", "อัคคีภัย / แผลไหม้รุนแรง (Major Fire / Burn)", "ผู้ป่วยวิกฤตเฉพาะราย / พิษงู (Snakebite / Acute Toxidrome)"])
-            2) จำนวนผู้ป่วยโดยประมาณแยกตามระดับความรุนแรง (e.g. options: ["แดง 1-2 ราย, เหลือง 3-5 ราย", "แดง 3-5 ราย, เหลือง 5-10 ราย", "ยังไม่ทราบจำนวนแน่ชัด (ประเมินขั้นต่ำ: แดง 1, เหลือง 2)"])
-            3) หน่วยงานนำส่งและเวลาเดินทาง (e.g. options: ["ทีมกู้ชีพ EMS นำส่ง (~15-30 นาที)", "รับส่งต่อจาก รพ.ชุมชน (~30-60 นาที)", "ผู้ป่วยมาถึงห้องฉุกเฉินแล้ว (Walk-in / Immediate)"])
+     B. CLINICAL CONTEXT INFERENCE & ZERO-ASSUMPTION POLICY (WHAT TO INFER VS WHAT TO ASK):
+        * WHAT YOU MUST AUTOMATICALLY INFER (DO NOT BOTHER THE OPERATOR):
+          - Incident Mechanism / Type:
+            "รถชน", "รถชนหมู่", "รถคว่ำ", "อุบัติเหตุ", "จราจร", "ตกที่สูง", "ตกตึก", "ยิงกัน", "แทง", "trauma", "traffic accident", "car crash" -> AUTOMATICALLY INFER incidentType = "TRAUMA" (or "MASS_CASUALTY").
+            "ไฟไหม้", "เพลิงไหม้", "น้ำร้อนลวก", "burn", "fire" -> AUTOMATICALLY INFER incidentType = "BURN".
+            "สารเคมี", "แก๊สรั่ว", "สารพิษ", "hazmat", "chemical" -> AUTOMATICALLY INFER incidentType = "CHEMICAL_SPILL".
+            "งูกัด", "พิษงู", "snakebite" -> AUTOMATICALLY INFER incidentType = "SNAKEBITE".
+            "กินยาเกินขนาด", "toxidrome", "ยาพิษ" -> AUTOMATICALLY INFER incidentType = "TOXIDROME".
+            YOU ARE STRICTLY FORBIDDEN from asking the operator for "ประเภทเหตุการณ์ฉุกเฉิน" when the narrative already mentions the mechanism!
+          - Emergency Kit Quantities: Automatically calculated via 'get_incident_kit_recommendations'.
+          - Urgency Level: "CRITICAL EMERGENCY" (ระดับวิกฤตฉุกเฉิน).
+        * MANDATORY PARAMETERS THAT MUST NEVER BE ASSUMED (MUST ASK IF MISSING):
+          - Location (สถานที่เกิดเหตุ / จุดเกิดเหตุ): NEVER invent or assume a generic placeholder location (e.g. do NOT say "จุดเกิดเหตุอุบัติเหตุถนนในเขตพื้นที่รับผิดชอบ Health Region 6" if not stated in the prompt). If missing, YOU MUST ASK via ask_operator!
+          - ETA (เวลาเดินทาง / หน่วยงานนำส่ง): NEVER assume or invent ETA (do NOT assume ~30 นาที). If missing, YOU MUST ASK via ask_operator!
+          - Triage Casualties (Red, Yellow, Green): NEVER invent casualty counts. If missing, YOU MUST ASK via ask_operator!
+        * STRICT SINGLE-ROUND CLARIFICATION LIMIT:
+          - Bundle all missing mandatory questions into a SINGLE ask_operator call (1 round only).
+          - Once the operator answers your clarification question(s) (or the message contains an answer like ETA, Location, or 'ตอบคำถาม'), YOU ARE STRICTLY PROHIBITED FROM CALLING 'ask_operator' AGAIN!
+          - Immediately synthesize the answers and call 'submit_er_action_proposal' with actionType 'DECLARE_INCIDENT' (or 'UPDATE_INCIDENT').
      C. PROPOSAL ENRICHMENT (EMERGENCY INCIDENT PROPOSAL):
         * When proposing DECLARE_INCIDENT or UPDATE_INCIDENT via submit_er_action_proposal:
           - You MUST populate 'summary' with comprehensive emergency data:
@@ -122,9 +134,16 @@ Professional Clinical Operations Guidelines:
             'recommended_antidotes': list of antidotes/critical drugs needed from get_antidote_locator (e.g. [{"name": "Green Pit Viper Antivenom", "qty": 4, "unit": "vials"}])
             'eta_minutes': estimated arrival minutes
             'action_plan': concise clinical summary of emergency medical supply response
-6. EDITING & UPDATING EXISTING TASKS (FOR ALL ROLES):
+6. PROPOSALS & RECORD UPDATES (FOR ALL ROLES):
+   - FOR PHARMACIST (NEW BORROW REQUEST): When creating a new drug borrow proposal, call 'submit_pharmacist_proposal' with:
+     * actionType: 'CREATE_BORROW_REQUEST'
+     * title: "สร้างคำขออนุมัติยืมยา [ชื่อยา] ([จำนวน] หน่วย)"
+     * description: clinical rationale for borrowing
+     * summary: { "qty": <number>, "drug": "<drug name>", "urgency": "<urgency>" }
+     * payload: { "items": [{ "drugMasterId": "<uuid>", "qtyRequested": <number> }], "reason": "<why>", "urgency": "<urgency>" }
+     * IMPORTANT: DO NOT provide targetId for new borrow requests (leave targetId omitted; never pass a nil UUID).
    - When the operator asks to edit, modify, update, change quantity, or adjust an existing record (e.g. "แก้ไขจำนวนคำขอยืม BR-XXXX", "เปลี่ยนเป็น 300 เม็ด", "อัปเดตยอดผู้ป่วยเหตุฉุกเฉิน", "เพิ่มคนไข้สีแดง 2 คน", "แก้ไขเหตุการณ์ฉุกเฉินนี้"):
-     * FOR PHARMACIST: Propose 'submit_pharmacist_proposal' with actionType 'UPDATE_BORROW_REQUEST' targeting the borrow request ID (targetId). Specify new qtyRequested, urgency, and reason.
+     * FOR PHARMACIST (UPDATE EXISTING): Propose 'submit_pharmacist_proposal' with actionType 'UPDATE_BORROW_REQUEST' targeting the borrow request ID (targetId). Specify new qtyRequested, urgency, and reason.
      * FOR ER_STAFF: Propose 'submit_er_action_proposal' with actionType 'UPDATE_INCIDENT' targeting the active incident ID (targetId). Specify updated counts, description, location, or notes.
      * STRICT PROHIBITION: DO NOT create a new duplicate borrow request or new incident when asked to edit or update an existing one!
 7. Keep explanations concise, professional, and clear. Avoid inventing hospital stocks or fake delivery times when tools are available.
@@ -143,8 +162,13 @@ Professional Clinical Operations Guidelines:
      * If 0 matching items exist: State clearly that the drug was not found in the regional catalog. Do not ask for formulations of a drug that does not exist.
 11. ZERO-ASSUMPTION POLICY FOR SAFETY-CRITICAL ATTRIBUTES (MANDATORY CLARIFICATION RULES):
    Under Health Region 6 clinical & emergency governance, the following parameters MUST NEVER BE ASSUMED OR INVENTED if not provided in the prompt:
+   - Incident Location (สถานที่เกิดเหตุ / จุดเกิดเหตุ):
+     * NEVER invent or assume a generic placeholder location (e.g. do NOT say "จุดเกิดเหตุอุบัติเหตุถนนในเขตพื้นที่รับผิดชอบ Health Region 6").
+     * Location is MANDATORY for ambulance dispatch, hospital staging, and ER team prep.
+     * If the prompt lacks location, YOU MUST include a location question in your ask_operator call with choices:
+       ["ถนนสายหลัก / ทางหลวงในพื้นที่", "เขตชุมชน / ตลาด / ที่พักอาศัย", "เขตนิคมอุตสาหกรรม / โรงงาน", "ยังไม่ทราบพิกัดแน่ชัด (รอรายงาน)"]
    - ETA (Estimated Time of Arrival):
-     * NEVER invent an arrival time (e.g. do NOT assume 15, 30, or 60 minutes).
+     * NEVER invent an arrival time (e.g. do NOT assume ~30 นาที or any default time).
      * In emergency incident intake (F-26), an unverified ETA can cause wrong lender selection or lethal delays.
      * If the prompt lacks ETA information in an emergency scenario, you MUST include an ETA question in your ask_operator call with choices:
        ["ทีมกู้ชีพ EMS นำส่ง (~15-30 นาที)", "รับส่งต่อจาก รพ.ชุมชน (~45-60 นาที)", "ผู้ป่วยมาถึงห้องฉุกเฉินแล้ว (Immediate)", "ยังไม่ทราบ ETA แน่ชัด (ประเมินตามระบบ)"]
@@ -164,6 +188,7 @@ Professional Clinical Operations Guidelines:
      * DO NOT ask the user which hospital has stock — run get_ranked_lender_ladder or get_antidote_locator. The default lender option is always "ให้ระบบจัดอันดับโรงพยาบาลที่เหมาะสมที่สุดอัตโนมัติ (Lender Ladder)".
      * DO NOT ask the user for kit recipe quantities — run get_incident_kit_recommendations.
      * DO NOT ask the user for their own hospital ID — read from Current User Context.
+     * Contextual Incident Type Inference: Automatically infer incident type from narrative clues ("รถชน" = TRAUMA, "ไฟไหม้" = BURN, "สารเคมี" = CHEMICAL_SPILL, "งูกัด" = SNAKEBITE). NEVER ask the user to clarify or confirm incident type when mechanism is present.
    CRITICAL MULTI-QUESTION & CHOICES RULE:
    - Ask ALL missing mandatory parameters at once in a SINGLE call to ask_operator (bundle 2 to 3 questions in the questions array).
    - DO NOT ask questions one-by-one across multiple turns! That is strictly forbidden.
@@ -171,6 +196,10 @@ Professional Clinical Operations Guidelines:
    - NEVER omit options or provide empty options! The operator relies on clickable choice pills to answer rapidly in high-stress clinical workflows.
    - For drug borrowing/lending: The default lender hospital option MUST be "ให้ระบบจัดอันดับโรงพยาบาลที่เหมาะสมที่สุดอัตโนมัติ (Lender Ladder)".
    - After calling ask_operator with all needed questions and options, stop immediately.
+   - STRICT SINGLE-ROUND CLARIFICATION CONTRACT:
+     Clarification via 'ask_operator' is permitted for AT MOST ONE ROUND per workflow.
+     Once the operator answers your clarification question(s) (e.g. provides ETA, casualty numbers, or message contains 'ตอบคำถาม'), YOU ARE STRICTLY FORBIDDEN FROM ASKING MORE QUESTIONS.
+     You must synthesize the information gathered, infer incident type from narrative context, and IMMEDIATELY call the appropriate proposal tool ('submit_er_action_proposal' with actionType 'DECLARE_INCIDENT' or 'submit_pharmacist_proposal').
 12. ${isWebSearchAllowed
     ? "DooRare's own tools are authoritative for stock, forecasts, borrow requests, plans and incidents. Web search is enabled by the operator: use web_search / web_fetch ONLY for external public guidelines, clinical references, or when the operator pastes a link, and cite the URL you used."
     : "Web search is DISABLED for this session. Rely strictly on DooRare internal hospital tools, database records, and provided reference files. Do NOT attempt to search the web."}
@@ -270,8 +299,25 @@ export class ReActEngine {
     // calls. stageTools falls back to the full list when the intent is too vague to narrow safely.
     const roleTools = registry.getToolDefinitionsForRole(context.role);
     const lastUserMessage = [...messages].reverse().find((m) => m.role === 'user')?.content ?? '';
+    const hasPreviousClarification = messages.some((m, idx) => {
+      if (m.role !== 'user') return false;
+      const c = String(m.content || '').trim().toLowerCase();
+      if (c.startsWith('ตอบคำถาม') || c.includes('ตอบคำถาม:') || c.startsWith('answer:')) return true;
+      if (idx > 0 && messages[idx - 1]?.role === 'assistant') {
+        const prev = messages[idx - 1];
+        if (
+          prev.tool_calls?.some((tc) => tc.function.name === 'ask_operator') ||
+          (prev.content && (prev.content.includes('ขอข้อมูล') || prev.content.includes('กรุณาระบุ')))
+        ) {
+          return true;
+        }
+      }
+      return false;
+    });
     let needsFormulationClarify = false;
     let needsUrgencyClarify = false;
+    let needsIncidentClarify = false;
+    const missingIncidentParams: string[] = [];
     let detectedKeyword: string | null = null;
     let availableFormulationOptions: { label: string; description?: string }[] = [];
     const staging = stageTools(roleTools, {
@@ -381,13 +427,6 @@ export class ReActEngine {
       availableFormulationOptions = [];
       const hasUrgencySpecified = /(ปกติ|normal|routine|ด่วน|urgent|เร่งด่วน|ด่วนมาก|very.?urgent|ฉุกเฉิน|emergency|วิกฤต|critical|stat)/i.test(lowerMsg);
       const isBorrowOrRequestIntent = /(ยืม|ขอ|เบิก|นำส่ง|borrow|request|transfer|lender)/i.test(lowerMsg);
-
-      // Check if operator already answered / clarified in previous turns of this conversation
-      const hasPreviousClarification = messages.some((m) => {
-        if (m.role !== 'user') return false;
-        const c = String(m.content || '').toLowerCase();
-        return c.includes('ตอบคำถาม') || c.includes('tablet') || c.includes('syrup') || c.includes('เม็ด') || c.includes('น้ำเชื่อม') || c.includes('urgent') || c.includes('normal') || c.includes('ด่วน');
-      });
 
       if (detectedKeyword) {
         try {
@@ -501,6 +540,86 @@ CRITICAL: Do NOT invent, suggest, or ask for any other formulation. Use the veri
           // ignore
         }
       }
+    }
+
+    needsIncidentClarify = false;
+    missingIncidentParams.length = 0;
+    const lowerMsgAll = (typeof lastUserMessage === 'string' ? lastUserMessage : '').toLowerCase();
+    const isIncidentIntent = /(เกิดเหตุ|อุบัติเหตุ|ผู้บาดเจ็บ|ผู้ป่วยฉุกเฉิน|mass casualty|incident|รับมือสาธารณภัย|ชนหมู่|รถชน|ไฟไหม้|เพลิงไหม้|สารเคมี|งูกัด)/i.test(lowerMsgAll);
+    const hasEtaSpecified = /(eta|นาที|min|ชม\.|ชั่วโมง|ถึงใน|อีก\s*\d+|มาถึงแล้ว|immediate|walk-in|ถึงห้องฉุกเฉิน)/i.test(lowerMsgAll);
+    const hasLocationSpecified = /(ที่|แถว|ถนน|แยก|กม\.|km|ซอย|อ\.|ต\.|จ\.|หน้า|ใกล้|โรงงาน|สะพาน|นิคม|สี่แยก|สามแยก|ทางหลวง|สถานที่)/i.test(lowerMsgAll);
+    const hasCasualtiesSpecified = /(แดง|เหลือง|เขียว|ดำ|วิกฤต|ปานกลาง|ถลอก|ราย|คน|ผู้บาดเจ็บ\s*\d+|ผู้ป่วย\s*\d+|ตาย\s*\d+|เสียชีวิต\s*\d+)/i.test(lowerMsgAll);
+
+    if (isIncidentIntent && !hasPreviousClarification) {
+      if (!hasLocationSpecified) {
+        missingIncidentParams.push('LOCATION');
+      }
+      if (!hasEtaSpecified) {
+        missingIncidentParams.push('ETA');
+      }
+      if (!hasCasualtiesSpecified) {
+        missingIncidentParams.push('CASUALTIES');
+      }
+      if (missingIncidentParams.length > 0) {
+        needsIncidentClarify = true;
+      }
+    }
+
+    if (needsIncidentClarify) {
+      preFetchedContexts.push({
+        role: 'system',
+        content: `[MANDATORY ZERO-ASSUMPTION POLICY - ER INCIDENT INTAKE CLARIFICATION REQUIRED]
+The operator reported an emergency incident, but mandatory operational parameters are missing from the prompt:
+${missingIncidentParams.includes('LOCATION') ? '- Location (สถานที่เกิดเหตุ): Missing. YOU MUST NEVER invent or guess a generic placeholder location (e.g. do NOT say "จุดเกิดเหตุอุบัติเหตุถนนในเขตพื้นที่รับผิดชอบ Health Region 6")!' : ''}
+${missingIncidentParams.includes('ETA') ? '- ETA (เวลาเดินทาง / หน่วยงานนำส่ง): Missing. YOU MUST NEVER assume or invent ETA (do NOT assume 30 minutes)!' : ''}
+${missingIncidentParams.includes('CASUALTIES') ? '- Casualties (ยอดผู้ป่วย แดง/เหลือง/เขียว): Missing. YOU MUST NEVER guess casualty counts!' : ''}
+
+CRITICAL OPERATIONAL INSTRUCTIONS:
+1. YOU ARE STRICTLY FORBIDDEN from calling 'submit_er_action_proposal' in this turn.
+2. CONTEXTUAL INFERENCE: Automatically infer the incident mechanism from keywords (e.g. "รถชน" / "รถชนหมู่" = TRAUMA or MASS_CASUALTY). DO NOT ask for incident type!
+3. YOU MUST CALL 'ask_operator' in a SINGLE TURN bundling questions for the missing mandatory parameters:
+${missingIncidentParams.includes('LOCATION') ? `   - Question: "สถานที่เกิดเหตุหรือจุดเกิดเหตุ"
+     Options: [
+       {"label": "ถนนสายหลัก / ทางหลวงในพื้นที่", "description": "ระบุชื่อถนนหรือจุดสังเกตเพิ่มเติม"},
+       {"label": "เขตชุมชน / ตลาด / ที่พักอาศัย", "description": "ระบุชื่อซอยหรือจุดสังเกตสำคัญ"},
+       {"label": "เขตนิคมอุตสาหกรรม / โรงงาน", "description": "ระบุชื่อโรงงานหรือนิคมอุตสาหกรรม"},
+       {"label": "ยังไม่ทราบพิกัดแน่ชัด", "description": "อยู่ระหว่างรอทีมกู้ชีพรายงานจุดเกิดเหตุ"}
+     ]` : ''}
+${missingIncidentParams.includes('ETA') ? `   - Question: "หน่วยงานนำส่งและเวลาเดินทาง (ETA)"
+     Options: [
+       {"label": "ทีมกู้ชีพ EMS นำส่ง (~15-30 นาที)", "description": "รถพยาบาลฉุกเฉินกำลังนำส่งผู้ป่วย"},
+       {"label": "รับส่งต่อจาก รพ.ชุมชน (~45-60 นาที)", "description": "ประสานงานรับส่งต่อผู้ป่วยระหว่าง รพ."},
+       {"label": "ผู้ป่วยมาถึงห้องฉุกเฉินแล้ว (Immediate)", "description": "ผู้ป่วยถึงจุดคัดแยก ER หรือ Walk-in แล้ว"},
+       {"label": "ยังไม่ทราบ ETA แน่ชัด (ประเมินตามระบบ)", "description": "บันทึกสถานะรอการประสานงานวิทยุสื่อสาร"}
+     ]` : ''}
+${missingIncidentParams.includes('CASUALTIES') ? `   - Question: "จำนวนผู้บาดเจ็บโดยประมาณแยกตามระดับความรุนแรง"
+     Options: [
+       {"label": "แดง 1-2 ราย, เหลือง 3-5 ราย", "description": "อุบัติเหตุทั่วไป / ผู้บาดเจ็บวิกฤตจำนวนจำกัด"},
+       {"label": "แดง 3-5 ราย, เหลือง 5-10 ราย", "description": "อุบัติเหตุหมู่ระดับกลาง"},
+       {"label": "ยังไม่ทราบยอดแน่ชัด (ประเมินขั้นต่ำ: แดง 1, เหลือง 2)", "description": "เปิดแผนเวชภัณฑ์ขั้นต่ำเบื้องต้น"}
+     ]` : ''}
+4. ZERO EMOJIS: Never use any emojis or decorative symbols in your response or tool arguments.`,
+      });
+    }
+
+    if (hasPreviousClarification) {
+      preFetchedContexts.push({
+        role: 'system',
+        content: `[OPERATOR CLARIFICATION RECEIVED - SINGLE-ROUND LIMIT ENFORCED]
+The operator has already answered clarification question(s) in this workflow.
+1. STRICT ZERO-QUESTION RULE:
+   YOU ARE STRICTLY FORBIDDEN FROM CALLING 'ask_operator' OR ASKING FURTHER QUESTIONS IN THIS TURN.
+2. MANDATORY CONTEXTUAL INFERENCE:
+   Automatically infer any remaining parameters from earlier messages:
+   - "รถชน" / "รถคว่ำ" / "อุบัติเหตุ" / "trauma" -> incidentType = "TRAUMA" (อุบัติเหตุจราจร / การบาดเจ็บรุนแรง)
+   - "ไฟไหม้" / "เพลิงไหม้" / "burn" -> incidentType = "BURN"
+   - "สารเคมี" / "แก๊สรั่ว" / "chemical" -> incidentType = "CHEMICAL_SPILL"
+   - "งูกัด" / "พิษงู" / "snakebite" -> incidentType = "SNAKEBITE"
+3. TERMINAL ACTION MANDATE:
+   - If ER incident intake: You have casualty counts, kit recommendations, and reported ETA. You MUST IMMEDIATELY call 'submit_er_action_proposal' with actionType 'DECLARE_INCIDENT' (or 'UPDATE_INCIDENT').
+   - If drug borrow: You MUST IMMEDIATELY execute 'get_ranked_lender_ladder', 'draft_lender_communication', and 'submit_pharmacist_proposal' (actionType: 'CREATE_BORROW_REQUEST', title, description, summary, payload with items and reason; omit targetId).
+4. STRICT ZERO-EMOJI POLICY: Never use any emojis anywhere in your response or proposal fields.`,
+      });
     }
 
     // Prepare conversational history starting with system prompt
@@ -642,6 +761,49 @@ CRITICAL: Do NOT invent, suggest, or ask for any other formulation. Use the veri
           break reactLoop;
         }
 
+        if (needsIncidentClarify && toolName === 'submit_er_action_proposal') {
+          const isThai = /[\u0E00-\u0E7F]/.test(lastUserMessage || '');
+          const questions: ToolQuestion[] = [];
+          if (missingIncidentParams.includes('LOCATION')) {
+            questions.push({
+              header: isThai ? 'สถานที่เกิดเหตุ' : 'Incident Location',
+              question: isThai ? 'สถานที่หรือจุดเกิดเหตุ (เช่น ชื่อถนน, แยก, หรือพิกัดใกล้เคียง)' : 'Incident location or landmark',
+              options: getDefaultClarifyOptions('location', 'location').map((opt) => ({
+                label: stripEmojis(opt.label),
+                description: opt.description ? stripEmojis(opt.description) : undefined,
+              })),
+              allowFreeText: true,
+              multiSelect: false,
+            });
+          }
+          if (missingIncidentParams.includes('ETA')) {
+            questions.push({
+              header: isThai ? 'เวลาเดินทาง (ETA)' : 'Transit Time (ETA)',
+              question: isThai ? 'หน่วยงานนำส่งและเวลาเดินทางมาถึง รพ. (ETA)' : 'Transport agency and estimated arrival time',
+              options: getDefaultClarifyOptions('eta', 'eta').map((opt) => ({
+                label: stripEmojis(opt.label),
+                description: opt.description ? stripEmojis(opt.description) : undefined,
+              })),
+              allowFreeText: true,
+              multiSelect: false,
+            });
+          }
+          if (missingIncidentParams.includes('CASUALTIES')) {
+            questions.push({
+              header: isThai ? 'จำนวนผู้ป่วย' : 'Casualty Counts',
+              question: isThai ? 'จำนวนผู้บาดเจ็บโดยประมาณแยกตามระดับความรุนแรง' : 'Estimated casualty counts by triage priority',
+              options: getDefaultClarifyOptions('triage', 'triage').map((opt) => ({
+                label: stripEmojis(opt.label),
+                description: opt.description ? stripEmojis(opt.description) : undefined,
+              })),
+              allowFreeText: true,
+              multiSelect: false,
+            });
+          }
+          await onEvent({ type: 'question', questions });
+          break reactLoop;
+        }
+
         if (
           needsUrgencyClarify &&
           (toolName === 'get_ranked_lender_ladder' || toolName === 'draft_lender_communication')
@@ -662,6 +824,23 @@ CRITICAL: Do NOT invent, suggest, or ask for any other formulation. Use the veri
 
           await onEvent({ type: 'question', questions });
           break reactLoop;
+        }
+
+        // Single-Round Clarification Limit Enforcement:
+        // If the operator already answered clarification in a previous turn, prevent the model
+        // from presenting another clarification panel. Instead, tell the model to proceed to proposal.
+        if (hasPreviousClarification && isAskOperator) {
+          const toolErrorResult: ToolResult = {
+            success: false,
+            error:
+              'Single-round clarification limit reached. The operator already answered clarification. You are strictly forbidden from calling ask_operator again. Infer incident type from context (e.g. รถชน = TRAUMA) and call submit_er_action_proposal (with actionType DECLARE_INCIDENT) or submit_pharmacist_proposal immediately.',
+          };
+          conversation.push({
+            role: 'tool',
+            tool_call_id: call.id,
+            content: JSON.stringify(toolErrorResult),
+          });
+          continue;
         }
 
         // Execute via Tool Registry

@@ -3248,6 +3248,34 @@
   box-sizing: border-box;
 }
 
+.doorare-supplies-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 2px;
+}
+
+.doorare-supplies-coverage-badge {
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.doorare-supplies-coverage-badge.ready {
+  background: #dcfce7;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+
+.doorare-supplies-coverage-badge.shortfall {
+  background: #ffedd5;
+  color: #c2410c;
+  border: 1px solid #fed7aa;
+}
+
 .doorare-supplies-title {
   font-size: 11.5px;
   font-weight: 700;
@@ -3255,6 +3283,145 @@
   display: flex;
   align-items: center;
   gap: 6px;
+}
+
+.doorare-supplies-table {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.doorare-supply-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #ffffff;
+  border: 1px solid #dcfce7;
+  border-radius: 7px;
+  padding: 6px 10px;
+  gap: 10px;
+  transition: background 0.15s ease;
+}
+
+.doorare-supply-row.has-shortfall {
+  background: #fffbeb;
+  border-color: #fed7aa;
+}
+
+.doorare-supply-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
+  min-width: 0;
+}
+
+.doorare-supply-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.doorare-supply-name .code-tag {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 5px;
+  background: #f1f5f9;
+  color: #334155;
+  border-radius: 4px;
+  border: 1px solid #e2e8f0;
+  letter-spacing: 0.3px;
+}
+
+.doorare-supply-name .thai-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.doorare-supply-sub {
+  font-size: 10.5px;
+  color: #64748b;
+}
+
+.doorare-supply-qty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  white-space: nowrap;
+  min-width: 60px;
+}
+
+.doorare-supply-qty .qty-main {
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+}
+
+.doorare-supply-qty .num {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #047857;
+}
+
+.doorare-supply-qty .unit {
+  font-size: 11px;
+  color: #475569;
+}
+
+.doorare-supply-qty .crit-sub {
+  font-size: 9.5px;
+  color: #dc2626;
+  font-weight: 600;
+}
+
+.doorare-supply-source {
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.source-pill {
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 5px;
+  white-space: nowrap;
+}
+
+.source-pill.in-stock {
+  background: #dcfce7;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+
+.source-pill.borrow {
+  background: #ffedd5;
+  color: #c2410c;
+  border: 1px solid #fed7aa;
+}
+
+.doorare-stock-status-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  border-radius: 5px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.doorare-stock-status-pill.ready {
+  background: #dcfce7;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+.doorare-stock-status-pill.shortfall {
+  background: #fef3c7;
+  color: #b45309;
+  border: 1px solid #fde68a;
 }
 
 .doorare-supplies-group {

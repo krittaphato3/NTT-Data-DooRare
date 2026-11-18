@@ -155,6 +155,8 @@ export const withdrawNearExpiry = (id: string, reason: string) => post<One<ApiNe
 
 export const listPool = () => apiJsonAll<{ ok: true; items: ApiPoolEntry[]; nextCursor: string | null }>('/pool?limit=200');
 export const listPlans = () => apiJsonAll<{ ok: true; items: ApiPlan[]; nextCursor: string | null }>('/allocation-plans?limit=200');
+/** Demo shortcut: approve the plan for another hospital whose answer is still pending (same checks as its own approval). */
+export const approvePlanFor = (id: string, hospitalId: string, version: number) => post<One<ApiPlan>>(`/allocation-plans/${id}/approve-for`, { hospitalId, version });
 export const decidePlan = (id: string, decision: 'APPROVED' | 'REJECTED', version: number, comment?: string, approveAll?: boolean, lines?: { receiver: string; qty: number }[]) => post<One<ApiPlan>>(`/allocation-plans/${id}/decision`, { decision, version, comment, approveAll, lines });
 export const choosePlanOption = (id: string, option: ApiPlanOption, version: number, reason?: string) => post<One<ApiPlan>>(`/allocation-plans/${id}/option`, { option, version, reason });
 export const getPoolCandidates = (id: string) => apiJson<{ ok: true; data: ApiPoolCandidates }>(`/pool/${id}/candidates`);

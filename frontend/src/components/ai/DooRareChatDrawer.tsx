@@ -981,7 +981,7 @@ export const DooRareChatDrawer: React.FC = () => {
               </div>
             )}
 
-            {displayMessages.map((msg) => (
+            {displayMessages.map((msg, index) => (
               <div key={msg.id} className={`doorare-chat-msg-row ${msg.role}`}>
                 <div className="doorare-msg-row-inner">
                   {msg.role === 'assistant' && (
@@ -1217,7 +1217,14 @@ export const DooRareChatDrawer: React.FC = () => {
                       <AnswerInsights content={msg.content} toolLogs={msg.toolLogs} onAsk={handleQuickPrompt} />
                     )}
 
-                    {!msg.content && isStreaming && msg.role === 'assistant' && !msg.isThinking && !msg.thought ? (
+                    {!msg.content &&
+                    !msg.questions?.length &&
+                    !msg.proposal &&
+                    isStreaming &&
+                    msg.role === 'assistant' &&
+                    !msg.isThinking &&
+                    !msg.thought &&
+                    index === displayMessages.length - 1 ? (
                       <div className="doorare-typing-bubble" title="AI กำลังพิมพ์คำตอบ...">
                         <span className="doorare-typing-dot" />
                         <span className="doorare-typing-dot" />

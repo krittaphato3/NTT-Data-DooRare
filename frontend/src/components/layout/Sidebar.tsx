@@ -13,14 +13,14 @@ interface SidebarProps {
   items: ShellNavEntry[];
 }
 
-/** Brand row: DooRare logo (heart mark + wordmark) over the health-region label. */
+/** Brand row: PharmaSync+ logo (heart mark + wordmark) over the health-region label. */
 function SidebarBrand({ collapsed, onToggle, onNavigate }: Pick<SidebarProps, 'collapsed' | 'onToggle' | 'onNavigate'>) {
   return (
     <div className="side-brand">
       <div className="side-brand-main">
         <img className="side-logo" src={logoMark} alt="" aria-hidden="true" />
         <div className="side-brand-text">
-          <img className="side-brand-wordmark" src={logoWordmark} alt="DooRare ดูแร์" />
+          <img className="side-brand-wordmark" src={logoWordmark} alt="PharmaSync+" />
           <div className="en">เครือข่ายเขตสุขภาพที่ 6</div>
         </div>
       </div>

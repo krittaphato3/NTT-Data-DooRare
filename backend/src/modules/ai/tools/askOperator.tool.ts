@@ -107,6 +107,21 @@ export function getDefaultClarifyOptions(header?: string, question?: string): Cl
     ];
   }
   if (
+    combined.includes('สถานที่') ||
+    combined.includes('จุดเกิดเหตุ') ||
+    combined.includes('location') ||
+    combined.includes('พิกัด') ||
+    combined.includes('เกิดเหตุที่') ||
+    combined.includes('ที่ไหน')
+  ) {
+    return [
+      { label: 'ถนนสายหลัก / ทางหลวงในพื้นที่', description: 'อุบัติเหตุบนทางหลวงหรือถนนสายหลัก' },
+      { label: 'เขตชุมชน / ตลาด / ที่พักอาศัย', description: 'พื้นที่ชุมชนหนาแน่นหรือตลาด' },
+      { label: 'เขตนิคมอุตสาหกรรม / โรงงาน', description: 'โรงงานอุตสาหกรรมหรือโกดังสินค้า' },
+      { label: 'ยังไม่ทราบพิกัดแน่ชัด', description: 'อยู่ระหว่างรอทีมกู้ชีพรายงานจุดเกิดเหตุ' },
+    ];
+  }
+  if (
     combined.includes('อุณหภูมิ') ||
     combined.includes('cold chain') ||
     combined.includes('แช่เย็น') ||

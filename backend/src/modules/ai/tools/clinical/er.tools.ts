@@ -346,15 +346,33 @@ export const draftEmergencyIncidentTool: IAgentTool<{
       const parsedTotal =
         (redCount ?? 0) + (yellowCount ?? 0) + (greenCount ?? 0) + (blackCount ?? 0);
 
+      // Contextual inference for incident type from clinical narrative keywords
+      let detectedType = args.incidentType;
+      if (!detectedType) {
+        if (/(?:รถชน|รถคว่ำ|อุบัติเหตุ|ตกที่สูง|ตกตึก|ยิงกัน|ถูกยิง|แทง|trauma|traffic accident|car crash|crash)/i.test(rawText)) {
+          detectedType = 'TRAUMA';
+        } else if (/(?:ไฟไหม้|เพลิงไหม้|น้ำร้อนลวก|burn|fire)/i.test(rawText)) {
+          detectedType = 'BURN';
+        } else if (/(?:สารเคมี|แก๊สรั่ว|สารพิษ|hazmat|chemical)/i.test(rawText)) {
+          detectedType = 'CHEMICAL_SPILL';
+        } else if (/(?:งูกัด|พิษงู|snakebite)/i.test(rawText)) {
+          detectedType = 'SNAKEBITE';
+        } else if (/(?:กินยาเกินขนาด|toxidrome|overdose|ยาพิษ)/i.test(rawText)) {
+          detectedType = 'TOXIDROME';
+        } else {
+          detectedType = 'MASS_CASUALTY';
+        }
+      }
+
       const incidentTitle = args.incidentType
         ? `Emergency Incident: ${args.incidentType}`
-        : 'Emergency Incident Triage Intake';
+        : `Emergency Incident: ${detectedType}`;
 
       return {
         success: true,
         data: {
           incidentTitle,
-          incidentType: args.incidentType || 'MASS_CASUALTY',
+          incidentType: detectedType,
           location: args.location || 'Unknown',
           triageCounts: {
             red: redCount,
@@ -715,7 +733,26 @@ function extractIncidentDetails(args: {
     ? { packOverrides: {}, removeKits: [], removeExtras: [], setKits, setExtras }
     : undefined;
 
-  return { standardizedCounts, etaMin, edits };
+  // 4. Incident Type Extraction & Contextual Inference
+  let inferredIncidentType: string | undefined = undefined;
+  const rawType = p.incidentType ?? p.eventType ?? s.incident_type ?? s.incidentType;
+  if (typeof rawType === 'string' && rawType.trim()) {
+    inferredIncidentType = rawType.trim();
+  } else {
+    if (/(?:รถชน|รถคว่ำ|อุบัติเหตุ|ตกที่สูง|ตกตึก|ยิงกัน|แทง|trauma|traffic accident|car crash|crash)/i.test(textContent)) {
+      inferredIncidentType = 'TRAUMA';
+    } else if (/(?:ไฟไหม้|เพลิงไหม้|น้ำร้อนลวก|burn|fire)/i.test(textContent)) {
+      inferredIncidentType = 'BURN';
+    } else if (/(?:สารเคมี|แก๊สรั่ว|สารพิษ|hazmat|chemical)/i.test(textContent)) {
+      inferredIncidentType = 'CHEMICAL_SPILL';
+    } else if (/(?:งูกัด|พิษงู|snakebite)/i.test(textContent)) {
+      inferredIncidentType = 'SNAKEBITE';
+    } else if (/(?:กินยาเกินขนาด|toxidrome|overdose|ยาพิษ)/i.test(textContent)) {
+      inferredIncidentType = 'TOXIDROME';
+    }
+  }
+
+  return { standardizedCounts, etaMin, edits, inferredIncidentType };
 }
 
 /**
@@ -879,6 +916,7 @@ export const submitErActionProposalTool: IAgentTool<{
         standardizedCounts: { RED: 0, YELLOW: 0, GREEN: 0, BLACK: 0 },
         etaMin: undefined as number | undefined,
         edits: undefined as any,
+        inferredIncidentType: undefined as string | undefined,
       };
 
       if (args.actionType === 'DECLARE_INCIDENT' || args.actionType === 'UPDATE_INCIDENT') {
@@ -982,7 +1020,42 @@ export const submitErActionProposalTool: IAgentTool<{
           const incType =
             (validated.incidentType as string) ||
             (validated.eventType as string) ||
-            'MASS_CASUALTY';
+            extractedDetails.inferredIncidentType ||
+            'TRAUMA';
+
+          args.summary = {
+            ...args.summary,
+            incident_type: (args.summary?.incident_type as string) || incType,
+            incidentType: incType,
+          };
+
+          // Enrich standard emergency stock kit recommendations if omitted by caller
+          if (!args.summary.recommended_kits && !args.summary.recommendedKits && !args.summary.kits) {
+            const calculatedKits: Array<{ kitCode: string; kitName: string; estimatedQuantity: number; criticalMinimum: number }> = [];
+            const isBurn = incType.toUpperCase().includes('BURN');
+            if (isBurn) {
+              calculatedKits.push({ kitCode: 'BURN', kitName: 'ชุดดูแลแผลไฟไหม้ฉุกเฉิน', estimatedQuantity: totalPatients, criticalMinimum: standardizedCounts.RED });
+              calculatedKits.push({ kitCode: 'IV_SET', kitName: 'ชุดสารน้ำกู้ชีพเร่งด่วน', estimatedQuantity: Math.max(totalPatients * 2, 4), criticalMinimum: standardizedCounts.RED * 2 });
+              if (standardizedCounts.RED > 0) {
+                calculatedKits.push({ kitCode: 'INTUBATION', kitName: 'ชุดเปิดทางเดินหายใจ & ท่อช่วยหายใจ', estimatedQuantity: standardizedCounts.RED, criticalMinimum: standardizedCounts.RED });
+              }
+            } else {
+              if (standardizedCounts.RED > 0) {
+                calculatedKits.push({ kitCode: 'TRAUMA_RESUS', kitName: 'ชุดช่วยชีวิตวิกฤตอุบัติเหตุ', estimatedQuantity: standardizedCounts.RED, criticalMinimum: standardizedCounts.RED });
+                calculatedKits.push({ kitCode: 'INTUBATION', kitName: 'ชุดเปิดทางเดินหายใจ & ท่อช่วยหายใจ', estimatedQuantity: standardizedCounts.RED, criticalMinimum: standardizedCounts.RED });
+              }
+              const ivQty = Math.max(standardizedCounts.RED * 2 + standardizedCounts.YELLOW, totalPatients, 2);
+              calculatedKits.push({ kitCode: 'IV_SET', kitName: 'ชุดสารน้ำกู้ชีพเร่งด่วน', estimatedQuantity: ivQty, criticalMinimum: standardizedCounts.RED });
+              if (standardizedCounts.RED >= 2 || totalPatients >= 5) {
+                const chestQty = Math.min(standardizedCounts.RED, 2) || 1;
+                calculatedKits.push({ kitCode: 'CHEST_TUBE', kitName: 'ชุดเจาะระบายทรวงอก', estimatedQuantity: chestQty, criticalMinimum: chestQty });
+              }
+              const splintQty = standardizedCounts.YELLOW > 0 ? Math.max(standardizedCounts.YELLOW + 1, 2) : 2;
+              calculatedKits.push({ kitCode: 'SPLINT', kitName: 'ชุดดามกระดูกและห้ามเลือด', estimatedQuantity: splintQty, criticalMinimum: 0 });
+            }
+            args.summary.recommended_kits = calculatedKits;
+            args.summary.recommendedKits = calculatedKits;
+          }
           const incTitle =
             (validated.title as string) ||
             args.title ||

@@ -32,6 +32,8 @@ export type PlanStatus =
 
 export interface PlanApproval {
   hospital: string;
+  /** Live only: the hospital's id (used by the "เห็นชอบแทน" demo shortcut). */
+  hospitalId?: string;
   pharmacist: string;
   state: 'APPROVED' | 'WAITING' | 'REJECTED';
   at?: string;
